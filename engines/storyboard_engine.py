@@ -1,11 +1,14 @@
 """
 Storyboard Engine.
-Deconstructs script into 4-7 synchronized visual shots with camera motion and visual queries.
+Deconstructs script into 4-7 synchronized visual shots.
+Dynamically generates story-specific, historical visual search queries and AI prompts via Gemini 3.6 Flash.
 """
 import uuid
+import json
 import logging
 from typing import List, Dict, Any
 from core.models import ScriptRecord
+from config.settings import GEMINI_API_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -17,15 +20,53 @@ class StoryboardEngine:
 
     def create_storyboard(self, script: ScriptRecord) -> List[Dict[str, Any]]:
         """
-        Splits script into 5 structured visual shots with timing, motion, and visual queries.
+        Splits script into 5 structured visual shots with topic-specific queries and motions.
         """
-        segments = [
-            {"name": "hook", "text": script.hook, "query": "dramatic historical monument landscape", "prompt": "Cinematic historical documentary scene, dramatic lighting, 8k resolution, authentic 19th century atmosphere"},
-            {"name": "context", "text": script.context, "query": "old vintage architecture building europe", "prompt": "Authentic period accurate historical setting, vintage architectural detail, atmospheric cinematic tone"},
-            {"name": "escalation", "text": script.escalation, "query": "historical army battleship storm tension", "prompt": "Intense cinematic historical conflict, dramatic smoke and dynamic lighting, realistic period costumes"},
-            {"name": "reveal", "text": script.reveal, "query": "historical palace explosion victory", "prompt": "Cinematic climactic historical revelation, dramatic visual composition, detailed period accuracy"},
-            {"name": "loop_twist", "text": script.loop_twist, "query": "cinematic sunset vintage landscape", "prompt": "Moody atmospheric ending shot, historical cinematic lighting, reflective wide shot"}
+        raw_segments = [
+            {"name": "hook", "text": script.hook},
+            {"name": "context", "text": script.context},
+            {"name": "escalation", "text": script.escalation},
+            {"name": "reveal", "text": script.reveal},
+            {"name": "loop_twist", "text": script.loop_twist}
         ]
+
+        # 1. Use Gemini 3.6 Flash to generate 5 story-specific search queries and AI prompts
+        queries = []
+        if GEMINI_API_KEY:
+            try:
+                from google import genai
+                client = genai.Client(api_key=GEMINI_API_KEY)
+                prompt = (
+                    f"Given this historical story script:\n"
+                    f"Hook: {script.hook}\n"
+                    f"Context: {script.context}\n"
+                    f"Escalation: {script.escalation}\n"
+                    f"Reveal: {script.reveal}\n"
+                    f"Twist: {script.loop_twist}\n\n"
+                    f"Generate 5 distinct, highly specific stock photo search queries (2-4 words each) "
+                    f"and 5 cinematic visual prompts tailored exactly to this event.\n"
+                    f"Return ONLY valid JSON format with a list of 5 objects, each having 'query' and 'prompt'."
+                )
+                response = client.models.generate_content(
+                    model="gemini-3.6-flash",
+                    contents=prompt
+                )
+                clean_json = response.text.strip().replace("```json", "").replace("```", "").strip()
+                queries = json.loads(clean_json)
+            except Exception as e:
+                logger.warning(f"Dynamic storyboard query generation fallback: {e}")
+
+        # Fallback if Gemini unavailable
+        if not queries or len(queries) < 5:
+            topic_words = script.hook.split()[:4]
+            base_kw = " ".join([w for w in topic_words if len(w) > 3])
+            queries = [
+                {"query": f"{base_kw} dramatic history", "prompt": f"Cinematic historical documentary scene of {base_kw}"},
+                {"query": f"{base_kw} vintage architecture", "prompt": f"Historical setting during {base_kw}"},
+                {"query": f"{base_kw} tension conflict", "prompt": f"Dramatic historical scene showing {base_kw}"},
+                {"query": f"{base_kw} aftermath destruction", "prompt": f"Historical aftermath of {base_kw}"},
+                {"query": f"{base_kw} memorial landscape", "prompt": f"Moody historical wide landscape of {base_kw}"}
+            ]
 
         total_duration = script.estimated_duration_sec
         # Allocate duration per shot
@@ -36,10 +77,11 @@ class StoryboardEngine:
         shots = []
         current_time = 0.0
 
-        for i, seg in enumerate(segments):
+        for i, seg in enumerate(raw_segments):
             dur = durations[i]
             shot_id = f"shot_{i+1}_{uuid.uuid4().hex[:6]}"
             motion = self.CAMERA_MOTIONS[i % len(self.CAMERA_MOTIONS)]
+            q_info = queries[i] if i < len(queries) else queries[0]
 
             shot = {
                 "shot_id": shot_id,
@@ -48,13 +90,13 @@ class StoryboardEngine:
                 "end_time": round(current_time + dur, 2),
                 "duration": round(dur, 2),
                 "narration_segment": seg["text"],
-                "search_query": seg["query"],
-                "visual_prompt": seg["prompt"],
+                "search_query": q_info.get("query", "vintage historical event"),
+                "visual_prompt": q_info.get("prompt", "Cinematic historical documentary scene, 8k resolution"),
                 "camera_motion": motion,
                 "transition": "crossfade" if i > 0 else "cut"
             }
             shots.append(shot)
             current_time += dur
 
-        logger.info(f"Generated storyboard with {len(shots)} shots for script {script.id}")
+        logger.info(f"Generated dynamic storyboard with {len(shots)} unique visual queries: {[s['search_query'] for s in shots]}")
         return shots

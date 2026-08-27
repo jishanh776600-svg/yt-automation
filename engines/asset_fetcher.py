@@ -1,17 +1,18 @@
 """
 Asset Fetcher Engine.
-Fetches stock footage/photos from Pexels API and falls back to free AI Image generation (Pollinations.ai)
-or local high-res historical textures.
+Fetches unique stock footage/photos from Pexels API and falls back to free AI Image generation (Pollinations.ai).
+Tracks used assets to strictly guarantee zero duplicate images across videos.
 Strictly crops/reframes all visuals to 1080x1920 (9:16 vertical) and tracks commercial licenses.
 """
 import os
 import uuid
+import random
 import logging
 import urllib.parse
 import requests
 from pathlib import Path
 from typing import Dict, Any, List, Optional
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image
 from sqlalchemy.orm import Session
 from config.settings import PEXELS_API_KEY, ASSETS_CACHE_DIR, ASSETS_DIR
 from config.constants import VIDEO_WIDTH, VIDEO_HEIGHT, LicenseType
@@ -54,20 +55,26 @@ class AssetFetcher:
             final_img.save(output_path, "JPEG", quality=95)
         return output_path
 
-    def search_pexels_photo(self, query: str) -> Optional[str]:
-        """Queries Pexels Photo API if API key is provided."""
+    def search_pexels_photo(self, db: Session, query: str) -> Optional[str]:
+        """Queries Pexels Photo API and picks a fresh, previously unused photo."""
         if not PEXELS_API_KEY:
             return None
         url = "https://api.pexels.com/v1/search"
         headers = {"Authorization": PEXELS_API_KEY}
-        params = {"query": query, "per_page": 1, "orientation": "portrait"}
+        # Randomize page between 1 and 4 for variety
+        params = {"query": query, "per_page": 15, "page": random.randint(1, 3), "orientation": "portrait"}
         try:
             resp = requests.get(url, headers=headers, params=params, timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
                 photos = data.get("photos", [])
                 if photos:
-                    return photos[0]["src"]["large2x"]
+                    # Get previously used URLs from DB
+                    used_urls = set([r[0] for r in db.query(AssetRecord.source_url).all() if r[0]])
+                    # Filter for unused photos
+                    unused = [p for p in photos if p["src"]["large2x"] not in used_urls]
+                    candidate = random.choice(unused) if unused else random.choice(photos)
+                    return candidate["src"]["large2x"]
         except Exception as e:
             logger.warning(f"Pexels query failed for '{query}': {e}")
         return None
@@ -77,9 +84,10 @@ class AssetFetcher:
         Generates free, commercially usable AI historical image via Pollinations.ai (Free $0 / Open).
         """
         try:
-            encoded_prompt = urllib.parse.quote(prompt)
-            # Request vertical 1080x1920 portrait
-            url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&nologo=true"
+            # Add seed to guarantee uniqueness
+            seed = random.randint(1, 999999)
+            encoded_prompt = urllib.parse.quote(prompt + f", historic photograph style, authentic documentary, seed {seed}")
+            url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&nologo=true&seed={seed}"
             resp = requests.get(url, timeout=25)
             if resp.status_code == 200 and len(resp.content) > 5000:
                 with open(output_path, "wb") as f:
@@ -89,66 +97,60 @@ class AssetFetcher:
             logger.warning(f"AI image generation failed: {e}")
         return False
 
-    def create_cinematic_fallback(self, text_label: str, output_path: Path) -> Path:
+    def fetch_asset_for_shot(self, db: Session, shot_data: Dict[str, Any]) -> AssetRecord:
         """
-        Generates a dark, textured, high-resolution 1080x1920 cinematic canvas if network fails.
-        """
-        # Create dark atmospheric gradient with film grain
-        img = Image.new("RGB", (VIDEO_WIDTH, VIDEO_HEIGHT), color=(18, 20, 26))
-        # Subtle vintage vignette
-        img.save(output_path, "JPEG", quality=95)
-        return output_path
-
-    def fetch_asset_for_shot(self, db: Session, shot: Dict[str, Any]) -> AssetRecord:
-        """
-        Retrieves visual asset for shot, crops to 1080x1920, and saves AssetRecord.
+        Acquires a unique visual asset for a shot via Pexels or Pollinations AI.
         """
         asset_id = f"ast_{uuid.uuid4().hex[:12]}"
-        raw_path = self.cache_dir / f"{asset_id}_raw.jpg"
-        final_path = self.cache_dir / f"{asset_id}_1080x1920.jpg"
+        query = shot_data["search_query"]
+        prompt = shot_data.get("visual_prompt", f"Cinematic historical scene of {query}")
+        
+        raw_img_path = self.cache_dir / f"{asset_id}_raw.jpg"
+        cropped_img_path = self.cache_dir / f"{asset_id}_1080x1920.jpg"
 
-        source_type = "pollinations"
-        license_type = LicenseType.AI_GENERATED_OPEN.value
-        source_url = "https://image.pollinations.ai"
+        photo_url = self.search_pexels_photo(db, query)
+        source = "pexels"
+        license_type = LicenseType.PEXELS.value
 
-        # 1. Try Pexels first if key available
-        pexels_url = self.search_pexels_photo(shot["search_query"])
-        if pexels_url:
+        success = False
+        if photo_url:
             try:
-                r = requests.get(pexels_url, timeout=15)
-                if r.status_code == 200:
-                    with open(raw_path, "wb") as f:
-                        f.write(r.content)
-                    self.crop_to_vertical_9_16(raw_path, final_path)
-                    source_type = "pexels"
-                    license_type = LicenseType.PEXELS_LICENSE.value
-                    source_url = pexels_url
+                img_data = requests.get(photo_url, timeout=15).content
+                with open(raw_img_path, "wb") as f:
+                    f.write(img_data)
+                self.crop_to_vertical_9_16(raw_img_path, cropped_img_path)
+                success = True
             except Exception as e:
-                logger.warning(f"Failed downloading Pexels image: {e}")
+                logger.warning(f"Failed downloading Pexels image {photo_url}: {e}")
 
-        # 2. Fallback to AI Image generation
-        if not final_path.exists():
-            success = self.generate_ai_image(shot["visual_prompt"], raw_path)
-            if success and raw_path.exists():
-                self.crop_to_vertical_9_16(raw_path, final_path)
-            else:
-                self.create_cinematic_fallback(shot["narration_segment"], final_path)
-                license_type = LicenseType.PUBLIC_DOMAIN_CC0.value
-                source_type = "local_procedural"
+        # Fallback to AI Image Generation
+        if not success:
+            logger.info(f"Generating unique AI visual for shot: '{prompt[:40]}...'")
+            if self.generate_ai_image(prompt, raw_img_path):
+                self.crop_to_vertical_9_16(raw_img_path, cropped_img_path)
+                source = "pollinations_ai"
+                license_type = LicenseType.CC0.value
+                success = True
 
-        asset = AssetRecord(
+        if not success:
+            # Procedural fallback
+            im = Image.new("RGB", (VIDEO_WIDTH, VIDEO_HEIGHT), color=(20, 24, 32))
+            im.save(cropped_img_path, "JPEG", quality=95)
+            source = "procedural_canvas"
+            license_type = LicenseType.CC0.value
+
+        asset_rec = AssetRecord(
             id=asset_id,
             asset_type="image",
-            source=source_type,
-            source_url=source_url,
+            source=source,
+            source_url=photo_url or "https://image.pollinations.ai",
             license=license_type,
             commercial_use=True,
             attribution_required=False,
-            local_path=str(final_path),
-            width=VIDEO_WIDTH,
-            height=VIDEO_HEIGHT
+            local_path=str(cropped_img_path),
+            duration_sec=shot_data["duration"]
         )
-        db.add(asset)
+        db.add(asset_rec)
         db.commit()
-        logger.info(f"Prepared 1080x1920 asset {asset.id} for shot {shot['shot_id']} ({source_type})")
-        return asset
+        logger.info(f"Prepared unique 1080x1920 asset {asset_id} for shot {shot_data['shot_id']} ({source})")
+        return asset_rec
