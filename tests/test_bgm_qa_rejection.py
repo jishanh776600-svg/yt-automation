@@ -14,9 +14,10 @@ class TestBGMQAVerification(unittest.TestCase):
 
     def setUp(self):
         self.qa = QAEngine()
-        self.voice_path = Path(r"C:\Users\jisha\OneDrive\Desktop\yt automation\data\voice\aud_38804dc2022b.wav")
-        self.correct_bgm = Path(r"C:\Users\jisha\OneDrive\Desktop\yt automation\assets\music\No copyright Best Historical.wav")
-        self.wrong_bgm = Path(r"C:\Users\jisha\OneDrive\Desktop\yt automation\assets\music\Empty - Emotional Sad Background.wav")
+        root = Path(__file__).resolve().parent.parent
+        self.voice_path = root / "data" / "voice" / "aud_38804dc2022b.wav"
+        self.correct_bgm = root / "assets" / "music" / "No copyright Best Historical.wav"
+        self.wrong_bgm = root / "assets" / "music" / "Empty - Emotional Sad Background.wav"
         
         self.test_mp4_correct = RENDERS_DIR / "test_qa_correct.mp4"
         self.test_mp4_noise = RENDERS_DIR / "test_qa_noise.mp4"

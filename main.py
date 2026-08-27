@@ -252,14 +252,15 @@ class ShortsPipeline:
 
             # 12. TEST MODE vs PRODUCTION YOUTUBE PUBLISHING
             import shutil
-            desktop_path = Path(r"C:\Users\jisha\OneDrive\Desktop")
             if TEST_MODE:
                 # ABSOLUTE TEST MODE: Strictly NO YouTube Uploading
-                dest_video = desktop_path / "VERIFIED_SHORT_TEST_OUTPUT.mp4"
+                desktop_candidate = Path.home() / "Desktop"
+                output_dir = desktop_candidate if desktop_candidate.exists() else (PROJECT_ROOT / "data" / "renders")
+                dest_video = output_dir / "VERIFIED_SHORT_TEST_OUTPUT.mp4"
                 shutil.copy2(Path(render_output.video_path), dest_video)
                 console.print(Panel.fit(
                     f"[bold green][+] Test Pipeline Complete![/bold green]\n"
-                    f"Final Verified MP4 copied to Desktop: [bold yellow]{dest_video}[/bold yellow]\n"
+                    f"Final Verified MP4 saved to: [bold yellow]{dest_video}[/bold yellow]\n"
                     f"BGM Verified: [bold green]PASS[/bold green] ({Path(music_asset.local_path).name})\n"
                     f"YouTube Upload: [bold cyan]BYPASSED (No publishing occurred)[/bold cyan]",
                     border_style="green"

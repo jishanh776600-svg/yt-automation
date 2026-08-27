@@ -193,7 +193,8 @@ def test_closed_feedback_learning_loop():
         decision="Prioritize Unusual Wars category in 60% proven slot"
     )
 
-    log_file = Path(r"C:\Users\jisha\OneDrive\Desktop\yt automation\data\LEARNING_LOG.md")
+    from config.settings import DATA_DIR
+    log_file = DATA_DIR / "LEARNING_LOG.md"
     assert log_file.exists()
     print("Persistent Learning Log verified at:", log_file)
 

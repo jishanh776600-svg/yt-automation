@@ -23,7 +23,7 @@ class TestAllFourBGMTracks(unittest.TestCase):
     def setUp(self):
         self.mixer = AudioMixer()
         self.qa = QAEngine()
-        self.voice_path = Path(r"C:\Users\jisha\OneDrive\Desktop\yt automation\data\voice\aud_38804dc2022b.wav")
+        self.voice_path = Path(__file__).resolve().parent.parent / "data" / "voice" / "aud_38804dc2022b.wav"
         self.test_renders = []
 
     def tearDown(self):

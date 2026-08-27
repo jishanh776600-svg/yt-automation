@@ -2,7 +2,7 @@ import subprocess
 from pathlib import Path
 
 task_name = "YT_Shorts_Autopilot"
-vbs_path = str(Path(r"C:\Users\jisha\OneDrive\Desktop\yt automation\run_silent.vbs").resolve())
+vbs_path = str((Path(__file__).resolve().parent / "run_silent.vbs").resolve())
 tr_cmd = f'wscript.exe "{vbs_path}"'
 
 # 1. Remove old task if present
