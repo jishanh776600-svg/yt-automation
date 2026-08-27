@@ -2,8 +2,8 @@ name: YouTube Shorts Cloud Autopilot
 
 on:
   schedule:
-    # 3 scheduled windows daily: 10:00 UTC (3:30 PM IST), 15:00 UTC (8:30 PM IST), 20:00 UTC (1:30 AM IST)
-    - cron: '0 10,15,20 * * *'
+    # 4 scheduled windows daily: 06:00 UTC (11:30 AM IST), 10:00 UTC (3:30 PM IST), 15:00 UTC (8:30 PM IST), 20:00 UTC (1:30 AM IST)
+    - cron: '0 6,10,15,20 * * *'
   workflow_dispatch: # Allows manual one-click trigger from GitHub web or mobile app
 
 permissions:

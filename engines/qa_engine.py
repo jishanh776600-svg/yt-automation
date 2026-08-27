@@ -282,17 +282,18 @@ class QAEngine:
             f"BGM Audible: {audio_analysis['bgm_audible']}"
         )
 
-        # 5. Daily Publishing Limit Check (Strictly max 3 Shorts/day unless forced)
+        # 5. Daily Publishing Limit Check (Strictly max DAILY_SHORTS_LIMIT Shorts/day unless forced)
         from datetime import datetime
         from core.models import UploadRecord
+        from config.constants import DAILY_SHORTS_LIMIT
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         published_today = db.query(UploadRecord).filter(
             UploadRecord.published_at >= today_start,
             UploadRecord.status == "PUBLISHED"
         ).count()
-        daily_count_ok = (published_today < 3 or force)
+        daily_count_ok = (published_today < DAILY_SHORTS_LIMIT or force)
         if not daily_count_ok:
-            reasons.append(f"Daily publishing limit reached ({published_today}/3 Shorts already published today)")
+            reasons.append(f"Daily publishing limit reached ({published_today}/{DAILY_SHORTS_LIMIT} Shorts already published today)")
 
         # 6. Commercial License Check
         license_ok, license_failures = LicenseTracker.verify_job_assets(assets_used)

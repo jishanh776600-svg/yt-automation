@@ -84,18 +84,19 @@ class ShortsPipeline:
 
         console.print(Panel.fit(f"[bold cyan]Starting Production Pipeline for Job {job_id}[/bold cyan]\nTarget: 1080x1920 9:16 Vertical (~23 sec) | Cost: $0.00", border_style="cyan"))
 
-        # 0. CHECK DAILY PUBLISHING LIMIT (EXACTLY MAX 3 SHORTS/DAY)
+        # 0. CHECK DAILY PUBLISHING LIMIT (EXACTLY MAX 4 SHORTS/DAY)
         from datetime import datetime
         from core.models import UploadRecord
+        from config.constants import DAILY_SHORTS_LIMIT
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         published_today = db.query(UploadRecord).filter(
             UploadRecord.published_at >= today_start,
             UploadRecord.status == "PUBLISHED"
         ).count()
 
-        if published_today >= 3 and not force:
-            console.print(f"[bold yellow][!] Daily limit reached ({published_today}/3 Shorts published today). Pausing until next scheduled window.[/bold yellow]")
-            logger.info(f"Daily limit of 3 Shorts reached ({published_today}/3).")
+        if published_today >= DAILY_SHORTS_LIMIT and not force:
+            console.print(f"[bold yellow][!] Daily limit reached ({published_today}/{DAILY_SHORTS_LIMIT} Shorts published today). Pausing until next scheduled window.[/bold yellow]")
+            logger.info(f"Daily limit reached ({published_today}/{DAILY_SHORTS_LIMIT}).")
             return False
 
         try:
@@ -307,7 +308,8 @@ def main():
         pipeline.run_single_job(force=args.force)
     elif args.daemon:
         import schedule
-        console.print("[bold green]Starting automated daemon scheduler (Strictly 3 Shorts/day at 10:00, 15:00, 20:00 UTC)...[/bold green]")
+        console.print("[bold green]Starting automated daemon scheduler (Strictly 4 Shorts/day at 06:00, 10:00, 15:00, 20:00 UTC)...[/bold green]")
+        schedule.every().day.at("06:00").do(pipeline.run_single_job)
         schedule.every().day.at("10:00").do(pipeline.run_single_job)
         schedule.every().day.at("15:00").do(pipeline.run_single_job)
         schedule.every().day.at("20:00").do(pipeline.run_single_job)
