@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+.venv/
+env/
+venv/
+
+# Secrets (Protected - Injected via GitHub Secrets in Cloud)
+token.json
+client_secret.json
+.env
+
+# Large Model Weights (Downloaded on-the-fly by Kokoro / HF)
+data/*.onnx
+data/*.bin
+*.onnx
+*.bin
+
+# Media Caches (Render outputs are temporary)
+data/renders/
+data/voice/
+data/visuals/
+data/assets/
+data/captions/
+
+# Keep empty structure
+!data/database/.gitkeep
+!assets/music/*.wav

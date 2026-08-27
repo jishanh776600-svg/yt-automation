@@ -1,0 +1,62 @@
+name: YouTube Shorts Cloud Autopilot
+
+on:
+  schedule:
+    # 3 scheduled windows daily: 10:00 UTC (3:30 PM IST), 15:00 UTC (8:30 PM IST), 20:00 UTC (1:30 AM IST)
+    - cron: '0 10,15,20 * * *'
+  workflow_dispatch: # Allows manual one-click trigger from GitHub web or mobile app
+
+concurrency:
+  group: youtube-autopilot
+  cancel-in-progress: false
+
+jobs:
+  produce_and_publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore OAuth Credentials & Secrets
+        env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TOKEN_JSON: ${{ secrets.TOKEN_JSON }}
+          CLIENT_SECRET_JSON: ${{ secrets.CLIENT_SECRET_JSON }}
+        run: |
+          echo "PEXELS_API_KEY=${PEXELS_API_KEY}" > .env
+          echo "GEMINI_API_KEY=${GEMINI_API_KEY}" >> .env
+          echo "TEST_MODE=false" >> .env
+          echo "${TOKEN_JSON}" > token.json
+          echo "${CLIENT_SECRET_JSON}" > client_secret.json
+
+      - name: Run Autopilot Production Cycle
+        run: |
+          python main.py --run-once
+
+      - name: Commit Learning Data & Logs
+        if: always()
+        run: |
+          git config --global user.name 'YouTube Autopilot Bot'
+          git config --global user.email 'bot@github-actions.local'
+          git add data/LEARNING_LOG.md data/database/ 2>/dev/null || true
+          git commit -m "Auto-update learning log and database [skip ci]" || echo "No changes to commit"
+          git push || echo "Push skipped"
