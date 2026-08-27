@@ -26,7 +26,9 @@ class TestCoreSystem(unittest.TestCase):
         self.db.close()
 
     def test_job_state_machine_transition(self):
-        job = Job(id="test_job_001", state=JobState.QUEUED.value)
+        import uuid
+        job_id = f"test_job_{uuid.uuid4().hex[:8]}"
+        job = Job(id=job_id, state=JobState.QUEUED.value)
         self.db.add(job)
         self.db.commit()
 

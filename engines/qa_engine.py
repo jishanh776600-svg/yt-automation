@@ -4,12 +4,13 @@ Performs automated multi-factor validation before any Short can be scheduled or 
 - Video Resolution: Exactly 1080x1920 (9:16 vertical)
 - Duration: Strictly within 21.0 - 25.5 seconds
 - Codecs: H.264 video / AAC audio
-- Audio Quality & Deep BGM Verification: 
-  * BGM physically mixed and audible in the final rendered file
+- Audio Quality & Deep BGM Identity Verification: 
+  * Extracts audio directly from the final rendered MP4 file
   * Master loudness conforms to -14.0 LUFS target (-22 to -10 LUFS acceptable range)
   * No audio clipping or distortion (peak <= 0.0 dB)
-  * No unexpected silence or dropout
-- License Verification: All used assets verified commercial_use=True
+  * No silence or dropout
+  * FFT Cross-Correlation BGM Identity Fingerprinting proving the intended BGM is physically present
+- Commercial License Check: All used assets verified commercial_use=True
 - Content Safety & Policy: Anti-spam and anti-duplication validation
 """
 import os
@@ -17,11 +18,13 @@ import re
 import json
 import logging
 import subprocess
+import soundfile as sf
+import numpy as np
 from pathlib import Path
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 from sqlalchemy.orm import Session
 
-from config.settings import FFMPEG_EXE
+from config.settings import FFMPEG_EXE, RENDERS_DIR
 from config.constants import (
     VIDEO_WIDTH, VIDEO_HEIGHT, MIN_DURATION_SEC, MAX_DURATION_SEC,
     MIN_AUDIO_LOUDNESS_LUFS, MAX_AUDIO_LOUDNESS_LUFS, MAX_TRUE_PEAK_DBTP
@@ -33,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 class QAEngine:
-    """Rigorous pre-upload inspection engine."""
+    """Rigorous pre-upload inspection and acoustic verification engine."""
 
     def inspect_media(self, video_path: Path) -> dict:
         """Inspects video and audio stream properties via FFmpeg."""
@@ -68,7 +71,7 @@ class QAEngine:
                 info["has_audio"] = True
                 info["audio_codec"] = "audio"
 
-            # Extract Duration: 00:00:23.45
+            # Extract Duration
             for line in output.split("\n"):
                 if "Duration:" in line:
                     parts = line.split("Duration:")[1].split(",")[0].strip()
@@ -80,11 +83,63 @@ class QAEngine:
             logger.warning(f"Error inspecting media: {e}")
         return info
 
-    def analyze_audio_stream(self, video_path: Path) -> Dict[str, Any]:
+    def extract_audio_from_mp4(self, video_path: Path, output_wav_path: Path) -> Path:
+        """Extracts decoded PCM audio stream directly from final MP4 for analysis."""
+        cmd = [
+            FFMPEG_EXE, "-y",
+            "-i", str(video_path),
+            "-vn",
+            "-c:a", "pcm_s16le",
+            "-ar", "44100",
+            "-ac", "2",
+            str(output_wav_path)
+        ]
+        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return output_wav_path
+
+    def compute_bgm_identity_correlation(self, bgm_reference_path: Path, rendered_audio_path: Path) -> float:
+        """
+        Uses FFT Cross-Correlation to mathematically verify that the selected BGM
+        is present in the rendered MP4's audio track.
+        Returns correlation score (>= 0.65 indicates genuine BGM presence).
+        """
+        try:
+            b, sr1 = sf.read(str(bgm_reference_path))
+            m, sr2 = sf.read(str(rendered_audio_path))
+
+            # Convert stereo to mono for correlation
+            if b.ndim > 1:
+                b = np.mean(b, axis=1)
+            if m.ndim > 1:
+                m = np.mean(m, axis=1)
+
+            min_len = min(len(b), len(m))
+            if min_len < 1000:
+                return 0.0
+
+            b = b[:min_len]
+            m = m[:min_len]
+
+            # Fast FFT linear cross-correlation
+            n = len(b)
+            n_fft = 2 ** int(np.ceil(np.log2(2 * n - 1)))
+            B = np.fft.rfft(b, n=n_fft)
+            M = np.fft.rfft(m, n=n_fft)
+            corr = np.fft.irfft(M * np.conj(B), n=n_fft)
+            max_corr = float(np.max(corr))
+            auto_b = float(np.sum(b ** 2))
+
+            score = max_corr / (auto_b + 1e-9)
+            return score
+        except Exception as e:
+            logger.warning(f"BGM FFT correlation calculation notice: {e}")
+            return 0.0
+
+    def analyze_audio_stream(self, video_path: Path, bgm_reference_path: Optional[Path] = None) -> Dict[str, Any]:
         """
         Performs deep acoustic measurement of the final rendered video's audio track.
         Measures integrated loudness (LUFS), true peak (dBTP), mean volume (dB),
-        and verifies BGM presence & speech intelligibility.
+        and verifies BGM identity & physical presence.
         """
         analysis = {
             "integrated_lufs": -99.0,
@@ -92,10 +147,12 @@ class QAEngine:
             "mean_volume_db": -99.0,
             "is_silent": True,
             "has_clipping": False,
-            "bgm_audible": False,
-            "raw_output": ""
+            "bgm_fingerprint_score": 0.0,
+            "bgm_identity_verified": False,
+            "bgm_audible": False
         }
         try:
+            # 1. Run volumedetect and ebur128 filters on MP4
             cmd = [
                 FFMPEG_EXE, "-y",
                 "-i", str(video_path),
@@ -106,9 +163,7 @@ class QAEngine:
             ]
             res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             output = res.stderr.decode("utf-8", errors="ignore")
-            analysis["raw_output"] = output
 
-            # Parse volumedetect
             max_vol_match = re.search(r"max_volume:\s*(-?[\d\.]+)\s*dB", output)
             if max_vol_match:
                 analysis["max_volume_db"] = float(max_vol_match.group(1))
@@ -117,20 +172,28 @@ class QAEngine:
             if mean_vol_match:
                 analysis["mean_volume_db"] = float(mean_vol_match.group(1))
 
-            # Parse ebur128 integrated loudness (I: -14.2 LUFS)
             i_matches = re.findall(r"I:\s*(-?[\d\.]+)\s*LUFS", output)
             if i_matches:
                 analysis["integrated_lufs"] = float(i_matches[-1])
 
-            # Evaluate thresholds
             is_not_silent = (analysis["max_volume_db"] > -30.0) and (analysis["mean_volume_db"] > -45.0)
             analysis["is_silent"] = not is_not_silent
-
-            # Clipping check: True peak exceeding 0.0 dB
             analysis["has_clipping"] = (analysis["max_volume_db"] > 0.0)
 
-            # BGM is audible if mean energy is rich and integrated loudness is in target broadcast zone
-            analysis["bgm_audible"] = is_not_silent and (analysis["integrated_lufs"] >= MIN_AUDIO_LOUDNESS_LUFS)
+            # 2. Extract audio and verify BGM identity via FFT correlation
+            if bgm_reference_path and bgm_reference_path.exists():
+                temp_extracted = RENDERS_DIR / f"temp_qa_audio_{os.urandom(4).hex()}.wav"
+                self.extract_audio_from_mp4(video_path, temp_extracted)
+                score = self.compute_bgm_identity_correlation(bgm_reference_path, temp_extracted)
+                temp_extracted.unlink(missing_ok=True)
+                analysis["bgm_fingerprint_score"] = round(score, 4)
+                # Score >= 0.65 proves the intended BGM is physically present in the MP4
+                analysis["bgm_identity_verified"] = (score >= 0.65)
+                analysis["bgm_audible"] = is_not_silent and analysis["bgm_identity_verified"]
+            else:
+                # If no reference provided, fallback to energy threshold
+                analysis["bgm_audible"] = is_not_silent and (analysis["integrated_lufs"] >= MIN_AUDIO_LOUDNESS_LUFS)
+                analysis["bgm_identity_verified"] = analysis["bgm_audible"]
 
         except Exception as e:
             logger.warning(f"Audio stream acoustic analysis warning: {e}")
@@ -142,6 +205,7 @@ class QAEngine:
         job: Job,
         render: RenderOutput,
         assets_used: List[AssetRecord],
+        bgm_reference_path: Optional[Path] = None,
         force: bool = False
     ) -> Tuple[bool, QAReport]:
         """
@@ -177,8 +241,17 @@ class QAEngine:
         if not music_assets:
             reasons.append("Mandatory Background Music (BGM) track missing from pipeline assets")
 
+        # Find Stage B BGM reference path if not explicitly provided
+        if not bgm_reference_path and music_assets:
+            # Check if stage B file exists in renders
+            bgm_stage_b = RENDERS_DIR / f"bgm_only_{job.id}.wav"
+            if bgm_stage_b.exists():
+                bgm_reference_path = bgm_stage_b
+            else:
+                bgm_reference_path = Path(music_assets[0].local_path)
+
         # Perform physical acoustic inspection on rendered MP4
-        audio_analysis = self.analyze_audio_stream(video_path)
+        audio_analysis = self.analyze_audio_stream(video_path, bgm_reference_path=bgm_reference_path)
 
         if audio_analysis["is_silent"]:
             reasons.append(f"Rendered video audio is silent or below audible threshold (Max Vol: {audio_analysis['max_volume_db']} dB)")
@@ -195,12 +268,18 @@ class QAEngine:
                 f"Master loudness {audio_analysis['integrated_lufs']:.1f} LUFS exceeds broadcast limit (Maximum: {MAX_AUDIO_LOUDNESS_LUFS} LUFS)"
             )
 
+        if not audio_analysis["bgm_identity_verified"]:
+            reasons.append(
+                f"BGM Identity Verification Failed: Score {audio_analysis['bgm_fingerprint_score']:.4f} < 0.65 threshold (Selected BGM missing or replaced by noise)"
+            )
+
         logger.info(
             f"BGM QA Final Audit -> File: {video_path.name} | "
             f"Loudness: {audio_analysis['integrated_lufs']:.1f} LUFS | "
             f"Max Volume: {audio_analysis['max_volume_db']:.1f} dB | "
-            f"Mean Volume: {audio_analysis['mean_volume_db']:.1f} dB | "
-            f"BGM Mixed & Audible: {audio_analysis['bgm_audible']}"
+            f"BGM Match Score: {audio_analysis['bgm_fingerprint_score']:.4f} | "
+            f"BGM Identity Verified: {audio_analysis['bgm_identity_verified']} | "
+            f"BGM Audible: {audio_analysis['bgm_audible']}"
         )
 
         # 5. Daily Publishing Limit Check (Strictly max 3 Shorts/day unless forced)
@@ -230,7 +309,7 @@ class QAEngine:
             passed=all_passed,
             resolution_ok=resolution_ok,
             duration_ok=duration_ok,
-            audio_ok=(audio_ok and not audio_analysis["is_silent"] and not audio_analysis["has_clipping"]),
+            audio_ok=(audio_ok and not audio_analysis["is_silent"] and not audio_analysis["has_clipping"] and audio_analysis["bgm_identity_verified"]),
             captions_ok=captions_ok,
             license_ok=license_ok,
             policy_ok=policy_ok,

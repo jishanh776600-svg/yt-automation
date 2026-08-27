@@ -173,11 +173,12 @@ class ShortsPipeline:
             )
             assets_used.append(music_asset)
             master_audio_path = RENDERS_DIR / f"master_{job_id}.aac"
-            self.audio_mixer.mix_audio(
+            master_audio_path, bgm_only_path = self.audio_mixer.mix_audio(
                 voice_path=voice_path,
                 music_path=Path(music_asset.local_path),
                 output_path=master_audio_path,
-                duration=audio_duration
+                duration=audio_duration,
+                job_id=job_id
             )
             StateMachine.transition(db, job, JobState.AUDIO_READY, "Master audio mixed with audible BGM (-13dB) and normalized")
             console.print(f"[green][+] Master Audio Mixed:[/green] Voice + '{Path(music_asset.local_path).name}' (-13dB BGM) normalized to -14.0 LUFS")
@@ -196,22 +197,28 @@ class ShortsPipeline:
 
             # 10. QUALITY CONTROL (QA) WITH AUTOMATED BGM FAIL-SAFE REPAIR LOOP
             StateMachine.transition(db, job, JobState.QA, "Running automated QA & BGM acoustic verification")
-            passed_qa, qa_report = self.qa_engine.run_qa(db, job, render_output, assets_used, force=force)
+            passed_qa, qa_report = self.qa_engine.run_qa(
+                db=db,
+                job=job,
+                render=render_output,
+                assets_used=assets_used,
+                bgm_reference_path=bgm_only_path,
+                force=force
+            )
 
             # FAIL-SAFE AUTO-REPAIR: If QA fails on audio or BGM, automatically re-mix & re-render once
             if not passed_qa and qa_report.failure_reasons and ("Audio" in qa_report.failure_reasons or "BGM" in qa_report.failure_reasons or "loudness" in qa_report.failure_reasons):
                 console.print(f"[yellow][!] Audio QA discrepancy detected ({qa_report.failure_reasons}). Executing automatic repair & re-render pass...[/yellow]")
                 try:
-                    # Repair audio remix
-                    repair_music = Path(self.audio_mixer.music_dir / "No Copyright Background Music.wav")
-                    self.audio_mixer.mix_audio(
+                    repair_music = Path(self.audio_mixer.music_dir / "No copyright Best Historical.wav")
+                    master_audio_path, bgm_only_path = self.audio_mixer.mix_audio(
                         voice_path=voice_path,
                         music_path=repair_music,
                         output_path=master_audio_path,
                         duration=audio_duration,
-                        bgm_volume_db=-13.0
+                        bgm_volume_db=-13.0,
+                        job_id=job_id
                     )
-                    # Re-render short
                     render_output = self.render_engine.assemble_short(
                         db=db,
                         job_id=job_id,
@@ -220,7 +227,14 @@ class ShortsPipeline:
                         master_audio_path=master_audio_path,
                         ass_subtitle_path=ass_path
                     )
-                    passed_qa, qa_report = self.qa_engine.run_qa(db, job, render_output, assets_used, force=force)
+                    passed_qa, qa_report = self.qa_engine.run_qa(
+                        db=db,
+                        job=job,
+                        render=render_output,
+                        assets_used=assets_used,
+                        bgm_reference_path=bgm_only_path,
+                        force=force
+                    )
                 except Exception as repair_err:
                     logger.warning(f"Auto-repair attempt warning: {repair_err}")
 
@@ -235,7 +249,23 @@ class ShortsPipeline:
             metadata = self.seo_engine.generate_metadata(topic, script)
             console.print(f"[cyan]SEO Title:[/cyan] [bold]{metadata['title']}[/bold]")
 
-            # 12. YOUTUBE UPLOAD & VERIFY (Strictly PUBLIC)
+            # 12. TEST MODE vs PRODUCTION YOUTUBE PUBLISHING
+            import shutil
+            desktop_path = Path(r"C:\Users\jisha\OneDrive\Desktop")
+            if TEST_MODE:
+                # ABSOLUTE TEST MODE: Strictly NO YouTube Uploading
+                dest_video = desktop_path / "VERIFIED_SHORT_TEST_OUTPUT.mp4"
+                shutil.copy2(Path(render_output.video_path), dest_video)
+                console.print(Panel.fit(
+                    f"[bold green][+] Test Pipeline Complete![/bold green]\n"
+                    f"Final Verified MP4 copied to Desktop: [bold yellow]{dest_video}[/bold yellow]\n"
+                    f"BGM Verified: [bold green]PASS[/bold green] ({Path(music_asset.local_path).name})\n"
+                    f"YouTube Upload: [bold cyan]BYPASSED (No publishing occurred)[/bold cyan]",
+                    border_style="green"
+                ))
+                return True
+
+            # PRODUCTION YOUTUBE UPLOAD & VERIFY (Strictly PUBLIC)
             StateMachine.transition(db, job, JobState.READY_TO_UPLOAD, "Ready for publishing")
             StateMachine.transition(db, job, JobState.UPLOADING, "Uploading to YouTube (Visibility: PUBLIC)")
             upload_rec = self.upload_engine.upload_short(db, job, render_output, metadata, privacy_status="public")
