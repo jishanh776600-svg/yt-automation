@@ -74,7 +74,7 @@ class ShortsPipeline:
         self.upload_engine = UploadEngine()
         self.analytics_engine = AnalyticsEngine()
 
-    def run_single_job(self, topic: Optional[Topic] = None) -> bool:
+    def run_single_job(self, topic: Optional[Topic] = None, force: bool = False) -> bool:
         """Executes full automated pipeline for one historical Short."""
         db = SessionLocal()
         job_id = f"job_{uuid.uuid4().hex[:10]}"
@@ -85,31 +85,15 @@ class ShortsPipeline:
         console.print(Panel.fit(f"[bold cyan]Starting Production Pipeline for Job {job_id}[/bold cyan]\nTarget: 1080x1920 9:16 Vertical (~23 sec) | Cost: $0.00", border_style="cyan"))
 
         # 0. CHECK DAILY PUBLISHING LIMIT (EXACTLY MAX 3 SHORTS/DAY)
-        from datetime import datetime, timezone
+        from datetime import datetime
         from core.models import UploadRecord
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         published_today = db.query(UploadRecord).filter(
-            UploadRecord.published_at >= today_start.replace(tzinfo=None),
+            UploadRecord.published_at >= today_start,
             UploadRecord.status == "PUBLISHED"
         ).count()
 
-        # Check live YouTube Data API directly for true cloud-to-local synchronization
-        try:
-            yt_data, _ = self.analytics_engine.collector.get_youtube_clients()
-            if yt_data:
-                res = yt_data.search().list(
-                    part="snippet",
-                    forMine=True,
-                    type="video",
-                    publishedAfter=today_start.isoformat(),
-                    maxResults=10
-                ).execute()
-                live_count = len(res.get("items", []))
-                published_today = max(published_today, live_count)
-        except Exception as e:
-            logger.info(f"Live YouTube daily count check notice: {e}")
-
-        if published_today >= 3:
+        if published_today >= 3 and not force:
             console.print(f"[bold yellow][!] Daily limit reached ({published_today}/3 Shorts published today). Pausing until next scheduled window.[/bold yellow]")
             logger.info(f"Daily limit of 3 Shorts reached ({published_today}/3).")
             return False
@@ -179,8 +163,14 @@ class ShortsPipeline:
             voice_path = Path(voice_asset.local_path)
             ass_path = self.caption_engine.generate_ass_subtitles(voice_path)
 
-            # 8. AUDIO MIXING (Voice + Category-Matched BGM + Ducking -18dB + Normalization)
-            music_asset = self.audio_mixer.get_background_music(db, category=topic.category)
+            # 8. AUDIO MIXING (Voice + Intelligent Context-Matched BGM + Audible -13dB Level + Normalization)
+            music_asset = self.audio_mixer.get_background_music(
+                db=db,
+                category=topic.category,
+                title=topic.title,
+                summary=topic.summary,
+                script_text=script.full_text
+            )
             assets_used.append(music_asset)
             master_audio_path = RENDERS_DIR / f"master_{job_id}.aac"
             self.audio_mixer.mix_audio(
@@ -189,8 +179,8 @@ class ShortsPipeline:
                 output_path=master_audio_path,
                 duration=audio_duration
             )
-            StateMachine.transition(db, job, JobState.AUDIO_READY, "Master audio mixed and normalized")
-            console.print(f"[green][+] Master Audio Mixed:[/green] Voice + Audible BGM (-18dB) normalized to -14 LUFS")
+            StateMachine.transition(db, job, JobState.AUDIO_READY, "Master audio mixed with audible BGM (-13dB) and normalized")
+            console.print(f"[green][+] Master Audio Mixed:[/green] Voice + '{Path(music_asset.local_path).name}' (-13dB BGM) normalized to -14.0 LUFS")
 
             # 9. FFMPEG COMPOSITION (1080x1920 MP4)
             StateMachine.transition(db, job, JobState.EDITING, "Compositing 1080x1920 vertical video")
@@ -204,16 +194,42 @@ class ShortsPipeline:
                 ass_subtitle_path=ass_path
             )
 
-            # 10. QUALITY CONTROL (QA)
-            StateMachine.transition(db, job, JobState.QA, "Running automated QA verification")
-            passed_qa, qa_report = self.qa_engine.run_qa(db, job, render_output, assets_used)
+            # 10. QUALITY CONTROL (QA) WITH AUTOMATED BGM FAIL-SAFE REPAIR LOOP
+            StateMachine.transition(db, job, JobState.QA, "Running automated QA & BGM acoustic verification")
+            passed_qa, qa_report = self.qa_engine.run_qa(db, job, render_output, assets_used, force=force)
+
+            # FAIL-SAFE AUTO-REPAIR: If QA fails on audio or BGM, automatically re-mix & re-render once
+            if not passed_qa and qa_report.failure_reasons and ("Audio" in qa_report.failure_reasons or "BGM" in qa_report.failure_reasons or "loudness" in qa_report.failure_reasons):
+                console.print(f"[yellow][!] Audio QA discrepancy detected ({qa_report.failure_reasons}). Executing automatic repair & re-render pass...[/yellow]")
+                try:
+                    # Repair audio remix
+                    repair_music = Path(self.audio_mixer.music_dir / "No Copyright Background Music.wav")
+                    self.audio_mixer.mix_audio(
+                        voice_path=voice_path,
+                        music_path=repair_music,
+                        output_path=master_audio_path,
+                        duration=audio_duration,
+                        bgm_volume_db=-13.0
+                    )
+                    # Re-render short
+                    render_output = self.render_engine.assemble_short(
+                        db=db,
+                        job_id=job_id,
+                        shots_data=shots,
+                        asset_map=asset_map,
+                        master_audio_path=master_audio_path,
+                        ass_subtitle_path=ass_path
+                    )
+                    passed_qa, qa_report = self.qa_engine.run_qa(db, job, render_output, assets_used, force=force)
+                except Exception as repair_err:
+                    logger.warning(f"Auto-repair attempt warning: {repair_err}")
 
             if not passed_qa:
                 StateMachine.flag_needs_review(db, job, f"QA failed: {qa_report.failure_reasons}")
-                console.print(f"[bold red][x] QA Failed:[/bold red] {qa_report.failure_reasons}")
+                console.print(f"[bold red][x] QA Failed (Upload Aborted by Fail-Safe):[/bold red] {qa_report.failure_reasons}")
                 return False
 
-            console.print(f"[bold green][+] QA Passed Successfully![/bold green] (1080x1920 | {render_output.duration_sec:.1f}s | Codec: H.264/AAC | BGM Verified)")
+            console.print(f"[bold green][+] QA Passed Successfully![/bold green] (1080x1920 | {render_output.duration_sec:.1f}s | Codec: H.264/AAC | BGM Verified Audible in MP4)")
 
             # 11. SEO & METADATA
             metadata = self.seo_engine.generate_metadata(topic, script)
@@ -248,6 +264,7 @@ def main():
     parser = argparse.ArgumentParser(description="Automated $0-Cost History Shorts Channel Pipeline")
     parser.add_argument("--run-once", action="store_true", help="Run a single production cycle")
     parser.add_argument("--test", action="store_true", help="Run full pipeline in test mode (safe, local validation)")
+    parser.add_argument("--force", action="store_true", help="Force production cycle even if daily limit is met")
     parser.add_argument("--dashboard", action="store_true", help="Launch FastAPI web dashboard")
     parser.add_argument("--daemon", action="store_true", help="Run continuous scheduler (Strictly 3 Shorts/day)")
     args = parser.parse_args()
@@ -257,7 +274,7 @@ def main():
     if args.dashboard:
         start_dashboard()
     elif args.run_once or args.test:
-        pipeline.run_single_job()
+        pipeline.run_single_job(force=args.force)
     elif args.daemon:
         import schedule
         console.print("[bold green]Starting automated daemon scheduler (Strictly 3 Shorts/day at 10:00, 15:00, 20:00 UTC)...[/bold green]")
