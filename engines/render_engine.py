@@ -112,7 +112,8 @@ class RenderEngine:
                 )
                 temp_clips.append(clip_out)
                 # Write to concat list (escaped forward slashes for FFmpeg)
-                f_concat.write(f"file '{str(clip_out).replace('\\', '/')}'\n")
+                clean_clip_path = str(clip_out).replace("\\", "/")
+                f_concat.write(f"file '{clean_clip_path}'\n")
 
         # 2. Concat visual clips together
         cmd_concat = [
