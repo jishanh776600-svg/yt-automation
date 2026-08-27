@@ -110,7 +110,7 @@ class AssetFetcher:
 
         photo_url = self.search_pexels_photo(db, query)
         source = "pexels"
-        license_type = LicenseType.PEXELS.value
+        license_type = LicenseType.PEXELS_LICENSE.value
 
         success = False
         if photo_url:
@@ -129,7 +129,7 @@ class AssetFetcher:
             if self.generate_ai_image(prompt, raw_img_path):
                 self.crop_to_vertical_9_16(raw_img_path, cropped_img_path)
                 source = "pollinations_ai"
-                license_type = LicenseType.CC0.value
+                license_type = LicenseType.PUBLIC_DOMAIN_CC0.value
                 success = True
 
         if not success:
@@ -137,7 +137,7 @@ class AssetFetcher:
             im = Image.new("RGB", (VIDEO_WIDTH, VIDEO_HEIGHT), color=(20, 24, 32))
             im.save(cropped_img_path, "JPEG", quality=95)
             source = "procedural_canvas"
-            license_type = LicenseType.CC0.value
+            license_type = LicenseType.PUBLIC_DOMAIN_CC0.value
 
         asset_rec = AssetRecord(
             id=asset_id,
