@@ -10,7 +10,7 @@ import os
 import uuid
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
@@ -23,6 +23,43 @@ logger = logging.getLogger(__name__)
 
 class UploadEngine:
     """Manages YouTube uploads and YouTube-side scheduled publishing via Data API v3."""
+
+    def validate_media_integrity(self, video_path: Union[str, Path]) -> None:
+        """
+        Strict pre-upload media integrity guard:
+        - Rejects missing files
+        - Rejects files smaller than 500 KB (a valid 20-30s 1080x1920 Short is typically 15MB - 35MB)
+        - Runs FFmpeg integrity decode probe using configured FFMPEG_EXE
+        - Rejects invalid/corrupt/truncated/non-video media
+        - Ensures rejected media never reaches YouTube API
+        """
+        path = Path(video_path)
+        if not path.exists():
+            raise FileNotFoundError(f"[UPLOAD_INTEGRITY] Video file does not exist: {path}")
+
+        file_size = path.stat().st_size
+        min_size = 500 * 1024  # 500 KB minimum
+        if file_size < min_size:
+            raise ValueError(
+                f"[UPLOAD_INTEGRITY] Video file too small ({file_size} bytes < {min_size} bytes minimum): {path}"
+            )
+
+        from config.settings import FFMPEG_EXE
+        import subprocess
+
+        try:
+            probe = subprocess.run(
+                [FFMPEG_EXE, "-v", "error", "-i", str(path), "-f", "null", "-"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+        except Exception as probe_err:
+            raise ValueError(f"[UPLOAD_INTEGRITY] Failed to run FFmpeg integrity probe on {path}: {probe_err}")
+
+        if probe.returncode != 0:
+            err_details = probe.stderr.strip()[:300] if probe.stderr else "Non-zero exit code"
+            raise ValueError(f"[UPLOAD_INTEGRITY] Media failed FFmpeg integrity validation: {err_details}")
 
     def _is_test_mode(self) -> bool:
         from config.settings import TEST_MODE
@@ -68,7 +105,7 @@ class UploadEngine:
             return existing
 
         # 2. Test Mode Handling
-        if self._is_test_mode() or not video_path.exists():
+        if self._is_test_mode():
             logger.info(f"[TEST_MODE/STAGING] Staging Scheduled YouTube Short '{metadata['title']}' for slot {publish_at_str}.")
             record = UploadRecord(
                 id=upload_id,
@@ -89,6 +126,9 @@ class UploadEngine:
             return record
 
         # 3. Production YouTube API Scheduled Upload
+        # Pre-Upload Media Integrity Guard: Reject missing, truncated, or corrupt media BEFORE reaching YouTube API
+        self.validate_media_integrity(video_path)
+
         try:
             from googleapiclient.discovery import build
             from googleapiclient.http import MediaFileUpload

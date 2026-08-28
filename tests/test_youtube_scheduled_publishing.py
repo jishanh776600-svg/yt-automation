@@ -33,9 +33,12 @@ class TestYouTubeScheduledPublishing(unittest.TestCase):
         cls.db = SessionLocal()
         cls.scheduler = PublicationScheduler(min_lead_minutes=15)
         cls.upload_engine = UploadEngine()
+        cls._test_mode_patcher = patch("engines.upload_engine.UploadEngine._is_test_mode", return_value=True)
+        cls._test_mode_patcher.start()
 
     @classmethod
     def tearDownClass(cls):
+        cls._test_mode_patcher.stop()
         cls.db.close()
 
     def setUp(self):

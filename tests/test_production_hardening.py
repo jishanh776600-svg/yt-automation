@@ -43,8 +43,11 @@ class TestProductionHardening(unittest.TestCase):
             self.test_render_file.write_bytes(b"dummy_mp4_content_for_test")
 
         self.upload_engine = UploadEngine()
+        self._test_mode_patcher = patch("engines.upload_engine.UploadEngine._is_test_mode", return_value=True)
+        self._test_mode_patcher.start()
 
     def tearDown(self):
+        self._test_mode_patcher.stop()
         self.db.close()
         if self.test_render_file.exists():
             try:

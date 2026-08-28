@@ -752,3 +752,27 @@
 | `duration_target` | **EXTENDED_26S** | 6 | `+109.7%` | `USABLE_EVIDENCE` | **1.50** | Usable evidence (N=6). Full weight adjustment (+109.7% lift). |
 | `hook_archetype` | **MYSTERY_CURIOSITY** | 6 | `+109.7%` | `USABLE_EVIDENCE` | **1.50** | Usable evidence (N=6). Full weight adjustment (+109.7% lift). |
 | `motion_style` | **SLOW_CINEMATIC_ZOOM** | 6 | `+109.7%` | `USABLE_EVIDENCE` | **1.50** | Usable evidence (N=6). Full weight adjustment (+109.7% lift). |
+
+## Learning Cycle — 2026-08-28 18:51:08 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-28 21:06:08 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-28 21:08:42 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
