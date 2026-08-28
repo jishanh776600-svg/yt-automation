@@ -418,3 +418,18 @@
 | `duration_target` | **EXTENDED_26S** | 6 | `+61.7%` | `USABLE_EVIDENCE` | **1.50** | Usable evidence (N=6). Full weight adjustment (+61.7% lift). |
 | `hook_archetype` | **MYSTERY_CURIOSITY** | 6 | `+61.7%` | `USABLE_EVIDENCE` | **1.50** | Usable evidence (N=6). Full weight adjustment (+61.7% lift). |
 | `motion_style` | **SLOW_CINEMATIC_ZOOM** | 6 | `+61.7%` | `USABLE_EVIDENCE` | **1.50** | Usable evidence (N=6). Full weight adjustment (+61.7% lift). |
+
+## Learning Cycle — 2026-08-28 14:05:36 UTC
+
+- **Mature Videos Evaluated**: 36
+- **Channel Performance Baseline**: 49.83/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Eerie / Unsolved / Mysterious** | 6 | `+61.7%` | `USABLE_EVIDENCE` | **1.50** | Usable evidence (N=6). Full weight adjustment (+61.7% lift). |
+| `category` | **Ancient Mysteries** | 6 | `+61.7%` | `USABLE_EVIDENCE` | **1.50** | Usable evidence (N=6). Full weight adjustment (+61.7% lift). |
+| `category` | **Documented Disasters** | 2 | `-48.6%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-61.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `duration_target` | **EXTENDED_26S** | 6 | `+61.7%` | `USABLE_EVIDENCE` | **1.50** | Usable evidence (N=6). Full weight adjustment (+61.7% lift). |
+| `hook_archetype` | **MYSTERY_CURIOSITY** | 6 | `+61.7%` | `USABLE_EVIDENCE` | **1.50** | Usable evidence (N=6). Full weight adjustment (+61.7% lift). |
+| `motion_style` | **SLOW_CINEMATIC_ZOOM** | 6 | `+61.7%` | `USABLE_EVIDENCE` | **1.50** | Usable evidence (N=6). Full weight adjustment (+61.7% lift). |
