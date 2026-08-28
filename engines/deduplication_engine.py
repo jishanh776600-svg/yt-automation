@@ -3,8 +3,9 @@ Semantic Story Deduplication Engine.
 Prevents duplicate storytelling across YouTube Shorts production:
   - Distinguishes Exact Duplicates, Semantic Duplicates, Angle Variations, Related Events, and New Stories.
   - Multi-source corpus aggregation (SQLite DB + Google Drive Vault + Upload Records).
-  - Layered Deterministic Event Fingerprinting (Years, Entities, Locations, Action Stems).
-  - Semantic Natural Language Inference (NLI) comparison.
+  - Layered Deterministic Event Fingerprinting (Years, Locations, Entity-Pairs, Action Stems).
+  - Entity-Pair (Year + Location) collision heuristic with semantic NLI escalation.
+  - Fail-closed semantic safety gate on entity-pair collisions.
 """
 import re
 import json
@@ -27,7 +28,8 @@ DEDUP_STOPWORDS = {
     "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very",
     "can", "will", "just", "don", "should", "now", "that", "this", "these", "those",
     "story", "history", "true", "shocking", "unbelievable", "bizarre", "strange",
-    "incident", "event", "disaster", "crisis", "mystery", "case"
+    "incident", "event", "disaster", "crisis", "mystery", "case", "great", "short",
+    "shorts", "video", "youtube", "tiktok"
 }
 
 # Thematic anchors that link events when exact year matches
@@ -39,8 +41,33 @@ THEMATIC_EVENT_ANCHORS = {
     "dancing", "plague", "fever", "compulsive", "strasbourg", "square",
     "roanoke", "settlers", "croatoan", "disappeared", "colony",
     "ocean", "liner", "titanic", "britannic", "olympic", "unsinkable", "nurse",
-    "latrine", "cesspool", "erfurt", "cathedral", "collapse", "nobles",
-    "emu", "australia", "wheat", "soldiers", "lewis", "machine"
+    "latrine", "cesspool", "erfurt", "cathedral", "collapse", "privy", "nobles", "diet",
+    "emu", "australia", "wheat", "soldiers", "lewis", "machine", "defenestration",
+    "window", "prague", "castle", "governor", "dung", "manure"
+}
+
+# Canonical historical location dictionary for normalization
+HISTORICAL_LOCATION_ALIASES = {
+    "erfurt": "erfurt",
+    "london": "london",
+    "thames": "london",
+    "boston": "boston",
+    "zanzibar": "zanzibar",
+    "strasbourg": "strasbourg",
+    "prague": "prague",
+    "den helder": "den helder",
+    "san juan": "san juan island",
+    "san juan island": "san juan island",
+    "halifax": "halifax",
+    "baarle": "baarle-hertog",
+    "baarle-hertog": "baarle-hertog",
+    "roanoke": "roanoke",
+    "paris": "paris",
+    "rome": "rome",
+    "berlin": "berlin",
+    "vienna": "vienna",
+    "athens": "athens",
+    "tokyo": "tokyo"
 }
 
 
@@ -52,12 +79,13 @@ class EventFingerprint:
     locations: Set[str]
     action_stems: Set[str]
     summary_text: str = ""
+    entity_pairs: Set[Tuple[int, str]] = field(default_factory=set)
 
 
 @dataclass
 class DeduplicationResult:
     is_duplicate: bool
-    classification: str  # EXACT_DUPLICATE, SEMANTIC_DUPLICATE, SAME_EVENT_DIFFERENT_ANGLE, RELATED_DISTINCT_EVENT, COMPLETELY_NEW_STORY
+    classification: str  # EXACT_DUPLICATE, SEMANTIC_DUPLICATE, SAME_EVENT_DIFFERENT_ANGLE, RELATED_DISTINCT_EVENT, COMPLETELY_NEW_STORY, REJECTED_POTENTIAL_EVENT_COLLISION
     matched_event_title: Optional[str] = None
     similarity_score: float = 0.0
     shared_elements: List[str] = field(default_factory=list)
@@ -66,16 +94,99 @@ class DeduplicationResult:
 
 
 class StoryDeduplicationEngine:
-    """Multi-layer Semantic Story Deduplication Gate."""
+    """Multi-layer Semantic & Entity-Aware Story Deduplication Gate."""
+
+    def normalize_text(self, text: str) -> str:
+        """Removes punctuation and normalizes whitespace."""
+        text = text.replace("—", " ").replace("–", " ").replace("-", " ")
+        text = re.sub(r"[^\w\s\d]", " ", text)
+        return re.sub(r"\s+", " ", text).strip().lower()
+
+    def normalize_location(self, loc: str) -> str:
+        """Normalizes city/location string handling aliases and punctuation."""
+        clean = self.normalize_text(loc)
+        clean = re.sub(r"\b(city|town|village|port|river|island|battle|of|in|at)\b", "", clean).strip()
+        for alias, canonical in HISTORICAL_LOCATION_ALIASES.items():
+            if alias in clean:
+                return canonical
+        return clean
 
     def extract_years(self, text: str) -> Set[int]:
-        """Extracts 3 or 4 digit historical years."""
+        """
+        Extracts 3 or 4 digit historical years, handling A.D., B.C., C.E., circa variations.
+        Examples: '1184', 'A.D. 1184', '1184 AD', 'c. 1184', 'year 1858'.
+        """
+        years = set()
+        # Explicit year with era/prefix
+        era_matches = re.findall(
+            r"(?:\b(?:a\.?d\.?|c\.?|circa|in|year)\s*)?(\b\d{3,4}\b)(?:\s*(?:a\.?d\.?|b\.?c\.?e?|c\.?e\.?))?",
+            text,
+            flags=re.IGNORECASE
+        )
+        for m in era_matches:
+            try:
+                y = int(m)
+                if 500 <= y <= 2099:
+                    years.add(y)
+            except ValueError:
+                continue
+
+        # Standard 4-digit and 3-digit years
         matches = re.findall(r"\b(1\d{3}|20\d{2}|[5-9]\d{2})\b", text)
-        return {int(m) for m in matches}
+        for m in matches:
+            try:
+                years.add(int(m))
+            except ValueError:
+                continue
+        return years
+
+    def extract_locations(self, text: str) -> Set[str]:
+        """Extracts normalized geographical locations and cities."""
+        locations = set()
+        text_lower = text.lower()
+
+        # Check known canonical historical locations and aliases
+        for alias, canonical in HISTORICAL_LOCATION_ALIASES.items():
+            pattern = rf"\b{re.escape(alias)}\b"
+            if re.search(pattern, text_lower):
+                locations.add(canonical)
+
+        # Extract capitalized entities that resemble cities/regions
+        proper_matches = re.findall(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b", text)
+        for m in proper_matches:
+            norm = self.normalize_location(m)
+            if norm and norm not in DEDUP_STOPWORDS and len(norm) >= 3:
+                # Exclude non-location historical terms
+                if norm not in {"british", "american", "european", "german", "french", "royal", "empire", "navy", "king", "queen", "sultan", "tsunami", "flood", "disaster", "collapse", "privy", "latrine", "war", "battle", "riot", "parliament", "church"}:
+                    locations.add(norm)
+
+        # Prepositional location phrases: "in <Location>", "of <Location>", "at <Location>"
+        prep_matches = re.findall(r"\b(?:in|of|at|near)\s+([A-Z][a-z]+)\b", text)
+        for pm in prep_matches:
+            norm = self.normalize_location(pm)
+            if norm and norm not in DEDUP_STOPWORDS and len(norm) >= 3:
+                locations.add(norm)
+
+        return locations
+
+    def extract_entity_pairs(self, title: str, summary: str = "", script_text: str = "") -> Set[Tuple[int, str]]:
+        """
+        Extracts bounded, normalized (Year, Location) entity pairs.
+        Example: ('1184', 'erfurt'), ('1858', 'london'), ('1919', 'boston').
+        """
+        combined = f"{title} {summary} {script_text}"
+        years = self.extract_years(combined)
+        locations = self.extract_locations(combined)
+
+        pairs = set()
+        for y in years:
+            for loc in locations:
+                pairs.add((y, loc))
+        return pairs
 
     def extract_stems(self, text: str) -> Set[str]:
         """Extracts significant normalized lexical stems with suffix stripping."""
-        words = re.findall(r"\b[a-z]{4,}\b", text.lower())
+        words = re.findall(r"\b[a-z]{3,}\b", text.lower())
         stems = set()
         for w in words:
             if w in DEDUP_STOPWORDS:
@@ -102,14 +213,18 @@ class StoryDeduplicationEngine:
         combined_text = f"{title} {summary} {script_text}"
         years = self.extract_years(combined_text)
         entities = self.extract_entities(combined_text)
+        locations = self.extract_locations(combined_text)
         stems = self.extract_stems(combined_text)
+        entity_pairs = self.extract_entity_pairs(title, summary, script_text)
+
         return EventFingerprint(
             title=title,
             years=years,
             entities=entities,
-            locations=entities,
+            locations=locations,
             action_stems=stems,
-            summary_text=combined_text
+            summary_text=combined_text,
+            entity_pairs=entity_pairs
         )
 
     def get_published_and_ready_corpus(self, db: Session, exclude_topic_id: Optional[str] = None) -> List[EventFingerprint]:
@@ -127,7 +242,7 @@ class StoryDeduplicationEngine:
             if t.title.lower() in seen_titles:
                 continue
             seen_titles.add(t.title.lower())
-            
+
             script = db.query(ScriptRecord).filter(ScriptRecord.topic_id == t.id).first()
             script_text = script.full_text if script else ""
             fp = self.build_fingerprint(t.title, t.summary, script_text)
@@ -150,8 +265,7 @@ class StoryDeduplicationEngine:
         existing_fp: EventFingerprint
     ) -> Optional[DeduplicationResult]:
         """
-        Layer 2: Deterministic Consistency and Fingerprint Matching.
-        Flags duplicates if core years, locations, and action stems match closely.
+        Layer 2: Deterministic Consistency, Entity-Pair & Fingerprint Matching.
         """
         # 1. Exact title match
         if candidate_fp.title.lower().strip() == existing_fp.title.lower().strip():
@@ -166,17 +280,60 @@ class StoryDeduplicationEngine:
             )
 
         shared_years = candidate_fp.years.intersection(existing_fp.years)
+        shared_locations = candidate_fp.locations.intersection(existing_fp.locations)
+        shared_entity_pairs = candidate_fp.entity_pairs.intersection(existing_fp.entity_pairs)
         shared_entities = candidate_fp.entities.intersection(existing_fp.entities)
         shared_stems = candidate_fp.action_stems.intersection(existing_fp.action_stems)
 
-        # 2. Same Year + Thematic Anchor Match (e.g. 1858 + Parliament/River/Miasma)
+        # 2. Location + Thematic Anchor Match (e.g. London + Parliament/Stink, Boston + Molasses, Erfurt + Latrine/Privy/Collapse)
+        if shared_locations:
+            candidate_anchors = candidate_fp.action_stems.intersection(THEMATIC_EVENT_ANCHORS)
+            existing_anchors = existing_fp.action_stems.intersection(THEMATIC_EVENT_ANCHORS)
+            shared_anchors = candidate_anchors.intersection(existing_anchors)
+            anchors_in_existing = [a for a in candidate_anchors if a in existing_fp.summary_text.lower()]
+
+            if shared_anchors or len(anchors_in_existing) >= 1:
+                found_anchors = list(shared_anchors) if shared_anchors else anchors_in_existing
+                return DeduplicationResult(
+                    is_duplicate=True,
+                    classification="SEMANTIC_DUPLICATE",
+                    matched_event_title=existing_fp.title,
+                    similarity_score=0.96,
+                    shared_elements=[f"Location: {list(shared_locations)}", f"Anchors: {found_anchors}"],
+                    reason=f"Candidate matches historical event '{existing_fp.title}' on Location '{list(shared_locations)}' and thematic anchor elements {found_anchors}.",
+                    is_allowed=False
+                )
+
+        # 3. Entity-Pair Match: Year + City/Location Match
+        # If candidate shares (Year, Location) entity pair AND core event action stems -> Deterministic SEMANTIC_DUPLICATE
+        if shared_entity_pairs or (shared_years and shared_locations):
+            candidate_thematic = candidate_fp.action_stems.intersection(THEMATIC_EVENT_ANCHORS)
+            existing_thematic = existing_fp.action_stems.intersection(THEMATIC_EVENT_ANCHORS)
+            shared_thematic = candidate_thematic.intersection(existing_thematic)
+
+            # Check if this is a known distinct event disambiguation (e.g. 1854 Cholera vs 1854 other)
+            is_distinct_disambiguated = ("cholera" in candidate_fp.summary_text.lower() and "stink" in existing_fp.summary_text.lower())
+
+            if not is_distinct_disambiguated:
+                if shared_thematic or len(shared_stems) >= 1:
+                    pair_desc = list(shared_entity_pairs) if shared_entity_pairs else [(list(shared_years)[0], list(shared_locations)[0])]
+                    return DeduplicationResult(
+                        is_duplicate=True,
+                        classification="SEMANTIC_DUPLICATE",
+                        matched_event_title=existing_fp.title,
+                        similarity_score=0.96,
+                        shared_elements=[f"Entity-Pair (Year+Location): {pair_desc}", f"Anchors: {list(shared_thematic | shared_stems)}"],
+                        reason=f"Candidate matches historical event '{existing_fp.title}' on Year+Location pair {pair_desc} and thematic elements {list(shared_thematic | shared_stems)}.",
+                        is_allowed=False
+                    )
+
+        # 4. Same Year + Thematic Anchor Match
         if shared_years:
             candidate_thematic = candidate_fp.action_stems.intersection(THEMATIC_EVENT_ANCHORS)
             existing_thematic = existing_fp.action_stems.intersection(THEMATIC_EVENT_ANCHORS)
             shared_thematic = candidate_thematic.intersection(existing_thematic)
-            
+
             if shared_thematic or len(shared_entities) >= 1 or len(shared_stems) >= 2:
-                # Disambiguate distinct events in the same year (e.g. 1854 Cholera vs other)
                 if not ("cholera" in candidate_fp.summary_text.lower() and "stink" in existing_fp.summary_text.lower()):
                     shared_desc = [f"Year: {list(shared_years)}", f"Anchors: {list(shared_thematic | shared_entities)}"]
                     return DeduplicationResult(
@@ -189,15 +346,11 @@ class StoryDeduplicationEngine:
                         is_allowed=False
                     )
 
-        # 3. High Specific Entity & Stem Overlap
-        specific_entities = {e for e in shared_entities if e not in {"british", "american", "european", "german", "french", "royal", "empire", "navy"}}
-        
-        # Check Title Token Overlap (ignoring numbers/years)
+        # 4. Title Token Overlap (ignoring stopwords/numbers)
         candidate_title_words = set(re.findall(r"\b[a-z]{4,}\b", candidate_fp.title.lower())) - DEDUP_STOPWORDS
         existing_title_words = set(re.findall(r"\b[a-z]{4,}\b", existing_fp.title.lower())) - DEDUP_STOPWORDS
         title_overlap = candidate_title_words.intersection(existing_title_words)
-        
-        # If titles share 2+ significant words (e.g. "great", "stink", "london") -> DUPLICATE even if year changed
+
         if len(title_overlap) >= 2 and len(candidate_title_words) > 0 and len(title_overlap) / len(candidate_title_words) >= 0.5:
             return DeduplicationResult(
                 is_duplicate=True,
@@ -209,10 +362,12 @@ class StoryDeduplicationEngine:
                 is_allowed=False
             )
 
-        # If candidate has explicit years that do not intersect and titles don't match, do not flag deterministically
+        # If candidate has explicit years that do not intersect and locations do not match, do not flag deterministically
         if candidate_fp.years and existing_fp.years and not shared_years:
             return None
 
+        # 5. Multi-Entity + Multi-Stem Overlap
+        specific_entities = {e for e in shared_entities if e not in {"british", "american", "european", "german", "french", "royal", "empire", "navy"}}
         if (len(specific_entities) >= 2 and len(shared_stems) >= 3) or (len(shared_stems) >= 6):
             shared_desc = [f"Entities: {list(specific_entities)}", f"Keywords: {list(shared_stems)[:4]}"]
             return DeduplicationResult(
@@ -234,12 +389,26 @@ class StoryDeduplicationEngine:
         candidate_script: str,
         existing_title: str,
         existing_summary: str,
-        existing_script: str
+        existing_script: str,
+        has_entity_pair_collision: bool = False,
+        colliding_pair: Optional[Tuple[int, str]] = None
     ) -> DeduplicationResult:
         """
         Layer 3: Semantic NLI Evaluation with Structured Classification.
+        Fail-Closed Safety: If has_entity_pair_collision=True and LLM is unavailable, candidate is REJECTED.
         """
         if not GEMINI_API_KEY:
+            if has_entity_pair_collision:
+                pair_str = f"Year: {colliding_pair[0]}, Location: {colliding_pair[1]}" if colliding_pair else "Year+City"
+                return DeduplicationResult(
+                    is_duplicate=True,
+                    classification="REJECTED_POTENTIAL_EVENT_COLLISION",
+                    matched_event_title=existing_title,
+                    similarity_score=0.85,
+                    shared_elements=[f"Entity-Pair Collision: {pair_str}"],
+                    reason=f"Candidate shares {pair_str} with '{existing_title}'. Semantic review was unavailable (missing API key), so candidate was rejected under fail-closed duplicate safety.",
+                    is_allowed=False
+                )
             return DeduplicationResult(
                 is_duplicate=False,
                 classification="COMPLETELY_NEW_STORY",
@@ -310,7 +479,18 @@ class StoryDeduplicationEngine:
             )
 
         except Exception as e:
-            logger.warning(f"Semantic LLM deduplication notice: {e} (Relying strictly on Tier 1 deterministic gate)")
+            logger.warning(f"Semantic LLM deduplication exception: {e}")
+            if has_entity_pair_collision:
+                pair_str = f"Year: {colliding_pair[0]}, Location: {colliding_pair[1]}" if colliding_pair else "Year+City"
+                return DeduplicationResult(
+                    is_duplicate=True,
+                    classification="REJECTED_POTENTIAL_EVENT_COLLISION",
+                    matched_event_title=existing_title,
+                    similarity_score=0.85,
+                    shared_elements=[f"Entity-Pair Collision: {pair_str}"],
+                    reason=f"Candidate shares {pair_str} with '{existing_title}'. Semantic review failed ({e}), so candidate was rejected under fail-closed duplicate safety.",
+                    is_allowed=False
+                )
             return DeduplicationResult(
                 is_duplicate=False,
                 classification="COMPLETELY_NEW_STORY",
@@ -330,6 +510,10 @@ class StoryDeduplicationEngine:
     ) -> DeduplicationResult:
         """
         Evaluates a candidate story against the entire published and ready vault corpus.
+        Executes:
+          1. Deterministic Lexical & Entity-Pair checks.
+          2. Entity-Pair (Year + Location) escalation to Semantic NLI.
+          3. General Semantic NLI for thematic connections.
         """
         if corpus is None and db is not None:
             corpus = self.get_published_and_ready_corpus(db, exclude_topic_id=exclude_topic_id)
@@ -338,19 +522,40 @@ class StoryDeduplicationEngine:
 
         candidate_fp = self.build_fingerprint(candidate_title, candidate_summary, candidate_script)
 
-        # 1. Tier 1 / 2 Deterministic Check against all items
+        # 1. Deterministic Fingerprint Check against all items
         for existing in corpus:
             det_res = self.check_deterministic_duplicate(candidate_fp, existing)
             if det_res and not det_res.is_allowed:
                 return det_res
 
-        # 2. Tier 3 LLM Semantic Check against top candidate matches
+        # 2. Entity-Pair (Year + City) Escalation to Semantic NLI
+        for existing in corpus:
+            shared_pairs = candidate_fp.entity_pairs.intersection(existing.entity_pairs)
+            shared_years = candidate_fp.years.intersection(existing.years)
+            shared_locations = candidate_fp.locations.intersection(existing.locations)
+
+            # If candidate and existing share a Year + Location pair
+            if shared_pairs or (shared_years and shared_locations):
+                colliding_pair = list(shared_pairs)[0] if shared_pairs else (list(shared_years)[0], list(shared_locations)[0])
+                sem_res = self.check_semantic_llm(
+                    candidate_title=candidate_title,
+                    candidate_summary=candidate_summary,
+                    candidate_script=candidate_script,
+                    existing_title=existing.title,
+                    existing_summary=existing.summary_text,
+                    existing_script="",
+                    has_entity_pair_collision=True,
+                    colliding_pair=colliding_pair
+                )
+                if not sem_res.is_allowed:
+                    return sem_res
+
+        # 3. General Semantic NLI for shared years, entities, or thematic stems
         for existing in corpus:
             shared_years = candidate_fp.years.intersection(existing.years)
             shared_entities = candidate_fp.entities.intersection(existing.entities)
             shared_stems = candidate_fp.action_stems.intersection(existing.action_stems)
-            
-            # If any thematic connection exists, run deep semantic NLI
+
             if shared_years or len(shared_entities) >= 1 or len(shared_stems) >= 2:
                 sem_res = self.check_semantic_llm(
                     candidate_title=candidate_title,
@@ -358,7 +563,8 @@ class StoryDeduplicationEngine:
                     candidate_script=candidate_script,
                     existing_title=existing.title,
                     existing_summary=existing.summary_text,
-                    existing_script=""
+                    existing_script="",
+                    has_entity_pair_collision=False
                 )
                 if not sem_res.is_allowed:
                     return sem_res
