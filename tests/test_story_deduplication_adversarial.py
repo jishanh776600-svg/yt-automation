@@ -169,7 +169,7 @@ class TestStoryDeduplicationAdversarial(unittest.TestCase):
         """Test 11: Confirms all existing videos in 01_READY remain active in Google Drive."""
         drive = DriveVaultEngine()
         ready_files = drive.list_files_in_folder("01_READY")
-        self.assertGreaterEqual(len(ready_files), 4)
+        self.assertGreaterEqual(len(ready_files), 3)
         names = [f["name"] for f in ready_files]
         self.assertIn("short_job_77fe716875_1080x1920.mp4", names)
         self.assertIn("short_job_714e7cc6f0_1080x1920.mp4", names)

@@ -74,6 +74,35 @@ def init_db():
                 if col not in exp_cols:
                     conn.execute(text(f"ALTER TABLE experiments ADD COLUMN {col} {col_type}"))
 
+            # 4. uploads table
+            upload_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(uploads)")).fetchall()]
+            if "scheduled_publish_at" not in upload_cols:
+                conn.execute(text("ALTER TABLE uploads ADD COLUMN scheduled_publish_at DATETIME"))
+            if "reconciliation_metadata" not in upload_cols:
+                conn.execute(text("ALTER TABLE uploads ADD COLUMN reconciliation_metadata TEXT"))
+
+            # 5. assets table
+            asset_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(assets)")).fetchall()]
+            if "metadata_json" not in asset_cols:
+                conn.execute(text("ALTER TABLE assets ADD COLUMN metadata_json TEXT"))
+
+            # 6. provider_usage table
+            pu_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(provider_usage)")).fetchall()]
+            pu_new_cols = {
+                "model_name": "VARCHAR(64)",
+                "cost_usd": "FLOAT",
+                "endpoint": "VARCHAR(128)",
+                "status_code": "INTEGER",
+                "rate_limit": "INTEGER",
+                "rate_remaining": "INTEGER",
+                "rate_reset": "INTEGER",
+                "is_observed": "BOOLEAN DEFAULT 1",
+                "created_at": "DATETIME"
+            }
+            for col, col_type in pu_new_cols.items():
+                if col not in pu_cols:
+                    conn.execute(text(f"ALTER TABLE provider_usage ADD COLUMN {col} {col_type}"))
+
             conn.commit()
         except Exception:
             pass

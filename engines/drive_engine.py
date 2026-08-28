@@ -50,6 +50,37 @@ class DriveVaultEngine:
             logger.error(f"Failed to initialize Google Drive API client: {e}")
             raise
 
+    def get_storage_quota(self) -> Optional[Dict[str, Any]]:
+        """
+        Retrieves Google Drive storage quota metrics via Drive API about.get(fields="storageQuota").
+        Returns {'limit': int, 'usage': int, 'usage_in_drive': int, 'usage_in_trash': int} or None.
+        Includes a 5-minute memory cache to prevent burning Drive API calls on rapid refreshes.
+        """
+        import time
+        if hasattr(self, "_storage_quota_cache") and self._storage_quota_cache:
+            cache_time, data = self._storage_quota_cache
+            if time.time() - cache_time < 300:  # 5-minute TTL
+                return data
+
+        if not self.token_path.exists():
+            return None
+
+        try:
+            drive = self.get_drive_service()
+            about = drive.about().get(fields="storageQuota").execute()
+            raw = about.get("storageQuota", {})
+            data = {
+                "limit": int(raw["limit"]) if raw.get("limit") is not None else None,
+                "usage": int(raw["usage"]) if raw.get("usage") is not None else None,
+                "usage_in_drive": int(raw["usageInDrive"]) if raw.get("usageInDrive") is not None else None,
+                "usage_in_trash": int(raw["usageInTrash"]) if raw.get("usageInTrash") is not None else None,
+            }
+            self._storage_quota_cache = (time.time(), data)
+            return data
+        except Exception as e:
+            logger.warning(f"Error fetching Google Drive storage quota: {e}")
+            return None
+
     def find_folder(self, folder_name: str, parent_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Searches for an existing folder by name (and optional parent).

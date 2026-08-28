@@ -33,7 +33,8 @@ class StateMachine:
         JobState.EDITING: [JobState.QA, JobState.FAILED, JobState.NEEDS_REVIEW],
         JobState.QA: [JobState.READY_TO_UPLOAD, JobState.NEEDS_REVIEW, JobState.FAILED],
         JobState.READY_TO_UPLOAD: [JobState.UPLOADING, JobState.NEEDS_REVIEW, JobState.FAILED],
-        JobState.UPLOADING: [JobState.PUBLISHED, JobState.FAILED, JobState.NEEDS_REVIEW],
+        JobState.UPLOADING: [JobState.SCHEDULED, JobState.PUBLISHED, JobState.FAILED, JobState.NEEDS_REVIEW],
+        JobState.SCHEDULED: [JobState.PUBLISHED, JobState.FAILED, JobState.NEEDS_REVIEW],
         JobState.PUBLISHED: [],
         JobState.FAILED: [JobState.QUEUED],
         JobState.NEEDS_REVIEW: [JobState.QUEUED, JobState.READY_TO_UPLOAD, JobState.FAILED],
@@ -85,3 +86,18 @@ class StateMachine:
         db.add(log_entry)
         db.commit()
         logger.warning(f"Job {job.id} moved to NEEDS_REVIEW: {reason}")
+
+    @classmethod
+    def record_recovery_event(cls, db: Session, job_id: str, action: str, message: str, details: Optional[Dict[str, Any]] = None):
+        """Records a genuine persisted recovery event in JobLog."""
+        log_entry = JobLog(
+            job_id=job_id,
+            stage="RECOVERY",
+            status=action,
+            message=message,
+            details_json=json.dumps(details or {}, ensure_ascii=False),
+            created_at=datetime.utcnow()
+        )
+        db.add(log_entry)
+        db.commit()
+        logger.info(f"[RECOVERY_LOG] Job {job_id} -> {action}: {message}")

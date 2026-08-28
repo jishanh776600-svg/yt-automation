@@ -42,9 +42,11 @@ from engines.render_engine import RenderEngine
 from engines.qa_engine import QAEngine
 from engines.seo_engine import SEOEngine
 from engines.upload_engine import UploadEngine
+from engines.scheduler_engine import PublicationScheduler
 from engines.analytics_engine import AnalyticsEngine
 from engines.drive_engine import DriveVaultEngine
 from engines.experiment_manager import ExperimentManager
+from core.recovery_manager import RecoveryManager
 
 # Setup UTF-8 Encoding on Windows
 if sys.platform == "win32":
@@ -81,9 +83,11 @@ class ShortsPipeline:
         self.qa_engine = QAEngine()
         self.seo_engine = SEOEngine()
         self.upload_engine = UploadEngine()
+        self.scheduler = PublicationScheduler()
         self.analytics_engine = AnalyticsEngine()
         self.drive_engine = DriveVaultEngine()
         self.experiment_manager = ExperimentManager()
+        self.recovery_manager = RecoveryManager(self.drive_engine, self.upload_engine)
 
     def _render_and_qa_job(self, db, job: Job, topic: Topic, force: bool = False) -> Tuple[Optional[RenderOutput], Optional[Dict[str, Any]]]:
         """Internal helper: Executes research -> script -> visuals -> voice -> audio -> render -> QA -> SEO."""
@@ -352,37 +356,62 @@ class ShortsPipeline:
     def maintain_buffer(self, target_stock: int = 12) -> int:
         """
         BUFFER MANAGER: Checks current ready stock in Drive '01_READY'.
-        If stock < target_stock, generates the exact number needed to replenish.
+        If stock < target_stock, dynamically calculates deficit per iteration and generates
+        the exact number needed to replenish without assuming batch completion.
         If stock >= target_stock, exits cleanly with zero unnecessary production.
         """
-        # Cap target_stock against hard reserve capacity ceiling
         clamped_target = min(max(1, target_stock), MAX_BUFFER_RESERVE_CEILING)
         if clamped_target < target_stock:
             console.print(f"[bold yellow][!] Target reserve ({target_stock}) exceeds max capacity ceiling ({MAX_BUFFER_RESERVE_CEILING}). Clamped to {clamped_target}.[/bold yellow]")
 
         console.print(Panel.fit(f"[bold cyan]Auditing Reserve Buffer (Target: {clamped_target} Shorts)[/bold cyan]", border_style="cyan"))
-        current_stock = self.drive_engine.get_ready_stock_count()
-        needed = max(0, clamped_target - current_stock)
-
-        if needed == 0:
-            console.print(Panel.fit(
-                f"[bold green][+] Reserve Buffer Healthy![/bold green]\n"
-                f"Current Ready Stock in 01_READY: [bold cyan]{current_stock} Shorts[/bold cyan]\n"
-                f"Target Reserve: [bold]{clamped_target} Shorts[/bold]\n"
-                f"Action: [bold green]Zero production needed. Exiting cleanly.[/bold green]",
-                border_style="green"
-            ))
+        
+        lock = ProcessLock(name="production", command_name="maintain-buffer")
+        try:
+            lock.acquire()
+        except ProcessLockError as e:
+            logger.warning(f"Production lock already held: {e}")
+            console.print(f"[bold yellow][!] Production lock active: {e}[/bold yellow]")
             return 0
 
-        needed = min(needed, MAX_BATCH_PRODUCTION_CEILING)
-        console.print(f"[bold yellow][*] Current reserve is {current_stock}/{clamped_target}. Generating {needed} fresh Shorts to replenish buffer...[/bold yellow]")
-        return self.produce_batch(count=needed)
+        produced_count = 0
+        total_attempts = 0
+        try:
+            while total_attempts < MAX_PRODUCTION_ATTEMPTS_CEILING:
+                current_stock = self.drive_engine.get_ready_stock_count()
+                needed = max(0, clamped_target - current_stock)
+
+                if needed == 0:
+                    console.print(Panel.fit(
+                        f"[bold green][+] Reserve Buffer Healthy & Fully Stocked![/bold green]\n"
+                        f"Current Ready Stock in 01_READY: [bold cyan]{current_stock} Shorts[/bold cyan]\n"
+                        f"Target Reserve: [bold]{clamped_target} Shorts[/bold]\n"
+                        f"Produced This Session: [bold]{produced_count} Shorts[/bold]",
+                        border_style="green"
+                     ))
+                    break
+
+                if produced_count >= MAX_BATCH_PRODUCTION_CEILING:
+                    logger.warning(f"Batch production reached session limit ({MAX_BATCH_PRODUCTION_CEILING}). Halting safely.")
+                    break
+
+                total_attempts += 1
+                console.print(f"\n[bold yellow][*] Reserve Deficit: {needed} Shorts remaining (Current: {current_stock}/{clamped_target}). Producing next Short (Attempt {total_attempts})...[/bold yellow]")
+                job = self.produce_single_to_vault()
+                if job:
+                    produced_count += 1
+                time.sleep(2)
+
+            return produced_count
+        finally:
+            lock.release()
 
     def publish_next_from_vault(self, force: bool = False, target_file_id: Optional[str] = None) -> bool:
         """
-        PUBLISHER MODE: Scheduled cloud releaser.
-        Acquires 'publisher' lock, checks daily limit, claims next video from Google Drive,
-        uploads to YouTube, and moves Drive file to '03_PUBLISHED'.
+        PUBLISHER / SCHEDULER MODE: True YouTube-Side Scheduled Releaser.
+        Acquires 'publisher' lock, reconciles past scheduled uploads, calculates next available
+        publication slot, claims next video from Google Drive, schedules it on YouTube with publishAt,
+        and manages Google Drive vault state transitions safely.
         """
         lock = ProcessLock(name="publisher", command_name="publish-next")
         if not lock.acquire():
@@ -392,23 +421,26 @@ class ShortsPipeline:
             console.print(f"[bold yellow][!] Publisher lock currently held by PID {owner_pid} ('{cmd}'). Publisher halting safely.[/bold yellow]")
             return False
 
-        db = SessionLocal()
-        console.print(Panel.fit("[bold cyan]Starting Scheduled Publisher Execution[/bold cyan]", border_style="cyan"))
+        db = self.SessionLocal()
+        console.print(Panel.fit("[bold cyan]Starting True YouTube Scheduled Publisher Execution[/bold cyan]", border_style="cyan"))
 
         temp_download_path = None
         try:
-            # 1. CHECK DAILY PUBLISHING LIMIT (EXACTLY MAX 4 SHORTS/DAY)
-            from datetime import datetime
-            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-            published_today = db.query(UploadRecord).filter(
-                UploadRecord.published_at >= today_start,
-                UploadRecord.status == "PUBLISHED"
-            ).count()
-
-            if published_today >= DAILY_SHORTS_LIMIT and not force:
-                console.print(f"[bold yellow][!] Daily limit reached ({published_today}/{DAILY_SHORTS_LIMIT} Shorts published today). Publisher halting safely.[/bold yellow]")
-                logger.info(f"Daily limit reached ({published_today}/{DAILY_SHORTS_LIMIT}). Publisher halted.")
-                return False
+            # 1. RECONCILE PRIOR SCHEDULED UPLOADS (Check if YouTube has made any public)
+            try:
+                reconciled_jobs = self.upload_engine.reconcile_scheduled_uploads(db)
+                if reconciled_jobs:
+                    console.print(f"[bold green][+] Reconciled {len(reconciled_jobs)} previously scheduled Short(s) to PUBLISHED status.[/bold green]")
+                    # Move corresponding files in 02_PROCESSING to 03_PUBLISHED
+                    processing_files = self.drive_engine.list_files_in_folder("02_PROCESSING")
+                    for rec_item in reconciled_jobs:
+                        for pf in processing_files:
+                            props = pf.get("properties", {}) or {}
+                            if props.get("job_id") == rec_item["job_id"] or rec_item["job_id"] in pf.get("name", ""):
+                                self.drive_engine.move_file_in_vault(pf["id"], from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
+                                logger.info(f"Moved reconciled file {pf['name']} from 02_PROCESSING to 03_PUBLISHED.")
+            except Exception as rec_err:
+                logger.warning(f"Reconciliation check notice: {rec_err}")
 
             # 2. RUN PERFORMANCE INTELLIGENCE LEARNING LOOP
             try:
@@ -416,35 +448,41 @@ class ShortsPipeline:
             except Exception as e:
                 logger.warning(f"Analytics feedback notice: {e}")
 
-            # 3. RECOVERY CHECK: Inspect 02_PROCESSING first for stale or in-flight jobs
+            # 3. CALCULATE NEXT VALID PUBLICATION SLOT
+            next_slot = self.scheduler.calculate_next_available_slot(db)
+            console.print(f"[cyan][*] Allocated YouTube Publication Slot:[/cyan] [bold yellow]{next_slot.strftime('%Y-%m-%d %H:%M')} UTC[/bold yellow]")
+
+            # 4. RECOVERY CHECK: Inspect 02_PROCESSING first for stale or in-flight jobs
             target_file = None
             current_folder = "01_READY"
             processing_files = self.drive_engine.list_files_in_folder("02_PROCESSING")
 
             if processing_files:
-                candidate = processing_files[0]
-                props = candidate.get("properties", {}) or {}
-                cand_job_id = props.get("job_id")
+                for candidate in processing_files:
+                    props = candidate.get("properties", {}) or {}
+                    cand_job_id = props.get("job_id")
+                    
+                    # Check if already scheduled or published in DB
+                    existing_upl = None
+                    if cand_job_id:
+                        existing_upl = db.query(UploadRecord).filter(
+                            UploadRecord.job_id == cand_job_id
+                        ).first()
 
-                # Check if already successfully uploaded to YouTube before crash
-                existing_upl = None
-                if cand_job_id:
-                    existing_upl = db.query(UploadRecord).filter(
-                        UploadRecord.job_id == cand_job_id,
-                        UploadRecord.status == "PUBLISHED"
-                    ).first()
+                    if existing_upl and existing_upl.status == "PUBLISHED":
+                        logger.info(f"Reconciling job {cand_job_id}: Already published on YouTube ({existing_upl.youtube_video_id}). Moving to 03_PUBLISHED.")
+                        self.drive_engine.move_file_in_vault(candidate["id"], from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
+                        continue
+                    elif existing_upl and existing_upl.status == "SCHEDULED":
+                        logger.info(f"Job {cand_job_id} is legitimately SCHEDULED on YouTube for {existing_upl.scheduled_publish_at}. Retaining in 02_PROCESSING.")
+                        continue
+                    else:
+                        logger.info(f"Resuming recovered in-flight video from '02_PROCESSING' (File ID: {candidate['id']})")
+                        target_file = candidate
+                        current_folder = "02_PROCESSING"
+                        break
 
-                if existing_upl and existing_upl.youtube_video_id and not existing_upl.youtube_video_id.startswith("TEST_"):
-                    logger.info(f"Reconciling job {cand_job_id}: Already published to YouTube ({existing_upl.youtube_video_id}). Moving to 03_PUBLISHED.")
-                    self.drive_engine.move_file_in_vault(candidate["id"], from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
-                    console.print(f"[green][+] Reconciled and moved previously published video to 03_PUBLISHED.[/green]")
-                    return True
-                else:
-                    logger.info(f"Resuming recovered in-flight video from '02_PROCESSING' (File ID: {candidate['id']})")
-                    target_file = candidate
-                    current_folder = "02_PROCESSING"
-
-            # 4. CLAIM READY VIDEO FROM 01_READY
+            # 5. CLAIM READY VIDEO FROM 01_READY (WITH PRE-FLIGHT DEDUPLICATION)
             if not target_file:
                 ready_files = self.drive_engine.list_files_in_folder("01_READY")
                 if not ready_files:
@@ -452,15 +490,51 @@ class ShortsPipeline:
                     logger.info("Drive vault '01_READY' is empty. Publisher exiting safely.")
                     return False
 
+                import re
+                fresh_ready_files = []
+                for candidate in ready_files:
+                    c_props = candidate.get("properties", {}) or {}
+                    c_job_id = c_props.get("job_id")
+                    if not c_job_id:
+                        m = re.search(r"short_(job_[a-f0-9]+)", candidate.get("name", ""))
+                        if m:
+                            c_job_id = m.group(1)
+
+                    c_title = c_props.get("title") or candidate.get("name", "").replace(".mp4", "")
+                    
+                    # Check SQLite for existing upload records
+                    existing_upl = None
+                    if c_job_id:
+                        existing_upl = db.query(UploadRecord).filter(
+                            (UploadRecord.job_id == c_job_id) |
+                            (UploadRecord.title.ilike(c_title.strip().lower()))
+                        ).first()
+
+                    if existing_upl and existing_upl.status == "PUBLISHED":
+                        logger.warning(f"[PRE-CLAIM DEDUP] File {candidate['id']} ({c_title}) is already PUBLISHED on YouTube ({existing_upl.youtube_video_id}). Auto-moving 01_READY -> 03_PUBLISHED.")
+                        self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="03_PUBLISHED")
+                        continue
+                    elif existing_upl and existing_upl.status == "SCHEDULED":
+                        logger.warning(f"[PRE-CLAIM DEDUP] File {candidate['id']} ({c_title}) is already SCHEDULED on YouTube ({existing_upl.youtube_video_id}). Auto-moving 01_READY -> 02_PROCESSING.")
+                        self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="02_PROCESSING")
+                        continue
+                    else:
+                        fresh_ready_files.append(candidate)
+
+                if not fresh_ready_files:
+                    console.print("[bold yellow][!] No fresh (unscheduled/unclaimed) videos remaining in '01_READY' vault.[/bold yellow]")
+                    logger.info("Drive vault '01_READY' has no fresh un-scheduled videos. Publisher exiting safely.")
+                    return False
+
                 if target_file_id:
-                    matched = [f for f in ready_files if f["id"] == target_file_id]
+                    matched = [f for f in fresh_ready_files if f["id"] == target_file_id]
                     if not matched:
-                        console.print(f"[bold red][x] Specified target file {target_file_id} not found in 01_READY vault.[/bold red]")
-                        logger.error(f"Target file {target_file_id} not found in 01_READY.")
+                        console.print(f"[bold red][x] Specified target file {target_file_id} not found among fresh 01_READY inventory.[/bold red]")
+                        logger.error(f"Target file {target_file_id} not found among fresh 01_READY files.")
                         return False
                     target_file = matched[0]
                 else:
-                    target_file = ready_files[0]
+                    target_file = fresh_ready_files[0]
 
                 # Atomically move 01_READY -> 02_PROCESSING
                 self.drive_engine.move_file_in_vault(target_file["id"], from_folder="01_READY", to_folder="02_PROCESSING")
@@ -468,7 +542,15 @@ class ShortsPipeline:
 
             file_id = target_file["id"]
             props = target_file.get("properties", {}) or {}
-            job_id = props.get("job_id") or f"job_vault_{file_id[:8]}"
+            
+            # Robust Job ID Extraction: Properties -> Filename Regex -> Fallback
+            import re
+            extracted_job_id = props.get("job_id")
+            if not extracted_job_id:
+                m = re.search(r"short_(job_[a-f0-9]+)", target_file.get("name", ""))
+                if m:
+                    extracted_job_id = m.group(1)
+            job_id = extracted_job_id or f"job_vault_{file_id[:8]}"
             title = props.get("title") or target_file.get("name", "Documentary Short").replace(".mp4", "")
             description = props.get("description") or f"Historical Short: {title}\n\n#history #shorts #documentary"
             tags = [t.strip() for t in props.get("tags", "history,shorts,documentary,facts").split(",") if t.strip()]
@@ -479,7 +561,7 @@ class ShortsPipeline:
                 "tags": tags
             }
 
-            # 5. DOWNLOAD MP4 TO TEMPORARY LOCAL RUNNER STORAGE
+            # 6. DOWNLOAD MP4 TO TEMPORARY LOCAL RUNNER STORAGE
             temp_download_path = RENDERS_DIR / f"temp_publish_{file_id}.mp4"
             console.print(f"[yellow][*] Downloading Short '{title}' from Google Drive Vault...[/yellow]")
             self.drive_engine.download_video_from_vault(file_id, temp_download_path)
@@ -498,7 +580,7 @@ class ShortsPipeline:
                     job_id=job.id,
                     video_path=str(temp_download_path),
                     duration_sec=23.0,
-                    file_size_bytes=temp_download_path.stat().st_size
+                    file_size_bytes=temp_download_path.stat().st_size if temp_download_path.exists() else 1024000
                 )
                 db.add(render_output)
                 db.commit()
@@ -506,19 +588,27 @@ class ShortsPipeline:
                 render_output.video_path = str(temp_download_path)
                 db.commit()
 
-            # 6. TEST MODE HANDLING
+            # 7. TEST MODE HANDLING
             if TEST_MODE:
                 desktop_candidate = Path.home() / "Desktop"
                 output_dir = desktop_candidate if desktop_candidate.exists() else (PROJECT_ROOT / "data" / "renders")
                 dest_video = output_dir / f"VERIFIED_VAULT_PUBLISHED_{file_id[:8]}.mp4"
                 import shutil
                 shutil.copy2(temp_download_path, dest_video)
+                
+                upload_rec = self.upload_engine.schedule_short(
+                    db=db,
+                    job=job,
+                    render=render_output,
+                    metadata=metadata,
+                    scheduled_publish_at=next_slot
+                )
                 self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
-                StateMachine.transition(db, job, JobState.UPLOADING, "TEST_MODE: Simulating YouTube publication")
-                StateMachine.transition(db, job, JobState.PUBLISHED, f"TEST_MODE verified: Moved to 03_PUBLISHED")
+                StateMachine.transition(db, job, JobState.PUBLISHED, f"TEST_MODE verified: Scheduled for {next_slot.isoformat()}Z")
                 console.print(Panel.fit(
-                    f"[bold green][+] Test Publisher Success![/bold green]\n"
+                    f"[bold green][+] Test Scheduled Publisher Success![/bold green]\n"
                     f"Title: [bold]{title}[/bold]\n"
+                    f"Assigned Slot: [bold cyan]{next_slot.strftime('%Y-%m-%d %H:%M')} UTC[/bold cyan]\n"
                     f"Drive File ID: {file_id}\n"
                     f"Moved To: [bold cyan]YouTube_Shorts_Vault/03_PUBLISHED[/bold cyan]\n"
                     f"YouTube Upload: [bold cyan]BYPASSED (TEST_MODE=true)[/bold cyan]",
@@ -526,31 +616,51 @@ class ShortsPipeline:
                 ))
                 return True
 
-            # 7. PRODUCTION YOUTUBE UPLOAD & VERIFICATION (Strictly PUBLIC)
+            # 8. PRODUCTION YOUTUBE-SIDE SCHEDULED UPLOAD & EXPLICIT VERIFICATION
             try:
-                StateMachine.transition(db, job, JobState.UPLOADING, "Uploading to YouTube (Visibility: PUBLIC)")
-                upload_rec = self.upload_engine.upload_short(db, job, render_output, metadata, privacy_status="public")
+                StateMachine.transition(db, job, JobState.UPLOADING, f"Uploading to YouTube (Scheduled for {next_slot.strftime('%Y-%m-%d %H:%M')} UTC)")
+                upload_rec = self.upload_engine.schedule_short(
+                    db=db,
+                    job=job,
+                    render=render_output,
+                    metadata=metadata,
+                    scheduled_publish_at=next_slot
+                )
 
-                # 8. POST-UPLOAD DRIVE STATE TRANSITION
-                self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
-                StateMachine.transition(db, job, JobState.PUBLISHED, f"Published YouTube ID: {upload_rec.youtube_video_id}")
-                self.experiment_manager.link_experiment_to_upload(db, job_id=job.id, upload_id=upload_rec.id, youtube_video_id=upload_rec.youtube_video_id)
+                # Set Drive properties marking it as scheduled
+                try:
+                    self.drive_engine.set_file_properties(file_id, {
+                        "job_id": job.id,
+                        "youtube_video_id": upload_rec.youtube_video_id,
+                        "upload_status": "SCHEDULED",
+                        "scheduled_publish_at": next_slot.isoformat() + "Z"
+                    })
+                except Exception as prop_err:
+                    logger.warning(f"Could not attach Drive scheduling properties: {prop_err}")
+
+                self.experiment_manager.link_experiment_to_upload(
+                    db,
+                    job_id=job.id,
+                    upload_id=upload_rec.id,
+                    youtube_video_id=upload_rec.youtube_video_id
+                )
 
                 console.print(Panel.fit(
-                    f"[bold green][+] Scheduled Short Successfully Published![/bold green]\n"
+                    f"[bold green][+] True YouTube Scheduled Short Successfully Uploaded & Verified![/bold green]\n"
                     f"Title: [bold]{title}[/bold]\n"
                     f"YouTube ID: [bold yellow]{upload_rec.youtube_video_id}[/bold yellow]\n"
-                    f"Visibility: [bold green]PUBLIC (Verified)[/bold green]\n"
-                    f"Drive State: [bold cyan]03_PUBLISHED[/bold cyan]",
+                    f"Assigned UTC Slot: [bold cyan]{next_slot.strftime('%Y-%m-%d %H:%M')} UTC[/bold cyan]\n"
+                    f"Privacy Status: [bold magenta]PRIVATE (Will auto-release on YouTube)[/bold magenta]\n"
+                    f"Drive State: [bold cyan]02_PROCESSING (Tracked until public)[/bold cyan]",
                     border_style="green"
                 ))
                 return True
 
             except Exception as upload_err:
-                logger.error(f"YouTube upload failed for Drive file {file_id}: {upload_err}")
-                self.experiment_manager.update_experiment_status(db, job.id, "FAILED", failure_reason=f"YouTube upload failed: {str(upload_err)}")
+                logger.error(f"YouTube scheduling failed for Drive file {file_id}: {upload_err}")
+                self.experiment_manager.update_experiment_status(db, job.id, "FAILED", failure_reason=f"YouTube scheduling failed: {str(upload_err)}")
                 self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="04_FAILED")
-                StateMachine.flag_needs_review(db, job, f"YouTube upload failed: {str(upload_err)}")
+                StateMachine.flag_needs_review(db, job, f"YouTube scheduling failed: {str(upload_err)}")
                 return False
 
         except Exception as e:
@@ -628,13 +738,30 @@ class ShortsPipeline:
                 ))
                 return True
 
-            # PRODUCTION YOUTUBE UPLOAD & VERIFY
-            StateMachine.transition(db, job, JobState.READY_TO_UPLOAD, "Ready for publishing")
-            StateMachine.transition(db, job, JobState.UPLOADING, "Uploading to YouTube (Visibility: PUBLIC)")
-            upload_rec = self.upload_engine.upload_short(db, job, render_output, metadata, privacy_status="public")
+            # PRODUCTION YOUTUBE-SIDE SCHEDULED PUBLISHING
+            from engines.scheduler_engine import PublicationScheduler
+            scheduler = PublicationScheduler()
+            next_slot = scheduler.calculate_next_available_slot(db)
 
-            StateMachine.transition(db, job, JobState.PUBLISHED, f"Published Short ID: {upload_rec.youtube_video_id}")
-            console.print(Panel.fit(f"[bold green][+] Production Cycle Complete![/bold green]\nOutput Video: {render_output.video_path}\nYouTube Status: {upload_rec.status} ({upload_rec.youtube_video_id})\nVisibility: PUBLIC (Verified)", border_style="green"))
+            StateMachine.transition(db, job, JobState.READY_TO_UPLOAD, "Ready for scheduled publishing")
+            StateMachine.transition(db, job, JobState.UPLOADING, f"Uploading to YouTube (Scheduled for {next_slot.strftime('%Y-%m-%d %H:%M')} UTC)")
+            upload_rec = self.upload_engine.schedule_short(
+                db=db,
+                job=job,
+                render=render_output,
+                metadata=metadata,
+                scheduled_publish_at=next_slot
+            )
+
+            StateMachine.transition(db, job, JobState.SCHEDULED, f"Scheduled on YouTube for {next_slot.isoformat()}Z (ID: {upload_rec.youtube_video_id})")
+            console.print(Panel.fit(
+                f"[bold green][+] Production Cycle Complete (Scheduled)![/bold green]\n"
+                f"Output Video: {render_output.video_path}\n"
+                f"YouTube Status: {upload_rec.status} ({upload_rec.youtube_video_id})\n"
+                f"Scheduled Release: {next_slot.strftime('%Y-%m-%d %H:%M')} UTC\n"
+                f"Visibility: PRIVATE -> AUTO-PUBLIC (Verified)",
+                border_style="green"
+            ))
             return True
 
         except Exception as e:
@@ -657,6 +784,7 @@ def start_dashboard():
 def main():
     parser = argparse.ArgumentParser(description="Automated $0-Cost History Shorts Channel Pipeline")
     parser.add_argument("--health-check", action="store_true", help="Run non-destructive production health check and launch readiness gate")
+    parser.add_argument("--self-heal", action="store_true", help="Executes master autonomous self-healing, stale recovery, and vault reconciliation")
     parser.add_argument("--json", action="store_true", help="Output health check or diagnostic results in JSON format")
     parser.add_argument("--maintain-buffer", type=int, nargs="?", const=12, default=0, metavar="TARGET", help="Maintain a reserve of TARGET ready Shorts in Drive 01_READY (default: 12)")
     parser.add_argument("--produce-batch", type=int, default=0, metavar="N", help="Generate N Shorts, verify QA, and deposit in Google Drive 01_READY")
@@ -714,6 +842,20 @@ def main():
                 f"• Critical Failures: [bold red]{len(result['critical_failures'])}[/bold red]",
                 border_style=color
             ))
+    elif args.self_heal:
+        db = SessionLocal()
+        try:
+            res = pipeline.recovery_manager.run_full_self_healing(db)
+            console.print(Panel.fit(
+                f"[bold green][+] Master Autonomous Self-Healing Cycle Complete![/bold green]\n"
+                f"Stale Jobs Handled: [bold]{res['stale_jobs_recovered_count']}[/bold]\n"
+                f"Processing Vault Recoveries: [bold]{res['vault_recoveries_count']}[/bold]\n"
+                f"YouTube Videos Reconciled: [bold]{res['youtube_reconciled_count']}[/bold]\n"
+                f"System Health Status: [bold cyan]{res['status']}[/bold cyan]",
+                border_style="green"
+            ))
+        finally:
+            db.close()
     elif args.dashboard:
         start_dashboard()
     elif args.harvest_analytics:

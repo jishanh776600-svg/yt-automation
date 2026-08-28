@@ -126,6 +126,7 @@ class AssetRecord(Base):
     width = Column(Integer, nullable=True)
     height = Column(Integer, nullable=True)
     duration_sec = Column(Float, nullable=True)
+    metadata_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -171,14 +172,16 @@ class UploadRecord(Base):
     __tablename__ = "uploads"
 
     id = Column(String(64), primary_key=True)
-    job_id = Column(String(64), nullable=False)
-    youtube_video_id = Column(String(64), nullable=True)
-    title = Column(String(255), nullable=False)
+    job_id = Column(String(64), nullable=False, index=True)
+    youtube_video_id = Column(String(64), nullable=True, index=True)
+    title = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=False)
     tags = Column(Text, nullable=True)
     privacy_status = Column(String(32), default="private")
+    scheduled_publish_at = Column(DateTime, nullable=True)
     published_at = Column(DateTime, nullable=True)
-    status = Column(String(32), default="SUCCESS")
+    status = Column(String(32), default="SUCCESS")  # SCHEDULED, PUBLISHED, FAILED, TEST_VERIFIED
+    reconciliation_metadata = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     snapshots = relationship("PerformanceSnapshot", back_populates="upload", cascade="all, delete-orphan")
@@ -319,6 +322,12 @@ class ProviderUsage(Base):
     provider_name = Column(String(64), nullable=False, index=True)
     units_used = Column(Integer, default=1)
     model_name = Column(String(64), nullable=True)
+    endpoint = Column(String(128), nullable=True)
+    status_code = Column(Integer, nullable=True)
+    rate_limit = Column(Integer, nullable=True)
+    rate_remaining = Column(Integer, nullable=True)
+    rate_reset = Column(Integer, nullable=True)
+    is_observed = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -337,3 +346,12 @@ class StrategyWeight(Base):
     confidence_level = Column(String(32), default="INSUFFICIENT_EVIDENCE", nullable=False)  # INSUFFICIENT_EVIDENCE (<3), WEAK_EVIDENCE (3-4), USABLE_EVIDENCE (>=5)
     last_updated = Column(DateTime, default=datetime.utcnow)
     update_reason = Column(Text, nullable=True)
+
+
+class SystemConfig(Base):
+    """Stores persistent key-value configuration for pipeline operations (e.g. active voice)."""
+    __tablename__ = "system_config"
+
+    key = Column(String(64), primary_key=True)
+    value = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

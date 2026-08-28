@@ -31,6 +31,8 @@ stage_*.wav
 test_*.wav
 test_*.aac
 *.mp4
+*.db-shm
+*.db-wal
 
 # Keep empty structure
 !data/database/.gitkeep

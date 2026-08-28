@@ -34,7 +34,12 @@ BGM_LIBRARY = {
         "mood": "Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities",
         "default_intensity": "Medium-High",
         "description": "Epic historical orchestral music designed for historical mystery, war, disaster, strange historical events, and serious documentaries.",
-        "keywords": ["history", "war", "battle", "disaster", "bizarre", "historical", "oddity", "riot", "conflict", "empire", "king", "queen", "court", "law", "army", "event", "parliament", "revolution", "monarch"]
+        "keywords": [
+            "war", "battle", "disaster", "bizarre", "oddity", "riot", "conflict", "empire", "king",
+            "queen", "court", "law", "army", "parliament", "revolution", "monarch", "dynasty",
+            "coronation", "treaty", "feud", "scandal", "privy", "latrine", "rebellion", "emperor",
+            "pope", "crusade", "medieval", "royal", "duel", "regime", "conquest", "siege"
+        ]
     },
     "emotional_sad": {
         "primary_files": ["Empty - Emotional Sad Background.mp3", "Empty - Emotional Sad Background.wav"],
@@ -42,7 +47,12 @@ BGM_LIBRARY = {
         "mood": "Emotional / Sad / Mournful / Poignant / Human Tragedy",
         "default_intensity": "Subdued-Poignant",
         "description": "Deeply emotional and somber melody for tragic stories, personal loss, heartfelt sacrifice, and poignant historical moments.",
-        "keywords": ["sad", "tragedy", "emotional", "loss", "grief", "poignant", "mourn", "sacrifice", "heartbreak", "death", "tears", "memorial", "ruin", "sorrow", "farewell", "crying", "dying", "famine"]
+        "keywords": [
+            "sad", "tragedy", "emotional", "loss", "grief", "poignant", "mourn", "sacrifice",
+            "heartbreak", "death", "tears", "memorial", "ruin", "sorrow", "farewell", "crying",
+            "dying", "famine", "plague", "victim", "burial", "fatal", "suffering", "sorrowful",
+            "heartbreaking", "perished", "massacre", "destitution", "orphan", "starved", "grave"
+        ]
     },
     "flux_ambient": {
         "primary_files": ["The Flux Beneath It All.mp3", "The Flux Beneath It All.wav"],
@@ -50,7 +60,12 @@ BGM_LIBRARY = {
         "mood": "Dark / Intense / Dramatic / Mysterious / Scientific Wonder / Intrigue",
         "default_intensity": "Atmospheric-Tense",
         "description": "Atmospheric, ambient curiosity and dark mysterious pulse for unexplained secrets, lost civilizations, strange inventions, and scientific wonder.",
-        "keywords": ["mystery", "secret", "strange", "lost", "invention", "wonder", "science", "curiosity", "puzzle", "ancient", "unexplained", "phenomenon", "intrigue", "dark", "riddle", "cryptic", "alchemist"]
+        "keywords": [
+            "mystery", "secret", "strange", "lost", "invention", "wonder", "science", "curiosity",
+            "puzzle", "ancient", "unexplained", "phenomenon", "intrigue", "dark", "riddle",
+            "cryptic", "alchemist", "astronomy", "unknown", "hidden", "discovery", "experiment",
+            "baffling", "artifact", "voynich", "roanoke", "atlantis", "conspiracy", "code", "anomaly", "alien"
+        ]
     },
     "suspense_climax": {
         "primary_files": ["No Copyright Background Music.wav", "No Copyright Background Music.mp3"],
@@ -58,7 +73,12 @@ BGM_LIBRARY = {
         "mood": "High Tension / Suspense / Dramatic Build-Up / Thriller / General Documentary",
         "default_intensity": "High-Driving",
         "description": "Intense cinematic build-up with dramatic tempo for races against time, high-stakes escapes, shocking reveals, and escalating tension.",
-        "keywords": ["suspense", "tension", "climax", "escape", "hunt", "chase", "race", "danger", "thriller", "build", "shock", "intense", "countdown", "panic", "heist", "manhunt", "assassination"]
+        "keywords": [
+            "suspense", "tension", "climax", "escape", "hunt", "chase", "race", "danger",
+            "thriller", "build", "shock", "intense", "countdown", "panic", "heist", "manhunt",
+            "assassination", "robbery", "ambush", "plot", "trapped", "deadly", "urgent",
+            "strike", "pursuit", "breakout", "hostage", "bomb", "confrontation", "alarm"
+        ]
     }
 }
 
@@ -114,23 +134,24 @@ class AudioMixer:
             f'}}'
         )
 
-        try:
-            from google import genai
-            client = genai.Client(api_key=GEMINI_API_KEY)
-            response = client.models.generate_content(
-                model="gemini-3.6-flash",
-                contents=prompt
-            )
-            clean_text = response.text.strip().replace("```json", "").replace("```", "").strip()
-            data = json.loads(clean_text)
-            track_key = data.get("track")
-            if track_key in BGM_LIBRARY:
-                detected_mood = data.get("mood", BGM_LIBRARY[track_key]["mood"])
-                detected_intensity = data.get("intensity", BGM_LIBRARY[track_key]["default_intensity"])
-                reason = data.get("reason", "AI multidimensional mood and tone analysis")
-                return track_key, detected_mood, detected_intensity, reason
-        except Exception as e:
-            logger.warning(f"AI story mood classification fallback: {e}")
+        for model_name in ["gemini-2.0-flash", "gemini-1.5-flash"]:
+            try:
+                from google import genai
+                client = genai.Client(api_key=GEMINI_API_KEY)
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+                clean_text = response.text.strip().replace("```json", "").replace("```", "").strip()
+                data = json.loads(clean_text)
+                track_key = data.get("track")
+                if track_key in BGM_LIBRARY:
+                    detected_mood = data.get("mood", BGM_LIBRARY[track_key]["mood"])
+                    detected_intensity = data.get("intensity", BGM_LIBRARY[track_key]["default_intensity"])
+                    reason = data.get("reason", "AI multidimensional mood and tone analysis")
+                    return track_key, detected_mood, detected_intensity, reason
+            except Exception as e:
+                logger.debug(f"AI story mood classification fallback ({model_name}): {e}")
 
         return None
 
@@ -151,30 +172,30 @@ class AudioMixer:
             selected_key, detected_mood, detected_intensity, reason = ai_result
             reason = f"[AI Analyzed] {reason}"
         else:
-            # 2. Semantic Multidimensional Fallback Analysis
-            text_corpus = f"{category} {title} {summary} {script_text}".lower()
+            # 2. Balanced Semantic Heuristic Fallback Analysis
+            cat_lower = (category or "").lower()
+            title_lower = (title or "").lower()
+            sum_lower = (summary or "").lower()
+            script_lower = (script_text or "").lower()
 
             scores = {}
             for key, info in BGM_LIBRARY.items():
-                score = sum(2 if kw in f"{category} {title}".lower() else 1 for kw in info["keywords"] if kw in text_corpus)
-                scores[key] = score
+                cat_score = sum(3 for kw in info["keywords"] if kw in cat_lower)
+                title_score = sum(2 for kw in info["keywords"] if kw in title_lower)
+                sum_score = sum(1 for kw in info["keywords"] if kw in sum_lower)
+                script_score = sum(1 for kw in info["keywords"] if kw in script_lower)
+                scores[key] = cat_score + title_score + sum_score + script_score
 
-            if scores["emotional_sad"] >= 2 and scores["emotional_sad"] >= scores["suspense_climax"]:
-                selected_key = "emotional_sad"
-                detected_intensity = "Subdued-Poignant"
-                reason = f"Keyword match for tragic/emotional tone ({scores['emotional_sad']} triggers)"
-            elif scores["flux_ambient"] >= 2 and any(w in f"{category} {title}".lower() for w in ["mystery", "lost", "invention", "science", "secret", "dark"]):
-                selected_key = "flux_ambient"
-                detected_intensity = "Atmospheric-Tense"
-                reason = f"Keyword match for mystery/curiosity atmosphere ({scores['flux_ambient']} triggers)"
-            elif scores["suspense_climax"] >= 3 and scores["suspense_climax"] > scores["best_historical"]:
-                selected_key = "suspense_climax"
-                detected_intensity = "High-Driving"
-                reason = f"Keyword match for high suspense/tension ({scores['suspense_climax']} triggers)"
+            max_score = max(scores.values())
+            if max_score > 0:
+                selected_key = max(scores, key=scores.get)
+                detected_intensity = BGM_LIBRARY[selected_key]["default_intensity"]
+                score_str = ", ".join(f"{k}:{v}" for k, v in scores.items())
+                reason = f"Keyword matching ({selected_key} with {scores[selected_key]} pts [{score_str}])"
             else:
                 selected_key = "best_historical"
                 detected_intensity = "Medium-High"
-                reason = f"Documentary default track for historical events & oddities ({scores.get('best_historical', 0)} triggers)"
+                reason = "Documentary baseline track for historical oddities"
 
             detected_mood = BGM_LIBRARY[selected_key]["mood"]
 
@@ -228,6 +249,14 @@ class AudioMixer:
             script_text=script_text
         )
 
+        meta_dict = {
+            "bgm_track": track_key,
+            "display_name": BGM_LIBRARY[track_key]["display_name"],
+            "mood": mood,
+            "reason": reason,
+            "filename": music_file.name
+        }
+
         asset_id = f"bgm_{uuid.uuid4().hex[:10]}"
         asset = AssetRecord(
             id=asset_id,
@@ -238,7 +267,8 @@ class AudioMixer:
             commercial_use=True,
             attribution_required=False,
             local_path=str(music_file),
-            duration_sec=35.0
+            duration_sec=35.0,
+            metadata_json=json.dumps(meta_dict)
         )
         db.add(asset)
         db.commit()

@@ -76,6 +76,13 @@ MAX_PRODUCTION_ATTEMPTS_CEILING = int(os.getenv("MAX_PRODUCTION_ATTEMPTS_CEILING
 MAX_BUFFER_RESERVE_CEILING = int(os.getenv("MAX_BUFFER_RESERVE_CEILING", "24"))
 LOCK_STALE_TIMEOUT_SEC = float(os.getenv("LOCK_STALE_TIMEOUT_SEC", "1800.0"))  # 30 minutes
 
+# Cloud Mode & Remote GitHub Actions Dispatcher (Phase 7.2)
+CLOUD_MODE = os.getenv("CLOUD_MODE", "false").lower() == "true"
+GITHUB_PAT = os.getenv("GITHUB_PAT", "")
+GITHUB_REPOSITORY_OWNER = os.getenv("GITHUB_REPOSITORY_OWNER", "")
+GITHUB_REPOSITORY_NAME = os.getenv("GITHUB_REPOSITORY_NAME", "")
+GITHUB_REF = os.getenv("GITHUB_REF", "main")
+
 
 def get_ffmpeg_path() -> str:
     """Finds valid FFmpeg binary path."""

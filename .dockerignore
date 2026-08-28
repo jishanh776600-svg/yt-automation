@@ -1,0 +1,38 @@
+# Version control
+.git
+.gitignore
+
+# Secrets & Environment (Protected - Injected via Cloud Environment Variables)
+.env
+*.env
+token.json
+client_secret.json
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+
+# Local SQLite databases (Cloud container initializes clean schema)
+data/database/
+*.db
+*.db-shm
+*.db-wal
+
+# Local media renders and runtime files
+data/renders/
+data/voice/
+data/visuals/
+data/assets/
+data/captions/
+data/locks/
+
+# Temporary audio/video outputs & logs
+*.log
+stage_*.wav
+test_*.wav
+test_*.aac
+*.mp4

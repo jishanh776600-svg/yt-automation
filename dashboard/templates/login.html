@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Historia Control // Authenticated Access</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                        cinzel: ['"Cinzel"', 'serif'],
+                    },
+                    colors: {
+                        obsidian: '#090D16',
+                        panel: '#0F1626',
+                        borderSubtle: '#1E293B',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-obsidian text-slate-100 min-h-screen font-sans flex items-center justify-center p-4 selection:bg-amber-500 selection:text-slate-950">
+
+    <div class="max-w-md w-full space-y-6">
+
+        <!-- Logo & Mission Control Branding -->
+        <div class="text-center space-y-2">
+            <div class="inline-flex w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 items-center justify-center text-slate-950 font-cinzel font-bold text-2xl shadow-xl shadow-amber-500/20">
+                H
+            </div>
+            <h1 class="font-cinzel text-2xl font-bold tracking-wider text-amber-400">HISTORIA CONTROL</h1>
+            <p class="text-xs text-slate-400 font-mono">Autonomous Production System & Vault Operations</p>
+        </div>
+
+        <!-- Login Card -->
+        <div class="bg-panel border border-borderSubtle p-6 sm:p-8 rounded-3xl shadow-2xl space-y-5 relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-emerald-500 to-sky-500"></div>
+
+            <div class="space-y-1">
+                <h2 class="text-base font-bold text-slate-100 font-mono uppercase tracking-wide">Operator Access</h2>
+                <p class="text-xs text-slate-400">Authenticate with administrator credentials to manage autonomous operations.</p>
+            </div>
+
+            <!-- Error Banner -->
+            <div id="error-banner" class="p-3 bg-rose-950/80 border border-rose-800 rounded-xl text-rose-300 text-xs font-mono hidden items-center space-x-2">
+                <span>✕</span>
+                <span id="error-text">Invalid credentials. Please verify and retry.</span>
+            </div>
+
+            <!-- Form -->
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                <div class="space-y-1.5">
+                    <label class="text-xs font-mono uppercase text-slate-400 font-semibold" for="username">Username</label>
+                    <input type="text" id="username" name="username" required autocomplete="username"
+                        class="w-full px-3.5 py-2.5 bg-obsidian border border-borderSubtle focus:border-amber-500 rounded-xl text-slate-100 text-sm font-mono outline-none transition"
+                        placeholder="Operator username">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-xs font-mono uppercase text-slate-400 font-semibold" for="password">Password</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password"
+                        class="w-full px-3.5 py-2.5 bg-obsidian border border-borderSubtle focus:border-amber-500 rounded-xl text-slate-100 text-sm font-mono outline-none transition"
+                        placeholder="••••••••••••">
+                </div>
+
+                <button type="submit" id="submit-btn"
+                    class="w-full py-3 bg-amber-600 hover:bg-amber-500 text-slate-950 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition shadow-lg shadow-amber-600/30 flex items-center justify-center space-x-2">
+                    <span id="btn-text">Authenticate Session</span>
+                    <span id="btn-spinner" class="hidden animate-spin">↻</span>
+                </button>
+            </form>
+
+            <div class="pt-2 text-center text-[11px] font-mono text-slate-500">
+                <span>🔒 Protected by PBKDF2-HMAC-SHA256 & Rate-Limiting</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        async function handleLogin(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const errorBanner = document.getElementById('error-banner');
+            const errorText = document.getElementById('error-text');
+            const submitBtn = document.getElementById('submit-btn');
+            const btnText = document.getElementById('btn-text');
+            const btnSpinner = document.getElementById('btn-spinner');
+
+            errorBanner.classList.add('hidden');
+            btnText.innerText = 'Authenticating...';
+            btnSpinner.classList.remove('hidden');
+            submitBtn.disabled = true;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: usernameInput.value,
+                        password: passwordInput.value
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    btnText.innerText = 'Access Granted';
+                    window.location.href = '/';
+                } else {
+                    errorText.innerText = data.detail || data.error || 'Authentication failed. Please verify credentials.';
+                    errorBanner.classList.remove('hidden');
+                    errorBanner.classList.add('flex');
+                    btnText.innerText = 'Authenticate Session';
+                    btnSpinner.classList.add('hidden');
+                    submitBtn.disabled = false;
+                }
+            } catch (err) {
+                errorText.innerText = 'Network error connecting to authentication service.';
+                errorBanner.classList.remove('hidden');
+                errorBanner.classList.add('flex');
+                btnText.innerText = 'Authenticate Session';
+                btnSpinner.classList.add('hidden');
+                submitBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

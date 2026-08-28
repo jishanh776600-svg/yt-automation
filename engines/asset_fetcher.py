@@ -21,6 +21,70 @@ from core.models import AssetRecord
 logger = logging.getLogger(__name__)
 
 
+def parse_rate_limit_headers(headers: Any) -> Dict[str, Optional[int]]:
+    """
+    Defensively extracts X-Ratelimit-Limit, X-Ratelimit-Remaining, X-Ratelimit-Reset
+    from HTTP response headers (case-insensitive). Never raises on malformed or missing headers.
+    """
+    res: Dict[str, Optional[int]] = {"limit": None, "remaining": None, "reset": None}
+    if not headers or not hasattr(headers, "get"):
+        return res
+
+    def _parse_int(key: str) -> Optional[int]:
+        val = headers.get(key)
+        if val is None:
+            val = headers.get(key.lower()) or headers.get(key.upper())
+        if val is not None:
+            try:
+                return int(float(str(val).strip()))
+            except (ValueError, TypeError):
+                return None
+        return None
+
+    res["limit"] = _parse_int("X-Ratelimit-Limit")
+    res["remaining"] = _parse_int("X-Ratelimit-Remaining")
+    res["reset"] = _parse_int("X-Ratelimit-Reset")
+    return res
+
+
+def record_pexels_telemetry(
+    db: Session,
+    endpoint: str = "/v1/search",
+    status_code: Optional[int] = None,
+    headers: Optional[Any] = None,
+    units: int = 1,
+    is_observed: bool = True
+) -> None:
+    """
+    Persists Pexels API usage and observed rate limit headers into provider_usage.
+    Fails safely so telemetry issues NEVER crash the production pipeline.
+    """
+    try:
+        from core.models import ProviderUsage
+        from datetime import datetime
+
+        parsed = parse_rate_limit_headers(headers)
+        usage_entry = ProviderUsage(
+            provider_name="pexels",
+            units_used=units,
+            endpoint=endpoint,
+            status_code=status_code,
+            rate_limit=parsed["limit"],
+            rate_remaining=parsed["remaining"],
+            rate_reset=parsed["reset"],
+            is_observed=is_observed,
+            created_at=datetime.utcnow()
+        )
+        db.add(usage_entry)
+        db.commit()
+    except Exception as err:
+        logger.warning(f"[PEXELS_TELEMETRY] Failed to record provider telemetry: {err}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+
 class AssetFetcher:
     """Retrieves and prepares 1080x1920 vertical visual assets with zero-cost commercial licensing."""
 
@@ -60,9 +124,11 @@ class AssetFetcher:
         if not PEXELS_API_KEY:
             return None
         url = "https://api.pexels.com/v1/search"
+        endpoint = "/v1/search"
         headers = {"Authorization": PEXELS_API_KEY}
         # Randomize page between 1 and 4 for variety
         params = {"query": query, "per_page": 15, "page": random.randint(1, 3), "orientation": "portrait"}
+        resp = None
         try:
             from core.retry import retry_call
             resp = retry_call(
@@ -70,7 +136,18 @@ class AssetFetcher:
                 max_retries=3,
                 base_delay=1.0
             )
-            if resp.status_code == 200:
+            # Record observed telemetry from the response (whether 200, 429, 500, etc.)
+            if resp is not None:
+                record_pexels_telemetry(
+                    db=db,
+                    endpoint=endpoint,
+                    status_code=resp.status_code,
+                    headers=resp.headers,
+                    units=1,
+                    is_observed=True
+                )
+
+            if resp is not None and resp.status_code == 200:
                 data = resp.json()
                 photos = data.get("photos", [])
                 if photos:
@@ -82,6 +159,15 @@ class AssetFetcher:
                     return candidate["src"]["large2x"]
         except Exception as e:
             logger.warning(f"Pexels query failed for '{query}': {e}")
+            # Record unobserved network/timeout attempt safely
+            record_pexels_telemetry(
+                db=db,
+                endpoint=endpoint,
+                status_code=getattr(e, "status_code", None),
+                headers=getattr(getattr(e, "response", None), "headers", None),
+                units=1,
+                is_observed=False
+            )
         return None
 
     def generate_ai_image(self, prompt: str, output_path: Path) -> bool:

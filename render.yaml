@@ -1,0 +1,40 @@
+# ==============================================================================
+# Render Blueprint Specification - Historia Emergency Mission Control
+# ==============================================================================
+services:
+  - type: web
+    name: historia-mission-control
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: CLOUD_MODE
+        value: "true"
+      - key: TEST_MODE
+        value: "false"
+      - key: GITHUB_REF
+        value: "main"
+      # Secure Environment Secrets (Configured in Render Dashboard - Zero values in repository)
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: GITHUB_PAT
+        sync: false
+      - key: GITHUB_REPOSITORY_OWNER
+        sync: false
+      - key: GITHUB_REPOSITORY_NAME
+        sync: false
+      - key: PEXELS_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TOKEN_JSON
+        sync: false
+      - key: CLIENT_SECRET_JSON
+        sync: false
