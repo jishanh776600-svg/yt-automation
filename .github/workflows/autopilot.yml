@@ -1,20 +1,26 @@
-name: YouTube Shorts Cloud Autopilot
+name: YouTube Shorts Cloud Publisher
+# ==============================================================================
+# SCHEDULED CLOUD PUBLISHER: Autonomous Releaser (4x Daily Slots)
+# Strictly publishes 4 public Shorts daily directly from Google Drive Vault.
+# Execution Time: ~30-45 seconds (Ultra-fast: Claim -> Download -> Upload -> Move)
+# ==============================================================================
 
 on:
   schedule:
-    # 4 scheduled windows daily: 06:00 UTC (11:30 AM IST), 10:00 UTC (3:30 PM IST), 15:00 UTC (8:30 PM IST), 20:00 UTC (1:30 AM IST)
+    # 4 scheduled publishing slots daily:
+    # 06:00 UTC (11:30 AM IST) | 10:00 UTC (3:30 PM IST) | 15:00 UTC (8:30 PM IST) | 20:00 UTC (1:30 AM IST)
     - cron: '0 6,10,15,20 * * *'
-  workflow_dispatch: # Allows manual one-click trigger from GitHub web or mobile app
+  workflow_dispatch: # Allows manual on-demand publishing from GitHub Web / Mobile
 
 permissions:
   contents: write
 
 concurrency:
-  group: youtube-autopilot
+  group: youtube-publisher
   cancel-in-progress: false
 
 jobs:
-  produce_and_publish:
+  publish_scheduled_short:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -29,17 +35,12 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Install FFmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-dejavu-core
-
       - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Restore OAuth Credentials & Secrets
+      - name: Restore OAuth Credentials & Environment Secrets
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -52,15 +53,15 @@ jobs:
           echo "${TOKEN_JSON}" > token.json
           echo "${CLIENT_SECRET_JSON}" > client_secret.json
 
-      - name: Run Autopilot Production Cycle
+      - name: Claim and Publish Next Ready Short from Google Drive Vault
         run: |
-          python main.py --run-once
+          python main.py --publish-next
 
-      - name: Commit Learning Data & Logs
+      - name: Commit Analytics Feedback & Learning Logs
         if: always()
         run: |
-          git config --global user.name 'YouTube Autopilot Bot'
+          git config --global user.name 'YouTube Publisher Bot'
           git config --global user.email 'bot@github-actions.local'
           git add data/LEARNING_LOG.md data/database/ 2>/dev/null || true
-          git commit -m "Auto-update learning log and database [skip ci]" || echo "No changes to commit"
+          git commit -m "Auto-update publisher learning log and state [skip ci]" || echo "No changes to commit"
           git push origin main || echo "Push skipped"

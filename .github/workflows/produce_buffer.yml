@@ -1,0 +1,93 @@
+name: YouTube Shorts Cloud Buffer Producer
+# ==============================================================================
+# BATCH CLOUD PRODUCER: Content Generator & Drive Vault Replenisher
+# Genuinely creates, renders, fact-checks, voice-synthesizes, and QA-verifies
+# fresh historical Shorts and deposits them into Google Drive (01_READY).
+# ZERO direct YouTube uploads (strictly preserves daily publication slots).
+# ==============================================================================
+
+on:
+  schedule:
+    # Daily off-peak buffer audit & replenishment at 02:00 UTC (07:30 AM IST)
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      target_buffer:
+        description: 'Target reserve stock in Drive (01_READY)'
+        required: false
+        default: '12'
+        type: string
+      batch_count:
+        description: 'Force generate specific number of Shorts (0 = auto-replenish to target)'
+        required: false
+        default: '0'
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: youtube-producer
+  cancel-in-progress: false
+
+jobs:
+  produce_reserve_buffer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install FFmpeg & Fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore OAuth Credentials & Environment Secrets
+        env:
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TOKEN_JSON: ${{ secrets.TOKEN_JSON }}
+          CLIENT_SECRET_JSON: ${{ secrets.CLIENT_SECRET_JSON }}
+        run: |
+          echo "PEXELS_API_KEY=${PEXELS_API_KEY}" > .env
+          echo "GEMINI_API_KEY=${GEMINI_API_KEY}" >> .env
+          echo "TEST_MODE=false" >> .env
+          echo "${TOKEN_JSON}" > token.json
+          echo "${CLIENT_SECRET_JSON}" > client_secret.json
+
+      - name: Run Batch Production & Replenish Drive Vault
+        run: |
+          BATCH_COUNT="${{ inputs.batch_count }}"
+          TARGET_BUFFER="${{ inputs.target_buffer }}"
+
+          if [ -n "$BATCH_COUNT" ] && [ "$BATCH_COUNT" -gt 0 ] 2>/dev/null; then
+            echo "[*] Running targeted batch production for $BATCH_COUNT Shorts..."
+            python main.py --produce-batch "$BATCH_COUNT"
+          else
+            TARGET=${TARGET_BUFFER:-12}
+            echo "[*] Auditing and maintaining reserve buffer (Target: $TARGET Shorts in 01_READY)..."
+            python main.py --maintain-buffer "$TARGET"
+          fi
+
+      - name: Commit Topic Database & Production Records
+        if: always()
+        run: |
+          git config --global user.name 'YouTube Producer Bot'
+          git config --global user.email 'bot@github-actions.local'
+          git add data/database/ data/assets/ data/captions/ 2>/dev/null || true
+          git commit -m "Auto-update producer database records [skip ci]" || echo "No changes to commit"
+          git push origin main || echo "Push skipped"

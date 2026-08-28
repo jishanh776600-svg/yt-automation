@@ -25,6 +25,14 @@ data/visuals/
 data/assets/
 data/captions/
 
+# Temporary test audio and logs
+*.log
+stage_*.wav
+test_*.wav
+test_*.aac
+*.mp4
+
 # Keep empty structure
 !data/database/.gitkeep
 !assets/music/*.wav
+!assets/music/*.mp3
