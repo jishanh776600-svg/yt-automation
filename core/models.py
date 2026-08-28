@@ -102,6 +102,8 @@ class ScriptRecord(Base):
     full_text = Column(Text, nullable=False)
     word_count = Column(Integer, nullable=False)
     estimated_duration_sec = Column(Float, nullable=False)
+    hook_archetype = Column(String(64), nullable=True)  # DATE_TIME_ANCHOR, CONTRADICTION_SHOCK, HYPOTHETICAL_CURIOSITY, IN_MEDIAS_RES, UNSOLVED_MYSTERY, OTHER
+    duration_target = Column(String(64), nullable=True)  # ULTRA_TIGHT, SWEET_SPOT, NARRATIVE_RICH
     status = Column(String(32), default="APPROVED")
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -140,6 +142,8 @@ class RenderOutput(Base):
     video_codec = Column(String(32), default="h264")
     audio_codec = Column(String(32), default="aac")
     file_size_bytes = Column(Integer, nullable=False)
+    bgm_mood = Column(String(128), nullable=True)
+    motion_style = Column(String(64), nullable=True)  # DYNAMIC_ZOOM_PAN, KEN_BURNS_STANDARD, STATIC
     created_at = Column(DateTime, default=datetime.utcnow)
 
     job = relationship("Job", back_populates="renders")
@@ -266,23 +270,41 @@ class ContentPattern(Base):
 
 
 class ExperimentRecord(Base):
-    """Tracks controlled single-variable experiments and resulting learnings."""
+    """Tracks controlled strategy assignments, experiments, and resulting learnings."""
     __tablename__ = "experiments"
 
     id = Column(String(64), primary_key=True)
-    experiment_type = Column(String(64), nullable=False)  # EXPERIMENT_A (Same Topic/New Hook), EXPERIMENT_B (Same Hook/New Topic), etc.
-    title = Column(String(255), nullable=False)
-    hypothesis = Column(Text, nullable=False)
+    experiment_type = Column(String(64), nullable=True)  # STRATEGY_ASSIGNMENT, EXPERIMENT_A, etc.
+    experiment_group_id = Column(String(64), nullable=True, index=True)
+    title = Column(String(255), nullable=True)
+    hypothesis = Column(Text, nullable=True)
     
     # Controlled & test variables
-    control_variable = Column(String(128), nullable=False)
-    test_variable = Column(String(128), nullable=False)
-    
-    # Linked jobs / videos
+    control_variable = Column(String(128), nullable=True)
+    test_variable = Column(String(128), nullable=True)
     control_job_id = Column(String(64), nullable=True)
     test_job_id = Column(String(64), nullable=True)
 
-    status = Column(String(32), default="PLANNED")  # PLANNED, RUNNING, CONCLUDED
+    # Phase 4 Strategy Assignment Fields
+    job_id = Column(String(64), nullable=True, index=True)
+    topic_id = Column(String(64), nullable=True, index=True)
+    hook_archetype = Column(String(64), nullable=True)
+    duration_target = Column(String(64), nullable=True)
+    bgm_mood = Column(String(128), nullable=True)
+    motion_style = Column(String(64), nullable=True)
+    category = Column(String(64), nullable=True)
+    selection_mode = Column(String(32), default="EXPLOITATION")  # EXPLOITATION, EXPLORATION, MANUAL_OVERRIDE, DEFAULT
+    strategy_reason = Column(Text, nullable=True)
+    combination_type = Column(String(32), default="KNOWN")  # KNOWN, PARTIALLY_KNOWN, UNSEEN
+
+    # Lifecycle State
+    status = Column(String(32), default="PLANNED")  # PLANNED, SELECTED, PRODUCED, READY, UPLOADED, MEASURED, FAILED, CANCELLED
+    failure_reason = Column(Text, nullable=True)
+    
+    # Upload & Metric Linking
+    upload_id = Column(String(64), nullable=True, index=True)
+    youtube_video_id = Column(String(64), nullable=True, index=True)
+    outcome_snapshot_id = Column(Integer, nullable=True)
     outcome_summary = Column(Text, nullable=True)
     measured_delta_apv = Column(Float, nullable=True)
     confidence = Column(String(32), default="LOW_CONFIDENCE")
@@ -296,6 +318,22 @@ class ProviderUsage(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     provider_name = Column(String(64), nullable=False, index=True)
     units_used = Column(Integer, default=1)
-    cost_usd = Column(Float, default=0.0)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    model_name = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
+
+class StrategyWeight(Base):
+    """Stores persistent, deterministic strategy weights for content generation."""
+    __tablename__ = "strategy_weights"
+
+    id = Column(String(64), primary_key=True)
+    feature_type = Column(String(64), nullable=False, index=True)  # hook_archetype, duration_target, bgm_mood, motion_style, category
+    feature_value = Column(String(128), nullable=False, index=True)
+    weight = Column(Float, default=1.0, nullable=False)  # Bounded [0.20, 2.00]
+    sample_count = Column(Integer, default=0, nullable=False)
+    performance_mean = Column(Float, default=50.0, nullable=False)
+    baseline_performance = Column(Float, default=50.0, nullable=False)
+    relative_lift = Column(Float, default=0.0, nullable=False)  # Percentage lift vs baseline (e.g. +15.2%)
+    confidence_level = Column(String(32), default="INSUFFICIENT_EVIDENCE", nullable=False)  # INSUFFICIENT_EVIDENCE (<3), WEAK_EVIDENCE (3-4), USABLE_EVIDENCE (>=5)
+    last_updated = Column(DateTime, default=datetime.utcnow)
+    update_reason = Column(Text, nullable=True)

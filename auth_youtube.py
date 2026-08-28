@@ -8,7 +8,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube",
-    "https://www.googleapis.com/auth/drive"
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/yt-analytics.readonly"
 ]
 
 PROJECT_ROOT = Path(__file__).resolve().parent

@@ -64,7 +64,12 @@ class AssetFetcher:
         # Randomize page between 1 and 4 for variety
         params = {"query": query, "per_page": 15, "page": random.randint(1, 3), "orientation": "portrait"}
         try:
-            resp = requests.get(url, headers=headers, params=params, timeout=10)
+            from core.retry import retry_call
+            resp = retry_call(
+                lambda: requests.get(url, headers=headers, params=params, timeout=10),
+                max_retries=3,
+                base_delay=1.0
+            )
             if resp.status_code == 200:
                 data = resp.json()
                 photos = data.get("photos", [])
@@ -84,11 +89,16 @@ class AssetFetcher:
         Generates free, commercially usable AI historical image via Pollinations.ai (Free $0 / Open).
         """
         try:
+            from core.retry import retry_call
             # Add seed to guarantee uniqueness
             seed = random.randint(1, 999999)
             encoded_prompt = urllib.parse.quote(prompt + f", historic photograph style, authentic documentary, seed {seed}")
             url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&nologo=true&seed={seed}"
-            resp = requests.get(url, timeout=25)
+            resp = retry_call(
+                lambda: requests.get(url, timeout=25),
+                max_retries=3,
+                base_delay=1.5
+            )
             if resp.status_code == 200 and len(resp.content) > 5000:
                 with open(output_path, "wb") as f:
                     f.write(resp.content)

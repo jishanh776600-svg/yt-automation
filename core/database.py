@@ -1,18 +1,82 @@
 """
 Database engine and session management.
 """
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker, scoped_session
 from config.settings import DB_PATH
 from core.models import Base
 
-engine = create_engine(f"sqlite:///{DB_PATH}", echo=False, connect_args={"check_same_thread": False})
+engine = create_engine(
+    f"sqlite:///{DB_PATH}",
+    echo=False,
+    connect_args={"check_same_thread": False, "timeout": 30.0}
+)
+
+
+@event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    """Configures SQLite for safe concurrent reads/writes via WAL mode and busy timeout."""
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+    except Exception:
+        pass
+    finally:
+        cursor.close()
+
+
 SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 
 
 def init_db():
-    """Initializes tables in database."""
+    """Initializes tables in database and applies idempotent column migrations."""
     Base.metadata.create_all(bind=engine)
+
+    # Safe idempotent SQLite column migrations
+    with engine.connect() as conn:
+        try:
+            # 1. scripts table
+            script_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(scripts)")).fetchall()]
+            if "hook_archetype" not in script_cols:
+                conn.execute(text("ALTER TABLE scripts ADD COLUMN hook_archetype VARCHAR(64)"))
+            if "duration_target" not in script_cols:
+                conn.execute(text("ALTER TABLE scripts ADD COLUMN duration_target VARCHAR(64)"))
+
+            # 2. renders table
+            render_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(renders)")).fetchall()]
+            if "bgm_mood" not in render_cols:
+                conn.execute(text("ALTER TABLE renders ADD COLUMN bgm_mood VARCHAR(128)"))
+            if "motion_style" not in render_cols:
+                conn.execute(text("ALTER TABLE renders ADD COLUMN motion_style VARCHAR(64)"))
+
+            # 3. experiments table
+            exp_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(experiments)")).fetchall()]
+            exp_new_cols = {
+                "experiment_group_id": "VARCHAR(64)",
+                "job_id": "VARCHAR(64)",
+                "topic_id": "VARCHAR(64)",
+                "hook_archetype": "VARCHAR(64)",
+                "duration_target": "VARCHAR(64)",
+                "bgm_mood": "VARCHAR(128)",
+                "motion_style": "VARCHAR(64)",
+                "category": "VARCHAR(64)",
+                "selection_mode": "VARCHAR(32)",
+                "strategy_reason": "TEXT",
+                "combination_type": "VARCHAR(32)",
+                "failure_reason": "TEXT",
+                "upload_id": "VARCHAR(64)",
+                "youtube_video_id": "VARCHAR(64)",
+                "outcome_snapshot_id": "INTEGER"
+            }
+            for col, col_type in exp_new_cols.items():
+                if col not in exp_cols:
+                    conn.execute(text(f"ALTER TABLE experiments ADD COLUMN {col} {col_type}"))
+
+            conn.commit()
+        except Exception:
+            pass
 
 
 def get_db():

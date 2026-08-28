@@ -29,38 +29,31 @@ class AnalyticsEngine:
     def run_feedback_loop(self, db: Session, mock_dataset: bool = False) -> Dict[str, Any]:
         """
         Executes the end-to-end feedback loop:
-        1. Collects snapshots
-        2. Computes baselines & classifies videos
-        3. Extracts structured root causes (Fact vs Hypothesis)
-        4. Updates persistent ContentPattern database with confidence ratings
-        5. Logs daily & weekly intelligence reports
+        1. Harvests snapshots for mature, eligible uploads
+        2. Links snapshots to ExperimentRecords with MEASURED status
+        3. Recalculates StrategyWeights via LearningEngine
+        4. Updates LEARNING_LOG.md
         """
         logger.info("Starting Closed-Loop Performance Analysis...")
 
-        # 1. Collect latest metrics snapshots
-        snapshots = self.collector.collect_all_active_shorts(db)
-        
-        # 2. Compute channel rolling medians
-        baselines = self.analyzer.compute_channel_baselines(db)
+        # 1. Collect latest metrics snapshots and auto-run learning cycle
+        harvest_summary = self.collector.harvest_all_eligible_shorts(db, auto_learn=True)
 
-        # 3. Analyze each upload
-        uploads = db.query(UploadRecord).filter(UploadRecord.youtube_video_id.isnot(None)).all()
-        analyses = []
-        for upl in uploads:
-            an = self.analyzer.analyze_video(db, upl, baselines)
-            analyses.append(an)
-
-        # 4. Update persistent learning knowledge base
-        patterns = self.learner.update_learning_database(db)
-
-        # 5. Generate daily intelligence report
-        daily_report = self.reporter.generate_daily_learning_report(db)
-        logger.info("\n" + daily_report)
+        # 2. Run Learning cycle directly if not already triggered by new harvests
+        learning_summary = harvest_summary.get("learning_summary")
+        if not learning_summary:
+            try:
+                learning_summary = self.learner.run_learning_cycle(db)
+            except Exception as e:
+                logger.warning(f"Learning cycle notice: {e}")
+                learning_summary = {}
 
         return {
-            "snapshots_collected": len(snapshots),
-            "videos_analyzed": len(analyses),
-            "patterns_active": len(patterns),
-            "channel_baselines": baselines,
-            "daily_report": daily_report
+            "snapshots_harvested": harvest_summary.get("snapshots_harvested", 0),
+            "skipped_immature": harvest_summary.get("skipped_immature_count", 0),
+            "skipped_idempotent": harvest_summary.get("skipped_idempotent_count", 0),
+            "learning_cycle_executed": bool(learning_summary),
+            "weights_updated_count": learning_summary.get("weights_updated_count", 0) if learning_summary else 0,
+            "harvest_summary": harvest_summary,
+            "learning_summary": learning_summary
         }

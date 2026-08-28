@@ -85,16 +85,36 @@ class RenderEngine:
         shots_data: List[Dict[str, Any]],
         asset_map: Dict[str, AssetRecord],
         master_audio_path: Path,
-        ass_subtitle_path: Optional[Path] = None
+        ass_subtitle_path: Optional[Path] = None,
+        bgm_mood: Optional[str] = None,
+        motion_style: Optional[str] = None
     ) -> RenderOutput:
         """
         Assembles all shots, applies transitions, muxes master audio, burns subtitles,
-        and outputs final 1080x1920 vertical MP4.
+        and outputs final 1080x1920 vertical MP4 with persistent learning metadata.
         """
         temp_clips = []
         concat_list_path = self.renders_dir / f"concat_{job_id}.txt"
         final_video_path = self.renders_dir / f"short_{job_id}_1080x1920.mp4"
         visual_only_path = self.renders_dir / f"visual_{job_id}.mp4"
+
+        # Infer motion style if not explicitly supplied
+        if not motion_style:
+            motions = {s.get("camera_motion", "zoom_in") for s in shots_data}
+            motion_style = "DYNAMIC_ZOOM_PAN" if len(motions) > 1 else "KEN_BURNS_STANDARD"
+
+        # Infer BGM mood if not explicitly supplied
+        if not bgm_mood:
+            try:
+                from engines.audio_mixer import AudioMixer
+                from core.models import Job
+                job = db.query(Job).filter(Job.id == job_id).first()
+                if job and job.topic:
+                    mixer = AudioMixer()
+                    bgm_decision = mixer.select_bgm_for_topic(job.topic.title)
+                    bgm_mood = bgm_decision.get("mood", "Historical / Serious Documentary")
+            except Exception:
+                bgm_mood = "Historical / Serious Documentary"
 
         # 1. Render each individual shot clip
         with open(concat_list_path, "w", encoding="utf-8") as f_concat:
@@ -177,9 +197,11 @@ class RenderEngine:
             duration_sec=total_duration,
             video_codec="h264",
             audio_codec="aac",
-            file_size_bytes=file_size
+            file_size_bytes=file_size,
+            bgm_mood=bgm_mood,
+            motion_style=motion_style
         )
         db.add(render_rec)
         db.commit()
-        logger.info(f"Render complete: {final_video_path} ({file_size} bytes)")
+        logger.info(f"Render complete: {final_video_path} ({file_size} bytes | Mood: {bgm_mood} | Motion: {motion_style})")
         return render_rec

@@ -28,12 +28,14 @@ MUSIC_DIR = ASSETS_DIR / "music"
 SFX_DIR = ASSETS_DIR / "sfx"
 FONTS_DIR = ASSETS_DIR / "fonts"
 
+LOCKS_DIR = DATA_DIR / "locks"
+
 DB_PATH = DATABASE_DIR / "pipeline.db"
 
 # Ensure runtime directories exist
 for d in [DATABASE_DIR, TOPICS_DIR, RESEARCH_DIR, SCRIPTS_DIR, STORYBOARDS_DIR,
           ASSETS_CACHE_DIR, VOICE_DIR, CAPTIONS_DIR, RENDERS_DIR, PUBLISHED_DIR,
-          LOGS_DIR, MUSIC_DIR, SFX_DIR, FONTS_DIR]:
+          LOGS_DIR, LOCKS_DIR, MUSIC_DIR, SFX_DIR, FONTS_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 # Environment Variables & Keys
@@ -57,6 +59,22 @@ IMAGE_PROVIDER = os.getenv("IMAGE_PROVIDER", "pollinations")
 # Publishing Frequency
 SHORTS_PER_DAY = int(os.getenv("SHORTS_PER_DAY", "2"))
 PUBLISH_TIME_SLOTS = ["14:00", "20:00"]
+
+# Self-Improvement & Strategy Execution (Phase 4)
+SELF_IMPROVEMENT_ENABLED = os.getenv("SELF_IMPROVEMENT_ENABLED", "false").lower() == "true"
+STRATEGY_MODE = os.getenv("STRATEGY_MODE", "LEARNED").upper()  # LEARNED, EXPLORE, DEFAULT
+EXPLORATION_RATE = float(os.getenv("EXPLORATION_RATE", "0.20"))
+
+# Resilient Bounded Retries (Phase 5.2)
+RETRY_MAX_ATTEMPTS = int(os.getenv("RETRY_MAX_ATTEMPTS", "3"))
+RETRY_BASE_DELAY = float(os.getenv("RETRY_BASE_DELAY", "1.0"))
+RETRY_MAX_DELAY = float(os.getenv("RETRY_MAX_DELAY", "30.0"))
+
+# Concurrency & Buffer Guardrails (Phase 5.3)
+MAX_BATCH_PRODUCTION_CEILING = int(os.getenv("MAX_BATCH_PRODUCTION_CEILING", "8"))
+MAX_PRODUCTION_ATTEMPTS_CEILING = int(os.getenv("MAX_PRODUCTION_ATTEMPTS_CEILING", "12"))
+MAX_BUFFER_RESERVE_CEILING = int(os.getenv("MAX_BUFFER_RESERVE_CEILING", "24"))
+LOCK_STALE_TIMEOUT_SEC = float(os.getenv("LOCK_STALE_TIMEOUT_SEC", "1800.0"))  # 30 minutes
 
 
 def get_ffmpeg_path() -> str:
