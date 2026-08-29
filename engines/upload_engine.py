@@ -152,7 +152,10 @@ class UploadEngine:
                 ).execute()
                 for item in search_res.get("items", []):
                     item_title = item.get("snippet", {}).get("title", "").strip().lower()
-                    if item_title == norm_title or (norm_title and norm_title in item_title):
+                    item_desc = item.get("snippet", {}).get("description", "")
+                    is_exact_title = (item_title == norm_title)
+                    is_job_match = (f"[JOB_ID: {job.id}]" in item_desc) or (job.id in item_desc)
+                    if is_job_match or is_exact_title:
                         existing_yt_id = item.get("id", {}).get("videoId")
                         if existing_yt_id:
                             logger.warning(f"[CRASH_RECOVERY] Found existing YouTube video {existing_yt_id} matching '{metadata['title']}' from previous interrupted session. Reconciling without re-upload.")
@@ -176,11 +179,17 @@ class UploadEngine:
             except Exception as search_err:
                 logger.warning(f"[CRASH_RECOVERY] Pre-upload channel search check skipped: {search_err}")
 
+            # Embed Job ID in description for unambiguous identity reconciliation
+            job_tag = f"\n\n[JOB_ID: {job.id}]"
+            full_description = metadata["description"]
+            if f"[JOB_ID: {job.id}]" not in full_description:
+                full_description += job_tag
+
             # YouTube API requires privacyStatus='private' when publishAt is set
             body = {
                 "snippet": {
                     "title": metadata["title"][:100],
-                    "description": metadata["description"][:5000],
+                    "description": full_description[:5000],
                     "tags": metadata.get("tags", []),
                     "categoryId": "27"  # Education
                 },
@@ -278,7 +287,10 @@ class UploadEngine:
                         ).execute()
                         for item in search_res.get("items", []):
                             item_title = item.get("snippet", {}).get("title", "").strip().lower()
-                            if item_title == norm_title or (norm_title and norm_title in item_title):
+                            item_desc = item.get("snippet", {}).get("description", "")
+                            is_exact_title = (item_title == norm_title)
+                            is_job_match = (f"[JOB_ID: {job.id}]" in item_desc) or (job.id in item_desc)
+                            if is_job_match or is_exact_title:
                                 rec_id = item.get("id", {}).get("videoId")
                                 if rec_id:
                                     logger.warning(

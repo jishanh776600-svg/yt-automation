@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 
 from config.settings import PROJECT_ROOT
+from core.retry import retry_call
 
 logger = logging.getLogger(__name__)
 
@@ -92,12 +93,13 @@ class DriveVaultEngine:
             query += f" and '{parent_id}' in parents"
 
         try:
-            res = drive.files().list(
+            req = drive.files().list(
                 q=query,
                 spaces="drive",
                 fields="files(id, name, parents, createdTime)",
                 pageSize=10
-            ).execute()
+            )
+            res = retry_call(req.execute, max_retries=3, base_delay=1.5, max_delay=8.0)
             files = res.get("files", [])
             if files:
                 return files[0]
@@ -117,10 +119,11 @@ class DriveVaultEngine:
             file_metadata["parents"] = [parent_id]
 
         try:
-            folder = drive.files().create(
+            req = drive.files().create(
                 body=file_metadata,
                 fields="id, name, parents"
-            ).execute()
+            )
+            folder = retry_call(req.execute, max_retries=3, base_delay=1.5, max_delay=8.0)
             logger.info(f"[+] Created Google Drive folder: '{folder_name}' (ID: {folder.get('id')})")
             return folder
         except Exception as e:
@@ -268,12 +271,13 @@ class DriveVaultEngine:
         to_id = self.get_folder_id(to_folder, create_if_missing=True)
 
         try:
-            updated_file = drive.files().update(
+            req = drive.files().update(
                 fileId=file_id,
                 addParents=to_id,
                 removeParents=from_id,
                 fields="id, name, parents"
-            ).execute()
+            )
+            updated_file = retry_call(req.execute, max_retries=3, base_delay=1.5, max_delay=8.0)
             logger.info(f"[+] Moved file {file_id} in Drive from '{from_folder}' to '{to_folder}'")
             return updated_file
         except Exception as e:
@@ -284,10 +288,11 @@ class DriveVaultEngine:
         """Retrieves comprehensive metadata and custom properties of a Drive file."""
         drive = self.get_drive_service()
         try:
-            return drive.files().get(
+            req = drive.files().get(
                 fileId=file_id,
                 fields="id, name, mimeType, size, createdTime, description, properties, webViewLink, parents"
-            ).execute()
+            )
+            return retry_call(req.execute, max_retries=3, base_delay=1.5, max_delay=8.0)
         except Exception as e:
             logger.error(f"Error fetching metadata for Drive file {file_id}: {e}")
             raise
@@ -310,12 +315,13 @@ class DriveVaultEngine:
         folder_id = self.get_folder_id(folder_name, create_if_missing=False)
         query = f"'{folder_id}' in parents and name = '{filename}' and trashed = false"
         try:
-            res = drive.files().list(
+            req = drive.files().list(
                 q=query,
                 spaces="drive",
                 fields="files(id, name, mimeType, size, createdTime, md5Checksum)",
                 pageSize=1
-            ).execute()
+            )
+            res = retry_call(req.execute, max_retries=3, base_delay=1.5, max_delay=8.0)
             files = res.get("files", [])
             return files[0] if files else None
         except Exception as e:
@@ -349,11 +355,12 @@ class DriveVaultEngine:
         if existing:
             file_id = existing["id"]
             logger.info(f"Updating canonical database in Drive (File ID: {file_id}, size: {local_path.stat().st_size} bytes)...")
-            file_obj = drive.files().update(
+            req = drive.files().update(
                 fileId=file_id,
                 media_body=media,
                 fields="id, name, size, md5Checksum, modifiedTime"
-            ).execute()
+            )
+            file_obj = retry_call(req.execute, max_retries=3, base_delay=2.0, max_delay=10.0)
             logger.info(f"[+] Successfully updated canonical database in Drive: ID={file_obj.get('id')}")
             return file_obj
         else:
@@ -363,11 +370,12 @@ class DriveVaultEngine:
                 "description": "Historia Production SQLite Database"
             }
             logger.info(f"Uploading new canonical database to Drive (00_SYSTEM/{filename})...")
-            file_obj = drive.files().create(
+            req = drive.files().create(
                 body=file_metadata,
                 media_body=media,
                 fields="id, name, size, md5Checksum, modifiedTime"
-            ).execute()
+            )
+            file_obj = retry_call(req.execute, max_retries=3, base_delay=2.0, max_delay=10.0)
             logger.info(f"[+] Successfully created canonical database in Drive: ID={file_obj.get('id')}")
             return file_obj
 

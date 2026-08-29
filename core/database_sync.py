@@ -171,14 +171,24 @@ def upload_canonical_database(
     if not source.exists():
         raise FileNotFoundError(f"Local database not found for upload: {source}")
 
-    # Explicit WAL checkpoint to ensure all transactions are flushed to primary DB file
+    # Dispose any pooled SQLAlchemy connections so no open transaction blocks WAL checkpoint
     try:
-        conn = sqlite3.connect(str(source), timeout=10.0)
-        conn.execute("PRAGMA wal_checkpoint(TRUNCATE);")
-        conn.commit()
-        conn.close()
-    except Exception as cp_err:
-        logger.warning(f"WAL checkpoint notice: {cp_err}")
+        from core.database import engine as sa_engine
+        sa_engine.dispose()
+    except Exception:
+        pass
+
+    # Explicit WAL checkpoint to ensure all transactions are flushed to primary DB file
+    for attempt in range(3):
+        try:
+            conn = sqlite3.connect(str(source), timeout=15.0)
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE);")
+            conn.commit()
+            conn.close()
+            break
+        except Exception as cp_err:
+            logger.warning(f"WAL checkpoint attempt {attempt + 1} notice: {cp_err}")
+            time.sleep(0.5)
 
     is_valid, msg = verify_sqlite_integrity(source)
     if not is_valid:

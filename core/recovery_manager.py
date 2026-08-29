@@ -232,29 +232,47 @@ class RecoveryManager:
 
             # Check if any job claims to be READY_TO_UPLOAD but has no file in 01_READY
             ready_files = self.drive_engine.list_files_in_folder("01_READY")
-            ready_job_ids = set()
-            for rf in ready_files:
-                props = rf.get("properties", {}) or {}
-                jid = props.get("job_id")
-                if not jid:
-                    m = re.search(r"short_(job_[a-f0-9]+)", rf.get("name", ""))
-                    if m:
-                        jid = m.group(1)
-                if jid:
-                    ready_job_ids.add(jid)
+            processing_files = self.drive_engine.list_files_in_folder("02_PROCESSING")
+            published_files = self.drive_engine.list_files_in_folder("03_PUBLISHED")
+
+            def extract_job_ids(files):
+                jids = set()
+                for f in files:
+                    props = f.get("properties", {}) or {}
+                    jid = props.get("job_id")
+                    if not jid:
+                        m = re.search(r"short_(job_[a-f0-9]+)", f.get("name", ""))
+                        if m:
+                            jid = m.group(1)
+                    if jid:
+                        jids.add(jid)
+                return jids
+
+            ready_job_ids = extract_job_ids(ready_files)
+            processing_job_ids = extract_job_ids(processing_files)
+            published_job_ids = extract_job_ids(published_files)
 
             db_ready_jobs = db.query(Job).filter(Job.state == JobState.READY_TO_UPLOAD.value).all()
             for rj in db_ready_jobs:
-                if rj.id not in ready_job_ids:
+                if rj.id in ready_job_ids:
+                    continue
+                elif rj.id in processing_job_ids:
+                    logger.info(f"Job {rj.id} is currently in 02_PROCESSING. Skipping false-positive consistency alert.")
+                    continue
+                elif rj.id in published_job_ids:
+                    logger.info(f"Job {rj.id} is already in 03_PUBLISHED. Reconciling status.")
+                    rj.state = JobState.PUBLISHED.value
+                    continue
+                else:
                     results["inconsistencies"].append({
                         "job_id": rj.id,
                         "type": "MISSING_DRIVE_READY_FILE",
-                        "message": f"Job {rj.id} has state READY_TO_UPLOAD but no corresponding file found in 01_READY."
+                        "message": f"Job {rj.id} has state READY_TO_UPLOAD but no corresponding file found in Drive vault."
                     })
                     StateMachine.flag_needs_review(
                         db,
                         rj,
-                        reason="[CONSISTENCY_CHECK] Job marked READY_TO_UPLOAD but file missing from 01_READY vault."
+                        reason="[CONSISTENCY_CHECK] Job marked READY_TO_UPLOAD but file missing from Drive vault."
                     )
 
         except Exception as e:
