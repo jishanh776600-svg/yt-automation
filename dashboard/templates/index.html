@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>Historia Mission Control // Autonomous Pipeline Operations</title>
+    <title>AL AMR Operations // Autonomous Pipeline Operations</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
@@ -81,7 +81,7 @@
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span class="text-emerald-400 font-bold uppercase tracking-wider">MISSION CONTROL LIVE</span>
+            <span class="text-emerald-400 font-bold uppercase tracking-wider">AL AMR INTELLIGENCE LIVE</span>
             <span class="text-slate-600 hidden sm:inline">|</span>
             <span class="text-slate-400 hidden sm:inline">UTC: <span id="clock-utc" class="text-slate-200 font-bold">--:--:--</span></span>
             <span class="text-slate-600 hidden md:inline">|</span>
@@ -106,7 +106,7 @@
                     H
                 </div>
                 <div>
-                    <h1 class="font-cinzel text-lg sm:text-xl font-bold tracking-wider text-amber-400">HISTORIA MISSION CONTROL</h1>
+                    <h1 class="font-cinzel text-lg sm:text-xl font-bold tracking-wider text-amber-400">HISTORIA AL AMR INTELLIGENCE</h1>
                     <p class="text-[11px] text-slate-400 font-mono">Autonomous Production, Google Drive Vault & Scheduled YouTube Operations</p>
                 </div>
             </div>
@@ -857,6 +857,120 @@
         </section>
 
         <!-- ================================================================== -->
+        <!-- 7.5. AL AMR PUBLISHED VIDEO PERFORMANCE LEADERBOARD                -->
+        <!-- ================================================================== -->
+        <section class="bg-panel border border-borderSubtle rounded-2xl p-5 shadow-xl space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-3">
+                <div class="flex items-center space-x-2">
+                    <span class="text-amber-400 font-bold text-base">📊</span>
+                    <div>
+                        <h2 class="text-sm font-bold font-mono text-slate-100 uppercase tracking-wider">AL AMR // Published Video Performance Intelligence</h2>
+                        <p class="text-[11px] text-slate-400 font-mono">Real historical YouTube metrics, audience retention depth, and engagement rates</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3 text-xs font-mono text-slate-400">
+                    <span>Ranked Videos: <strong id="leaderboard-total-count" class="text-sky-400">{{ (state.performance_leaderboard or [])|length }}</strong></span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left font-mono text-xs border-collapse">
+                    <thead>
+                        <tr class="text-[10px] text-slate-400 border-b border-borderSubtle uppercase tracking-wider bg-obsidian/50">
+                            <th class="py-2.5 px-3">Rank</th>
+                            <th class="py-2.5 px-3">Short / Title</th>
+                            <th class="py-2.5 px-3">Published</th>
+                            <th class="py-2.5 px-3 text-right">Views</th>
+                            <th class="py-2.5 px-3 text-right">Likes</th>
+                            <th class="py-2.5 px-3 text-right">Comments</th>
+                            <th class="py-2.5 px-3 text-right">APV (Retention)</th>
+                            <th class="py-2.5 px-3 text-right">Engagement</th>
+                            <th class="py-2.5 px-3 text-center">Status / Rating</th>
+                        </tr>
+                    </thead>
+                    <tbody id="performance-leaderboard-tbody" class="divide-y divide-borderSubtle">
+                        {% for v in (state.performance_leaderboard or []) %}
+                        <tr class="hover:bg-slate-900/60 transition group">
+                            <!-- Rank -->
+                            <td class="py-2.5 px-3 font-bold">
+                                {% if v.rank == 1 %}
+                                <span class="px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-600 text-[11px]">🥇 #1</span>
+                                {% elif v.rank == 2 %}
+                                <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-600 text-[11px]">🥈 #2</span>
+                                {% elif v.rank == 3 %}
+                                <span class="px-2 py-0.5 rounded bg-amber-950/40 text-amber-500 border border-amber-800 text-[11px]">🥉 #3</span>
+                                {% else %}
+                                <span class="text-slate-500">#{{ v.rank }}</span>
+                                {% endif %}
+                            </td>
+                            <!-- Short Title & Link -->
+                            <td class="py-2.5 px-3">
+                                <div class="font-bold text-slate-200 group-hover:text-sky-300 transition truncate max-w-xs md:max-w-md" title="{{ v.title }}">
+                                    {{ v.title }}
+                                </div>
+                                <div class="flex items-center space-x-2 text-[10px] text-slate-500 mt-0.5">
+                                    <span class="text-slate-400">{{ v.youtube_video_id }}</span>
+                                    {% if v.youtube_url %}
+                                    <a href="{{ v.youtube_url }}" target="_blank" rel="noopener noreferrer" class="text-sky-400 hover:text-sky-300 flex items-center space-x-0.5 underline">
+                                        <span>Watch</span>
+                                        <span>↗</span>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <!-- Published -->
+                            <td class="py-2.5 px-3 text-slate-400 text-[11px] whitespace-nowrap">
+                                {{ v.published_at_display }}
+                            </td>
+                            <!-- Views -->
+                            <td class="py-2.5 px-3 text-right font-bold text-slate-100 whitespace-nowrap" title="{{ '{:,}'.format(v.views) }} views">
+                                {{ v.views_display }}
+                            </td>
+                            <!-- Likes -->
+                            <td class="py-2.5 px-3 text-right text-slate-300 whitespace-nowrap" title="{{ '{:,}'.format(v.likes) }} likes">
+                                {{ v.likes_display }}
+                            </td>
+                            <!-- Comments -->
+                            <td class="py-2.5 px-3 text-right text-slate-300 whitespace-nowrap" title="{{ '{:,}'.format(v.comments) }} comments">
+                                {{ v.comments_display }}
+                            </td>
+                            <!-- APV -->
+                            <td class="py-2.5 px-3 text-right whitespace-nowrap">
+                                <span class="{% if v.apv and v.apv >= 70 %}text-emerald-400 font-bold{% elif v.apv and v.apv >= 50 %}text-sky-300{% elif v.apv %}text-slate-400{% else %}text-slate-600{% endif %}">
+                                    {{ v.apv_display }}
+                                </span>
+                            </td>
+                            <!-- Engagement Rate -->
+                            <td class="py-2.5 px-3 text-right whitespace-nowrap">
+                                <span class="{% if v.engagement_rate >= 3.0 %}text-emerald-400 font-bold{% elif v.engagement_rate >= 1.0 %}text-sky-300{% elif v.views > 0 %}text-slate-400{% else %}text-slate-600{% endif %}">
+                                    {{ v.engagement_display }}
+                                </span>
+                            </td>
+                            <!-- Status / Rating -->
+                            <td class="py-2.5 px-3 text-center whitespace-nowrap">
+                                <span class="px-2 py-0.5 rounded text-[9px] font-bold
+                                    {% if v.classification == 'OUTPERFORMER' %}bg-emerald-950 text-emerald-300 border border-emerald-700
+                                    {% elif v.classification == 'AVERAGE' %}bg-sky-950 text-sky-300 border border-sky-700
+                                    {% elif v.classification == 'UNDERPERFORMER' %}bg-rose-950 text-rose-300 border border-rose-700
+                                    {% else %}bg-slate-900 text-slate-400 border border-slate-700{% endif %}">
+                                    {{ v.classification if v.classification != 'UNRATED' else v.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="py-8 text-center text-slate-500 italic">
+                                No published YouTube videos with harvested analytics yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+
+        <!-- ================================================================== -->
         <!-- 8. CLOUD AUTOMATION WORKFLOWS TELEMETRY                            -->
         <!-- ================================================================== -->
         <section class="bg-panel border border-borderSubtle rounded-2xl p-5 shadow-xl space-y-4">
@@ -1186,7 +1300,7 @@
 
     <!-- Footer -->
     <footer class="border-t border-borderSubtle bg-obsidian px-6 py-5 text-center text-xs font-mono text-slate-500">
-        <div>HISTORIA PIPELINE // AUTONOMOUS MISSION CONTROL v5.0</div>
+        <div>AL AMR // AUTONOMOUS YOUTUBE SHORTS INTELLIGENCE v5.2</div>
     </footer>
 
     <!-- Client-Side Real-World Action Controller Script -->
@@ -1420,7 +1534,7 @@
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': window.CSRF_TOKEN
                     },
-                    body: JSON.stringify({ job_id: jobId, reason: 'Quarantined via Mission Control UI' })
+                    body: JSON.stringify({ job_id: jobId, reason: 'Quarantined via AL AMR INTELLIGENCE UI' })
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
@@ -1502,9 +1616,10 @@
                         }
                     }
 
-                    // Render live Database Sync & Service Quotas telemetry
+                    // Render live Database Sync, Service Quotas, and Performance Leaderboard telemetry
                     if (state.database_sync) renderDatabaseSync(state.database_sync);
                     if (state.service_quotas) renderServiceQuotas(state.service_quotas);
+                    if (state.performance_leaderboard) renderPerformanceLeaderboard(state.performance_leaderboard);
 
                     if (showToastFeedback) {
                         showToast('STATE SYNCED', 'Telemetry updated from live system.', true);
@@ -1519,6 +1634,77 @@
             }
         }
 
+
+        
+        function renderPerformanceLeaderboard(leaderboard) {
+            if (!leaderboard) return;
+            const countEl = document.getElementById('leaderboard-total-count');
+            if (countEl) countEl.innerText = leaderboard.length;
+
+            const tbody = document.getElementById('performance-leaderboard-tbody');
+            if (!tbody) return;
+
+            if (leaderboard.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500 italic">No published YouTube videos with harvested analytics yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = leaderboard.map(v => {
+                let rankBadge = '';
+                if (v.rank === 1) {
+                    rankBadge = '<span class="px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-600 text-[11px]">🥇 #1</span>';
+                } else if (v.rank === 2) {
+                    rankBadge = '<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-600 text-[11px]">🥈 #2</span>';
+                } else if (v.rank === 3) {
+                    rankBadge = '<span class="px-2 py-0.5 rounded bg-amber-950/40 text-amber-500 border border-amber-800 text-[11px]">🥉 #3</span>';
+                } else {
+                    rankBadge = `<span class="text-slate-500">#${v.rank}</span>`;
+                }
+
+                let classBadge = '';
+                if (v.classification === 'OUTPERFORMER') {
+                    classBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700">OUTPERFORMER</span>';
+                } else if (v.classification === 'AVERAGE') {
+                    classBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-sky-950 text-sky-300 border border-sky-700">AVERAGE</span>';
+                } else if (v.classification === 'UNDERPERFORMER') {
+                    classBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-rose-950 text-rose-300 border border-rose-700">UNDERPERFORMER</span>';
+                } else {
+                    classBadge = `<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-900 text-slate-400 border border-slate-700">${v.classification !== 'UNRATED' ? v.classification : v.status}</span>`;
+                }
+
+                let apvClass = 'text-slate-600';
+                if (v.apv && v.apv >= 70) apvClass = 'text-emerald-400 font-bold';
+                else if (v.apv && v.apv >= 50) apvClass = 'text-sky-300';
+                else if (v.apv) apvClass = 'text-slate-400';
+
+                let engClass = 'text-slate-600';
+                if (v.engagement_rate >= 3.0) engClass = 'text-emerald-400 font-bold';
+                else if (v.engagement_rate >= 1.0) engClass = 'text-sky-300';
+                else if (v.views > 0) engClass = 'text-slate-400';
+
+                const watchLink = v.youtube_url ? `<a href="${v.youtube_url}" target="_blank" rel="noopener noreferrer" class="text-sky-400 hover:text-sky-300 flex items-center space-x-0.5 underline"><span>Watch</span><span>↗</span></a>` : '';
+
+                return `
+                    <tr class="hover:bg-slate-900/60 transition group">
+                        <td class="py-2.5 px-3 font-bold">${rankBadge}</td>
+                        <td class="py-2.5 px-3">
+                            <div class="font-bold text-slate-200 group-hover:text-sky-300 transition truncate max-w-xs md:max-w-md" title="${v.title}">${v.title}</div>
+                            <div class="flex items-center space-x-2 text-[10px] text-slate-500 mt-0.5">
+                                <span class="text-slate-400">${v.youtube_video_id || ''}</span>
+                                ${watchLink}
+                            </div>
+                        </td>
+                        <td class="py-2.5 px-3 text-slate-400 text-[11px] whitespace-nowrap">${v.published_at_display}</td>
+                        <td class="py-2.5 px-3 text-right font-bold text-slate-100 whitespace-nowrap" title="${v.views.toLocaleString()} views">${v.views_display}</td>
+                        <td class="py-2.5 px-3 text-right text-slate-300 whitespace-nowrap" title="${v.likes.toLocaleString()} likes">${v.likes_display}</td>
+                        <td class="py-2.5 px-3 text-right text-slate-300 whitespace-nowrap" title="${v.comments.toLocaleString()} comments">${v.comments_display}</td>
+                        <td class="py-2.5 px-3 text-right whitespace-nowrap"><span class="${apvClass}">${v.apv_display}</span></td>
+                        <td class="py-2.5 px-3 text-right whitespace-nowrap"><span class="${engClass}">${v.engagement_display}</span></td>
+                        <td class="py-2.5 px-3 text-center whitespace-nowrap">${classBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
 
         function renderDatabaseSync(sync) {
             if (!sync) return;

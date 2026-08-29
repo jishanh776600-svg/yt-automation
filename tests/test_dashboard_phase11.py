@@ -29,11 +29,14 @@ class TestDashboardPhase11(unittest.TestCase):
         cls.db.close()
 
     def setUp(self):
-        login_res = self.client.post("/api/auth/login", json={
-            "username": DEFAULT_ADMIN_USER,
-            "password": DEFAULT_ADMIN_PASSWORD
-        })
-        self.csrf_token = login_res.json().get("csrf_token", "")
+        from dashboard.auth import session_store, SESSION_COOKIE_NAME
+        self.session_id, self.csrf_token = session_store.create_session("admin", duration_hours=1)
+        self.client.cookies.set(SESSION_COOKIE_NAME, self.session_id)
+
+    def tearDown(self):
+        from dashboard.auth import session_store
+        if hasattr(self, "session_id"):
+            session_store.invalidate_session(self.session_id)
 
     def test_desktop_database_sync_card_rendering(self):
         """Verify desktop index.html renders canonical database sync telemetry card."""

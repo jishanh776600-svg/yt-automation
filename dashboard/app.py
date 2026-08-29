@@ -323,7 +323,8 @@ def index(request: Request, db: Session = Depends(get_db)):
             "activity_feed": state["activity_feed"],
             "review_queue": review_queue,
             "database_sync": state.get("database_sync", {}),
-            "service_quotas": state.get("service_quotas", {})
+            "service_quotas": state.get("service_quotas", {}),
+            "performance_leaderboard": state.get("performance_leaderboard", [])
         }
     )
 
@@ -426,6 +427,23 @@ def api_pexels_quota(db: Session = Depends(get_db), session: Dict[str, Any] = De
 def api_service_quotas(db: Session = Depends(get_db), session: Dict[str, Any] = Depends(get_current_session)):
     """Returns normalized real-time API and service limits for all external providers."""
     return data_provider.get_all_service_quotas(db)
+
+
+@app.get("/api/performance")
+def api_performance_leaderboard(
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    session: Dict[str, Any] = Depends(get_current_session)
+):
+    """Returns real historical performance analytics leaderboard for published YouTube Shorts."""
+    bounded_limit = max(1, min(limit, 100))
+    leaderboard = data_provider.get_published_performance_leaderboard(db, limit=bounded_limit)
+    return {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "count": len(leaderboard),
+        "leaderboard": leaderboard
+    }
+
 
 
 # ==============================================================================

@@ -13,6 +13,8 @@ from datetime import datetime, time as dtime, timedelta
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from sqlalchemy.orm import Session
+from sqlalchemy import func, desc
+from config.settings import GOOGLE_DRIVE_TOTAL_CAPACITY_BYTES
 
 from config.settings import PROJECT_ROOT, TEST_MODE, KOKORO_VOICE
 from config.constants import DAILY_SHORTS_LIMIT, JobState
@@ -38,6 +40,24 @@ PUBLISHING_SLOTS_UTC = [
 
 TARGET_RESERVE_BUFFER = 12
 
+
+
+def format_compact_number(num: int | float) -> str:
+    """Formats 1809354184 -> '1.8B', 45300 -> '45.3K', 987 -> '987'."""
+    if num is None:
+        return "—"
+    try:
+        num_float = float(num)
+        if num_float >= 1_000_000_000:
+            return f"{num_float / 1_000_000_000:.1f}B"
+        elif num_float >= 1_000_000:
+            return f"{num_float / 1_000_000:.1f}M"
+        elif num_float >= 1_000:
+            return f"{num_float / 1_000:.1f}K"
+        else:
+            return f"{int(num_float)}"
+    except Exception:
+        return str(num)
 
 class SystemDataProvider:
     """
@@ -1054,23 +1074,31 @@ class SystemDataProvider:
         except Exception as e:
             logger.warning(f"Error computing GitHub Actions quota: {e}")
 
-        # 5. Google Drive Storage
+        # 5. Google Drive Storage (Phase 11.2 - 5 TB Storage Plan Telemetry)
         try:
             drive_quota = self.drive_engine.get_storage_quota()
-            if drive_quota and drive_quota.get("limit") is not None:
-                limit_b = drive_quota["limit"]
-                used_b = drive_quota.get("usage", 0)
+            if drive_quota is not None and (drive_quota.get("limit") is not None or drive_quota.get("usage") is not None):
+                raw_limit = drive_quota.get("limit")
+                # Respect confirmed 5 TB plan entitlement (or raw limit if explicitly provided)
+                limit_b = raw_limit if raw_limit is not None else GOOGLE_DRIVE_TOTAL_CAPACITY_BYTES
+                used_b = drive_quota.get("usage", 0) or 0
                 rem_b = max(0, limit_b - used_b)
                 used_gb = used_b / (1024 ** 3)
+                limit_tb = limit_b / (1024 ** 4)
                 limit_gb = limit_b / (1024 ** 3)
                 pct = (used_b / limit_b) * 100 if limit_b > 0 else 0.0
 
                 if rem_b < 200 * (1024 ** 2):  # < 200MB
                     drive_status = "CRITICAL"
-                elif rem_b < 1 * (1024 ** 3):    # < 1GB
+                elif rem_b < 10 * (1024 ** 3):   # < 10GB on a 5TB plan
                     drive_status = "WARNING"
                 else:
                     drive_status = "SAFE"
+
+                if limit_b >= 1024 ** 4:
+                    msg = f"{used_gb:.2f} GB used of {limit_tb:.2f} TB ({pct:.2f}% capacity)."
+                else:
+                    msg = f"{used_gb:.2f} GB used of {limit_gb:.2f} GB ({pct:.1f}% capacity)."
 
                 services.append({
                     "service": "google_drive",
@@ -1088,7 +1116,7 @@ class SystemDataProvider:
                     "fallback_available": False,
                     "fallback_description": "None (Drive vault is required for autonomous cloud publishing buffer)",
                     "last_observed_at": now.isoformat() + "Z",
-                    "message": f"{used_gb:.2f} GB used of {limit_gb:.2f} GB ({pct:.1f}% capacity)."
+                    "message": msg
                 })
             else:
                 services.append({
@@ -1116,6 +1144,104 @@ class SystemDataProvider:
             "timestamp": now.isoformat() + "Z",
             "services": services
         }
+
+
+    def get_published_performance_leaderboard(self, db: Session, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Returns real historical performance metrics for published YouTube Shorts.
+        Queries UploadRecord along with the latest PerformanceSnapshot and VideoAnalysisRecord.
+        Sorted by views desc, then publish date desc.
+        Zero synthetic metrics.
+        """
+        try:
+            # Subquery to get latest snapshot_time per upload_id
+            subq = (
+                db.query(
+                    PerformanceSnapshot.upload_id,
+                    func.max(PerformanceSnapshot.snapshot_time).label("max_time")
+                )
+                .group_by(PerformanceSnapshot.upload_id)
+                .subquery()
+            )
+
+            query = (
+                db.query(UploadRecord, PerformanceSnapshot, VideoAnalysisRecord)
+                .outerjoin(
+                    subq,
+                    UploadRecord.id == subq.c.upload_id
+                )
+                .outerjoin(
+                    PerformanceSnapshot,
+                    (PerformanceSnapshot.upload_id == UploadRecord.id) & 
+                    (PerformanceSnapshot.snapshot_time == subq.c.max_time)
+                )
+                .outerjoin(
+                    VideoAnalysisRecord,
+                    VideoAnalysisRecord.upload_id == UploadRecord.id
+                )
+                .filter(UploadRecord.youtube_video_id.isnot(None))
+                .order_by(
+                    desc(func.coalesce(PerformanceSnapshot.views, 0)),
+                    desc(UploadRecord.published_at),
+                    desc(UploadRecord.created_at)
+                )
+                .limit(limit)
+            )
+
+            rows = query.all()
+            leaderboard = []
+            seen_yt_ids = set()
+
+            for upload, snap, analysis in rows:
+                yt_id = upload.youtube_video_id
+                if yt_id in seen_yt_ids:
+                    continue
+                seen_yt_ids.add(yt_id)
+
+                views = snap.views if snap and snap.views is not None else 0
+                likes = snap.likes if snap and snap.likes is not None else 0
+                comments = snap.comments if snap and snap.comments is not None else 0
+                apv = snap.average_view_percentage if snap and snap.average_view_percentage is not None else None
+
+                # Mathematically correct engagement calculation: (likes + comments) / views * 100
+                if views > 0:
+                    eng_rate = round(((likes + comments) / views) * 100, 2)
+                elif snap and snap.engagement_rate:
+                    eng_rate = round(float(snap.engagement_rate), 2)
+                else:
+                    eng_rate = 0.0
+
+                pub_date = upload.published_at or upload.created_at
+                pub_date_str = pub_date.strftime("%b %d, %Y %H:%M UTC") if pub_date else "—"
+
+                leaderboard.append({
+                    "rank": len(leaderboard) + 1,
+                    "upload_id": upload.id,
+                    "job_id": upload.job_id,
+                    "youtube_video_id": yt_id,
+                    "title": upload.title or "Untitled Short",
+                    "published_at": pub_date.isoformat() + "Z" if pub_date else None,
+                    "published_at_display": pub_date_str,
+                    "views": views,
+                    "views_display": format_compact_number(views),
+                    "likes": likes,
+                    "likes_display": format_compact_number(likes),
+                    "comments": comments,
+                    "comments_display": format_compact_number(comments),
+                    "apv": apv,
+                    "apv_display": f"{apv:.1f}%" if apv is not None else "—",
+                    "engagement_rate": eng_rate,
+                    "engagement_display": f"{eng_rate:.2f}%" if views > 0 else "—",
+                    "classification": analysis.classification if analysis else "UNRATED",
+                    "performance_score": analysis.performance_score if analysis else None,
+                    "status": upload.status or "PUBLISHED",
+                    "youtube_url": f"https://www.youtube.com/shorts/{yt_id}" if yt_id else None
+                })
+
+            return leaderboard
+        except Exception as e:
+            logger.error(f"Error generating performance leaderboard: {e}")
+            return []
 
     def get_full_system_state(self, db: Session) -> Dict[str, Any]:
         """Provides a unified snapshot of the complete production system."""
@@ -1192,6 +1318,7 @@ class SystemDataProvider:
             "pexels_quota": pexels_quota,
             "service_quotas": service_quotas,
             "database_sync": db_sync_telemetry,
+            "performance_leaderboard": self.get_published_performance_leaderboard(db, limit=50),
             "database_summary": {
                 "total_jobs": total_jobs,
                 "needs_review_count": needs_review_count,

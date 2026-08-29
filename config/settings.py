@@ -83,6 +83,9 @@ GITHUB_REPOSITORY_OWNER = os.getenv("GITHUB_REPOSITORY_OWNER", "")
 GITHUB_REPOSITORY_NAME = os.getenv("GITHUB_REPOSITORY_NAME", "")
 GITHUB_REF = os.getenv("GITHUB_REF", "main")
 
+# Google Drive Cloud Storage Entitlement (Phase 11.2 - Confirmed 5 TB Storage Plan)
+GOOGLE_DRIVE_TOTAL_CAPACITY_BYTES = int(os.getenv("GOOGLE_DRIVE_TOTAL_CAPACITY_BYTES", str(5 * (1024 ** 4))))  # 5 TB = 5,497,558,138,880 bytes
+
 
 def get_ffmpeg_path() -> str:
     """Finds valid FFmpeg binary path."""

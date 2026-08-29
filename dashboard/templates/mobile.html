@@ -10,7 +10,7 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <link rel="icon" type="image/png" href="/static/icons/icon-192.png">
-    <title>Historia // Emergency Mission Control</title>
+    <title>Historia // Emergency AL AMR</title>
 
     <!-- Tailwind CDN with Custom Cyberpunk Palette -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -66,7 +66,7 @@
                     H
                 </div>
                 <div>
-                    <h1 class="text-xs font-mono font-black tracking-widest text-slate-100 uppercase">HISTORIA // MISSION CONTROL</h1>
+                    <h1 class="text-xs font-mono font-black tracking-widest text-slate-100 uppercase">AL AMR // MOBILE OPERATIONS</h1>
                     <div class="text-[10px] font-mono text-slate-400 flex items-center space-x-2">
                         <span id="utc-clock">--:--:-- UTC</span>
                         <span>•</span>
@@ -114,6 +114,65 @@
                         <span>•</span>
                         <span>Vault: <strong id="spotlight-vault" class="text-emerald-400">02_PROCESSING</strong></span>
                     </div>
+                </div>
+            </div>
+
+
+            <!-- AL AMR PUBLISHED VIDEO PERFORMANCE LEADERBOARD -->
+            <div class="bg-panel border border-borderSubtle rounded-2xl p-4 shadow-lg space-y-3">
+                <div class="flex items-center justify-between border-b border-borderSubtle pb-2.5">
+                    <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-100 flex items-center space-x-1.5">
+                        <span class="text-amber-400">📊</span>
+                        <span>Published Performance</span>
+                    </span>
+                    <span id="mobile-leaderboard-count" class="px-2 py-0.5 rounded bg-sky-950 text-sky-400 font-mono text-[10px] font-bold">
+                        {{ (state.performance_leaderboard or [])|length }} Ranked
+                    </span>
+                </div>
+
+                <div id="mobile-performance-leaderboard" class="space-y-2 max-h-80 overflow-y-auto custom-scrollbar">
+                    {% for v in (state.performance_leaderboard or []) %}
+                    <div class="bg-obsidian p-3 rounded-xl border border-borderSubtle space-y-2 font-mono text-xs">
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center space-x-1.5">
+                                {% if v.rank == 1 %}
+                                <span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-600 text-[10px] font-bold">🥇 #1</span>
+                                {% elif v.rank == 2 %}
+                                <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-600 text-[10px] font-bold">🥈 #2</span>
+                                {% elif v.rank == 3 %}
+                                <span class="px-1.5 py-0.5 rounded bg-amber-950/40 text-amber-500 border border-amber-800 text-[10px] font-bold">🥉 #3</span>
+                                {% else %}
+                                <span class="text-slate-500 font-bold">#{{ v.rank }}</span>
+                                {% endif %}
+                                <span class="font-bold text-slate-100 line-clamp-1 text-[11px]" title="{{ v.title }}">{{ v.title }}</span>
+                            </div>
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold {% if v.classification == 'OUTPERFORMER' %}bg-emerald-950 text-emerald-300 border border-emerald-700{% elif v.classification == 'AVERAGE' %}bg-sky-950 text-sky-300 border border-sky-700{% else %}bg-slate-900 text-slate-400 border border-slate-700{% endif %}">
+                                {{ v.classification if v.classification != 'UNRATED' else v.status }}
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-1.5 text-[10px] text-slate-300 bg-slate-900/60 p-2 rounded-lg">
+                            <div><span class="text-slate-500">Views:</span> <strong class="text-slate-100">{{ v.views_display }}</strong></div>
+                            <div><span class="text-slate-500">Likes:</span> <strong class="text-slate-200">{{ v.likes_display }}</strong></div>
+                            <div><span class="text-slate-500">Eng:</span> <strong class="text-sky-300">{{ v.engagement_display }}</strong></div>
+                            <div><span class="text-slate-500">APV:</span> <span class="text-purple-300">{{ v.apv_display }}</span></div>
+                            <div class="col-span-2"><span class="text-slate-500">Published:</span> <span class="text-slate-400">{{ v.published_at_display }}</span></div>
+                        </div>
+
+                        {% if v.youtube_url %}
+                        <div class="text-right pt-0.5">
+                            <a href="{{ v.youtube_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-1 text-[10px] font-bold text-sky-400 hover:text-sky-300 underline">
+                                <span>Watch on YouTube</span>
+                                <span>↗</span>
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-xs font-mono text-slate-500 italic">
+                        No published video analytics recorded yet.
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
 
@@ -493,7 +552,7 @@
                 body = { job_id: payload.job_id };
             } else if (type === 'QUARANTINE_JOB') {
                 url = '/api/actions/quarantine-job';
-                body = { job_id: payload.job_id, reason: 'Quarantined via Mobile Mission Control' };
+                body = { job_id: payload.job_id, reason: 'Quarantined via Mobile AL AMR' };
             } else if (type === 'RELEASE_PROD_LOCK') {
                 url = '/api/actions/release-lock';
                 body = { lock_name: 'production', force: true };
@@ -747,6 +806,52 @@
             const queueList = document.getElementById('queue-list');
             const queueItems = (state.scheduled_queue && state.scheduled_queue.scheduled_slots) || [];
             document.getElementById('queue-count').innerText = `${queueItems.length} Scheduled`;
+
+            // 7. Render Performance Leaderboard
+            if (state.performance_leaderboard) {
+                const countEl = document.getElementById('mobile-leaderboard-count');
+                if (countEl) countEl.innerText = `${state.performance_leaderboard.length} Ranked`;
+
+                const container = document.getElementById('mobile-performance-leaderboard');
+                if (container) {
+                    if (state.performance_leaderboard.length === 0) {
+                        container.innerHTML = '<div class="text-center py-4 text-xs font-mono text-slate-500 italic">No published video analytics recorded yet.</div>';
+                    } else {
+                        container.innerHTML = state.performance_leaderboard.map(v => {
+                            let rankBadge = '';
+                            if (v.rank === 1) rankBadge = '<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-600 text-[10px] font-bold">🥇 #1</span>';
+                            else if (v.rank === 2) rankBadge = '<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-600 text-[10px] font-bold">🥈 #2</span>';
+                            else if (v.rank === 3) rankBadge = '<span class="px-1.5 py-0.5 rounded bg-amber-950/40 text-amber-500 border border-amber-800 text-[10px] font-bold">🥉 #3</span>';
+                            else rankBadge = `<span class="text-slate-500 font-bold">#${v.rank}</span>`;
+
+                            const watchLink = v.youtube_url ? `<div class="text-right pt-0.5"><a href="${v.youtube_url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-1 text-[10px] font-bold text-sky-400 hover:text-sky-300 underline"><span>Watch on YouTube</span><span>↗</span></a></div>` : '';
+
+                            return `
+                                <div class="bg-obsidian p-3 rounded-xl border border-borderSubtle space-y-2 font-mono text-xs">
+                                    <div class="flex justify-between items-start">
+                                        <div class="flex items-center space-x-1.5">
+                                            ${rankBadge}
+                                            <span class="font-bold text-slate-100 line-clamp-1 text-[11px]" title="${v.title}">${v.title}</span>
+                                        </div>
+                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-900 text-slate-400 border border-slate-700">
+                                            ${v.classification !== 'UNRATED' ? v.classification : v.status}
+                                        </span>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-1.5 text-[10px] text-slate-300 bg-slate-900/60 p-2 rounded-lg">
+                                        <div><span class="text-slate-500">Views:</span> <strong class="text-slate-100">${v.views_display}</strong></div>
+                                        <div><span class="text-slate-500">Likes:</span> <strong class="text-slate-200">${v.likes_display}</strong></div>
+                                        <div><span class="text-slate-500">Eng:</span> <strong class="text-sky-300">${v.engagement_display}</strong></div>
+                                        <div><span class="text-slate-500">APV:</span> <span class="text-purple-300">${v.apv_display}</span></div>
+                                        <div class="col-span-2"><span class="text-slate-500">Published:</span> <span class="text-slate-400">${v.published_at_display}</span></div>
+                                    </div>
+                                    ${watchLink}
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+            }
+
 
             if (queueItems.length === 0) {
                 queueList.innerHTML = '<div class="bg-panel border border-borderSubtle rounded-xl p-4 text-center text-xs font-mono text-slate-500">No videos currently scheduled on YouTube.</div>';

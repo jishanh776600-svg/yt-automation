@@ -153,15 +153,27 @@ class TestQuotaMonitorPhase82(unittest.TestCase):
 
     def test_10_drive_storage_values_only_shown_when_measurable(self):
         """Verify Drive storage returns values when available and UNKNOWN when offline."""
-        with patch.object(self.provider.drive_engine, "get_storage_quota", return_value={"limit": 15000000000, "usage": 3000000000}):
+        from config.settings import GOOGLE_DRIVE_TOTAL_CAPACITY_BYTES
+        # 1. With explicit 5 TB capacity
+        with patch.object(self.provider.drive_engine, "get_storage_quota", return_value={"limit": GOOGLE_DRIVE_TOTAL_CAPACITY_BYTES, "usage": 3000000000}):
             res = self.provider.get_all_service_quotas(self.db)
             drive = next(s for s in res["services"] if s["service"] == "google_drive")
-            self.assertEqual(drive["limit"], 15000000000)
+            self.assertEqual(drive["limit"], GOOGLE_DRIVE_TOTAL_CAPACITY_BYTES)
             self.assertEqual(drive["used"], 3000000000)
-            self.assertEqual(drive["remaining"], 12000000000)
+            self.assertEqual(drive["remaining"], GOOGLE_DRIVE_TOTAL_CAPACITY_BYTES - 3000000000)
             self.assertEqual(drive["status"], "SAFE")
             self.assertEqual(drive["measurement_type"], "LIVE_OBSERVED")
+            self.assertIn("5.00 TB", drive["message"])
 
+        # 2. When API limit is None, defaults to configured 5 TB entitlement
+        with patch.object(self.provider.drive_engine, "get_storage_quota", return_value={"usage": 3000000000}):
+            res_default = self.provider.get_all_service_quotas(self.db)
+            drive_def = next(s for s in res_default["services"] if s["service"] == "google_drive")
+            self.assertEqual(drive_def["limit"], GOOGLE_DRIVE_TOTAL_CAPACITY_BYTES)
+            self.assertEqual(drive_def["used"], 3000000000)
+            self.assertEqual(drive_def["remaining"], GOOGLE_DRIVE_TOTAL_CAPACITY_BYTES - 3000000000)
+
+        # 3. When offline (None), returns UNKNOWN
         with patch.object(self.provider.drive_engine, "get_storage_quota", return_value=None):
             res_offline = self.provider.get_all_service_quotas(self.db)
             drive_off = next(s for s in res_offline["services"] if s["service"] == "google_drive")
