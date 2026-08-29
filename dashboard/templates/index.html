@@ -19,12 +19,12 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
         function dismissCloudBanner() {
             const banner = document.getElementById('cloud-workflow-banner');
             if (banner) banner.classList.add('hidden');
         }
-    
     </script>
     <script>
         tailwind.config = {
@@ -1027,16 +1027,32 @@
                 });
 
                 if (!res.ok) {
-                    const errData = await res.json();
-                    alert(`Voice Preview Failed: ${errData.detail || errData.error || 'Server error'}`);
+                    let errorMsg = `Server error (HTTP ${res.status})`;
+                    try {
+                        const errData = await res.json();
+                        errorMsg = errData.detail || errData.error || errorMsg;
+                    } catch (_) {
+                        const text = await res.text();
+                        if (text && text.length < 150) errorMsg = text;
+                    }
+                    alert(`Voice Preview Failed: ${errorMsg}`);
                     return;
                 }
 
-                const data = await res.json();
-                if (data.audio_url) {
+                let data;
+                try {
+                    data = await res.json();
+                } catch (parseErr) {
+                    alert(`Voice Preview Error: Received non-JSON response from server (HTTP ${res.status})`);
+                    return;
+                }
+
+                if (data && data.audio_url) {
                     const player = document.getElementById('voice-preview-player');
-                    player.src = data.audio_url;
-                    player.play();
+                    if (player) {
+                        player.src = data.audio_url;
+                        player.play().catch(e => console.log('Audio playback notice:', e));
+                    }
                 }
             } catch (err) {
                 alert(`Voice Preview Network Error: ${err.message}`);

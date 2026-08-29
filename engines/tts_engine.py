@@ -171,23 +171,32 @@ class TTSEngine:
             return False, 0.0
 
     async def _generate_edge_tts_async(self, text: str, output_path: Path, voice: str = "en-US-ChristopherNeural") -> Tuple[bool, float]:
-        """Edge TTS fallback synthesis."""
+        """Edge TTS fallback synthesis with resilient duration calculation."""
         try:
             import edge_tts
             communicate = edge_tts.Communicate(text, voice)
             await communicate.save(str(output_path))
-            # Read duration
-            with wave.open(str(output_path), "rb") as wf:
-                duration = wf.getnframes() / float(wf.getframerate())
-            return True, round(duration, 2)
-        except Exception:
-            # If mp3, compute duration via mutagen or soundfile
+            
+            if not output_path.exists() or output_path.stat().st_size == 0:
+                return False, 0.0
+
+            # Safe duration estimation/reading
+            duration = max(1.0, round(len(text) / 14.0, 2))
             try:
-                data, sr = sf.read(str(output_path))
-                duration = len(data) / float(sr)
-                return True, round(duration, 2)
-            except Exception as e:
-                logger.warning(f"Edge TTS duration read error: {e}")
+                with wave.open(str(output_path), "rb") as wf:
+                    duration = round(wf.getnframes() / float(wf.getframerate()), 2)
+            except Exception:
+                try:
+                    data, sr = sf.read(str(output_path))
+                    duration = round(len(data) / float(sr), 2)
+                except Exception:
+                    pass
+
+            return True, duration
+        except Exception as e:
+            logger.warning(f"Edge TTS duration/synthesis error: {e}")
+            return False, 0.0
+
     def generate_preview_sample(self, voice_id: str, sample_text: Optional[str] = None) -> Tuple[bool, Optional[bytes], str]:
         """
         Generates a short in-memory / temporary preview audio sample for a given voice.
@@ -201,23 +210,15 @@ class TTSEngine:
         text = sample_text or "History holds the secrets of who we once were."
         temp_id = f"preview_{uuid.uuid4().hex[:8]}"
 
-        if voice_id.startswith("en-") or TTS_PROVIDER == "edge":
-            temp_path = self.voice_dir / f"{temp_id}.mp3"
-            try:
-                try:
-                    loop = asyncio.get_event_loop()
-                except RuntimeError:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                success, _ = loop.run_until_complete(self._generate_edge_tts_async(text, temp_path, voice=voice_id))
-                if success and temp_path.exists():
-                    audio_data = temp_path.read_bytes()
-                    temp_path.unlink(missing_ok=True)
-                    return True, audio_data, "audio/mp3"
-            except Exception as e:
-                logger.warning(f"Edge TTS preview failed: {e}")
-                temp_path.unlink(missing_ok=True)
-        else:
+        # Fast-path: If Kokoro model weights are already cached locally on disk, use Kokoro
+        use_kokoro = (
+            not voice_id.startswith("en-")
+            and TTS_PROVIDER != "edge"
+            and KOKORO_MODEL_PATH.exists()
+            and KOKORO_VOICES_PATH.exists()
+        )
+
+        if use_kokoro:
             temp_path = self.voice_dir / f"{temp_id}.wav"
             try:
                 success, _ = self.generate_kokoro_audio(text, temp_path, voice=voice_id)
@@ -229,31 +230,35 @@ class TTSEngine:
                 logger.warning(f"Kokoro preview failed: {e}")
                 temp_path.unlink(missing_ok=True)
 
-            # Fallback to Edge-TTS if Kokoro is unavailable or fails
-            logger.info(f"Kokoro preview unavailable for '{voice_id}'. Falling back to Edge-TTS preview...")
-            edge_fallback_voice = "en-US-ChristopherNeural"
-            if voice_id in ("am_michael", "bm_george", "bm_lewis"):
-                edge_fallback_voice = "en-US-EricNeural"
-            elif voice_id in ("af_bella", "bf_emma"):
-                edge_fallback_voice = "en-US-JennyNeural"
-            elif voice_id in ("af_sarah", "af_nicole", "af_sky"):
-                edge_fallback_voice = "en-US-SaraNeural"
+        # Fallback to Edge-TTS preview (fast, lightweight, sub-second synthesis)
+        logger.info(f"Generating Edge-TTS preview for '{voice_id}'...")
+        edge_voice = voice_id if voice_id.startswith("en-") else "en-US-ChristopherNeural"
+        if voice_id in ("am_michael", "bm_george", "bm_lewis"):
+            edge_voice = "en-US-EricNeural"
+        elif voice_id in ("af_bella", "bf_emma"):
+            edge_voice = "en-US-JennyNeural"
+        elif voice_id in ("af_sarah", "af_nicole", "af_sky"):
+            edge_voice = "en-US-AriaNeural"
 
-            temp_mp3_path = self.voice_dir / f"{temp_id}.mp3"
+        temp_mp3_path = self.voice_dir / f"{temp_id}.mp3"
+        try:
             try:
-                try:
-                    loop = asyncio.get_event_loop()
-                except RuntimeError:
+                loop = asyncio.get_event_loop()
+                if loop.is_closed():
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
-                success, _ = loop.run_until_complete(self._generate_edge_tts_async(text, temp_mp3_path, voice=edge_fallback_voice))
-                if success and temp_mp3_path.exists():
-                    audio_data = temp_mp3_path.read_bytes()
-                    temp_mp3_path.unlink(missing_ok=True)
-                    return True, audio_data, "audio/mp3"
-            except Exception as fb_err:
-                logger.warning(f"Edge TTS fallback preview failed: {fb_err}")
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            success, _ = loop.run_until_complete(self._generate_edge_tts_async(text, temp_mp3_path, voice=edge_voice))
+            if success and temp_mp3_path.exists():
+                audio_data = temp_mp3_path.read_bytes()
                 temp_mp3_path.unlink(missing_ok=True)
+                return True, audio_data, "audio/mp3"
+        except Exception as fb_err:
+            logger.warning(f"Edge TTS fallback preview failed: {fb_err}")
+            temp_mp3_path.unlink(missing_ok=True)
 
         return False, None, ""
 

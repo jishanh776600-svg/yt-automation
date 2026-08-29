@@ -41,38 +41,29 @@
     </style>
     
     <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com">
-        function dismissMobileCloudBanner() {
-            const banner = document.getElementById('mobile-cloud-banner');
-            if (banner) banner.classList.add('hidden');
-        }
-    
-    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace']
+                        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Menlo', 'Consolas', 'monospace']
                     },
                     colors: {
                         spaceBlack: '#030712',
                         spaceDark: '#0b0f19',
                         surfaceElevated: '#111827',
+                        surfaceHover: '#1f2937',
                         borderSubtle: '#1e293b',
-                        brandGold: '#fbbf24'
+                        borderStrong: '#334155',
+                        brandGold: '#fbbf24',
+                        brandGoldDark: '#b45309'
                     }
                 }
             }
         }
-    
-        function dismissMobileCloudBanner() {
-            const banner = document.getElementById('mobile-cloud-banner');
-            if (banner) banner.classList.add('hidden');
-        }
-    
     </script>
 </head>
 <body class="bg-spaceBlack text-slate-200 min-h-screen">
@@ -365,8 +356,8 @@
             return meta ? meta.getAttribute('content') : '';
         }
 
-        async function handlePreviewVoice(voiceId, isMob) {
-            const btnId = isMob ? `mob-preview-btn-${voiceId}` : `preview-btn-${voiceId}`;
+        async function handlePreviewVoice(voiceId, opt) {
+            const btnId = (opt === true) ? `mob-preview-btn-${voiceId}` : (opt || `mob-preview-btn-${voiceId}`);
             const btn = document.getElementById(btnId);
             const origHtml = btn ? btn.innerHTML : '';
             if (btn) {
@@ -385,16 +376,32 @@
                 });
 
                 if (!res.ok) {
-                    const errData = await res.json();
-                    alert(`Voice Preview Failed: ${errData.detail || errData.error || 'Server error'}`);
+                    let errorMsg = `Server error (HTTP ${res.status})`;
+                    try {
+                        const errData = await res.json();
+                        errorMsg = errData.detail || errData.error || errorMsg;
+                    } catch (_) {
+                        const text = await res.text();
+                        if (text && text.length < 150) errorMsg = text;
+                    }
+                    alert(`Voice Preview Failed: ${errorMsg}`);
                     return;
                 }
 
-                const data = await res.json();
-                if (data.audio_url) {
+                let data;
+                try {
+                    data = await res.json();
+                } catch (parseErr) {
+                    alert(`Voice Preview Error: Received non-JSON response from server (HTTP ${res.status})`);
+                    return;
+                }
+
+                if (data && data.audio_url) {
                     const player = document.getElementById('mob-voice-preview-player');
-                    player.src = data.audio_url;
-                    player.play();
+                    if (player) {
+                        player.src = data.audio_url;
+                        player.play().catch(e => console.log('Audio playback notice:', e));
+                    }
                 }
             } catch (err) {
                 alert(`Voice Preview Error: ${err.message}`);
