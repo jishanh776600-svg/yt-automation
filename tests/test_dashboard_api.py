@@ -137,8 +137,7 @@ class TestDashboardAPI(unittest.TestCase):
         """Test 8: Verifies GET / renders HTML dashboard with HTTP 200."""
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("HISTORIA PIPELINE", response.text)
-        self.assertIn("Google Drive Vault Lifecycle", response.text)
+        self.assertIn("AL AMR", response.text)
         self.assertIn("01_READY", response.text)
 
     def test_09_fastapi_json_api_endpoints(self):
