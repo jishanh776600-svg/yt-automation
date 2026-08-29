@@ -27,64 +27,89 @@ AVAILABLE_VOICES = [
     {
         "id": "am_adam",
         "display_name": "Adam (US Male)",
-        "engine": "Kokoro-82M ONNX",
+        "engine": "Kokoro-82M ONNX / Edge-TTS",
         "description": "Deep documentary tone with confident, steady pacing. Best for serious historical events and unusual wars.",
         "style": "Deep Documentary",
         "gender": "Male",
         "accent": "American",
+        "kokoro_voice": "am_adam",
+        "edge_voice": "en-US-GuyNeural",
         "available": True
     },
     {
         "id": "am_michael",
         "display_name": "Michael (US Male)",
-        "engine": "Kokoro-82M ONNX",
+        "engine": "Kokoro-82M ONNX / Edge-TTS",
         "description": "Natural conversational storytelling with engaging inflection. Best for mysteries and historical oddities.",
         "style": "Storyteller / Natural",
         "gender": "Male",
         "accent": "American",
+        "kokoro_voice": "am_michael",
+        "edge_voice": "en-US-EricNeural",
         "available": True
     },
     {
         "id": "af_bella",
         "display_name": "Bella (US Female)",
-        "engine": "Kokoro-82M ONNX",
+        "engine": "Kokoro-82M ONNX / Edge-TTS",
         "description": "Clear, crisp, and high-energy narration. Best for fast-paced viral hooks and sudden twists.",
         "style": "Dynamic / Engaging",
         "gender": "Female",
         "accent": "American",
+        "kokoro_voice": "af_bella",
+        "edge_voice": "en-US-JennyNeural",
         "available": True
     },
     {
         "id": "af_sarah",
         "display_name": "Sarah (US Female)",
-        "engine": "Kokoro-82M ONNX",
+        "engine": "Kokoro-82M ONNX / Edge-TTS",
         "description": "Warm, measured, and authoritative documentary delivery. Best for poignant human stories.",
         "style": "Warm / Professional",
         "gender": "Female",
         "accent": "American",
+        "kokoro_voice": "af_sarah",
+        "edge_voice": "en-US-AriaNeural",
         "available": True
     },
     {
         "id": "bm_george",
         "display_name": "George (UK Male)",
-        "engine": "Kokoro-82M ONNX",
+        "engine": "Kokoro-82M ONNX / Edge-TTS",
         "description": "BBC-style classical British narrator with stately cadence. Best for medieval, monarchies, and ancient empires.",
         "style": "BBC Classical / Royal",
         "gender": "Male",
         "accent": "British",
+        "kokoro_voice": "bm_george",
+        "edge_voice": "en-GB-RyanNeural",
         "available": True
     },
     {
         "id": "en-US-ChristopherNeural",
         "display_name": "Christopher (US Male)",
-        "engine": "Edge-TTS Neural",
+        "engine": "Edge-TTS Neural / Kokoro",
         "description": "Deep cinematic broadcast narration with neural clarity.",
         "style": "Deep Cinematic",
         "gender": "Male",
         "accent": "American",
+        "kokoro_voice": "am_fenrir",
+        "edge_voice": "en-US-ChristopherNeural",
         "available": True
     }
 ]
+
+
+def resolve_voice_config(voice_id: str) -> dict:
+    """
+    Authoritative voice configuration resolver.
+    Returns the canonical voice entry for any supported voice_id, ensuring
+    both Kokoro and Edge-TTS providers resolve to the exact intended voice profile.
+    """
+    for v in AVAILABLE_VOICES:
+        if v["id"] == voice_id:
+            return v
+    # Fallback to default canonical voice (Adam)
+    return AVAILABLE_VOICES[0]
 
 
 def get_active_voice(db: Optional[Session] = None) -> str:
@@ -207,10 +232,14 @@ class TTSEngine:
         if not any(v["id"] == voice_id for v in AVAILABLE_VOICES):
             raise ValueError(f"Voice '{voice_id}' is not in the list of available production voices.")
 
+        v_cfg = resolve_voice_config(voice_id)
+        kokoro_v = v_cfg.get("kokoro_voice", voice_id)
+        edge_v = v_cfg.get("edge_voice", "en-US-GuyNeural")
+
         text = sample_text or "History holds the secrets of who we once were."
         temp_id = f"preview_{uuid.uuid4().hex[:8]}"
 
-        # Fast-path: If Kokoro model weights are already cached locally on disk, use Kokoro
+        # Fast-path: If Kokoro model weights are already cached locally on disk and not forced to edge
         use_kokoro = (
             not voice_id.startswith("en-")
             and TTS_PROVIDER != "edge"
@@ -221,25 +250,17 @@ class TTSEngine:
         if use_kokoro:
             temp_path = self.voice_dir / f"{temp_id}.wav"
             try:
-                success, _ = self.generate_kokoro_audio(text, temp_path, voice=voice_id)
+                success, _ = self.generate_kokoro_audio(text, temp_path, voice=kokoro_v)
                 if success and temp_path.exists():
                     audio_data = temp_path.read_bytes()
                     temp_path.unlink(missing_ok=True)
                     return True, audio_data, "audio/wav"
             except Exception as e:
-                logger.warning(f"Kokoro preview failed: {e}")
+                logger.warning(f"Kokoro preview failed for '{voice_id}': {e}")
                 temp_path.unlink(missing_ok=True)
 
-        # Fallback to Edge-TTS preview (fast, lightweight, sub-second synthesis)
-        logger.info(f"Generating Edge-TTS preview for '{voice_id}'...")
-        edge_voice = voice_id if voice_id.startswith("en-") else "en-US-ChristopherNeural"
-        if voice_id in ("am_michael", "bm_george", "bm_lewis"):
-            edge_voice = "en-US-EricNeural"
-        elif voice_id in ("af_bella", "bf_emma"):
-            edge_voice = "en-US-JennyNeural"
-        elif voice_id in ("af_sarah", "af_nicole", "af_sky"):
-            edge_voice = "en-US-AriaNeural"
-
+        # Fallback to Edge-TTS preview with exact 1:1 mapped distinct voice
+        logger.info(f"Generating Edge-TTS preview for '{voice_id}' using '{edge_v}'...")
         temp_mp3_path = self.voice_dir / f"{temp_id}.mp3"
         try:
             try:
@@ -251,13 +272,13 @@ class TTSEngine:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
             
-            success, _ = loop.run_until_complete(self._generate_edge_tts_async(text, temp_mp3_path, voice=edge_voice))
+            success, _ = loop.run_until_complete(self._generate_edge_tts_async(text, temp_mp3_path, voice=edge_v))
             if success and temp_mp3_path.exists():
                 audio_data = temp_mp3_path.read_bytes()
                 temp_mp3_path.unlink(missing_ok=True)
                 return True, audio_data, "audio/mpeg"
         except Exception as fb_err:
-            logger.warning(f"Edge TTS fallback preview failed: {fb_err}")
+            logger.warning(f"Edge TTS fallback preview failed for '{voice_id}': {fb_err}")
             temp_mp3_path.unlink(missing_ok=True)
 
         return False, None, ""
@@ -266,58 +287,68 @@ class TTSEngine:
         """
         Generates full narration audio using the persistent active voice setting,
         adjusts speed if needed to fit 21-25s, and saves AssetRecord with verified license.
+        Guarantees that active voice resolution is 100% identical to the preview path.
         """
         asset_id = f"aud_{uuid.uuid4().hex[:12]}"
         wav_path = self.voice_dir / f"{asset_id}.wav"
 
         active_voice = get_active_voice(db)
+        v_cfg = resolve_voice_config(active_voice)
+        kokoro_v = v_cfg.get("kokoro_voice", active_voice)
+        edge_v = v_cfg.get("edge_voice", "en-US-GuyNeural")
+
         success = False
         duration = 0.0
         tts_source = "kokoro"
         license_type = LicenseType.APACHE_2_0.value
 
-        # 1. Check if chosen voice is Edge-TTS or Kokoro
+        # 1. Direct Edge-TTS route if configured or if voice is Edge-only
         if active_voice.startswith("en-") or TTS_PROVIDER == "edge":
-            # Direct Edge-TTS route
             mp3_path = self.voice_dir / f"{asset_id}.mp3"
             try:
                 loop = asyncio.get_event_loop()
+                if loop.is_closed():
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
             except RuntimeError:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-            success, duration = loop.run_until_complete(self._generate_edge_tts_async(text, mp3_path, voice=active_voice))
+            success, duration = loop.run_until_complete(self._generate_edge_tts_async(text, mp3_path, voice=edge_v))
             if success:
                 wav_path = mp3_path
                 tts_source = "edge_tts"
                 license_type = LicenseType.AI_GENERATED_OPEN.value
         else:
-            # Kokoro TTS route
-            success, duration = self.generate_kokoro_audio(text, wav_path, voice=active_voice, speed=speed_multiplier)
+            # 2. Kokoro TTS route
+            success, duration = self.generate_kokoro_audio(text, wav_path, voice=kokoro_v, speed=speed_multiplier)
 
-        # 2. Fallback to Edge-TTS if Kokoro failed
+        # 3. Fallback to Edge-TTS using the EXACT SAME voice profile if Kokoro is unavailable / fails
         if not success or duration == 0.0:
-            logger.info("Falling back to Edge-TTS engine...")
+            logger.info(f"Kokoro narration failed or unavailable for '{active_voice}'; falling back to Edge-TTS '{edge_v}'...")
             mp3_path = self.voice_dir / f"{asset_id}.mp3"
             try:
                 loop = asyncio.get_event_loop()
+                if loop.is_closed():
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
             except RuntimeError:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-            success, duration = loop.run_until_complete(self._generate_edge_tts_async(text, mp3_path, voice="en-US-ChristopherNeural"))
+            success, duration = loop.run_until_complete(self._generate_edge_tts_async(text, mp3_path, voice=edge_v))
             if success:
                 wav_path = mp3_path
                 tts_source = "edge_tts"
                 license_type = LicenseType.AI_GENERATED_OPEN.value
 
-        # 3. Check Duration Sanity & Calibrate
+        # 4. Check Duration Sanity & Calibrate
         if duration < MIN_DURATION_SEC and duration > 16.0:
             logger.info(f"Duration {duration}s slightly short; re-synthesizing at 0.92x speed...")
             if tts_source == "kokoro":
-                success, duration = self.generate_kokoro_audio(text, wav_path, voice=active_voice, speed=0.92)
+                success, duration = self.generate_kokoro_audio(text, wav_path, voice=kokoro_v, speed=0.92)
         elif duration > MAX_DURATION_SEC and duration < 30.0:
             logger.info(f"Duration {duration}s slightly long; re-synthesizing at 1.08x speed...")
             if tts_source == "kokoro":
-                success, duration = self.generate_kokoro_audio(text, wav_path, voice=active_voice, speed=1.08)
+                success, duration = self.generate_kokoro_audio(text, wav_path, voice=kokoro_v, speed=1.08)
 
         asset = AssetRecord(
             id=asset_id,

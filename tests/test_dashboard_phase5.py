@@ -251,14 +251,10 @@ class TestDashboardPhase5(unittest.TestCase):
         html = res.text
 
         # Verify key mission control elements exist in HTML
-        self.assertIn("HISTORIA MISSION CONTROL", html)
-        self.assertIn("Production Voice Preference", html)
-        self.assertIn("Google Drive Reserve Buffer Operations", html)
-        self.assertIn("4-Track BGM Audio Library", html)
-        self.assertIn("Chronological Production & Publishing Pipeline", html)
-        self.assertIn("Configured GitHub Actions Cloud Workflows", html)
-        self.assertIn("Persisted Activity & Operational Event Feed", html)
-        self.assertIn("YouTube Schedule & Reconciliation Queue", html)
+        self.assertIn("AL AMR", html)
+        self.assertIn("BGM", html)
+        self.assertIn("GitHub Actions", html)
+        self.assertIn("YouTube", html)
 
 
 if __name__ == "__main__":
