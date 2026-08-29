@@ -97,50 +97,59 @@ class GeminiRateLimiter:
 
 class GeminiClient:
     """
-    Wrapper around Google GenAI client providing centralized rate limiting and 429-aware backoff.
+    Wrapper around Google GenAI client providing centralized rate limiting, 429-aware backoff,
+    and automatic fail-fast fallback to secondary independent provider account on quota exhaustion.
     """
     def __init__(
         self,
         api_key: Optional[str] = None,
+        secondary_api_key: Optional[str] = None,
+        secondary_model: Optional[str] = None,
         rate_limiter: Optional[GeminiRateLimiter] = None,
         sleeper: Callable[[float], None] = time.sleep
     ):
-        from config.settings import GEMINI_API_KEY
+        from config.settings import (
+            GEMINI_API_KEY,
+            GEMINI_API_KEY_SECONDARY,
+            GEMINI_MODEL_SECONDARY
+        )
         self.api_key = api_key or GEMINI_API_KEY
+        self.secondary_api_key = secondary_api_key or GEMINI_API_KEY_SECONDARY
+        self.secondary_model = secondary_model or GEMINI_MODEL_SECONDARY
         self.rate_limiter = rate_limiter or get_shared_rate_limiter()
         self.sleeper = sleeper
+        self.active_provider = "primary"
 
-    def generate_content(
+    def _execute_request(
         self,
+        api_key: str,
         model: str,
         contents: Any,
         max_retries: int = 3,
         base_delay: Optional[float] = None,
         max_delay: float = 60.0,
+        provider_name: str = "primary",
         **kwargs
     ) -> Any:
-        """
-        Executes models.generate_content with rate limiting and exponential backoff on 429s.
-        """
-        if not self.api_key:
-            raise ValueError("GEMINI_API_KEY is not configured.")
-
+        """Executes API call for a specific provider account with pacing and bounded backoff."""
         from core.retry import is_retryable_exception
 
         is_test = is_test_environment()
         if base_delay is None:
             base_delay = 0.05 if is_test else 4.0
 
+        current_model = model
         last_exception = None
+
         for attempt in range(1, max_retries + 1):
             # 1. Acquire paced slot before firing request
             self.rate_limiter.wait_for_slot()
 
             try:
                 from google import genai
-                client = genai.Client(api_key=self.api_key)
+                client = genai.Client(api_key=api_key)
                 response = client.models.generate_content(
-                    model=model,
+                    model=current_model,
                     contents=contents,
                     **kwargs
                 )
@@ -154,20 +163,21 @@ class GeminiClient:
 
                 if is_daily_quota:
                     from config.settings import GEMINI_FALLBACK_MODEL
-                    if model != GEMINI_FALLBACK_MODEL and GEMINI_FALLBACK_MODEL:
+                    if current_model != GEMINI_FALLBACK_MODEL and GEMINI_FALLBACK_MODEL:
                         logger.warning(
-                            f"[GEMINI_FALLBACK] Daily quota exhausted for model '{model}'. "
+                            f"[GEMINI_FALLBACK] Daily quota exhausted for model '{current_model}' on {provider_name} provider. "
                             f"Switching immediately to fallback model '{GEMINI_FALLBACK_MODEL}'..."
                         )
-                        model = GEMINI_FALLBACK_MODEL
+                        current_model = GEMINI_FALLBACK_MODEL
                         continue
-                    err_summary = f"Daily API quota exhausted for Gemini model '{model}': {exc}"
-                    logger.error(f"[GEMINI_EXHAUSTED] {err_summary}")
-                    raise GeminiQuotaExhaustedError(err_summary) from exc
+                    # Fail fast out of this provider on daily quota exhaustion
+                    raise GeminiQuotaExhaustedError(
+                        f"Daily API quota exhausted on {provider_name} provider for model '{current_model}'"
+                    ) from exc
 
                 if not (is_transient or is_429):
                     # Permanent error (e.g. invalid argument, unrecoverable) - do not retry
-                    logger.error(f"[GEMINI_ERROR] Non-retryable error from Gemini API: {exc}")
+                    logger.error(f"[GEMINI_ERROR] Non-retryable error from Gemini API on {provider_name} provider: {exc}")
                     raise exc
 
                 if attempt >= max_retries:
@@ -177,20 +187,80 @@ class GeminiClient:
                 if server_delay and server_delay > 0:
                     delay = server_delay + (0.01 if is_test else random.uniform(0.5, 1.5))
                 else:
-                    # Exponential backoff: base_delay * 2^(attempt - 1) + jitter
                     raw = base_delay * (2 ** (attempt - 1))
                     jitter = 0.01 if is_test else random.uniform(0.5, 1.5)
                     delay = min(max_delay, raw) + jitter
 
                 logger.warning(
-                    f"[GEMINI_RATE_LIMIT] 429/Transient failure on attempt {attempt}/{max_retries}: {exc}. "
+                    f"[GEMINI_RATE_LIMIT] 429/Transient failure on {provider_name} provider (attempt {attempt}/{max_retries}): {exc}. "
                     f"Backing off for {delay:.2f}s before retry..."
                 )
                 self.sleeper(delay)
 
-        err_summary = f"Gemini API rate limit / quota exhausted after {max_retries} attempts: {last_exception}"
+        err_summary = f"Gemini API rate limit / quota exhausted on {provider_name} provider after {max_retries} attempts"
         logger.error(f"[GEMINI_EXHAUSTED] {err_summary}")
         raise GeminiQuotaExhaustedError(err_summary) from last_exception
+
+    def generate_content(
+        self,
+        model: str,
+        contents: Any,
+        max_retries: int = 3,
+        base_delay: Optional[float] = None,
+        max_delay: float = 60.0,
+        **kwargs
+    ) -> Any:
+        """
+        Executes models.generate_content with rate limiting, exponential backoff, and
+        transparent secondary provider fallback upon primary daily quota exhaustion.
+        """
+        if not self.api_key:
+            raise ValueError("GEMINI_API_KEY is not configured.")
+
+        # Attempt 1: Primary Gemini Provider
+        try:
+            return self._execute_request(
+                api_key=self.api_key,
+                model=model,
+                contents=contents,
+                max_retries=max_retries,
+                base_delay=base_delay,
+                max_delay=max_delay,
+                provider_name="primary",
+                **kwargs
+            )
+        except GeminiQuotaExhaustedError as primary_quota_err:
+            # Check if an independent secondary Gemini credential is configured
+            if self.secondary_api_key and self.secondary_api_key != self.api_key:
+                sec_model = self.secondary_model or model
+                logger.warning(
+                    f"[GEMINI_FALLBACK] Primary Gemini provider quota exhausted. "
+                    f"Switching immediately to SECONDARY Gemini provider account (model: '{sec_model}')..."
+                )
+                self.active_provider = "secondary"
+
+                try:
+                    return self._execute_request(
+                        api_key=self.secondary_api_key,
+                        model=sec_model,
+                        contents=contents,
+                        max_retries=max_retries,
+                        base_delay=base_delay,
+                        max_delay=max_delay,
+                        provider_name="secondary",
+                        **kwargs
+                    )
+                except GeminiQuotaExhaustedError as sec_quota_err:
+                    logger.error(
+                        "[GEMINI_EXHAUSTED] ALL configured Gemini providers (primary & secondary) "
+                        "exhausted daily API quotas. Halting production cleanly."
+                    )
+                    raise GeminiQuotaExhaustedError(
+                        "All configured Gemini providers exhausted daily API quotas."
+                    ) from sec_quota_err
+
+            # No secondary provider available; re-raise primary quota error
+            raise primary_quota_err
 
 
 _SHARED_LIMITER: Optional[GeminiRateLimiter] = None
@@ -206,12 +276,20 @@ def get_shared_rate_limiter() -> GeminiRateLimiter:
         return _SHARED_LIMITER
 
 
-def get_gemini_client(api_key: Optional[str] = None) -> GeminiClient:
+def get_gemini_client(
+    api_key: Optional[str] = None,
+    secondary_api_key: Optional[str] = None,
+    secondary_model: Optional[str] = None
+) -> GeminiClient:
     global _SHARED_CLIENT
     with _INIT_LOCK:
-        if _SHARED_CLIENT is None or api_key:
-            client = GeminiClient(api_key=api_key)
-            if not api_key:
+        if _SHARED_CLIENT is None or api_key or secondary_api_key:
+            client = GeminiClient(
+                api_key=api_key,
+                secondary_api_key=secondary_api_key,
+                secondary_model=secondary_model
+            )
+            if not api_key and not secondary_api_key:
                 _SHARED_CLIENT = client
             return client
         return _SHARED_CLIENT

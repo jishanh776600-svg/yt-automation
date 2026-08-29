@@ -286,17 +286,23 @@ class SystemDataProvider:
         runway_hours = round(runway_days * 24.0, 1)
 
         health = "HEALTHY"
+        health_message = f"Vault buffer healthy ({ready_stock}/{target} Shorts)"
         if ready_stock == 0:
             health = "DEPLETED"
+            health_message = "Vault buffer depleted (0/12 Shorts)"
         elif ready_stock < DAILY_SHORTS_LIMIT:
             health = "CRITICAL_LOW"
+            health_message = f"Reserve critically low ({ready_stock}/{target} Shorts)"
         elif ready_stock < target:
             health = "REPLENISHING"
+            health_message = f"Replenishing reserve ({ready_stock}/{target} Shorts)"
 
         return {
             "ready_stock": ready_stock,
+            "current_reserve": ready_stock,
             "target_reserve": target,
             "health": health,
+            "health_message": health_message,
             "runway_days": runway_days,
             "runway_hours": runway_hours,
             "runway_display": f"{runway_days:.1f} days ({runway_hours:.0f} hours)",

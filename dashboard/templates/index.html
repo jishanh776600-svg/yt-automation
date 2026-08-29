@@ -473,10 +473,10 @@
                             <div class="sm:col-span-2 p-3.5 bg-spaceDark rounded-lg border border-borderHairline space-y-2">
                                 <div class="flex items-center justify-between">
                                     <span class="text-[10px] text-slate-500 uppercase tracking-wide">DRIVE VAULT RESERVE</span>
-                                    <span class="text-[10px] font-bold text-emerald-400">{{ state.buffer.current_reserve or 0 }} / 12 Shorts</span>
+                                    <span class="text-[10px] font-bold text-emerald-400">{{ state.buffer.ready_stock or state.buffer.current_reserve or 0 }} / 12 Shorts</span>
                                 </div>
                                 <div class="w-full bg-spaceWell h-2 rounded-full overflow-hidden border border-borderHairline">
-                                    <div class="bg-emerald-500 h-full transition-all" style="width: {{ (((state.buffer.current_reserve or 0) / 12) * 100)|int }}%"></div>
+                                    <div class="bg-emerald-500 h-full transition-all" style="width: {{ (((state.buffer.ready_stock or state.buffer.current_reserve or 0) / 12) * 100)|int }}%"></div>
                                 </div>
                                 <div class="flex items-center justify-between text-[10px] text-slate-400">
                                     <span class="truncate">{{ state.buffer.health_message }}</span>
