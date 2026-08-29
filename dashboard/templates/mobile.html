@@ -233,16 +233,31 @@
         <!-- MOBILE TAB 5: AUDIO                                             -->
         <!-- =============================================================== -->
         <div id="mob-tab-audio" class="mob-tab-section hidden space-y-3 font-mono text-xs">
-            <!-- Mobile Tactical Voice Preview Console & Audio Player -->
-            <div id="mob-voice-preview-console" class="p-3 bg-spaceDark rounded-xl border border-borderSubtle space-y-2">
+            <!-- Mobile Tactical Voice Preview Console & Audio Control Center -->
+            <div id="mob-voice-preview-console" class="p-3 bg-spaceDark rounded-xl border border-borderSubtle space-y-2.5">
                 <div class="flex items-center justify-between text-[11px]">
                     <div class="flex items-center gap-1.5">
-                        <span id="mob-voice-player-indicator" class="w-2 h-2 rounded-full bg-slate-500"></span>
-                        <span id="mob-voice-player-status" class="font-bold text-slate-400">VOICE PREVIEW — IDLE</span>
+                        <span id="mob-voice-player-indicator" class="w-2.5 h-2.5 rounded-full bg-slate-500 transition-all duration-300"></span>
+                        <span id="mob-voice-player-status" class="font-bold text-slate-300 tracking-wide">VOICE PREVIEW — IDLE</span>
                     </div>
                     <span id="mob-voice-player-voice-name" class="text-brandGold font-bold">Select Voice</span>
                 </div>
-                <audio id="mob-voice-preview-player" class="w-full h-8 rounded bg-spaceBlack border border-borderSubtle text-xs" controls></audio>
+
+                <!-- Interactive Mobile Player Bar -->
+                <div class="flex items-center gap-2.5 p-2 bg-spaceBlack rounded-lg border border-borderSubtle">
+                    <button id="mob-voice-console-play-btn" onclick="toggleMobConsolePlay()" disabled class="w-8 h-8 rounded-lg bg-surfaceElevated text-brandGold flex items-center justify-center transition-all disabled:opacity-40">
+                        <svg id="mob-voice-console-play-icon" class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <div class="flex-1 space-y-1">
+                        <div class="flex items-center justify-between text-[9px] text-slate-400">
+                            <span id="mob-voice-console-current-time">0:00</span>
+                            <span id="mob-voice-console-duration">0:00</span>
+                        </div>
+                        <input id="mob-voice-console-seek" type="range" min="0" max="100" value="0" step="0.1" oninput="handleMobSeek(this.value)" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-brandGold">
+                    </div>
+                    <audio id="mob-voice-preview-player" preload="auto" class="hidden"></audio>
+                </div>
+
                 <div id="mob-voice-player-notice" class="hidden text-[10px] text-amber-400 bg-amber-950/30 p-1.5 rounded border border-amber-900/50"></div>
             </div>
             <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Kokoro Voices</div>
@@ -367,36 +382,155 @@
             return meta ? meta.getAttribute('content') : '';
         }
 
-        // Mobile Voice Preview State Manager
-        let currentMobPlayingVoiceId = null;
+        // Global Mobile Voice Audio Cache & Playback Controller
+        window._mobVoiceCache = {};
+        window._mobAudioCtx = null;
+        let currentMobVoiceId = null;
 
-        function base64ToBlob(base64Data, contentType) {
-            const sliceSize = 1024;
-            const byteCharacters = atob(base64Data);
-            const bytesLength = byteCharacters.length;
-            const slicesCount = Math.ceil(bytesLength / sliceSize);
-            const byteArrays = new Array(slicesCount);
-
-            for (let sliceIndex = 0; sliceIndex < slicesCount; ++sliceIndex) {
-                const begin = sliceIndex * sliceSize;
-                const end = Math.min(begin + sliceSize, bytesLength);
-                const bytes = new Array(end - begin);
-                for (let offset = begin, i = 0; offset < end; ++i, ++offset) {
-                    bytes[i] = byteCharacters.charCodeAt(offset);
+        function getMobAudioContext() {
+            if (!window._mobAudioCtx) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) {
+                    window._mobAudioCtx = new AudioCtx();
                 }
-                byteArrays[sliceIndex] = new Uint8Array(bytes);
             }
-            return new Blob(byteArrays, { type: contentType });
+            if (window._mobAudioCtx && window._mobAudioCtx.state === 'suspended') {
+                window._mobAudioCtx.resume().catch(() => {});
+            }
+            return window._mobAudioCtx;
         }
 
-        function resetAllMobPreviewButtons() {
-            document.querySelectorAll('[id^="mob-preview-btn-"]').forEach(el => {
-                el.disabled = false;
-                el.innerHTML = `Preview`;
+        function formatMobTime(seconds) {
+            if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        function base64ToMobArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function base64ToMobBlobUrl(base64, mimeType) {
+            const buffer = base64ToMobArrayBuffer(base64);
+            const blob = new Blob([buffer], { type: mimeType });
+            return URL.createObjectURL(blob);
+        }
+
+        function initMobVoicePlayer() {
+            const player = document.getElementById('mob-voice-preview-player');
+            if (!player) return;
+
+            player.addEventListener('loadedmetadata', () => {
+                const dur = player.duration;
+                const durEl = document.getElementById('mob-voice-console-duration');
+                if (durEl && !isNaN(dur) && isFinite(dur)) {
+                    durEl.innerText = formatMobTime(dur);
+                }
+            });
+
+            player.addEventListener('timeupdate', () => {
+                const cur = player.currentTime;
+                const dur = player.duration;
+                const curEl = document.getElementById('mob-voice-console-current-time');
+                const seek = document.getElementById('mob-voice-console-seek');
+                if (curEl) curEl.innerText = formatMobTime(cur);
+                if (seek && dur > 0) {
+                    seek.value = (cur / dur) * 100;
+                }
+            });
+
+            player.addEventListener('play', () => {
+                updateMobPlayingUI(true);
+            });
+
+            player.addEventListener('pause', () => {
+                updateMobPlayingUI(false);
+            });
+
+            player.addEventListener('ended', () => {
+                updateMobPlayingUI(false);
+                const statusEl = document.getElementById('mob-voice-player-status');
+                if (statusEl && currentMobVoiceId) {
+                    statusEl.innerText = `COMPLETED (${currentMobVoiceId})`;
+                }
+            });
+
+            player.addEventListener('error', () => {
+                updateMobPlayingUI(false);
+                const statusEl = document.getElementById('mob-voice-player-status');
+                const indicatorEl = document.getElementById('mob-voice-player-indicator');
+                const noticeEl = document.getElementById('mob-voice-player-notice');
+                if (statusEl) statusEl.innerText = 'PLAYBACK ERROR';
+                if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+                if (noticeEl) {
+                    noticeEl.classList.remove('hidden');
+                    noticeEl.innerText = 'Audio stream could not be decoded. Tap Play on console.';
+                }
             });
         }
 
+        function updateMobPlayingUI(isPlaying) {
+            const playBtn = document.getElementById('mob-voice-console-play-btn');
+            const playIcon = document.getElementById('mob-voice-console-play-icon');
+            const indicatorEl = document.getElementById('mob-voice-player-indicator');
+            const statusEl = document.getElementById('mob-voice-player-status');
+
+            if (playBtn) playBtn.disabled = !currentMobVoiceId;
+
+            if (isPlaying) {
+                if (playIcon) playIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+                if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping';
+                if (statusEl && currentMobVoiceId) statusEl.innerText = `PLAYING: ${currentMobVoiceId}`;
+
+                const btn = document.getElementById(`mob-preview-btn-${currentMobVoiceId}`);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<span class="text-emerald-400 font-bold">Stop Sample</span>`;
+                }
+            } else {
+                if (playIcon) playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+                if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+
+                if (currentMobVoiceId) {
+                    const btn = document.getElementById(`mob-preview-btn-${currentMobVoiceId}`);
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = `<span class="text-brandGold font-bold">Play Sample</span>`;
+                    }
+                }
+            }
+        }
+
+        function toggleMobConsolePlay() {
+            const player = document.getElementById('mob-voice-preview-player');
+            if (!player || !currentMobVoiceId) return;
+
+            getMobAudioContext();
+
+            if (player.paused) {
+                player.play().catch(err => console.warn('[MOB_VOICE] Play error:', err));
+            } else {
+                player.pause();
+            }
+        }
+
+        function handleMobSeek(val) {
+            const player = document.getElementById('mob-voice-preview-player');
+            if (player && player.duration > 0) {
+                player.currentTime = (val / 100) * player.duration;
+            }
+        }
+
         async function handlePreviewVoice(voiceId, opt) {
+            getMobAudioContext();
+
             const btnId = (opt === true) ? `mob-preview-btn-${voiceId}` : (opt || `mob-preview-btn-${voiceId}`);
             const btn = document.getElementById(btnId);
             const player = document.getElementById('mob-voice-preview-player');
@@ -404,22 +538,45 @@
             const nameEl = document.getElementById('mob-voice-player-voice-name');
             const indicatorEl = document.getElementById('mob-voice-player-indicator');
             const noticeEl = document.getElementById('mob-voice-player-notice');
+            const playBtn = document.getElementById('mob-voice-console-play-btn');
 
-            if (currentMobPlayingVoiceId === voiceId && player && !player.paused) {
+            if (noticeEl) noticeEl.classList.add('hidden');
+
+            if (currentMobVoiceId === voiceId && player && !player.paused) {
                 player.pause();
                 player.currentTime = 0;
-                resetAllMobPreviewButtons();
+                updateMobPlayingUI(false);
                 if (statusEl) statusEl.innerText = 'VOICE PREVIEW — STOPPED';
-                if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-slate-500';
-                currentMobPlayingVoiceId = null;
                 return;
             }
 
-            resetAllMobPreviewButtons();
-            if (noticeEl) {
-                noticeEl.classList.add('hidden');
-                noticeEl.innerText = '';
+            if (window._mobVoiceCache[voiceId]) {
+                const cached = window._mobVoiceCache[voiceId];
+                currentMobVoiceId = voiceId;
+
+                resetOtherMobButtons(voiceId);
+                if (nameEl) nameEl.innerText = `${cached.displayName}`;
+                if (statusEl) statusEl.innerText = `PLAYING: ${cached.displayName}`;
+                if (playBtn) playBtn.disabled = false;
+
+                if (player) {
+                    if (player.src !== cached.blobUrl) {
+                        player.src = cached.blobUrl;
+                    }
+                    player.currentTime = 0;
+                    try {
+                        const p = player.play();
+                        if (p !== undefined) await p;
+                    } catch (playErr) {
+                        console.warn('[MOB_VOICE] Direct play notice:', playErr);
+                        updateMobPlayingUI(false);
+                    }
+                }
+                return;
             }
+
+            resetOtherMobButtons(voiceId);
+            currentMobVoiceId = voiceId;
 
             if (btn) {
                 btn.disabled = true;
@@ -427,7 +584,7 @@
             }
             if (statusEl) statusEl.innerText = `SYNTHESIZING (${voiceId})...`;
             if (nameEl) nameEl.innerText = `Synthesizing...`;
-            if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+            if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
 
             try {
                 const res = await fetch('/api/voice/preview', {
@@ -449,7 +606,7 @@
                         if (text && text.length < 150) errorMsg = text;
                     }
                     if (statusEl) statusEl.innerText = `FAILED (${res.status})`;
-                    if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-rose-500';
+                    if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
                     alert(`Voice Preview Failed: ${errorMsg}`);
                     resetAllMobPreviewButtons();
                     return;
@@ -460,73 +617,51 @@
                     data = await res.json();
                 } catch (parseErr) {
                     if (statusEl) statusEl.innerText = 'PARSE ERROR';
-                    if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-rose-500';
+                    if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
                     alert(`Voice Preview Error: Received non-JSON response from server (HTTP ${res.status})`);
                     resetAllMobPreviewButtons();
                     return;
                 }
 
                 if (data && (data.audio_base64 || data.audio_url)) {
-                    let audioSrc = data.audio_url;
                     const mime = data.format || 'audio/mpeg';
+                    const displayName = data.display_name || voiceId;
 
+                    let blobUrl = data.audio_url;
                     try {
                         if (data.audio_base64) {
-                            const blob = base64ToBlob(data.audio_base64, mime);
-                            audioSrc = URL.createObjectURL(blob);
+                            blobUrl = base64ToMobBlobUrl(data.audio_base64, mime);
                         }
                     } catch (blobErr) {
-                        console.warn('Blob URL generation fallback to data_url:', blobErr);
+                        console.warn('[MOB_VOICE] Blob conversion notice:', blobErr);
                     }
 
+                    window._mobVoiceCache[voiceId] = {
+                        blobUrl: blobUrl,
+                        mime: mime,
+                        displayName: displayName,
+                        base64: data.audio_base64
+                    };
+
+                    if (nameEl) nameEl.innerText = `${displayName}`;
+                    if (playBtn) playBtn.disabled = false;
+
                     if (player) {
-                        currentMobPlayingVoiceId = voiceId;
-                        player.src = audioSrc;
-                        player.load();
+                        player.src = blobUrl;
+                        player.currentTime = 0;
 
-                        if (nameEl) nameEl.innerText = `${data.display_name || voiceId}`;
-                        if (statusEl) statusEl.innerText = `PLAYING: ${data.display_name || voiceId}`;
-                        if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
-
-                        if (btn) {
-                            btn.disabled = false;
-                            btn.innerHTML = `<span class="text-emerald-400 font-bold">Playing...</span>`;
-                        }
-
-                        player.onended = () => {
-                            resetAllMobPreviewButtons();
-                            if (statusEl) statusEl.innerText = `COMPLETED (${data.display_name || voiceId})`;
-                            if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-slate-500';
-                            currentMobPlayingVoiceId = null;
-                        };
-
-                        player.onerror = (e) => {
-                            console.error('Audio playback error:', e);
-                            resetAllMobPreviewButtons();
-                            if (statusEl) statusEl.innerText = 'PLAYBACK ERROR';
-                            if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-rose-500';
+                        try {
+                            const p = player.play();
+                            if (p !== undefined) await p;
+                        } catch (playErr) {
+                            console.warn('[MOB_VOICE] Playback interrupted by browser policy:', playErr);
+                            updateMobPlayingUI(false);
+                            if (statusEl) statusEl.innerText = `READY (${displayName})`;
+                            if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
                             if (noticeEl) {
                                 noticeEl.classList.remove('hidden');
-                                noticeEl.innerText = 'Audio stream could not be decoded. Tap Play on player.';
+                                noticeEl.innerText = 'Audio is ready! Tap "Play Sample" or ▶ button above.';
                             }
-                            currentMobPlayingVoiceId = null;
-                        };
-
-                        const playPromise = player.play();
-                        if (playPromise !== undefined) {
-                            playPromise.catch(playErr => {
-                                console.warn('Mobile autoplay notice:', playErr);
-                                if (statusEl) statusEl.innerText = `READY (Tap Play)`;
-                                if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-amber-400';
-                                if (btn) {
-                                    btn.disabled = false;
-                                    btn.innerHTML = `<span class="text-amber-400 font-bold">Play Audio</span>`;
-                                }
-                                if (noticeEl) {
-                                    noticeEl.classList.remove('hidden');
-                                    noticeEl.innerText = '⚠️ Audio playback paused by browser. Tap Play button above.';
-                                }
-                            });
                         }
                     }
                 } else {
@@ -535,11 +670,37 @@
                 }
             } catch (err) {
                 if (statusEl) statusEl.innerText = 'NETWORK ERROR';
-                if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-rose-500';
+                if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
                 alert(`Voice Preview Error: ${err.message}`);
                 resetAllMobPreviewButtons();
             }
         }
+
+        function resetAllMobPreviewButtons() {
+            document.querySelectorAll('[id^="mob-preview-btn-"]').forEach(el => {
+                el.disabled = false;
+                el.innerHTML = `Preview`;
+            });
+            currentMobVoiceId = null;
+        }
+
+        function resetOtherMobButtons(activeVoiceId) {
+            document.querySelectorAll('[id^="mob-preview-btn-"]').forEach(el => {
+                if (el.id !== `mob-preview-btn-${activeVoiceId}`) {
+                    const vId = el.id.replace('mob-preview-btn-', '');
+                    el.disabled = false;
+                    if (window._mobVoiceCache[vId]) {
+                        el.innerHTML = `<span class="text-brandGold font-bold">Play Sample</span>`;
+                    } else {
+                        el.innerHTML = `Preview`;
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initMobVoicePlayer();
+        });
 
         async function handleSetVoice(voiceId) {
             try {

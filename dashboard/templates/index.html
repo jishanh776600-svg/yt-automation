@@ -747,17 +747,49 @@
                         <span class="text-xs font-mono text-brandGold">Active Voice: {{ state.voice_config.active_voice_name }}</span>
                     </div>
 
-                    <!-- Tactical Voice Preview Console & Audio Player -->
-                    <div id="voice-preview-console" class="p-3.5 bg-spaceBlack rounded-xl border border-borderSubtle space-y-2 font-mono">
+                    <!-- Tactical Voice Preview Console & Audio Control Center -->
+                    <div id="voice-preview-console" class="p-4 bg-spaceBlack rounded-xl border border-borderSubtle space-y-3 font-mono">
                         <div class="flex items-center justify-between text-xs">
                             <div class="flex items-center gap-2">
-                                <span id="voice-player-indicator" class="w-2 h-2 rounded-full bg-slate-500"></span>
-                                <span id="voice-player-status" class="font-bold text-slate-400">VOICE PREVIEW CONSOLE — IDLE</span>
+                                <span id="voice-player-indicator" class="w-2.5 h-2.5 rounded-full bg-slate-500 transition-all duration-300"></span>
+                                <span id="voice-player-status" class="font-bold text-slate-300 tracking-wide">VOICE PREVIEW CONSOLE — IDLE</span>
                             </div>
-                            <span id="voice-player-voice-name" class="text-brandGold font-bold">Select a voice to preview</span>
+                            <span id="voice-player-voice-name" class="text-brandGold font-bold tracking-wide">Select a voice below to preview</span>
                         </div>
-                        <audio id="voice-preview-player" class="w-full h-8 rounded bg-spaceDark border border-borderSubtle text-xs" controls></audio>
-                        <div id="voice-player-notice" class="hidden text-[11px] text-amber-400 bg-amber-950/30 p-2 rounded border border-amber-900/50"></div>
+
+                        <!-- Interactive Player Bar -->
+                        <div class="flex items-center gap-3 p-2.5 bg-spaceDark rounded-lg border border-borderSubtle">
+                            <!-- Play / Pause Master Button -->
+                            <button id="voice-console-play-btn" onclick="toggleConsolePlay()" disabled class="w-9 h-9 rounded-lg bg-surfaceElevated hover:bg-amber-950/50 border border-borderSubtle text-brandGold flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                                <svg id="voice-console-play-icon" class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            </button>
+
+                            <!-- Scrubber & Time Display -->
+                            <div class="flex-1 space-y-1">
+                                <div class="flex items-center justify-between text-[10px] text-slate-400">
+                                    <span id="voice-console-current-time">0:00</span>
+                                    <!-- Waveform visualizer bars -->
+                                    <div id="voice-waveform" class="flex items-center gap-0.5 opacity-40">
+                                        <span class="w-0.5 h-2 bg-brandGold rounded-full animate-pulse"></span>
+                                        <span class="w-0.5 h-3 bg-brandGold rounded-full animate-pulse delay-75"></span>
+                                        <span class="w-0.5 h-4 bg-brandGold rounded-full animate-pulse delay-150"></span>
+                                        <span class="w-0.5 h-2.5 bg-brandGold rounded-full animate-pulse delay-100"></span>
+                                        <span class="w-0.5 h-3.5 bg-brandGold rounded-full animate-pulse delay-200"></span>
+                                    </div>
+                                    <span id="voice-console-duration">0:00</span>
+                                </div>
+                                <input id="voice-console-seek" type="range" min="0" max="100" value="0" step="0.1" oninput="handleSeek(this.value)" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-brandGold">
+                            </div>
+
+                            <!-- Audio Element (Managed Preload) -->
+                            <audio id="voice-preview-player" preload="auto" class="hidden"></audio>
+                        </div>
+
+                        <!-- Dynamic Notice / Warning Banner -->
+                        <div id="voice-player-notice" class="hidden text-xs text-amber-400 bg-amber-950/40 p-2 rounded border border-amber-900/50 flex items-center gap-2">
+                            <svg class="w-4 h-4 shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            <span id="voice-player-notice-text"></span>
+                        </div>
                     </div>
 
                     <!-- Available Voices Grid -->
@@ -1017,68 +1049,223 @@
             return meta ? meta.getAttribute('content') : '';
         }
 
-        // Global Voice Preview Audio State Manager
-        let currentPlayingVoiceId = null;
+        // Global Voice Audio Cache & Playback Controller
+        window._voiceCache = {};
+        window._audioCtx = null;
+        let currentVoiceId = null;
 
-        function base64ToBlob(base64Data, contentType) {
-            const sliceSize = 1024;
-            const byteCharacters = atob(base64Data);
-            const bytesLength = byteCharacters.length;
-            const slicesCount = Math.ceil(bytesLength / sliceSize);
-            const byteArrays = new Array(slicesCount);
-
-            for (let sliceIndex = 0; sliceIndex < slicesCount; ++sliceIndex) {
-                const begin = sliceIndex * sliceSize;
-                const end = Math.min(begin + sliceSize, bytesLength);
-                const bytes = new Array(end - begin);
-                for (let offset = begin, i = 0; offset < end; ++i, ++offset) {
-                    bytes[i] = byteCharacters.charCodeAt(offset);
+        function getAudioContext() {
+            if (!window._audioCtx) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) {
+                    window._audioCtx = new AudioCtx();
                 }
-                byteArrays[sliceIndex] = new Uint8Array(bytes);
             }
-            return new Blob(byteArrays, { type: contentType });
+            if (window._audioCtx && window._audioCtx.state === 'suspended') {
+                window._audioCtx.resume().catch(() => {});
+            }
+            return window._audioCtx;
         }
 
-        function resetAllPreviewButtons() {
-            document.querySelectorAll('[id^="preview-btn-"]').forEach(el => {
-                el.disabled = false;
-                el.innerHTML = `<svg class="w-3.5 h-3.5 text-brandGold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>Preview</span>`;
+        function formatTime(seconds) {
+            if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function base64ToBlobUrl(base64, mimeType) {
+            const buffer = base64ToArrayBuffer(base64);
+            const blob = new Blob([buffer], { type: mimeType });
+            return URL.createObjectURL(blob);
+        }
+
+        // Initialize audio player listeners
+        function initVoicePlayer() {
+            const player = document.getElementById('voice-preview-player');
+            if (!player) return;
+
+            player.addEventListener('loadedmetadata', () => {
+                const dur = player.duration;
+                const durEl = document.getElementById('voice-console-duration');
+                if (durEl && !isNaN(dur) && isFinite(dur)) {
+                    durEl.innerText = formatTime(dur);
+                }
+            });
+
+            player.addEventListener('timeupdate', () => {
+                const cur = player.currentTime;
+                const dur = player.duration;
+                const curEl = document.getElementById('voice-console-current-time');
+                const seek = document.getElementById('voice-console-seek');
+                if (curEl) curEl.innerText = formatTime(cur);
+                if (seek && dur > 0) {
+                    seek.value = (cur / dur) * 100;
+                }
+            });
+
+            player.addEventListener('play', () => {
+                updatePlayingUI(true);
+            });
+
+            player.addEventListener('pause', () => {
+                updatePlayingUI(false);
+            });
+
+            player.addEventListener('ended', () => {
+                updatePlayingUI(false);
+                const statusEl = document.getElementById('voice-player-status');
+                if (statusEl && currentVoiceId) {
+                    statusEl.innerText = `VOICE PREVIEW — COMPLETED (${currentVoiceId})`;
+                }
+            });
+
+            player.addEventListener('error', (e) => {
+                console.error('[VOICE_PLAYER] Media element error:', player.error);
+                updatePlayingUI(false);
+                const statusEl = document.getElementById('voice-player-status');
+                const indicatorEl = document.getElementById('voice-player-indicator');
+                const noticeEl = document.getElementById('voice-player-notice');
+                const noticeText = document.getElementById('voice-player-notice-text');
+                if (statusEl) statusEl.innerText = 'VOICE PREVIEW — PLAYBACK ERROR';
+                if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+                if (noticeEl && noticeText) {
+                    noticeEl.classList.remove('hidden');
+                    noticeText.innerText = 'Audio stream format error. Click Play directly.';
+                }
             });
         }
 
-        // Voice Preview Handler
+        function updatePlayingUI(isPlaying) {
+            const playBtn = document.getElementById('voice-console-play-btn');
+            const playIcon = document.getElementById('voice-console-play-icon');
+            const indicatorEl = document.getElementById('voice-player-indicator');
+            const statusEl = document.getElementById('voice-player-status');
+            const waveform = document.getElementById('voice-waveform');
+
+            if (playBtn) playBtn.disabled = !currentVoiceId;
+
+            if (isPlaying) {
+                if (playIcon) playIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+                if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping';
+                if (statusEl && currentVoiceId) statusEl.innerText = `VOICE PREVIEW — PLAYING: ${currentVoiceId}`;
+                if (waveform) waveform.className = 'flex items-center gap-0.5 opacity-100';
+
+                // Update active voice card button
+                const btn = document.getElementById(`preview-btn-${currentVoiceId}`);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-400 animate-pulse" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg><span class="text-emerald-400 font-bold">Stop Sample</span>`;
+                }
+            } else {
+                if (playIcon) playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+                if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+                if (waveform) waveform.className = 'flex items-center gap-0.5 opacity-40';
+
+                if (currentVoiceId) {
+                    const btn = document.getElementById(`preview-btn-${currentVoiceId}`);
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = `<svg class="w-3.5 h-3.5 text-brandGold" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span class="text-brandGold font-bold">Play Sample</span>`;
+                    }
+                }
+            }
+        }
+
+        function toggleConsolePlay() {
+            const player = document.getElementById('voice-preview-player');
+            if (!player || !currentVoiceId) return;
+
+            getAudioContext(); // Direct user gesture unlock
+
+            if (player.paused) {
+                player.play().catch(err => {
+                    console.warn('[VOICE_PLAYER] Console play error:', err);
+                });
+            } else {
+                player.pause();
+            }
+        }
+
+        function handleSeek(val) {
+            const player = document.getElementById('voice-preview-player');
+            if (player && player.duration > 0) {
+                player.currentTime = (val / 100) * player.duration;
+            }
+        }
+
         async function handlePreviewVoice(voiceId) {
+            getAudioContext(); // Direct user gesture unlock
+
             const player = document.getElementById('voice-preview-player');
             const statusEl = document.getElementById('voice-player-status');
             const nameEl = document.getElementById('voice-player-voice-name');
             const indicatorEl = document.getElementById('voice-player-indicator');
             const noticeEl = document.getElementById('voice-player-notice');
+            const noticeText = document.getElementById('voice-player-notice-text');
+            const playBtn = document.getElementById('voice-console-play-btn');
             const btn = document.getElementById(`preview-btn-${voiceId}`);
 
-            // Toggle pause/stop if already playing
-            if (currentPlayingVoiceId === voiceId && player && !player.paused) {
+            if (noticeEl) noticeEl.classList.add('hidden');
+
+            // CASE 1: Voice is ALREADY active and playing -> Pause / Stop it
+            if (currentVoiceId === voiceId && player && !player.paused) {
                 player.pause();
                 player.currentTime = 0;
-                resetAllPreviewButtons();
+                updatePlayingUI(false);
                 if (statusEl) statusEl.innerText = 'VOICE PREVIEW CONSOLE — STOPPED';
-                if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-slate-500';
-                currentPlayingVoiceId = null;
                 return;
             }
 
-            resetAllPreviewButtons();
-            if (noticeEl) {
-                noticeEl.classList.add('hidden');
-                noticeEl.innerText = '';
+            // CASE 2: Voice is ALREADY cached in memory -> PLAY INSTANTLY (0ms latency, synchronous user gesture)
+            if (window._voiceCache[voiceId]) {
+                const cached = window._voiceCache[voiceId];
+                currentVoiceId = voiceId;
+
+                resetOtherVoiceButtons(voiceId);
+                if (nameEl) nameEl.innerText = `${cached.displayName} (${cached.mime})`;
+                if (statusEl) statusEl.innerText = `VOICE PREVIEW — PLAYING: ${cached.displayName}`;
+                if (playBtn) playBtn.disabled = false;
+
+                if (player) {
+                    if (player.src !== cached.blobUrl) {
+                        player.src = cached.blobUrl;
+                    }
+                    player.currentTime = 0;
+                    try {
+                        const p = player.play();
+                        if (p !== undefined) {
+                            await p;
+                        }
+                    } catch (playErr) {
+                        console.warn('[VOICE_PLAYER] Direct play notice:', playErr);
+                        updatePlayingUI(false);
+                    }
+                }
+                return;
             }
+
+            // CASE 3: Voice needs to be fetched from backend
+            resetOtherVoiceButtons(voiceId);
+            currentVoiceId = voiceId;
 
             if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = `<svg class="animate-spin w-3.5 h-3.5 text-brandGold" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg><span class="text-brandGold font-bold">Synthesizing...</span>`;
             }
-            if (statusEl) statusEl.innerText = `VOICE PREVIEW — SYNTHESIZING (${voiceId})...`;
-            if (nameEl) nameEl.innerText = `Synthesizing audio...`;
-            if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+            if (statusEl) statusEl.innerText = `SYNTHESIZING SAMPLE (${voiceId})...`;
+            if (nameEl) nameEl.innerText = `Synthesizing sample audio...`;
+            if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
 
             try {
                 const res = await fetch('/api/voice/preview', {
@@ -1100,9 +1287,9 @@
                         if (text && text.length < 150) errorMsg = text;
                     }
                     if (statusEl) statusEl.innerText = `VOICE PREVIEW — FAILED (${res.status})`;
-                    if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-rose-500';
+                    if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
                     alert(`Voice Preview Failed: ${errorMsg}`);
-                    resetAllPreviewButtons();
+                    resetAllVoiceButtons();
                     return;
                 }
 
@@ -1111,89 +1298,94 @@
                     data = await res.json();
                 } catch (parseErr) {
                     if (statusEl) statusEl.innerText = 'VOICE PREVIEW — PARSE ERROR';
-                    if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-rose-500';
+                    if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
                     alert(`Voice Preview Error: Received non-JSON response from server (HTTP ${res.status})`);
-                    resetAllPreviewButtons();
+                    resetAllVoiceButtons();
                     return;
                 }
 
                 if (data && (data.audio_base64 || data.audio_url)) {
-                    let audioSrc = data.audio_url;
                     const mime = data.format || 'audio/mpeg';
+                    const displayName = data.display_name || voiceId;
 
-                    // Convert base64 to Blob URL for fast native browser decoding
+                    let blobUrl = data.audio_url;
                     try {
                         if (data.audio_base64) {
-                            const blob = base64ToBlob(data.audio_base64, mime);
-                            audioSrc = URL.createObjectURL(blob);
+                            blobUrl = base64ToBlobUrl(data.audio_base64, mime);
                         }
                     } catch (blobErr) {
-                        console.warn('Blob URL generation fallback to data_url:', blobErr);
+                        console.warn('[VOICE_PLAYER] Blob conversion notice:', blobErr);
                     }
 
+                    // Save to memory cache
+                    window._voiceCache[voiceId] = {
+                        blobUrl: blobUrl,
+                        mime: mime,
+                        displayName: displayName,
+                        base64: data.audio_base64
+                    };
+
+                    if (nameEl) nameEl.innerText = `${displayName} (${mime})`;
+                    if (playBtn) playBtn.disabled = false;
+
                     if (player) {
-                        currentPlayingVoiceId = voiceId;
-                        player.src = audioSrc;
-                        player.load();
+                        player.src = blobUrl;
+                        player.currentTime = 0;
 
-                        if (nameEl) nameEl.innerText = `${data.display_name || voiceId} (${mime})`;
-                        if (statusEl) statusEl.innerText = `VOICE PREVIEW — PLAYING: ${data.display_name || voiceId}`;
-                        if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
-
-                        if (btn) {
-                            btn.disabled = false;
-                            btn.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-400 animate-pulse" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg><span class="text-emerald-400 font-bold">Playing...</span>`;
-                        }
-
-                        // Attach event listeners
-                        player.onended = () => {
-                            resetAllPreviewButtons();
-                            if (statusEl) statusEl.innerText = `VOICE PREVIEW — COMPLETED (${data.display_name || voiceId})`;
-                            if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-slate-500';
-                            currentPlayingVoiceId = null;
-                        };
-
-                        player.onerror = (e) => {
-                            console.error('Audio playback error event:', e);
-                            resetAllPreviewButtons();
-                            if (statusEl) statusEl.innerText = 'VOICE PREVIEW — PLAYBACK ERROR';
-                            if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-rose-500';
-                            if (noticeEl) {
-                                noticeEl.classList.remove('hidden');
-                                noticeEl.innerText = 'Audio stream could not be decoded by browser. Click Play controls directly.';
+                        try {
+                            const p = player.play();
+                            if (p !== undefined) {
+                                await p;
                             }
-                            currentPlayingVoiceId = null;
-                        };
-
-                        // Trigger playback
-                        const playPromise = player.play();
-                        if (playPromise !== undefined) {
-                            playPromise.catch(playErr => {
-                                console.warn('Browser autoplay notice:', playErr);
-                                if (statusEl) statusEl.innerText = `VOICE PREVIEW — READY (Click Play)`;
-                                if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-amber-400';
-                                if (btn) {
-                                    btn.disabled = false;
-                                    btn.innerHTML = `<svg class="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span class="text-amber-400 font-bold">Play Audio</span>`;
-                                }
-                                if (noticeEl) {
-                                    noticeEl.classList.remove('hidden');
-                                    noticeEl.innerText = '⚠️ Audio playback was paused by browser policy. Click the Play button in the player bar above to listen.';
-                                }
-                            });
+                        } catch (playErr) {
+                            console.warn('[VOICE_PLAYER] Playback interrupted by browser policy:', playErr);
+                            updatePlayingUI(false);
+                            if (statusEl) statusEl.innerText = `VOICE PREVIEW — READY (${displayName})`;
+                            if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+                            if (noticeEl && noticeText) {
+                                noticeEl.classList.remove('hidden');
+                                noticeText.innerText = 'Audio is ready! Tap "Play Sample" or the console ▶ button to listen.';
+                            }
                         }
                     }
                 } else {
                     alert('Voice Preview Error: No audio payload returned by server.');
-                    resetAllPreviewButtons();
+                    resetAllVoiceButtons();
                 }
             } catch (err) {
                 if (statusEl) statusEl.innerText = 'VOICE PREVIEW — NETWORK ERROR';
-                if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-rose-500';
+                if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
                 alert(`Voice Preview Network Error: ${err.message}`);
-                resetAllPreviewButtons();
+                resetAllVoiceButtons();
             }
         }
+
+        function resetAllVoiceButtons() {
+            document.querySelectorAll('[id^="preview-btn-"]').forEach(el => {
+                el.disabled = false;
+                el.innerHTML = `<svg class="w-3.5 h-3.5 text-brandGold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>Preview</span>`;
+            });
+            currentVoiceId = null;
+        }
+
+        function resetOtherVoiceButtons(activeVoiceId) {
+            document.querySelectorAll('[id^="preview-btn-"]').forEach(el => {
+                if (el.id !== `preview-btn-${activeVoiceId}`) {
+                    const vId = el.id.replace('preview-btn-', '');
+                    el.disabled = false;
+                    if (window._voiceCache[vId]) {
+                        el.innerHTML = `<svg class="w-3.5 h-3.5 text-brandGold" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span class="text-brandGold font-bold">Play Sample</span>`;
+                    } else {
+                        el.innerHTML = `<svg class="w-3.5 h-3.5 text-brandGold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>Preview</span>`;
+                    }
+                }
+            });
+        }
+
+        // Initialize on DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            initVoicePlayer();
+        });
 
         // Set Active Voice
         async function handleSetVoice(voiceId) {
