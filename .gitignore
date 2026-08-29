@@ -11,6 +11,7 @@ venv/
 token.json
 client_secret.json
 .env
+show_secrets.py
 
 # Large Model Weights (Downloaded on-the-fly by Kokoro / HF)
 data/*.onnx

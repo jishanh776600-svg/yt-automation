@@ -22,8 +22,8 @@ from fastapi.responses import RedirectResponse
 logger = logging.getLogger(__name__)
 
 # Default Admin Configuration from Environment (Never hardcoded in source)
-DEFAULT_ADMIN_USER = os.getenv("DASHBOARD_ADMIN_USER", "admin")
-DEFAULT_ADMIN_PASSWORD = os.getenv("DASHBOARD_ADMIN_PASSWORD", "HistoriaAdmin2026!Secure")
+DEFAULT_ADMIN_USER = os.getenv("DASHBOARD_ADMIN_USER") or os.getenv("ADMIN_USERNAME") or "admin"
+DEFAULT_ADMIN_PASSWORD = os.getenv("DASHBOARD_ADMIN_PASSWORD", "")
 
 SESSION_COOKIE_NAME = "historia_session_id"
 SESSION_DURATION_HOURS = 12
@@ -65,15 +65,56 @@ class PasswordHasher:
 
 
 class CredentialsManager:
-    """Manages secure runtime storage of administrator credentials."""
+    """Manages secure runtime storage of administrator credentials with fail-closed security."""
 
     def __init__(self):
-        self.username = os.getenv("DASHBOARD_ADMIN_USER", DEFAULT_ADMIN_USER)
-        admin_pass = os.getenv("DASHBOARD_ADMIN_PASSWORD", DEFAULT_ADMIN_PASSWORD)
-        self.hash_hex, self.salt_hex = PasswordHasher.hash_password(admin_pass)
+        self.reload()
+
+    def reload(self):
+        """Reloads credentials from environment variables, failing closed if none configured."""
+        self.username = os.getenv("DASHBOARD_ADMIN_USER") or os.getenv("ADMIN_USERNAME") or "admin"
+        admin_pass = os.getenv("DASHBOARD_ADMIN_PASSWORD")
+        password_hash = os.getenv("ADMIN_PASSWORD_HASH")
+
+        self.hash_hex = None
+        self.salt_hex = None
+        self.is_configured = False
+
+        if password_hash:
+            # Parse format: e.g. "pbkdf2_sha256$iterations$salt$hash" or "salt$hash" or "salt:hash"
+            parts = password_hash.split("$")
+            if len(parts) == 4 and parts[0] == "pbkdf2_sha256":
+                # pbkdf2_sha256$iterations$salt$hash
+                self.salt_hex = parts[2]
+                self.hash_hex = parts[3]
+                self.is_configured = True
+            elif len(parts) == 2:
+                self.salt_hex = parts[0]
+                self.hash_hex = parts[1]
+                self.is_configured = True
+            elif ":" in password_hash:
+                p_parts = password_hash.split(":")
+                if len(p_parts) == 2:
+                    self.salt_hex = p_parts[0]
+                    self.hash_hex = p_parts[1]
+                    self.is_configured = True
+            else:
+                logger.error("[AUTH_SECURITY] Unrecognized ADMIN_PASSWORD_HASH format.")
+        elif admin_pass:
+            self.hash_hex, self.salt_hex = PasswordHasher.hash_password(admin_pass)
+            self.is_configured = True
+        else:
+            # FAIL CLOSED: No password or hash is configured.
+            logger.warning("[AUTH_SECURITY] No admin password or hash configured. Dashboard login is disabled.")
+            self.is_configured = False
 
     def verify_credentials(self, username: str, password: str) -> bool:
-        """Verifies username and password in constant time."""
+        """Verifies username and password in constant time. Fails closed if not configured."""
+        if not self.is_configured or not self.hash_hex or not self.salt_hex:
+            logger.warning("[AUTH_SECURITY] Login attempted but admin credentials are not configured. Rejection enforced.")
+            return False
+        if not username or not password:
+            return False
         user_matches = hmac.compare_digest(username.strip(), self.username.strip())
         password_matches = PasswordHasher.verify_password(password, self.hash_hex, self.salt_hex)
         return user_matches and password_matches
