@@ -425,8 +425,16 @@ def api_produce_buffer_status(session: Dict[str, Any] = Depends(get_current_sess
     """Returns real-time GitHub Actions status for produce_buffer.yml."""
     from dashboard.github_client import GitHubWorkflowDispatcher
     dispatcher = GitHubWorkflowDispatcher()
-    latest_run = dispatcher.get_latest_workflow_run("produce_buffer.yml")
     active_run = dispatcher.get_active_workflow_run("produce_buffer.yml")
+    latest_run = dispatcher.get_latest_workflow_run("produce_buffer.yml")
+    if active_run:
+        if latest_run and latest_run.get("id") == active_run.get("id"):
+            active_run["jobs"] = latest_run.get("jobs", [])
+            active_run["step_summary"] = latest_run.get("step_summary", {})
+        elif "step_summary" not in active_run:
+            details = dispatcher.get_workflow_run_jobs(active_run["id"])
+            active_run["jobs"] = details.get("jobs", [])
+            active_run["step_summary"] = details.get("step_summary", {})
     return {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "workflow": "produce_buffer.yml",
@@ -444,8 +452,16 @@ def api_workflow_status(workflow_file: str, session: Dict[str, Any] = Depends(ge
     if workflow_file not in ALLOWED_WORKFLOWS:
         raise HTTPException(status_code=400, detail=f"Workflow '{workflow_file}' not in authorized list.")
     dispatcher = GitHubWorkflowDispatcher()
-    latest_run = dispatcher.get_latest_workflow_run(workflow_file)
     active_run = dispatcher.get_active_workflow_run(workflow_file)
+    latest_run = dispatcher.get_latest_workflow_run(workflow_file)
+    if active_run:
+        if latest_run and latest_run.get("id") == active_run.get("id"):
+            active_run["jobs"] = latest_run.get("jobs", [])
+            active_run["step_summary"] = latest_run.get("step_summary", {})
+        elif "step_summary" not in active_run:
+            details = dispatcher.get_workflow_run_jobs(active_run["id"])
+            active_run["jobs"] = details.get("jobs", [])
+            active_run["step_summary"] = details.get("step_summary", {})
     return {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "workflow": workflow_file,

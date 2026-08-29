@@ -160,7 +160,9 @@ class TestGitHubDispatcherPhase72(unittest.TestCase):
     def test_13_cloud_mode_true_dispatches_workflow(self):
         """Test that ActionManager dispatches GitHub workflow when CLOUD_MODE=True."""
         mgr = ActionManager()
-        with patch("config.settings.CLOUD_MODE", True),              patch.object(mgr.github_dispatcher, "dispatch_produce_buffer", return_value={"success": True, "action": "DISPATCH_ACCEPTED"}) as mock_disp:
+        with patch("config.settings.CLOUD_MODE", True), \
+             patch.object(mgr.github_dispatcher, "get_active_workflow_run", return_value=None), \
+             patch.object(mgr.github_dispatcher, "dispatch_produce_buffer", return_value={"success": True, "action": "DISPATCH_ACCEPTED"}) as mock_disp:
             res = mgr.trigger_buffer_production(self.db, target=12)
             self.assertTrue(res["success"])
             self.assertEqual(res["action"], "DISPATCH_ACCEPTED")
@@ -170,7 +172,10 @@ class TestGitHubDispatcherPhase72(unittest.TestCase):
         """Test that ActionManager preserves local behavior when CLOUD_MODE=False."""
         mgr = ActionManager()
         # Mock ProcessLock as locked to verify local ProcessLock check is executed
-        with patch("config.settings.CLOUD_MODE", False),              patch("core.lock.ProcessLock.is_locked", return_value=True),              patch("core.lock.ProcessLock.get_lock_info", return_value={"pid": 12345}):
+        with patch("config.settings.CLOUD_MODE", False), \
+             patch.object(mgr.github_dispatcher, "get_active_workflow_run", return_value=None), \
+             patch("core.lock.ProcessLock.is_locked", return_value=True), \
+             patch("core.lock.ProcessLock.get_lock_info", return_value={"pid": 12345}):
             res = mgr.trigger_buffer_production(self.db, target=12)
             self.assertFalse(res["success"])
             self.assertIn("Production lock is currently held", res["error"])

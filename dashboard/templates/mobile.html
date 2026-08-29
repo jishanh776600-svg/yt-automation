@@ -835,6 +835,7 @@
 
                 if (res.status === 409 && data.status === 'REFILL_ALREADY_RUNNING') {
                     alert(`⏳ REFILL ALREADY IN PROGRESS\n${data.error}`);
+                    startMobileWorkflowStatusPolling();
                     return;
                 }
 
@@ -845,7 +846,7 @@
 
                 if (data.success === true && data.status === 'DISPATCH_ACCEPTED') {
                     alert(`✅ DISPATCH ACCEPTED\n${data.message}\nRepository: ${data.repository}\nTarget Ref: ${data.ref}\n\nNote: GitHub Actions has accepted the workflow dispatch.`);
-                    window.location.reload();
+                    startMobileWorkflowStatusPolling();
                 } else if (data.success === true) {
                     alert(`✅ ACTION EXECUTED\n${data.action || 'Complete'}: Produced ${data.produced_count || 1} Short(s).`);
                     window.location.reload();
@@ -935,11 +936,171 @@
             }
         }
     
-        function dismissMobileCloudBanner() {
+        let _mobileWorkflowPollTimer = null;
+        let _isMobileTrackingActiveWorkflow = false;
+
+        function updateMobileWorkflowBannerUI(status, message, badgeText, badgeClass) {
+            const banner = document.getElementById('mobile-cloud-banner');
+            const bannerMsg = document.getElementById('mobile-cloud-msg');
+            const bannerWorkflow = document.getElementById('mobile-cloud-workflow');
+            const bannerBadge = document.getElementById('mobile-cloud-badge');
+
+            if (!banner) return;
+            banner.classList.remove('hidden');
+            if (bannerWorkflow) bannerWorkflow.innerText = 'produce_buffer.yml';
+
+            if (bannerBadge) {
+                bannerBadge.innerText = badgeText;
+                if (badgeClass) bannerBadge.className = badgeClass;
+            }
+            if (bannerMsg && message) bannerMsg.innerText = message;
+        }
+
+        function hideMobileWorkflowBanner() {
             const banner = document.getElementById('mobile-cloud-banner');
             if (banner) banner.classList.add('hidden');
+            _isMobileTrackingActiveWorkflow = false;
         }
-    
+
+        function stopMobileWorkflowStatusPolling() {
+            if (_mobileWorkflowPollTimer) {
+                clearInterval(_mobileWorkflowPollTimer);
+                _mobileWorkflowPollTimer = null;
+            }
+        }
+
+        function renderMobileWorkflowRunState(info) {
+            if (!info) return false;
+
+            if (info.is_active && info.active_run) {
+                _isMobileTrackingActiveWorkflow = true;
+                const active = info.active_run;
+                const status = (active.status || 'in_progress').toLowerCase();
+                const stepSummary = active.step_summary || {};
+                const currentStep = stepSummary.current_step || (status === 'queued' ? 'Queued in runner queue' : 'Executing');
+                const completedSteps = stepSummary.completed_steps || 0;
+                const totalSteps = stepSummary.total_steps || 0;
+
+                if (status === 'queued' || status === 'waiting' || status === 'requested') {
+                    updateMobileWorkflowBannerUI(
+                        status,
+                        'Queued in runner queue...',
+                        'QUEUED',
+                        'px-1.5 py-0.2 rounded bg-sky-900 border border-sky-700 text-[9px] font-bold text-sky-300'
+                    );
+                } else {
+                    const stepText = totalSteps > 0 ? `Step ${completedSteps}/${totalSteps}: ${currentStep}` : currentStep;
+                    updateMobileWorkflowBannerUI(
+                        status,
+                        stepText,
+                        'RUNNING',
+                        'px-1.5 py-0.2 rounded bg-amber-900/80 border border-amber-700 text-[9px] font-bold text-amber-300'
+                    );
+                }
+                return true;
+            }
+
+            if (_isMobileTrackingActiveWorkflow) {
+                _isMobileTrackingActiveWorkflow = false;
+                stopMobileWorkflowStatusPolling();
+
+                const latest = info.latest_run;
+                const conclusion = (latest && latest.conclusion) ? latest.conclusion : 'completed';
+
+                if (conclusion === 'success') {
+                    updateMobileWorkflowBannerUI(
+                        'completed',
+                        'Refill completed! Refreshing...',
+                        'COMPLETED',
+                        'px-1.5 py-0.2 rounded bg-emerald-900/80 border border-emerald-700 text-[9px] font-bold text-emerald-300'
+                    );
+                    setTimeout(() => window.location.reload(), 2500);
+                } else {
+                    updateMobileWorkflowBannerUI(
+                        'completed',
+                        `Finished: ${conclusion}`,
+                        (conclusion || 'FAILED').toUpperCase(),
+                        'px-1.5 py-0.2 rounded bg-rose-900/80 border border-rose-700 text-[9px] font-bold text-rose-300'
+                    );
+                }
+                return false;
+            }
+
+            hideMobileWorkflowBanner();
+            stopMobileWorkflowStatusPolling();
+            return false;
+        }
+
+        async function startMobileWorkflowStatusPolling() {
+            stopMobileWorkflowStatusPolling();
+            _isMobileTrackingActiveWorkflow = true;
+
+            updateMobileWorkflowBannerUI(
+                'dispatched',
+                'Waiting for runner provision...',
+                'DISPATCHED',
+                'px-1.5 py-0.2 rounded bg-sky-900 border border-sky-700 text-[9px] font-bold text-sky-300'
+            );
+
+            try {
+                const res = await fetch('/api/workflows/status/produce_buffer');
+                if (res.ok) {
+                    const info = await res.json();
+                    renderMobileWorkflowRunState(info);
+                }
+            } catch (e) {
+                console.warn('[MOBILE_POLL] Error:', e);
+            }
+
+            _mobileWorkflowPollTimer = setInterval(async () => {
+                try {
+                    const res = await fetch('/api/workflows/status/produce_buffer');
+                    if (res.ok) {
+                        const info = await res.json();
+                        renderMobileWorkflowRunState(info);
+                    }
+                } catch (e) {
+                    console.warn('[MOBILE_POLL] Error:', e);
+                }
+            }, 5000);
+        }
+
+        async function initMobileWorkflowStatusRecovery() {
+            try {
+                const res = await fetch('/api/workflows/status/produce_buffer');
+                if (res.ok) {
+                    const info = await res.json();
+                    if (info && info.is_active && info.active_run) {
+                        renderMobileWorkflowRunState(info);
+                        if (!_mobileWorkflowPollTimer) {
+                            _mobileWorkflowPollTimer = setInterval(async () => {
+                                try {
+                                    const r = await fetch('/api/workflows/status/produce_buffer');
+                                    if (r.ok) {
+                                        const latest = await r.json();
+                                        renderMobileWorkflowRunState(latest);
+                                    }
+                                } catch (e) {}
+                            }, 5000);
+                        }
+                    } else {
+                        hideMobileWorkflowBanner();
+                    }
+                }
+            } catch (e) {
+                console.warn('[MOBILE_RECOVERY] Could not check active status:', e);
+                hideMobileWorkflowBanner();
+            }
+        }
+
+        function dismissMobileCloudBanner() {
+            hideMobileWorkflowBanner();
+            stopMobileWorkflowStatusPolling();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initMobileWorkflowStatusRecovery();
+        });
     </script>
 </body>
 </html>

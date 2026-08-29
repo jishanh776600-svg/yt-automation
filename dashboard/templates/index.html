@@ -1463,6 +1463,7 @@
         // Initialize on DOM load
         document.addEventListener('DOMContentLoaded', () => {
             initVoicePlayer();
+            initWorkflowStatusRecovery();
         });
 
         // Set Active Voice
@@ -1551,73 +1552,183 @@
         }
 
         let _workflowPollTimer = null;
-        async function startWorkflowStatusPolling() {
+        let _isTrackingActiveWorkflow = false;
+
+        function updateWorkflowBannerUI(status, message, badgeText, badgeClass, elapsedText) {
             const banner = document.getElementById('cloud-workflow-banner');
             const bannerMsg = document.getElementById('cloud-banner-msg');
             const bannerWorkflow = document.getElementById('cloud-banner-workflow');
             const bannerBadge = document.getElementById('cloud-banner-badge');
             const bannerElapsed = document.getElementById('cloud-banner-elapsed');
 
-            if (banner) banner.classList.remove('hidden');
+            if (!banner) return;
+            banner.classList.remove('hidden');
             if (bannerWorkflow) bannerWorkflow.innerText = 'produce_buffer.yml';
+
             if (bannerBadge) {
-                bannerBadge.className = 'px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[10px] font-bold text-sky-300';
-                bannerBadge.innerText = 'DISPATCHED';
+                bannerBadge.innerText = badgeText;
+                if (badgeClass) bannerBadge.className = badgeClass;
             }
-            if (bannerMsg) bannerMsg.innerText = 'Waiting for GitHub Actions runner provision...';
+            if (bannerMsg && message) bannerMsg.innerText = message;
+            if (bannerElapsed && elapsedText !== undefined) bannerElapsed.innerText = elapsedText;
+        }
 
-            if (_workflowPollTimer) clearInterval(_workflowPollTimer);
+        function hideWorkflowBanner() {
+            const banner = document.getElementById('cloud-workflow-banner');
+            if (banner) banner.classList.add('hidden');
+            _isTrackingActiveWorkflow = false;
+        }
 
-            let startTime = Date.now();
-            _workflowPollTimer = setInterval(async () => {
-                const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
-                if (bannerElapsed) bannerElapsed.innerText = `${elapsedSec}s`;
+        function stopWorkflowStatusPolling() {
+            if (_workflowPollTimer) {
+                clearInterval(_workflowPollTimer);
+                _workflowPollTimer = null;
+            }
+        }
 
-                try {
-                    const res = await fetch('/api/workflows/status/produce_buffer');
-                    if (res.ok) {
-                        const info = await res.json();
-                        const active = info.active_run || info.latest_run;
-                        if (active) {
-                            const status = active.status;
-                            const conclusion = active.conclusion;
-                            const stepSummary = active.step_summary || {};
-                            const currentStep = stepSummary.current_step || 'Initializing';
-                            const completedSteps = stepSummary.completed_steps || 0;
-                            const totalSteps = stepSummary.total_steps || 0;
+        async function fetchWorkflowStatus() {
+            try {
+                const res = await fetch('/api/workflows/status/produce_buffer');
+                if (!res.ok) return null;
+                return await res.json();
+            } catch (err) {
+                console.warn('[WORKFLOW_POLL] Error fetching workflow status:', err);
+                return null;
+            }
+        }
 
-                            if (status === 'queued') {
-                                if (bannerBadge) bannerBadge.innerText = 'QUEUED';
-                                if (bannerMsg) bannerMsg.innerText = 'Queued in GitHub Actions queue...';
-                            } else if (status === 'in_progress') {
-                                if (bannerBadge) {
-                                    bannerBadge.className = 'px-1.5 py-0.5 rounded bg-amber-900/80 border border-amber-700 text-[10px] font-bold text-amber-300';
-                                    bannerBadge.innerText = 'RUNNING';
-                                }
-                                if (bannerMsg) bannerMsg.innerText = `Step ${completedSteps}/${totalSteps}: ${currentStep}`;
-                            } else if (status === 'completed') {
-                                clearInterval(_workflowPollTimer);
-                                if (conclusion === 'success') {
-                                    if (bannerBadge) {
-                                        bannerBadge.className = 'px-1.5 py-0.5 rounded bg-emerald-900/80 border border-emerald-700 text-[10px] font-bold text-emerald-300';
-                                        bannerBadge.innerText = 'COMPLETED';
-                                    }
-                                    if (bannerMsg) bannerMsg.innerText = 'Buffer refill completed successfully. Refreshing vault...';
-                                    setTimeout(() => window.location.reload(), 2500);
-                                } else {
-                                    if (bannerBadge) {
-                                        bannerBadge.className = 'px-1.5 py-0.5 rounded bg-rose-900/80 border border-rose-700 text-[10px] font-bold text-rose-300';
-                                        bannerBadge.innerText = (conclusion || 'FAILED').toUpperCase();
-                                    }
-                                    if (bannerMsg) bannerMsg.innerText = `Workflow finished with conclusion: ${conclusion}`;
-                                }
-                            }
-                        }
+        function renderWorkflowRunState(info) {
+            if (!info) return false;
+            const bannerElapsed = document.getElementById('cloud-banner-elapsed');
+
+            // 1. If backend indicates an active run (queued, in_progress, waiting, requested)
+            if (info.is_active && info.active_run) {
+                _isTrackingActiveWorkflow = true;
+                const active = info.active_run;
+                const status = (active.status || 'in_progress').toLowerCase();
+                const stepSummary = active.step_summary || {};
+                const currentStep = stepSummary.current_step || (status === 'queued' ? 'Queued in runner queue' : 'Cloud runner execution in progress...');
+                const completedSteps = stepSummary.completed_steps || 0;
+                const totalSteps = stepSummary.total_steps || 0;
+
+                // Accurate elapsed time calculated from actual run creation / start
+                const startIso = active.run_started_at || active.created_at;
+                let elapsedStr = '0s';
+                if (startIso) {
+                    const startMs = new Date(startIso).getTime();
+                    if (!isNaN(startMs)) {
+                        const sec = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+                        elapsedStr = sec >= 60 ? `${Math.floor(sec / 60)}m ${sec % 60}s` : `${sec}s`;
                     }
-                } catch (pollErr) {
-                    console.warn('[WORKFLOW_POLL] Notice:', pollErr);
+                }
+
+                if (status === 'queued' || status === 'waiting' || status === 'requested') {
+                    updateWorkflowBannerUI(
+                        status,
+                        'Queued in GitHub Actions queue — waiting for runner...',
+                        'QUEUED',
+                        'px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[10px] font-bold text-sky-300',
+                        elapsedStr
+                    );
+                } else {
+                    // in_progress
+                    const stepText = totalSteps > 0 ? `Step ${completedSteps}/${totalSteps}: ${currentStep}` : currentStep;
+                    updateWorkflowBannerUI(
+                        status,
+                        stepText,
+                        'RUNNING',
+                        'px-1.5 py-0.5 rounded bg-amber-900/80 border border-amber-700 text-[10px] font-bold text-amber-300',
+                        elapsedStr
+                    );
+                }
+                return true;
+            }
+
+            // 2. If workflow is NOT active
+            if (_isTrackingActiveWorkflow) {
+                // Workflow just finished while dashboard was actively tracking it
+                _isTrackingActiveWorkflow = false;
+                stopWorkflowStatusPolling();
+
+                const latest = info.latest_run;
+                const conclusion = (latest && latest.conclusion) ? latest.conclusion : 'completed';
+
+                if (conclusion === 'success') {
+                    updateWorkflowBannerUI(
+                        'completed',
+                        'Buffer refill completed successfully. Refreshing vault...',
+                        'COMPLETED',
+                        'px-1.5 py-0.5 rounded bg-emerald-900/80 border border-emerald-700 text-[10px] font-bold text-emerald-300',
+                        bannerElapsed ? bannerElapsed.innerText : ''
+                    );
+                    setTimeout(() => window.location.reload(), 2500);
+                } else {
+                    updateWorkflowBannerUI(
+                        'completed',
+                        `Workflow finished with conclusion: ${conclusion}`,
+                        (conclusion || 'FAILED').toUpperCase(),
+                        'px-1.5 py-0.5 rounded bg-rose-900/80 border border-rose-700 text-[10px] font-bold text-rose-300',
+                        bannerElapsed ? bannerElapsed.innerText : ''
+                    );
+                }
+                return false;
+            }
+
+            // 3. Normal page load / check when no workflow is active -> Hide banner, no stale UI
+            hideWorkflowBanner();
+            stopWorkflowStatusPolling();
+            return false;
+        }
+
+        async function startWorkflowStatusPolling() {
+            stopWorkflowStatusPolling();
+            _isTrackingActiveWorkflow = true;
+
+            // Initial banner state while fetching
+            updateWorkflowBannerUI(
+                'dispatched',
+                'Waiting for GitHub Actions runner provision...',
+                'DISPATCHED',
+                'px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[10px] font-bold text-sky-300',
+                '0s'
+            );
+
+            // Fetch and render immediately
+            const info = await fetchWorkflowStatus();
+            if (info) {
+                renderWorkflowRunState(info);
+            }
+
+            // Poll every 5s idempotently
+            _workflowPollTimer = setInterval(async () => {
+                const latestInfo = await fetchWorkflowStatus();
+                if (latestInfo) {
+                    renderWorkflowRunState(latestInfo);
                 }
             }, 5000);
+        }
+
+        async function initWorkflowStatusRecovery() {
+            try {
+                const info = await fetchWorkflowStatus();
+                if (info && info.is_active && info.active_run) {
+                    // Reconstruct active workflow state from backend & resume polling
+                    renderWorkflowRunState(info);
+                    if (!_workflowPollTimer) {
+                        _workflowPollTimer = setInterval(async () => {
+                            const latestInfo = await fetchWorkflowStatus();
+                            if (latestInfo) {
+                                renderWorkflowRunState(latestInfo);
+                            }
+                        }, 5000);
+                    }
+                } else {
+                    hideWorkflowBanner();
+                }
+            } catch (e) {
+                console.warn('[WORKFLOW_RECOVERY] Could not check active status:', e);
+                hideWorkflowBanner();
+            }
         }
 
         // Publish Next
@@ -1725,8 +1836,8 @@
         }
     
         function dismissCloudBanner() {
-            const banner = document.getElementById('cloud-workflow-banner');
-            if (banner) banner.classList.add('hidden');
+            hideWorkflowBanner();
+            stopWorkflowStatusPolling();
         }
     
     </script>

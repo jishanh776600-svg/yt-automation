@@ -964,3 +964,19 @@
 | `duration_target` | **SWEET_SPOT** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
 | `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
 | `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+
+## Learning Cycle — 2026-08-29 18:44:33 UTC
+
+- **Mature Videos Evaluated**: 46
+- **Channel Performance Baseline**: 24.18/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Eerie / Unsolved / Mysterious** | 1 | `+206.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 2 | `-20.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-31.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-23.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Ancient Mysteries** | 1 | `+206.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `duration_target` | **EXTENDED_26S** | 1 | `+206.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `hook_archetype` | **MYSTERY_CURIOSITY** | 1 | `+206.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `motion_style` | **SLOW_CINEMATIC_ZOOM** | 1 | `+206.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
