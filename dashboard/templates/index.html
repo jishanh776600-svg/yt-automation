@@ -1049,10 +1049,17 @@
             return meta ? meta.getAttribute('content') : '';
         }
 
-        // Global Voice Audio Cache & Playback Controller
+        // =====================================================================
+        // GLOBAL HIGH-PERFORMANCE WEBAUDIO VOICE ENGINE & STATE MACHINE
+        // =====================================================================
         window._voiceCache = {};
         window._audioCtx = null;
         let currentVoiceId = null;
+        let activeSourceNode = null;
+        let playbackStartTime = 0;
+        let playbackStartOffset = 0;
+        let playbackAnimFrame = null;
+        let isAudioPlaying = false;
 
         function getAudioContext() {
             if (!window._audioCtx) {
@@ -1068,7 +1075,7 @@
         }
 
         function formatTime(seconds) {
-            if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+            if (isNaN(seconds) || !isFinite(seconds) || seconds < 0) return '0:00';
             const mins = Math.floor(seconds / 60);
             const secs = Math.floor(seconds % 60);
             return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
@@ -1090,62 +1097,6 @@
             return URL.createObjectURL(blob);
         }
 
-        // Initialize audio player listeners
-        function initVoicePlayer() {
-            const player = document.getElementById('voice-preview-player');
-            if (!player) return;
-
-            player.addEventListener('loadedmetadata', () => {
-                const dur = player.duration;
-                const durEl = document.getElementById('voice-console-duration');
-                if (durEl && !isNaN(dur) && isFinite(dur)) {
-                    durEl.innerText = formatTime(dur);
-                }
-            });
-
-            player.addEventListener('timeupdate', () => {
-                const cur = player.currentTime;
-                const dur = player.duration;
-                const curEl = document.getElementById('voice-console-current-time');
-                const seek = document.getElementById('voice-console-seek');
-                if (curEl) curEl.innerText = formatTime(cur);
-                if (seek && dur > 0) {
-                    seek.value = (cur / dur) * 100;
-                }
-            });
-
-            player.addEventListener('play', () => {
-                updatePlayingUI(true);
-            });
-
-            player.addEventListener('pause', () => {
-                updatePlayingUI(false);
-            });
-
-            player.addEventListener('ended', () => {
-                updatePlayingUI(false);
-                const statusEl = document.getElementById('voice-player-status');
-                if (statusEl && currentVoiceId) {
-                    statusEl.innerText = `VOICE PREVIEW — COMPLETED (${currentVoiceId})`;
-                }
-            });
-
-            player.addEventListener('error', (e) => {
-                console.error('[VOICE_PLAYER] Media element error:', player.error);
-                updatePlayingUI(false);
-                const statusEl = document.getElementById('voice-player-status');
-                const indicatorEl = document.getElementById('voice-player-indicator');
-                const noticeEl = document.getElementById('voice-player-notice');
-                const noticeText = document.getElementById('voice-player-notice-text');
-                if (statusEl) statusEl.innerText = 'VOICE PREVIEW — PLAYBACK ERROR';
-                if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
-                if (noticeEl && noticeText) {
-                    noticeEl.classList.remove('hidden');
-                    noticeText.innerText = 'Audio stream format error. Click Play directly.';
-                }
-            });
-        }
-
         function updatePlayingUI(isPlaying) {
             const playBtn = document.getElementById('voice-console-play-btn');
             const playIcon = document.getElementById('voice-console-play-icon');
@@ -1158,7 +1109,10 @@
             if (isPlaying) {
                 if (playIcon) playIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
                 if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping';
-                if (statusEl && currentVoiceId) statusEl.innerText = `VOICE PREVIEW — PLAYING: ${currentVoiceId}`;
+                if (statusEl && currentVoiceId) {
+                    const disp = window._voiceCache[currentVoiceId] ? window._voiceCache[currentVoiceId].displayName : currentVoiceId;
+                    statusEl.innerText = `VOICE PREVIEW — PLAYING: ${disp}`;
+                }
                 if (waveform) waveform.className = 'flex items-center gap-0.5 opacity-100';
 
                 // Update active voice card button
@@ -1182,47 +1136,173 @@
             }
         }
 
-        function toggleConsolePlay() {
-            const player = document.getElementById('voice-preview-player');
-            if (!player || !currentVoiceId) return;
+        function stopCurrentPlayback(updateUI = true) {
+            if (playbackAnimFrame) {
+                cancelAnimationFrame(playbackAnimFrame);
+                playbackAnimFrame = null;
+            }
+            if (activeSourceNode) {
+                try {
+                    activeSourceNode.onended = null;
+                    activeSourceNode.stop();
+                    activeSourceNode.disconnect();
+                } catch (_) {}
+                activeSourceNode = null;
+            }
+            isAudioPlaying = false;
 
-            getAudioContext(); // Direct user gesture unlock
+            const htmlPlayer = document.getElementById('voice-preview-player');
+            if (htmlPlayer && !htmlPlayer.paused) {
+                htmlPlayer.pause();
+                htmlPlayer.currentTime = 0;
+            }
 
-            if (player.paused) {
-                player.play().catch(err => {
-                    console.warn('[VOICE_PLAYER] Console play error:', err);
+            if (updateUI) {
+                updatePlayingUI(false);
+            }
+        }
+
+        function playVoiceBuffer(voiceId, offset = 0) {
+            stopCurrentPlayback(false);
+
+            const cached = window._voiceCache[voiceId];
+            if (!cached) return;
+
+            currentVoiceId = voiceId;
+            const ctx = getAudioContext();
+
+            // 1. If WebAudio decoded AudioBuffer is present, play through WebAudio
+            if (cached.audioBuffer && ctx) {
+                try {
+                    if (ctx.state === 'suspended') {
+                        ctx.resume().catch(() => {});
+                    }
+
+                    const source = ctx.createBufferSource();
+                    source.buffer = cached.audioBuffer;
+                    source.connect(ctx.destination);
+
+                    activeSourceNode = source;
+                    playbackStartTime = ctx.currentTime;
+                    playbackStartOffset = offset;
+                    isAudioPlaying = true;
+
+                    const totalDur = cached.audioBuffer.duration;
+                    const durEl = document.getElementById('voice-console-duration');
+                    if (durEl) durEl.innerText = formatTime(totalDur);
+
+                    source.onended = () => {
+                        if (activeSourceNode === source) {
+                            activeSourceNode = null;
+                            isAudioPlaying = false;
+                            if (playbackAnimFrame) {
+                                cancelAnimationFrame(playbackAnimFrame);
+                                playbackAnimFrame = null;
+                            }
+                            updatePlayingUI(false);
+                            const statusEl = document.getElementById('voice-player-status');
+                            if (statusEl) statusEl.innerText = `VOICE PREVIEW — COMPLETED (${cached.displayName})`;
+                            const curEl = document.getElementById('voice-console-current-time');
+                            if (curEl) curEl.innerText = formatTime(totalDur);
+                            const seek = document.getElementById('voice-console-seek');
+                            if (seek) seek.value = 100;
+                        }
+                    };
+
+                    source.start(0, offset);
+                    updatePlayingUI(true);
+                    startProgressTracker(totalDur);
+                    return;
+                } catch (webaudioErr) {
+                    console.warn('[VOICE_PLAYER] WebAudio playback fallback to HTMLAudio:', webaudioErr);
+                }
+            }
+
+            // 2. Fallback to HTMLAudioElement
+            const htmlPlayer = document.getElementById('voice-preview-player');
+            if (htmlPlayer && cached.blobUrl) {
+                htmlPlayer.src = cached.blobUrl;
+                htmlPlayer.currentTime = offset;
+                isAudioPlaying = true;
+                updatePlayingUI(true);
+                htmlPlayer.play().catch(playErr => {
+                    console.warn('[VOICE_PLAYER] HTMLAudio play error:', playErr);
+                    stopCurrentPlayback(true);
                 });
+            }
+        }
+
+        function startProgressTracker(totalDuration) {
+            const curEl = document.getElementById('voice-console-current-time');
+            const seek = document.getElementById('voice-console-seek');
+            const ctx = getAudioContext();
+
+            function tick() {
+                if (!isAudioPlaying || !currentVoiceId) return;
+                const elapsed = (ctx.currentTime - playbackStartTime) + playbackStartOffset;
+                const current = Math.min(elapsed, totalDuration);
+
+                if (curEl) curEl.innerText = formatTime(current);
+                if (seek && totalDuration > 0) seek.value = (current / totalDuration) * 100;
+
+                if (current < totalDuration) {
+                    playbackAnimFrame = requestAnimationFrame(tick);
+                }
+            }
+            playbackAnimFrame = requestAnimationFrame(tick);
+        }
+
+        function toggleConsolePlay() {
+            if (!currentVoiceId || !window._voiceCache[currentVoiceId]) return;
+            getAudioContext();
+
+            if (isAudioPlaying) {
+                stopCurrentPlayback(true);
+                const statusEl = document.getElementById('voice-player-status');
+                if (statusEl) statusEl.innerText = 'VOICE PREVIEW CONSOLE — PAUSED';
             } else {
-                player.pause();
+                const seek = document.getElementById('voice-console-seek');
+                const percent = seek ? parseFloat(seek.value) || 0 : 0;
+                const dur = window._voiceCache[currentVoiceId].duration || 0;
+                const offset = (percent >= 99.5) ? 0 : (percent / 100) * dur;
+                playVoiceBuffer(currentVoiceId, offset);
             }
         }
 
         function handleSeek(val) {
-            const player = document.getElementById('voice-preview-player');
-            if (player && player.duration > 0) {
-                player.currentTime = (val / 100) * player.duration;
+            if (!currentVoiceId || !window._voiceCache[currentVoiceId]) return;
+            const dur = window._voiceCache[currentVoiceId].duration || 0;
+            const targetTime = (parseFloat(val) / 100) * dur;
+
+            const curEl = document.getElementById('voice-console-current-time');
+            if (curEl) curEl.innerText = formatTime(targetTime);
+
+            if (isAudioPlaying) {
+                playVoiceBuffer(currentVoiceId, targetTime);
+            } else {
+                playbackStartOffset = targetTime;
             }
         }
 
         async function handlePreviewVoice(voiceId) {
-            getAudioContext(); // Direct user gesture unlock
+            const ctx = getAudioContext();
 
-            const player = document.getElementById('voice-preview-player');
             const statusEl = document.getElementById('voice-player-status');
             const nameEl = document.getElementById('voice-player-voice-name');
             const indicatorEl = document.getElementById('voice-player-indicator');
             const noticeEl = document.getElementById('voice-player-notice');
             const noticeText = document.getElementById('voice-player-notice-text');
             const playBtn = document.getElementById('voice-console-play-btn');
+            const durEl = document.getElementById('voice-console-duration');
+            const curEl = document.getElementById('voice-console-current-time');
+            const seek = document.getElementById('voice-console-seek');
             const btn = document.getElementById(`preview-btn-${voiceId}`);
 
             if (noticeEl) noticeEl.classList.add('hidden');
 
             // CASE 1: Voice is ALREADY active and playing -> Pause / Stop it
-            if (currentVoiceId === voiceId && player && !player.paused) {
-                player.pause();
-                player.currentTime = 0;
-                updatePlayingUI(false);
+            if (currentVoiceId === voiceId && isAudioPlaying) {
+                stopCurrentPlayback(true);
                 if (statusEl) statusEl.innerText = 'VOICE PREVIEW CONSOLE — STOPPED';
                 return;
             }
@@ -1233,29 +1313,17 @@
                 currentVoiceId = voiceId;
 
                 resetOtherVoiceButtons(voiceId);
-                if (nameEl) nameEl.innerText = `${cached.displayName} (${cached.mime})`;
+                if (nameEl) nameEl.innerText = `${cached.displayName}`;
                 if (statusEl) statusEl.innerText = `VOICE PREVIEW — PLAYING: ${cached.displayName}`;
+                if (durEl) durEl.innerText = formatTime(cached.duration);
                 if (playBtn) playBtn.disabled = false;
 
-                if (player) {
-                    if (player.src !== cached.blobUrl) {
-                        player.src = cached.blobUrl;
-                    }
-                    player.currentTime = 0;
-                    try {
-                        const p = player.play();
-                        if (p !== undefined) {
-                            await p;
-                        }
-                    } catch (playErr) {
-                        console.warn('[VOICE_PLAYER] Direct play notice:', playErr);
-                        updatePlayingUI(false);
-                    }
-                }
+                playVoiceBuffer(voiceId, 0);
                 return;
             }
 
             // CASE 3: Voice needs to be fetched from backend
+            stopCurrentPlayback(false);
             resetOtherVoiceButtons(voiceId);
             currentVoiceId = voiceId;
 
@@ -1265,6 +1333,9 @@
             }
             if (statusEl) statusEl.innerText = `SYNTHESIZING SAMPLE (${voiceId})...`;
             if (nameEl) nameEl.innerText = `Synthesizing sample audio...`;
+            if (durEl) durEl.innerText = `LOADING...`;
+            if (curEl) curEl.innerText = `0:00`;
+            if (seek) seek.value = 0;
             if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
 
             try {
@@ -1288,6 +1359,7 @@
                     }
                     if (statusEl) statusEl.innerText = `VOICE PREVIEW — FAILED (${res.status})`;
                     if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+                    if (durEl) durEl.innerText = `0:00`;
                     alert(`Voice Preview Failed: ${errorMsg}`);
                     resetAllVoiceButtons();
                     return;
@@ -1299,55 +1371,60 @@
                 } catch (parseErr) {
                     if (statusEl) statusEl.innerText = 'VOICE PREVIEW — PARSE ERROR';
                     if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+                    if (durEl) durEl.innerText = `0:00`;
                     alert(`Voice Preview Error: Received non-JSON response from server (HTTP ${res.status})`);
                     resetAllVoiceButtons();
                     return;
                 }
 
                 if (data && (data.audio_base64 || data.audio_url)) {
-                    const mime = data.format || 'audio/mpeg';
+                    const mime = data.format || 'audio/wav';
                     const displayName = data.display_name || voiceId;
 
                     let blobUrl = data.audio_url;
+                    let arrayBuf = null;
+                    let decodedAudioBuf = null;
+                    let audioDuration = 0;
+
                     try {
                         if (data.audio_base64) {
-                            blobUrl = base64ToBlobUrl(data.audio_base64, mime);
+                            arrayBuf = base64ToArrayBuffer(data.audio_base64);
+                            blobUrl = URL.createObjectURL(new Blob([arrayBuf], { type: mime }));
                         }
-                    } catch (blobErr) {
-                        console.warn('[VOICE_PLAYER] Blob conversion notice:', blobErr);
+                    } catch (bErr) {
+                        console.warn('[VOICE_PLAYER] Buffer parsing notice:', bErr);
                     }
 
-                    // Save to memory cache
+                    // Decode into WebAudio buffer for 100% exact duration and crystal-clear playback
+                    if (ctx && arrayBuf) {
+                        try {
+                            // slice(0) copies array buffer because decodeAudioData detaches it
+                            decodedAudioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
+                            if (decodedAudioBuf) {
+                                audioDuration = decodedAudioBuf.duration;
+                            }
+                        } catch (decodeErr) {
+                            console.warn('[VOICE_PLAYER] decodeAudioData notice:', decodeErr);
+                        }
+                    }
+
+                    // Store in in-memory voice cache
                     window._voiceCache[voiceId] = {
                         blobUrl: blobUrl,
+                        audioBuffer: decodedAudioBuf,
+                        duration: audioDuration,
                         mime: mime,
                         displayName: displayName,
                         base64: data.audio_base64
                     };
 
-                    if (nameEl) nameEl.innerText = `${displayName} (${mime})`;
+                    if (nameEl) nameEl.innerText = `${displayName}`;
+                    if (durEl) durEl.innerText = formatTime(audioDuration);
                     if (playBtn) playBtn.disabled = false;
 
-                    if (player) {
-                        player.src = blobUrl;
-                        player.currentTime = 0;
+                    // Play immediately via WebAudio
+                    playVoiceBuffer(voiceId, 0);
 
-                        try {
-                            const p = player.play();
-                            if (p !== undefined) {
-                                await p;
-                            }
-                        } catch (playErr) {
-                            console.warn('[VOICE_PLAYER] Playback interrupted by browser policy:', playErr);
-                            updatePlayingUI(false);
-                            if (statusEl) statusEl.innerText = `VOICE PREVIEW — READY (${displayName})`;
-                            if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
-                            if (noticeEl && noticeText) {
-                                noticeEl.classList.remove('hidden');
-                                noticeText.innerText = 'Audio is ready! Tap "Play Sample" or the console ▶ button to listen.';
-                            }
-                        }
-                    }
                 } else {
                     alert('Voice Preview Error: No audio payload returned by server.');
                     resetAllVoiceButtons();
@@ -1355,6 +1432,7 @@
             } catch (err) {
                 if (statusEl) statusEl.innerText = 'VOICE PREVIEW — NETWORK ERROR';
                 if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+                if (durEl) durEl.innerText = `0:00`;
                 alert(`Voice Preview Network Error: ${err.message}`);
                 resetAllVoiceButtons();
             }

@@ -380,12 +380,17 @@
         function getCsrfToken() {
             const meta = document.querySelector('meta[name="csrf-token"]');
             return meta ? meta.getAttribute('content') : '';
-        }
-
-        // Global Mobile Voice Audio Cache & Playback Controller
+               // =====================================================================
+        // GLOBAL HIGH-PERFORMANCE MOBILE WEBAUDIO VOICE ENGINE & STATE MACHINE
+        // =====================================================================
         window._mobVoiceCache = {};
         window._mobAudioCtx = null;
         let currentMobVoiceId = null;
+        let activeMobSourceNode = null;
+        let mobPlaybackStartTime = 0;
+        let mobPlaybackStartOffset = 0;
+        let mobPlaybackAnimFrame = null;
+        let isMobAudioPlaying = false;
 
         function getMobAudioContext() {
             if (!window._mobAudioCtx) {
@@ -401,7 +406,7 @@
         }
 
         function formatMobTime(seconds) {
-            if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+            if (isNaN(seconds) || !isFinite(seconds) || seconds < 0) return '0:00';
             const mins = Math.floor(seconds / 60);
             const secs = Math.floor(seconds % 60);
             return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
@@ -417,65 +422,6 @@
             return bytes.buffer;
         }
 
-        function base64ToMobBlobUrl(base64, mimeType) {
-            const buffer = base64ToMobArrayBuffer(base64);
-            const blob = new Blob([buffer], { type: mimeType });
-            return URL.createObjectURL(blob);
-        }
-
-        function initMobVoicePlayer() {
-            const player = document.getElementById('mob-voice-preview-player');
-            if (!player) return;
-
-            player.addEventListener('loadedmetadata', () => {
-                const dur = player.duration;
-                const durEl = document.getElementById('mob-voice-console-duration');
-                if (durEl && !isNaN(dur) && isFinite(dur)) {
-                    durEl.innerText = formatMobTime(dur);
-                }
-            });
-
-            player.addEventListener('timeupdate', () => {
-                const cur = player.currentTime;
-                const dur = player.duration;
-                const curEl = document.getElementById('mob-voice-console-current-time');
-                const seek = document.getElementById('mob-voice-console-seek');
-                if (curEl) curEl.innerText = formatMobTime(cur);
-                if (seek && dur > 0) {
-                    seek.value = (cur / dur) * 100;
-                }
-            });
-
-            player.addEventListener('play', () => {
-                updateMobPlayingUI(true);
-            });
-
-            player.addEventListener('pause', () => {
-                updateMobPlayingUI(false);
-            });
-
-            player.addEventListener('ended', () => {
-                updateMobPlayingUI(false);
-                const statusEl = document.getElementById('mob-voice-player-status');
-                if (statusEl && currentMobVoiceId) {
-                    statusEl.innerText = `COMPLETED (${currentMobVoiceId})`;
-                }
-            });
-
-            player.addEventListener('error', () => {
-                updateMobPlayingUI(false);
-                const statusEl = document.getElementById('mob-voice-player-status');
-                const indicatorEl = document.getElementById('mob-voice-player-indicator');
-                const noticeEl = document.getElementById('mob-voice-player-notice');
-                if (statusEl) statusEl.innerText = 'PLAYBACK ERROR';
-                if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
-                if (noticeEl) {
-                    noticeEl.classList.remove('hidden');
-                    noticeEl.innerText = 'Audio stream could not be decoded. Tap Play on console.';
-                }
-            });
-        }
-
         function updateMobPlayingUI(isPlaying) {
             const playBtn = document.getElementById('mob-voice-console-play-btn');
             const playIcon = document.getElementById('mob-voice-console-play-icon');
@@ -487,7 +433,10 @@
             if (isPlaying) {
                 if (playIcon) playIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
                 if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping';
-                if (statusEl && currentMobVoiceId) statusEl.innerText = `PLAYING: ${currentMobVoiceId}`;
+                if (statusEl && currentMobVoiceId) {
+                    const disp = window._mobVoiceCache[currentMobVoiceId] ? window._mobVoiceCache[currentMobVoiceId].displayName : currentMobVoiceId;
+                    statusEl.innerText = `PLAYING: ${disp}`;
+                }
 
                 const btn = document.getElementById(`mob-preview-btn-${currentMobVoiceId}`);
                 if (btn) {
@@ -508,48 +457,178 @@
             }
         }
 
-        function toggleMobConsolePlay() {
-            const player = document.getElementById('mob-voice-preview-player');
-            if (!player || !currentMobVoiceId) return;
+        function stopMobPlayback(updateUI = true) {
+            if (mobPlaybackAnimFrame) {
+                cancelAnimationFrame(mobPlaybackAnimFrame);
+                mobPlaybackAnimFrame = null;
+            }
+            if (activeMobSourceNode) {
+                try {
+                    activeMobSourceNode.onended = null;
+                    activeMobSourceNode.stop();
+                    activeMobSourceNode.disconnect();
+                } catch (_) {}
+                activeMobSourceNode = null;
+            }
+            isMobAudioPlaying = false;
 
+            const htmlPlayer = document.getElementById('mob-voice-preview-player');
+            if (htmlPlayer && !htmlPlayer.paused) {
+                htmlPlayer.pause();
+                htmlPlayer.currentTime = 0;
+            }
+
+            if (updateUI) {
+                updateMobPlayingUI(false);
+            }
+        }
+
+        function playMobVoiceBuffer(voiceId, offset = 0) {
+            stopMobPlayback(false);
+
+            const cached = window._mobVoiceCache[voiceId];
+            if (!cached) return;
+
+            currentMobVoiceId = voiceId;
+            const ctx = getMobAudioContext();
+
+            // 1. If WebAudio decoded AudioBuffer is present, play through WebAudio
+            if (cached.audioBuffer && ctx) {
+                try {
+                    if (ctx.state === 'suspended') {
+                        ctx.resume().catch(() => {});
+                    }
+
+                    const source = ctx.createBufferSource();
+                    source.buffer = cached.audioBuffer;
+                    source.connect(ctx.destination);
+
+                    activeMobSourceNode = source;
+                    mobPlaybackStartTime = ctx.currentTime;
+                    mobPlaybackStartOffset = offset;
+                    isMobAudioPlaying = true;
+
+                    const totalDur = cached.audioBuffer.duration;
+                    const durEl = document.getElementById('mob-voice-console-duration');
+                    if (durEl) durEl.innerText = formatMobTime(totalDur);
+
+                    source.onended = () => {
+                        if (activeMobSourceNode === source) {
+                            activeMobSourceNode = null;
+                            isMobAudioPlaying = false;
+                            if (mobPlaybackAnimFrame) {
+                                cancelAnimationFrame(mobPlaybackAnimFrame);
+                                mobPlaybackAnimFrame = null;
+                            }
+                            updateMobPlayingUI(false);
+                            const statusEl = document.getElementById('mob-voice-player-status');
+                            if (statusEl) statusEl.innerText = `COMPLETED (${cached.displayName})`;
+                            const curEl = document.getElementById('mob-voice-console-current-time');
+                            if (curEl) curEl.innerText = formatMobTime(totalDur);
+                            const seek = document.getElementById('mob-voice-console-seek');
+                            if (seek) seek.value = 100;
+                        }
+                    };
+
+                    source.start(0, offset);
+                    updateMobPlayingUI(true);
+                    startMobProgressTracker(totalDur);
+                    return;
+                } catch (webaudioErr) {
+                    console.warn('[MOB_VOICE] WebAudio playback fallback to HTMLAudio:', webaudioErr);
+                }
+            }
+
+            // 2. Fallback to HTMLAudioElement
+            const htmlPlayer = document.getElementById('mob-voice-preview-player');
+            if (htmlPlayer && cached.blobUrl) {
+                htmlPlayer.src = cached.blobUrl;
+                htmlPlayer.currentTime = offset;
+                isMobAudioPlaying = true;
+                updateMobPlayingUI(true);
+                htmlPlayer.play().catch(playErr => {
+                    console.warn('[MOB_VOICE] HTMLAudio play error:', playErr);
+                    stopMobPlayback(true);
+                });
+            }
+        }
+
+        function startMobProgressTracker(totalDuration) {
+            const curEl = document.getElementById('mob-voice-console-current-time');
+            const seek = document.getElementById('mob-voice-console-seek');
+            const ctx = getMobAudioContext();
+
+            function tick() {
+                if (!isMobAudioPlaying || !currentMobVoiceId) return;
+                const elapsed = (ctx.currentTime - mobPlaybackStartTime) + mobPlaybackStartOffset;
+                const current = Math.min(elapsed, totalDuration);
+
+                if (curEl) curEl.innerText = formatMobTime(current);
+                if (seek && totalDuration > 0) seek.value = (current / totalDuration) * 100;
+
+                if (current < totalDuration) {
+                    mobPlaybackAnimFrame = requestAnimationFrame(tick);
+                }
+            }
+            mobPlaybackAnimFrame = requestAnimationFrame(tick);
+        }
+
+        function toggleMobConsolePlay() {
+            if (!currentMobVoiceId || !window._mobVoiceCache[currentMobVoiceId]) return;
             getMobAudioContext();
 
-            if (player.paused) {
-                player.play().catch(err => console.warn('[MOB_VOICE] Play error:', err));
+            if (isMobAudioPlaying) {
+                stopMobPlayback(true);
+                const statusEl = document.getElementById('mob-voice-player-status');
+                if (statusEl) statusEl.innerText = 'VOICE PREVIEW — PAUSED';
             } else {
-                player.pause();
+                const seek = document.getElementById('mob-voice-console-seek');
+                const percent = seek ? parseFloat(seek.value) || 0 : 0;
+                const dur = window._mobVoiceCache[currentMobVoiceId].duration || 0;
+                const offset = (percent >= 99.5) ? 0 : (percent / 100) * dur;
+                playMobVoiceBuffer(currentMobVoiceId, offset);
             }
         }
 
         function handleMobSeek(val) {
-            const player = document.getElementById('mob-voice-preview-player');
-            if (player && player.duration > 0) {
-                player.currentTime = (val / 100) * player.duration;
+            if (!currentMobVoiceId || !window._mobVoiceCache[currentMobVoiceId]) return;
+            const dur = window._mobVoiceCache[currentMobVoiceId].duration || 0;
+            const targetTime = (parseFloat(val) / 100) * dur;
+
+            const curEl = document.getElementById('mob-voice-console-current-time');
+            if (curEl) curEl.innerText = formatMobTime(targetTime);
+
+            if (isMobAudioPlaying) {
+                playMobVoiceBuffer(currentMobVoiceId, targetTime);
+            } else {
+                mobPlaybackStartOffset = targetTime;
             }
         }
 
         async function handlePreviewVoice(voiceId, opt) {
-            getMobAudioContext();
+            const ctx = getMobAudioContext();
 
-            const btnId = (opt === true) ? `mob-preview-btn-${voiceId}` : (opt || `mob-preview-btn-${voiceId}`);
-            const btn = document.getElementById(btnId);
-            const player = document.getElementById('mob-voice-preview-player');
             const statusEl = document.getElementById('mob-voice-player-status');
             const nameEl = document.getElementById('mob-voice-player-voice-name');
             const indicatorEl = document.getElementById('mob-voice-player-indicator');
             const noticeEl = document.getElementById('mob-voice-player-notice');
             const playBtn = document.getElementById('mob-voice-console-play-btn');
+            const durEl = document.getElementById('mob-voice-console-duration');
+            const curEl = document.getElementById('mob-voice-console-current-time');
+            const seek = document.getElementById('mob-voice-console-seek');
+            const btnId = (opt === true) ? `mob-preview-btn-${voiceId}` : (opt || `mob-preview-btn-${voiceId}`);
+            const btn = document.getElementById(btnId);
 
             if (noticeEl) noticeEl.classList.add('hidden');
 
-            if (currentMobVoiceId === voiceId && player && !player.paused) {
-                player.pause();
-                player.currentTime = 0;
-                updateMobPlayingUI(false);
+            // CASE 1: Voice is ALREADY active and playing -> Pause / Stop it
+            if (currentMobVoiceId === voiceId && isMobAudioPlaying) {
+                stopMobPlayback(true);
                 if (statusEl) statusEl.innerText = 'VOICE PREVIEW — STOPPED';
                 return;
             }
 
+            // CASE 2: Voice is ALREADY cached in memory -> PLAY INSTANTLY (0ms latency, synchronous user gesture)
             if (window._mobVoiceCache[voiceId]) {
                 const cached = window._mobVoiceCache[voiceId];
                 currentMobVoiceId = voiceId;
@@ -557,24 +636,15 @@
                 resetOtherMobButtons(voiceId);
                 if (nameEl) nameEl.innerText = `${cached.displayName}`;
                 if (statusEl) statusEl.innerText = `PLAYING: ${cached.displayName}`;
+                if (durEl) durEl.innerText = formatMobTime(cached.duration);
                 if (playBtn) playBtn.disabled = false;
 
-                if (player) {
-                    if (player.src !== cached.blobUrl) {
-                        player.src = cached.blobUrl;
-                    }
-                    player.currentTime = 0;
-                    try {
-                        const p = player.play();
-                        if (p !== undefined) await p;
-                    } catch (playErr) {
-                        console.warn('[MOB_VOICE] Direct play notice:', playErr);
-                        updateMobPlayingUI(false);
-                    }
-                }
+                playMobVoiceBuffer(voiceId, 0);
                 return;
             }
 
+            // CASE 3: Voice needs to be fetched from backend
+            stopMobPlayback(false);
             resetOtherMobButtons(voiceId);
             currentMobVoiceId = voiceId;
 
@@ -584,6 +654,9 @@
             }
             if (statusEl) statusEl.innerText = `SYNTHESIZING (${voiceId})...`;
             if (nameEl) nameEl.innerText = `Synthesizing...`;
+            if (durEl) durEl.innerText = `LOADING...`;
+            if (curEl) curEl.innerText = `0:00`;
+            if (seek) seek.value = 0;
             if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
 
             try {
@@ -607,6 +680,7 @@
                     }
                     if (statusEl) statusEl.innerText = `FAILED (${res.status})`;
                     if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+                    if (durEl) durEl.innerText = `0:00`;
                     alert(`Voice Preview Failed: ${errorMsg}`);
                     resetAllMobPreviewButtons();
                     return;
@@ -618,52 +692,58 @@
                 } catch (parseErr) {
                     if (statusEl) statusEl.innerText = 'PARSE ERROR';
                     if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+                    if (durEl) durEl.innerText = `0:00`;
                     alert(`Voice Preview Error: Received non-JSON response from server (HTTP ${res.status})`);
                     resetAllMobPreviewButtons();
                     return;
                 }
 
                 if (data && (data.audio_base64 || data.audio_url)) {
-                    const mime = data.format || 'audio/mpeg';
+                    const mime = data.format || 'audio/wav';
                     const displayName = data.display_name || voiceId;
 
                     let blobUrl = data.audio_url;
+                    let arrayBuf = null;
+                    let decodedAudioBuf = null;
+                    let audioDuration = 0;
+
                     try {
                         if (data.audio_base64) {
-                            blobUrl = base64ToMobBlobUrl(data.audio_base64, mime);
+                            arrayBuf = base64ToMobArrayBuffer(data.audio_base64);
+                            blobUrl = URL.createObjectURL(new Blob([arrayBuf], { type: mime }));
                         }
-                    } catch (blobErr) {
-                        console.warn('[MOB_VOICE] Blob conversion notice:', blobErr);
+                    } catch (bErr) {
+                        console.warn('[MOB_VOICE] Buffer parsing notice:', bErr);
+                    }
+
+                    // Decode into WebAudio buffer for exact duration and instant playback
+                    if (ctx && arrayBuf) {
+                        try {
+                            decodedAudioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
+                            if (decodedAudioBuf) {
+                                audioDuration = decodedAudioBuf.duration;
+                            }
+                        } catch (decodeErr) {
+                            console.warn('[MOB_VOICE] decodeAudioData notice:', decodeErr);
+                        }
                     }
 
                     window._mobVoiceCache[voiceId] = {
                         blobUrl: blobUrl,
+                        audioBuffer: decodedAudioBuf,
+                        duration: audioDuration,
                         mime: mime,
                         displayName: displayName,
                         base64: data.audio_base64
                     };
 
                     if (nameEl) nameEl.innerText = `${displayName}`;
+                    if (durEl) durEl.innerText = formatMobTime(audioDuration);
                     if (playBtn) playBtn.disabled = false;
 
-                    if (player) {
-                        player.src = blobUrl;
-                        player.currentTime = 0;
+                    // Play immediately via WebAudio
+                    playMobVoiceBuffer(voiceId, 0);
 
-                        try {
-                            const p = player.play();
-                            if (p !== undefined) await p;
-                        } catch (playErr) {
-                            console.warn('[MOB_VOICE] Playback interrupted by browser policy:', playErr);
-                            updateMobPlayingUI(false);
-                            if (statusEl) statusEl.innerText = `READY (${displayName})`;
-                            if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
-                            if (noticeEl) {
-                                noticeEl.classList.remove('hidden');
-                                noticeEl.innerText = 'Audio is ready! Tap "Play Sample" or ▶ button above.';
-                            }
-                        }
-                    }
                 } else {
                     alert('Voice Preview Error: No audio payload returned.');
                     resetAllMobPreviewButtons();
@@ -671,6 +751,7 @@
             } catch (err) {
                 if (statusEl) statusEl.innerText = 'NETWORK ERROR';
                 if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+                if (durEl) durEl.innerText = `0:00`;
                 alert(`Voice Preview Error: ${err.message}`);
                 resetAllMobPreviewButtons();
             }
@@ -697,10 +778,6 @@
                 }
             });
         }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            initMobVoicePlayer();
-        });
 
         async function handleSetVoice(voiceId) {
             try {
