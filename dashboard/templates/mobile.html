@@ -2,6 +2,7 @@
 <html lang="en" class="h-full bg-slate-950 text-slate-100 antialiased selection:bg-sky-500 selection:text-slate-950">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#030712">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -10,11 +11,16 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <link rel="icon" type="image/png" href="/static/icons/icon-192.png">
-    <title>Historia // Emergency AL AMR</title>
+    <title>AL AMR // Operations & Telemetry</title>
 
     <!-- Tailwind CDN with Custom Cyberpunk Palette -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        function getCsrfToken() {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            return meta ? meta.getAttribute('content') : '';
+        }
+
         tailwind.config = {
             theme: {
                 extend: {
@@ -66,7 +72,7 @@
                     H
                 </div>
                 <div>
-                    <h1 class="text-xs font-mono font-black tracking-widest text-slate-100 uppercase">AL AMR // MOBILE OPERATIONS</h1>
+                    <h1 class="text-xs font-mono font-black tracking-widest text-slate-100 uppercase">AL AMR <span class="text-[10px] text-slate-400 font-sans tracking-normal ml-1 opacity-80 font-normal">(الأمر)</span></h1>
                     <div class="text-[10px] font-mono text-slate-400 flex items-center space-x-2">
                         <span id="utc-clock">--:--:-- UTC</span>
                         <span>•</span>
@@ -93,6 +99,26 @@
 
         <!-- TAB 1: HOME (OVERVIEW) -->
         <div id="view-home" class="space-y-3.5">
+
+        <!-- AL AMR CLOUD WORKFLOW IN-FLIGHT STATUS BANNER (PHASE 11.3) -->
+        <div id="mobile-cloud-banner" class="hidden bg-gradient-to-r from-panel via-slate-900 to-panel border border-amber-500/50 rounded-2xl p-3.5 shadow-xl space-y-2">
+            <div class="flex items-center justify-between">
+                <span id="mobile-cloud-badge" class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-950 text-amber-300 border border-amber-600 tracking-wider uppercase">
+                    CLOUD WORKFLOW DISPATCHED
+                </span>
+                <span id="mobile-cloud-elapsed" class="text-[10px] font-mono font-bold text-amber-400">0s</span>
+            </div>
+            <div class="text-xs font-mono font-bold text-slate-100" id="mobile-cloud-workflow">produce_buffer.yml</div>
+            <p id="mobile-cloud-msg" class="text-[10px] text-slate-300 font-mono leading-relaxed">
+                Runner executing in GitHub Actions... Dispatched at <span id="mobile-cloud-time" class="text-amber-300 font-bold">--:--:-- UTC</span>
+            </p>
+            <div class="text-right pt-1">
+                <button onclick="dismissMobileCloudBanner()" class="px-2.5 py-1 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg text-[10px] font-mono btn-touch">
+                    Dismiss
+                </button>
+            </div>
+        </div>
+
             
             <!-- NEXT RELEASE SPOTLIGHT CARD -->
             <div class="bg-gradient-to-br from-panel to-sky-950/40 border border-sky-500/40 rounded-2xl p-4 shadow-lg space-y-2.5">
@@ -444,7 +470,7 @@
     <!-- JAVASCRIPT ENGINE -->
     <script>
         // Session CSRF Token
-        window.CSRF_TOKEN = "{{ csrf_token }}";
+        
 
         let currentAudio = null;
         let pendingAction = null;
@@ -566,13 +592,18 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': window.CSRF_TOKEN
+                        'X-CSRF-Token': getCsrfToken()
                     },
                     body: JSON.stringify(body)
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
-                    showToast(data.message || 'Operation succeeded.', true);
+                    if (data.action === 'DISPATCH_ACCEPTED' || data.workflow || data.mode === 'CLOUD_DISPATCH') {
+                        recordMobileInflightWorkflow(data.workflow || data.workflow_name || 'Cloud Workflow', pendingAction ? pendingAction.type : 'Cloud Operation');
+                        showToast(data.message || 'Cloud workflow dispatched. Runner executing in GitHub Actions...', true, '⏳');
+                    } else {
+                        showToast(data.message || 'Operation succeeded.', true);
+                    }
                     await fetchLatestState();
                 } else {
                     showToast(data.error || data.detail || 'Operation rejected by safety guardrail.', false);
@@ -599,7 +630,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': window.CSRF_TOKEN
+                        'X-CSRF-Token': getCsrfToken()
                     },
                     body: JSON.stringify({ voice_id: voiceId })
                 });
@@ -640,7 +671,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': window.CSRF_TOKEN
+                        'X-CSRF-Token': getCsrfToken()
                     },
                     body: JSON.stringify({ voice_id: voiceId })
                 });
@@ -657,6 +688,99 @@
         }
 
         // Master State Telemetry Poller
+        
+        // =========================================================================
+        // AL AMR MOBILE CLOUD WORKFLOW BANNER ENGINE (PHASE 11.3)
+        // =========================================================================
+        const MOBILE_INFLIGHT_KEY = 'al_amr_inflight_workflow';
+
+        function recordMobileInflightWorkflow(workflowName, actionTitle) {
+            const info = {
+                workflow: workflowName,
+                action: actionTitle,
+                dispatchedAt: new Date().toISOString(),
+                dispatchedTimestamp: Date.now()
+            };
+            try {
+                sessionStorage.setItem(MOBILE_INFLIGHT_KEY, JSON.stringify(info));
+            } catch(e) {}
+            renderMobileInflightBanner(info, 'IN_FLIGHT', 0);
+        }
+
+        function dismissMobileCloudBanner() {
+            try {
+                sessionStorage.removeItem(MOBILE_INFLIGHT_KEY);
+            } catch(e) {}
+            const banner = document.getElementById('mobile-cloud-banner');
+            if (banner) banner.classList.add('hidden');
+        }
+
+        function checkMobileInflightStatus() {
+            let saved = null;
+            try {
+                const item = sessionStorage.getItem(MOBILE_INFLIGHT_KEY);
+                if (item) saved = JSON.parse(item);
+            } catch(e) {}
+
+            if (!saved) {
+                const banner = document.getElementById('mobile-cloud-banner');
+                if (banner) banner.classList.add('hidden');
+                return;
+            }
+
+            const elapsedSec = Math.floor((Date.now() - saved.dispatchedTimestamp) / 1000);
+            if (elapsedSec > 480) {
+                renderMobileInflightBanner(saved, 'TIMEOUT', elapsedSec);
+                return;
+            }
+            renderMobileInflightBanner(saved, 'IN_FLIGHT', elapsedSec);
+        }
+
+        function renderMobileInflightBanner(savedInfo, status = 'IN_FLIGHT', elapsedSec = 0) {
+            if (!savedInfo) {
+                try {
+                    const item = sessionStorage.getItem(MOBILE_INFLIGHT_KEY);
+                    if (item) savedInfo = JSON.parse(item);
+                } catch(e) {}
+            }
+            if (!savedInfo) return;
+
+            const banner = document.getElementById('mobile-cloud-banner');
+            if (!banner) return;
+
+            banner.classList.remove('hidden');
+            const badge = document.getElementById('mobile-cloud-badge');
+            const wfEl = document.getElementById('mobile-cloud-workflow');
+            const msgEl = document.getElementById('mobile-cloud-msg');
+            const timeEl = document.getElementById('mobile-cloud-time');
+            const elapsedEl = document.getElementById('mobile-cloud-elapsed');
+
+            const dt = new Date(savedInfo.dispatchedAt);
+            const timeStr = dt.toUTCString().split(' ')[4] + ' UTC';
+
+            if (status === 'TIMEOUT') {
+                if (badge) {
+                    badge.className = 'px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-rose-950 text-rose-300 border border-rose-600 tracking-wider uppercase';
+                    badge.innerText = 'WORKFLOW TIMEOUT';
+                }
+                if (msgEl) {
+                    msgEl.innerHTML = `Runner executing longer than expected (> 8 mins). Check GitHub Actions tab for execution logs.`;
+                }
+            } else {
+                if (badge) {
+                    badge.className = 'px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-950 text-amber-300 border border-amber-600 tracking-wider uppercase';
+                    badge.innerText = 'CLOUD WORKFLOW DISPATCHED';
+                }
+                if (msgEl) {
+                    msgEl.innerHTML = `Runner executing in GitHub Actions... Dispatched at <span class="text-amber-300 font-bold">${timeStr}</span>`;
+                }
+            }
+
+            if (wfEl) wfEl.innerText = savedInfo.workflow || savedInfo.action || 'Cloud Runner';
+            if (timeEl) timeEl.innerText = timeStr;
+            if (elapsedEl) elapsedEl.innerText = `${elapsedSec}s`;
+        }
+
         async function fetchLatestState() {
             try {
                 const res = await fetch('/api/state');
