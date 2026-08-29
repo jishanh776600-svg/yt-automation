@@ -910,3 +910,25 @@
 | `hook_archetype` | **DATE_TIME_ANCHOR** | 1 | `+136.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
 | `motion_style` | **SLOW_CINEMATIC_ZOOM** | 3 | `+136.7%` | `WEAK_EVIDENCE` | **1.25** | Weak evidence (N=3). Conservative weight adjustment (+136.7% lift). |
 | `motion_style` | **DYNAMIC_ZOOM_PAN** | 1 | `+136.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+
+## Learning Cycle — 2026-08-29 12:33:12 UTC
+
+- **Mature Videos Evaluated**: 52
+- **Channel Performance Baseline**: 28.23/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Eerie / Unsolved / Mysterious** | 2 | `+162.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `bgm_mood` | **Historical / Serious Documentary** | 1 | `+162.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 2 | `-31.6%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-41.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-32.2%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Ancient Mysteries** | 2 | `+162.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Unusual Wars** | 1 | `+162.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **American History** | 1 | `+162.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `duration_target` | **EXTENDED_26S** | 2 | `+162.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `duration_target` | **SWEET_SPOT** | 1 | `+162.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `hook_archetype` | **MYSTERY_CURIOSITY** | 2 | `+162.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 1 | `+162.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `motion_style` | **SLOW_CINEMATIC_ZOOM** | 2 | `+162.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 1 | `+162.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
