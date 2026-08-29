@@ -136,9 +136,9 @@ class AudioMixer:
 
         for model_name in ["gemini-2.0-flash", "gemini-1.5-flash"]:
             try:
-                from google import genai
-                client = genai.Client(api_key=GEMINI_API_KEY)
-                response = client.models.generate_content(
+                from core.gemini_client import get_gemini_client
+                gemini_client = get_gemini_client()
+                response = gemini_client.generate_content(
                     model=model_name,
                     contents=prompt
                 )

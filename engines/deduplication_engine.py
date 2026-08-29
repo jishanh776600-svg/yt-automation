@@ -418,8 +418,8 @@ class StoryDeduplicationEngine:
             )
 
         try:
-            from google import genai
-            client = genai.Client(api_key=GEMINI_API_KEY)
+            from core.gemini_client import get_gemini_client
+            gemini_client = get_gemini_client()
 
             prompt = (
                 f"You are a strict editorial deduplication judge for a documentary history YouTube channel.\n\n"
@@ -454,7 +454,7 @@ class StoryDeduplicationEngine:
                 f"}}"
             )
 
-            response = client.models.generate_content(
+            response = gemini_client.generate_content(
                 model="gemini-3.6-flash",
                 contents=prompt
             )
@@ -551,12 +551,27 @@ class StoryDeduplicationEngine:
                     return sem_res
 
         # 3. General Semantic NLI for shared years, entities, or thematic stems
+        GENERIC_ENTITIES = {
+            "british", "american", "european", "german", "french", "spanish", "russian",
+            "royal", "empire", "navy", "army", "king", "queen", "president",
+            "january", "february", "march", "april", "may", "june", "july",
+            "august", "september", "october", "november", "december"
+        }
         for existing in corpus:
+            if candidate_fp.years and existing.years and not candidate_fp.years.intersection(existing.years):
+                continue
             shared_years = candidate_fp.years.intersection(existing.years)
             shared_entities = candidate_fp.entities.intersection(existing.entities)
+            specific_shared = shared_entities - GENERIC_ENTITIES
             shared_stems = candidate_fp.action_stems.intersection(existing.action_stems)
 
-            if shared_years or len(shared_entities) >= 1 or len(shared_stems) >= 2:
+            should_check = (
+                (bool(shared_years) and (len(specific_shared) >= 1 or len(shared_stems) >= 2))
+                or (len(specific_shared) >= 2)
+                or (len(shared_stems) >= 4)
+            )
+
+            if should_check:
                 sem_res = self.check_semantic_llm(
                     candidate_title=candidate_title,
                     candidate_summary=candidate_summary,

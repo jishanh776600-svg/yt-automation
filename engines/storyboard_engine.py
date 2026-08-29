@@ -34,8 +34,8 @@ class StoryboardEngine:
         queries = []
         if GEMINI_API_KEY:
             try:
-                from google import genai
-                client = genai.Client(api_key=GEMINI_API_KEY)
+                from core.gemini_client import get_gemini_client
+                gemini_client = get_gemini_client()
                 prompt = (
                     f"Given this historical story script:\n"
                     f"Hook: {script.hook}\n"
@@ -47,7 +47,7 @@ class StoryboardEngine:
                     f"and 5 cinematic visual prompts tailored exactly to this event.\n"
                     f"Return ONLY valid JSON format with a list of 5 objects, each having 'query' and 'prompt'."
                 )
-                response = client.models.generate_content(
+                response = gemini_client.generate_content(
                     model="gemini-3.6-flash",
                     contents=prompt
                 )

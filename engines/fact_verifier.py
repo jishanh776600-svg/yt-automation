@@ -191,8 +191,8 @@ class FactVerifier:
             return True, contradictions, unsupported, supported, styling
 
         try:
-            from google import genai
-            client = genai.Client(api_key=GEMINI_API_KEY)
+            from core.gemini_client import get_gemini_client
+            gemini_client = get_gemini_client()
 
             prompt = (
                 f"You are a strict historical fact-checking verifier for documentary scripts.\n"
@@ -211,7 +211,7 @@ class FactVerifier:
                 f"[{{\"sentence\": \"...\", \"classification\": \"SUPPORTED|REASONABLE_PARAPHRASE|NARRATIVE_STYLING|UNSUPPORTED|CONTRADICTED\", \"reason\": \"...\"}}]"
             )
 
-            response = client.models.generate_content(
+            response = gemini_client.generate_content(
                 model="gemini-3.6-flash",
                 contents=prompt
             )

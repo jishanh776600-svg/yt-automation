@@ -141,8 +141,13 @@ class TopicDiscoveryEngine:
         published_topic_ids = {j.topic_id for j in db.query(Job).filter(Job.state.in_(["PUBLISHED", "READY_TO_UPLOAD"])).all() if j.topic_id}
 
         unproduced = db.query(Topic).filter(Topic.id.notin_(published_topic_ids)).all()
-        # Filter unproduced topics through deduplication against published stories
-        valid_unproduced = [t for t in unproduced if not self.is_duplicate(db, t.title, t.summary, exclude_topic_id=t.id)]
+        # Filter unproduced topics through deduplication against published stories (bounded to limit)
+        valid_unproduced = []
+        for t in unproduced:
+            if not self.is_duplicate(db, t.title, t.summary, exclude_topic_id=t.id):
+                valid_unproduced.append(t)
+                if len(valid_unproduced) >= limit:
+                    break
         if valid_unproduced:
             random.shuffle(valid_unproduced)
             return valid_unproduced[:limit]
@@ -166,8 +171,8 @@ class TopicDiscoveryEngine:
         # 2. If Gemini API Key is available, generate fresh unique historical stories online with strategy conditioning
         if GEMINI_API_KEY:
             try:
-                from google import genai
-                client = genai.Client(api_key=GEMINI_API_KEY)
+                from core.gemini_client import get_gemini_client
+                gemini_client = get_gemini_client()
                 
                 favored_cats = guidance.get("top_categories", ["Unusual Wars", "Documented Disasters"])
                 cat_prompt_part = f"Focus especially on high-performing categories: {', '.join(favored_cats)}." if strategy_info["strategy_type"] == "PROVEN_PATTERN" else "Explore unusual, less-known historical categories."
@@ -178,7 +183,7 @@ class TopicDiscoveryEngine:
                     f"Format each as: Title | Category | 1-sentence factual summary. "
                     f"Do NOT use generic facts. Prioritize strange laws, unusual wars, or documented mysteries."
                 )
-                response = client.models.generate_content(
+                response = gemini_client.generate_content(
                     model="gemini-3.6-flash",
                     contents=prompt
                 )

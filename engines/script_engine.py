@@ -271,8 +271,8 @@ class ScriptEngine:
             ]
 
         try:
-            from google import genai
-            client = genai.Client(api_key=GEMINI_API_KEY)
+            from core.gemini_client import get_gemini_client
+            gemini_client = get_gemini_client()
             prompt = (
                 f"Generate 3 distinct, high-curiosity hook sentences (6-13 words each) for a historical YouTube Short about: '{topic.title}'.\n"
                 f"Historical Context: {res_summary}\n"
@@ -283,7 +283,7 @@ class ScriptEngine:
                 f"- Hook 3: Unexpected Specific Consequence (e.g. 'A single potato-eating pig almost sparked an armed war.')\n"
                 f"Output strictly valid JSON with key 'hooks' containing a list of 3 strings."
             )
-            response = client.models.generate_content(
+            response = gemini_client.generate_content(
                 model="gemini-3.6-flash",
                 contents=prompt
             )
@@ -321,8 +321,8 @@ class ScriptEngine:
         revision_feedback: Optional[List[str]] = None
     ) -> Dict[str, str]:
         """Executes a single draft/revision pass with Gemini GenAI."""
-        from google import genai
-        client = genai.Client(api_key=GEMINI_API_KEY)
+        from core.gemini_client import get_gemini_client
+        gemini_client = get_gemini_client()
 
         # Extract verified facts to anchor the model
         verified_facts_text = ""
@@ -352,7 +352,7 @@ class ScriptEngine:
             f"\nOutput strictly valid JSON with keys: hook, context, escalation, reveal, loop_twist"
         )
 
-        response = client.models.generate_content(
+        response = gemini_client.generate_content(
             model="gemini-3.6-flash",
             contents=prompt
         )

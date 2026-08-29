@@ -102,7 +102,13 @@ class TestTopicDeduplicationIntegration(unittest.TestCase):
         """Test K: Different event involving same broad country/demonym (1915 Lusitania vs Violet Jessop) -> ALLOW."""
         title = "The Sinking of the RMS Lusitania (1915)"
         summary = "In May 1915, a German submarine torpedoed the British ocean liner Lusitania off the southern coast of Ireland, killing over 1,100 passengers."
-        self.assertFalse(self.discovery.is_duplicate(self.db, title, summary))
+        mock_response = MagicMock()
+        mock_response.text = '{"classification": "COMPLETELY_NEW_STORY", "is_allowed": true, "similarity_score": 0.0, "reason": "Different events"}'
+        with patch("google.genai.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.models.generate_content.return_value = mock_response
+            mock_client_cls.return_value = mock_client
+            self.assertFalse(self.discovery.is_duplicate(self.db, title, summary))
 
     def test_l_duplicate_never_reaches_script_generation(self):
         """Test L: A rejected duplicate NEVER reaches script generation."""
