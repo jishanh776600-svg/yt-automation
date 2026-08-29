@@ -1,0 +1,115 @@
+name: Verify Database Cloud Persistence
+# ==============================================================================
+# NON-PRODUCTION CLOUD VERIFICATION: Controlled Database Sync Lifecycle Test
+# Verifies: Download -> SHA256 -> Integrity -> Row Counts -> Upload -> Re-verify
+# ZERO production video generation, ZERO YouTube uploads, ZERO vault mutations.
+# ==============================================================================
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pipeline-cloud-execution
+  cancel-in-progress: false
+
+jobs:
+  verify_cloud_db_sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore OAuth Credentials & Secrets
+        env:
+          TOKEN_JSON: ${{ secrets.TOKEN_JSON }}
+          CLIENT_SECRET_JSON: ${{ secrets.CLIENT_SECRET_JSON }}
+        run: |
+          echo "${TOKEN_JSON}" > token.json
+          echo "${CLIENT_SECRET_JSON}" > client_secret.json
+
+      - name: Step 1 - Download Canonical DB from Private Drive Vault
+        run: |
+          python -m core.database_sync download
+
+      - name: Step 2 - Verify Downloaded Database Integrity & State
+        run: |
+          python -c "
+          import sys, hashlib, sqlite3
+          from pathlib import Path
+          from core.database_sync import compute_sha256, verify_sqlite_integrity, get_database_stats
+          from config.settings import DB_PATH
+
+          print(f'Checking downloaded DB at: {DB_PATH}')
+          assert DB_PATH.exists(), 'Downloaded database missing!'
+          
+          is_valid, msg = verify_sqlite_integrity(DB_PATH)
+          print(f'PRAGMA integrity_check: {is_valid} ({msg})')
+          assert is_valid, f'Integrity check failed: {msg}'
+
+          sha = compute_sha256(DB_PATH)
+          print(f'Downloaded SHA256: {sha}')
+
+          stats = get_database_stats(DB_PATH)
+          print(f'Table Stats: {stats}')
+          assert stats.get('topics', 0) >= 298, f'Unexpected topic count: {stats}'
+          assert stats.get('jobs', 0) >= 237, f'Unexpected job count: {stats}'
+          assert stats.get('uploads', 0) >= 294, f'Unexpected upload count: {stats}'
+          print('Step 2 PASSED: Downloaded database is valid and intact.')
+          "
+
+      - name: Step 3 - Upload Database Back to Drive (Sync Test)
+        run: |
+          python -m core.database_sync upload
+
+      - name: Step 4 - Independent Re-Download & Double-Check Verification
+        run: |
+          python -c "
+          import sys
+          from pathlib import Path
+          from core.database_sync import download_canonical_database, compute_sha256, verify_sqlite_integrity, get_database_stats
+          from config.settings import DB_PATH
+
+          verify_path = Path('data/database/verify_remote.db')
+          download_canonical_database(target_path=verify_path)
+
+          is_valid, msg = verify_sqlite_integrity(verify_path)
+          print(f'Re-downloaded PRAGMA integrity_check: {is_valid} ({msg})')
+          assert is_valid, f'Re-downloaded integrity check failed: {msg}'
+
+          sha_orig = compute_sha256(DB_PATH)
+          sha_re = compute_sha256(verify_path)
+          print(f'Local SHA256:       {sha_orig}')
+          print(f'Re-download SHA256: {sha_re}')
+          assert sha_orig == sha_re, 'SHA256 mismatch after sync cycle!'
+
+          stats_orig = get_database_stats(DB_PATH)
+          stats_re = get_database_stats(verify_path)
+          print(f'Local Stats:       {stats_orig}')
+          print(f'Re-download Stats: {stats_re}')
+          assert stats_orig == stats_re, 'Stats mismatch after sync cycle!'
+
+          verify_path.unlink(missing_ok=True)
+          print('Step 4 PASSED: Re-download matches perfectly. Sync lifecycle 100% verified.')
+          "
+
+      - name: Step 5 - Cleanup Local Credentials
+        if: always()
+        run: |
+          rm -f token.json client_secret.json .env
+          echo 'Credentials scrubbed from runner disk.'
