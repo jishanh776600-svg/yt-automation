@@ -77,10 +77,10 @@ MAX_BUFFER_RESERVE_CEILING = int(os.getenv("MAX_BUFFER_RESERVE_CEILING", "24"))
 LOCK_STALE_TIMEOUT_SEC = float(os.getenv("LOCK_STALE_TIMEOUT_SEC", "1800.0"))  # 30 minutes
 
 # Cloud Mode & Remote GitHub Actions Dispatcher (Phase 7.2)
-CLOUD_MODE = os.getenv("CLOUD_MODE", "false").lower() == "true"
-GITHUB_PAT = os.getenv("GITHUB_PAT", "")
-GITHUB_REPOSITORY_OWNER = os.getenv("GITHUB_REPOSITORY_OWNER", "")
-GITHUB_REPOSITORY_NAME = os.getenv("GITHUB_REPOSITORY_NAME", "")
+CLOUD_MODE = os.getenv("CLOUD_MODE", "true").lower() == "true"
+GITHUB_PAT = os.getenv("GITHUB_PAT") or os.getenv("GITHUB_TOKEN") or ""
+GITHUB_REPOSITORY_OWNER = os.getenv("GITHUB_REPOSITORY_OWNER") or "jishanh776600-svg"
+GITHUB_REPOSITORY_NAME = os.getenv("GITHUB_REPOSITORY_NAME") or "yt-automation"
 GITHUB_REF = os.getenv("GITHUB_REF", "main")
 
 # Google Drive Cloud Storage Entitlement (Phase 11.2 - Confirmed 5 TB Storage Plan)

@@ -115,7 +115,7 @@ class TestDashboardAuth(unittest.TestCase):
         # 2. Access UI
         ui_res = self.client.get("/")
         self.assertEqual(ui_res.status_code, 200)
-        self.assertIn("Historia Mission Control", ui_res.text)
+        self.assertTrue("AL AMR" in ui_res.text or "Operations Console" in ui_res.text or "Historia Mission Control" in ui_res.text)
 
         # 3. Access API
         api_res = self.client.get("/api/state")

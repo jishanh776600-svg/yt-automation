@@ -1487,8 +1487,17 @@
             }
         }
 
-        // Trigger Produce
-        async function handleTriggerProduce(count) {
+        // Trigger Buffer Refill / Produce with Re-Auth & Real Status Machine
+        async function handleTriggerProduce(count, suppliedPassword = null) {
+            let password = suppliedPassword;
+            if (!password) {
+                password = prompt("🔐 SECURITY AUTHORIZATION REQUIRED\nEnter Administrator Password to authorize Buffer Refill:");
+                if (!password) {
+                    // Operator cancelled prompt
+                    return;
+                }
+            }
+
             try {
                 const res = await fetch('/api/actions/produce', {
                     method: 'POST',
@@ -1496,14 +1505,119 @@
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': getCsrfToken()
                     },
-                    body: JSON.stringify({ count: count, target: 12 })
+                    body: JSON.stringify({ count: count, target: 12, password: password })
                 });
                 const data = await res.json();
-                alert(data.message || 'Produce dispatched successfully');
-                window.location.reload();
+
+                if (res.status === 401 && data.status === 'AUTH_REQUIRED') {
+                    const retryPwd = prompt("🔐 Re-authentication Required:\nPlease enter Administrator Password:");
+                    if (retryPwd) {
+                        return handleTriggerProduce(count, retryPwd);
+                    }
+                    return;
+                }
+
+                if (res.status === 403 && data.status === 'AUTH_FAILED') {
+                    alert(`❌ AUTHORIZATION FAILED\n${data.error || 'Invalid administrator password.'}`);
+                    return;
+                }
+
+                if (res.status === 409 && data.status === 'STOCK_HEALTHY') {
+                    alert(`🛡️ BUFFER STOCK HEALTHY\n${data.error}`);
+                    return;
+                }
+
+                if (res.status === 409 && data.status === 'REFILL_ALREADY_RUNNING') {
+                    alert(`⏳ REFILL ALREADY IN PROGRESS\n${data.error}`);
+                    startWorkflowStatusPolling();
+                    return;
+                }
+
+                if (!res.ok || data.success === false) {
+                    alert(`❌ DISPATCH FAILED (HTTP ${res.status})\n${data.error || 'Failed to dispatch cloud workflow.'}`);
+                    return;
+                }
+
+                if (data.success === true && data.status === 'DISPATCH_ACCEPTED') {
+                    alert(`✅ DISPATCH ACCEPTED\n${data.message}\nRepository: ${data.repository}\nTarget Ref: ${data.ref}\n\nNote: GitHub Actions has accepted the workflow dispatch. Monitoring runner...`);
+                    startWorkflowStatusPolling();
+                } else if (data.success === true) {
+                    alert(`✅ ACTION EXECUTED\n${data.action || 'Complete'}: Produced ${data.produced_count || 1} Short(s).`);
+                    window.location.reload();
+                }
             } catch (e) {
-                alert(`Dispatch error: ${e.message}`);
+                alert(`❌ NETWORK / DISPATCH ERROR\n${e.message}`);
             }
+        }
+
+        let _workflowPollTimer = null;
+        async function startWorkflowStatusPolling() {
+            const banner = document.getElementById('cloud-workflow-banner');
+            const bannerMsg = document.getElementById('cloud-banner-msg');
+            const bannerWorkflow = document.getElementById('cloud-banner-workflow');
+            const bannerBadge = document.getElementById('cloud-banner-badge');
+            const bannerElapsed = document.getElementById('cloud-banner-elapsed');
+
+            if (banner) banner.classList.remove('hidden');
+            if (bannerWorkflow) bannerWorkflow.innerText = 'produce_buffer.yml';
+            if (bannerBadge) {
+                bannerBadge.className = 'px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[10px] font-bold text-sky-300';
+                bannerBadge.innerText = 'DISPATCHED';
+            }
+            if (bannerMsg) bannerMsg.innerText = 'Waiting for GitHub Actions runner provision...';
+
+            if (_workflowPollTimer) clearInterval(_workflowPollTimer);
+
+            let startTime = Date.now();
+            _workflowPollTimer = setInterval(async () => {
+                const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
+                if (bannerElapsed) bannerElapsed.innerText = `${elapsedSec}s`;
+
+                try {
+                    const res = await fetch('/api/workflows/status/produce_buffer');
+                    if (res.ok) {
+                        const info = await res.json();
+                        const active = info.active_run || info.latest_run;
+                        if (active) {
+                            const status = active.status;
+                            const conclusion = active.conclusion;
+                            const stepSummary = active.step_summary || {};
+                            const currentStep = stepSummary.current_step || 'Initializing';
+                            const completedSteps = stepSummary.completed_steps || 0;
+                            const totalSteps = stepSummary.total_steps || 0;
+
+                            if (status === 'queued') {
+                                if (bannerBadge) bannerBadge.innerText = 'QUEUED';
+                                if (bannerMsg) bannerMsg.innerText = 'Queued in GitHub Actions queue...';
+                            } else if (status === 'in_progress') {
+                                if (bannerBadge) {
+                                    bannerBadge.className = 'px-1.5 py-0.5 rounded bg-amber-900/80 border border-amber-700 text-[10px] font-bold text-amber-300';
+                                    bannerBadge.innerText = 'RUNNING';
+                                }
+                                if (bannerMsg) bannerMsg.innerText = `Step ${completedSteps}/${totalSteps}: ${currentStep}`;
+                            } else if (status === 'completed') {
+                                clearInterval(_workflowPollTimer);
+                                if (conclusion === 'success') {
+                                    if (bannerBadge) {
+                                        bannerBadge.className = 'px-1.5 py-0.5 rounded bg-emerald-900/80 border border-emerald-700 text-[10px] font-bold text-emerald-300';
+                                        bannerBadge.innerText = 'COMPLETED';
+                                    }
+                                    if (bannerMsg) bannerMsg.innerText = 'Buffer refill completed successfully. Refreshing vault...';
+                                    setTimeout(() => window.location.reload(), 2500);
+                                } else {
+                                    if (bannerBadge) {
+                                        bannerBadge.className = 'px-1.5 py-0.5 rounded bg-rose-900/80 border border-rose-700 text-[10px] font-bold text-rose-300';
+                                        bannerBadge.innerText = (conclusion || 'FAILED').toUpperCase();
+                                    }
+                                    if (bannerMsg) bannerMsg.innerText = `Workflow finished with conclusion: ${conclusion}`;
+                                }
+                            }
+                        }
+                    }
+                } catch (pollErr) {
+                    console.warn('[WORKFLOW_POLL] Notice:', pollErr);
+                }
+            }, 5000);
         }
 
         // Publish Next

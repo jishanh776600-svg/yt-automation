@@ -795,7 +795,15 @@
             }
         }
 
-        async function handleTriggerProduce(count) {
+        async function handleTriggerProduce(count, suppliedPassword = null) {
+            let password = suppliedPassword;
+            if (!password) {
+                password = prompt("🔐 SECURITY AUTHORIZATION REQUIRED\nEnter Administrator Password to authorize Buffer Refill:");
+                if (!password) {
+                    return;
+                }
+            }
+
             try {
                 const res = await fetch('/api/actions/produce', {
                     method: 'POST',
@@ -803,13 +811,47 @@
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': getCsrfToken()
                     },
-                    body: JSON.stringify({ count: count, target: 12 })
+                    body: JSON.stringify({ count: count, target: 12, password: password })
                 });
                 const data = await res.json();
-                alert(data.message || 'Dispatched');
-                window.location.reload();
+
+                if (res.status === 401 && data.status === 'AUTH_REQUIRED') {
+                    const retryPwd = prompt("🔐 Re-authentication Required:\nPlease enter Administrator Password:");
+                    if (retryPwd) {
+                        return handleTriggerProduce(count, retryPwd);
+                    }
+                    return;
+                }
+
+                if (res.status === 403 && data.status === 'AUTH_FAILED') {
+                    alert(`❌ AUTHORIZATION FAILED\n${data.error || 'Invalid administrator password.'}`);
+                    return;
+                }
+
+                if (res.status === 409 && data.status === 'STOCK_HEALTHY') {
+                    alert(`🛡️ BUFFER STOCK HEALTHY\n${data.error}`);
+                    return;
+                }
+
+                if (res.status === 409 && data.status === 'REFILL_ALREADY_RUNNING') {
+                    alert(`⏳ REFILL ALREADY IN PROGRESS\n${data.error}`);
+                    return;
+                }
+
+                if (!res.ok || data.success === false) {
+                    alert(`❌ DISPATCH FAILED (HTTP ${res.status})\n${data.error || 'Failed to dispatch cloud workflow.'}`);
+                    return;
+                }
+
+                if (data.success === true && data.status === 'DISPATCH_ACCEPTED') {
+                    alert(`✅ DISPATCH ACCEPTED\n${data.message}\nRepository: ${data.repository}\nTarget Ref: ${data.ref}\n\nNote: GitHub Actions has accepted the workflow dispatch.`);
+                    window.location.reload();
+                } else if (data.success === true) {
+                    alert(`✅ ACTION EXECUTED\n${data.action || 'Complete'}: Produced ${data.produced_count || 1} Short(s).`);
+                    window.location.reload();
+                }
             } catch (e) {
-                alert(e.message);
+                alert(`❌ NETWORK / DISPATCH ERROR\n${e.message}`);
             }
         }
 

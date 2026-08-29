@@ -34,23 +34,70 @@ class ActionManager:
         self.drive_engine = DriveVaultEngine()
         self.github_dispatcher = GitHubWorkflowDispatcher()
 
-    def trigger_buffer_production(self, db: Session, count: int = 1, target: int = 12) -> Dict[str, Any]:
+    def trigger_buffer_production(
+        self,
+        db: Session,
+        count: int = 1,
+        target: int = 12,
+        force_local: bool = False
+    ) -> Dict[str, Any]:
         """
         Executes real buffer production or replenishment under production process lock.
-        In CLOUD_MODE, requests produce_buffer.yml workflow dispatch on GitHub Actions.
+        In CLOUD_MODE, performs stock-health check, checks for active duplicate runs,
+        and requests produce_buffer.yml workflow dispatch on GitHub Actions.
         """
-        from config.settings import CLOUD_MODE
-        if CLOUD_MODE:
-            logger.info("[ACTION:CLOUD] CLOUD_MODE active. Dispatching produce_buffer.yml workflow...")
-            return self.github_dispatcher.dispatch_produce_buffer()
+        # 1. Authoritative Stock Health Gate (Phase 6)
+        try:
+            ready_files = self.drive_engine.list_files_in_folder("01_READY", limit=50)
+            current_stock = len(ready_files)
+        except Exception as d_err:
+            logger.warning(f"Could not read live Drive stock before refill: {d_err}")
+            current_stock = 0
 
+        if current_stock >= target:
+            logger.info(f"[ACTION] Buffer refill rejected: stock is healthy ({current_stock}/{target} Shorts in 01_READY).")
+            return {
+                "success": False,
+                "status": "STOCK_HEALTHY",
+                "error": f"Google Drive 01_READY stock is healthy ({current_stock}/{target} Shorts). Refill not required.",
+                "current_stock": current_stock,
+                "target": target,
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            }
+
+        # 2. Duplicate Refill Protection (Phase 5)
+        active_run = self.github_dispatcher.get_active_workflow_run("produce_buffer.yml")
+        if active_run:
+            logger.warning(f"[ACTION] Buffer refill rejected: run {active_run['id']} is currently {active_run['status']}.")
+            return {
+                "success": False,
+                "status": "REFILL_ALREADY_RUNNING",
+                "error": f"A buffer refill workflow is already running on GitHub Actions (Run ID: {active_run['id']}, Status: {active_run['status']}).",
+                "active_run_id": active_run["id"],
+                "run_status": active_run["status"],
+                "workflow": "produce_buffer.yml",
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            }
+
+        from config.settings import CLOUD_MODE
+        if CLOUD_MODE and not force_local:
+            logger.info(f"[ACTION:CLOUD] CLOUD_MODE active. Dispatching produce_buffer.yml (Current Stock: {current_stock}/{target})...")
+            batch_count = count if count == 1 else 0
+            return self.github_dispatcher.dispatch_produce_buffer(
+                target_buffer=target,
+                batch_count=batch_count
+            )
+
+        # Local execution fallback for offline development
         prod_lock = ProcessLock(name="production")
         if prod_lock.is_locked():
             info = prod_lock.get_lock_info()
             return {
                 "success": False,
+                "status": "LOCK_HELD",
                 "error": f"Production lock is currently held by active PID {info.get('pid') if info else 'unknown'}.",
-                "lock_active": True
+                "lock_active": True,
+                "timestamp": datetime.utcnow().isoformat() + "Z"
             }
 
         try:
@@ -62,6 +109,7 @@ class ActionManager:
                 if job:
                     return {
                         "success": True,
+                        "status": "PRODUCED_SINGLE",
                         "action": "PRODUCE_SINGLE",
                         "job_id": job.id,
                         "state": job.state,
@@ -71,6 +119,7 @@ class ActionManager:
                 else:
                     return {
                         "success": False,
+                        "status": "PRODUCTION_FAILED",
                         "error": "Production completed but no job record was returned.",
                         "timestamp": datetime.utcnow().isoformat() + "Z"
                     }
@@ -79,6 +128,7 @@ class ActionManager:
                 produced_count = pipeline.maintain_buffer(target_stock=target)
                 return {
                     "success": True,
+                    "status": "BUFFER_MAINTAINED",
                     "action": "MAINTAIN_BUFFER",
                     "produced_count": produced_count,
                     "timestamp": datetime.utcnow().isoformat() + "Z"
@@ -87,6 +137,7 @@ class ActionManager:
             logger.error(f"[ACTION] Buffer production failed: {e}")
             return {
                 "success": False,
+                "status": "PRODUCTION_FAILED",
                 "error": str(e),
                 "timestamp": datetime.utcnow().isoformat() + "Z"
             }

@@ -160,7 +160,37 @@ class SessionStore:
                 del self._sessions[session_id]
                 return None
 
-            return dict(session)
+            res = dict(session)
+            res["session_id"] = session_id
+            return res
+
+    def create_reauth_token(self, session_id: str, duration_sec: int = 300) -> Optional[str]:
+        """Creates a short-lived major-action authorization token (5 min window) attached to session."""
+        if not session_id:
+            return None
+        token = secrets.token_hex(24)
+        expires = datetime.utcnow() + timedelta(seconds=duration_sec)
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if not session:
+                return None
+            session["reauth_token"] = token
+            session["reauth_expires_at"] = expires
+            return token
+
+    def verify_reauth_token(self, session_id: str, candidate_token: str) -> bool:
+        """Verifies candidate re-authentication token against active session."""
+        if not session_id or not candidate_token:
+            return False
+        with self._lock:
+            session = self._sessions.get(session_id)
+            if not session:
+                return False
+            stored_token = session.get("reauth_token")
+            expires_at = session.get("reauth_expires_at")
+            if not stored_token or not expires_at or datetime.utcnow() > expires_at:
+                return False
+            return hmac.compare_digest(stored_token, candidate_token)
 
     def invalidate_session(self, session_id: str) -> bool:
         """Removes session from store on logout."""
@@ -301,3 +331,42 @@ def verify_csrf_token(request: Request, session: Dict[str, Any] = Depends(get_cu
         )
 
     return True
+
+
+def verify_major_action_auth(
+    password: Optional[str],
+    reauth_token: Optional[str],
+    session: Dict[str, Any],
+    credentials_mgr: Optional[CredentialsManager] = None,
+    store: Optional[SessionStore] = None
+) -> Tuple[bool, str, str]:
+    """
+    Verifies operator re-authentication for major production actions (e.g. manual buffer refill).
+    Returns (is_valid, error_message, status_code_string).
+    Status strings: 'AUTH_VALID', 'AUTH_REQUIRED', 'AUTH_FAILED'.
+    """
+    c_mgr = credentials_mgr or credentials_manager
+    s_store = store or session_store
+
+    username = session.get("username")
+    if not username:
+        return False, "Authentication session expired. Please log in again.", "AUTH_REQUIRED"
+
+    session_id = session.get("session_id")
+    # 1. Check if valid short-lived reauth_token is provided
+    if reauth_token and session_id:
+        if s_store.verify_reauth_token(session_id, reauth_token):
+            return True, "", "AUTH_VALID"
+
+    # 2. Check if password is provided
+    if not password:
+        return False, "Administrator password re-authentication is required to authorize this major production action.", "AUTH_REQUIRED"
+
+    # 3. Verify password against credentials manager in constant time
+    if c_mgr.verify_credentials(username, password):
+        if session_id:
+            s_store.create_reauth_token(session_id, duration_sec=300)
+        return True, "", "AUTH_VALID"
+
+    return False, "Invalid administrator password. Major action authorization rejected.", "AUTH_FAILED"
+

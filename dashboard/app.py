@@ -31,7 +31,8 @@ from dashboard.auth import (
     rate_limiter,
     get_current_session,
     get_optional_session,
-    verify_csrf_token
+    verify_csrf_token,
+    verify_major_action_auth
 )
 
 app = FastAPI(
@@ -92,8 +93,10 @@ class LoginRequest(BaseModel):
 
 
 class ProduceBufferRequest(BaseModel):
-    count: int = Field(default=1, ge=1, le=8, description="Number of Shorts to produce")
-    target: int = Field(default=12, ge=1, le=24, description="Target reserve count")
+    count: int = Field(default=12, ge=1, le=24, description="Number of Shorts to produce or target count")
+    target: int = Field(default=12, ge=1, le=24, description="Target reserve buffer size in Google Drive")
+    password: Optional[str] = Field(default=None, description="Admin password for major action re-authentication")
+    reauth_token: Optional[str] = Field(default=None, description="Short-lived re-authentication token")
 
 
 class PublishNextRequest(BaseModel):
@@ -417,6 +420,42 @@ def api_cloud_workflows(session: Dict[str, Any] = Depends(get_current_session)):
     return data_provider.get_cloud_workflows_status()
 
 
+@app.get("/api/workflows/status/produce_buffer")
+def api_produce_buffer_status(session: Dict[str, Any] = Depends(get_current_session)):
+    """Returns real-time GitHub Actions status for produce_buffer.yml."""
+    from dashboard.github_client import GitHubWorkflowDispatcher
+    dispatcher = GitHubWorkflowDispatcher()
+    latest_run = dispatcher.get_latest_workflow_run("produce_buffer.yml")
+    active_run = dispatcher.get_active_workflow_run("produce_buffer.yml")
+    return {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "workflow": "produce_buffer.yml",
+        "workflow_name": "01 Buffer Producer",
+        "is_active": bool(active_run),
+        "active_run": active_run,
+        "latest_run": latest_run
+    }
+
+
+@app.get("/api/workflows/status/{workflow_file}")
+def api_workflow_status(workflow_file: str, session: Dict[str, Any] = Depends(get_current_session)):
+    """Returns real-time GitHub Actions status for a specific workflow."""
+    from dashboard.github_client import GitHubWorkflowDispatcher, ALLOWED_WORKFLOWS
+    if workflow_file not in ALLOWED_WORKFLOWS:
+        raise HTTPException(status_code=400, detail=f"Workflow '{workflow_file}' not in authorized list.")
+    dispatcher = GitHubWorkflowDispatcher()
+    latest_run = dispatcher.get_latest_workflow_run(workflow_file)
+    active_run = dispatcher.get_active_workflow_run(workflow_file)
+    return {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "workflow": workflow_file,
+        "workflow_name": ALLOWED_WORKFLOWS[workflow_file],
+        "is_active": bool(active_run),
+        "active_run": active_run,
+        "latest_run": latest_run
+    }
+
+
 @app.get("/api/quota/pexels")
 def api_pexels_quota(db: Session = Depends(get_db), session: Dict[str, Any] = Depends(get_current_session)):
     """Returns observed Pexels API quota headers, request metrics, and status."""
@@ -571,11 +610,45 @@ def api_action_produce(
     csrf_valid: bool = Depends(verify_csrf_token)
 ):
     """
-    Executes real buffer production or replenishment under process lock.
+    Executes real buffer production or replenishment under process lock & cloud dispatch.
+    Requires operator administrator re-authentication.
     """
+    # 1. Major Action Re-Authentication Security Gate (Phase 7)
+    auth_valid, auth_err, auth_status = verify_major_action_auth(
+        password=req.password,
+        reauth_token=req.reauth_token,
+        session=session,
+        credentials_mgr=credentials_manager,
+        store=session_store
+    )
+    if not auth_valid:
+        http_code = status.HTTP_401_UNAUTHORIZED if auth_status == "AUTH_REQUIRED" else status.HTTP_403_FORBIDDEN
+        return JSONResponse(
+            status_code=http_code,
+            content={
+                "success": False,
+                "status": auth_status,
+                "error": auth_err,
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            }
+        )
+
+    # 2. Trigger buffer production (with stock check and duplicate prevention)
     result = action_manager.trigger_buffer_production(db, count=req.count, target=req.target)
+
+    # Map business status to explicit HTTP status codes
+    res_status = result.get("status", "")
     if not result.get("success"):
-        return JSONResponse(status_code=400, content=result)
+        if res_status in ("STOCK_HEALTHY", "REFILL_ALREADY_RUNNING"):
+            http_code = status.HTTP_409_CONFLICT
+        elif res_status == "DISPATCH_FAILED":
+            http_code = result.get("status_code", status.HTTP_500_INTERNAL_SERVER_ERROR)
+        elif res_status == "LOCK_HELD":
+            http_code = status.HTTP_409_CONFLICT
+        else:
+            http_code = status.HTTP_400_BAD_REQUEST
+        return JSONResponse(status_code=http_code, content=result)
+
     return result
 
 

@@ -13,7 +13,7 @@ import os
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
@@ -46,10 +46,10 @@ class GitHubWorkflowDispatcher:
         default_ref: Optional[str] = None,
         timeout_sec: float = 10.0
     ):
-        self._pat = pat or GITHUB_PAT or os.getenv("GITHUB_PAT", "")
-        self.owner = owner or GITHUB_REPOSITORY_OWNER or os.getenv("GITHUB_REPOSITORY_OWNER", "")
-        self.repo = repo or GITHUB_REPOSITORY_NAME or os.getenv("GITHUB_REPOSITORY_NAME", "")
-        self.default_ref = default_ref or GITHUB_REF or os.getenv("GITHUB_REF", "main")
+        self._pat = pat if pat is not None else (GITHUB_PAT or os.getenv("GITHUB_PAT", ""))
+        self.owner = owner if owner is not None else (GITHUB_REPOSITORY_OWNER or os.getenv("GITHUB_REPOSITORY_OWNER", ""))
+        self.repo = repo if repo is not None else (GITHUB_REPOSITORY_NAME or os.getenv("GITHUB_REPOSITORY_NAME", ""))
+        self.default_ref = default_ref if default_ref is not None else (GITHUB_REF or os.getenv("GITHUB_REF", "main"))
         self.timeout_sec = timeout_sec
 
         # Auto-detect from GITHUB_REPOSITORY (e.g. "owner/repo" in GitHub runner)
@@ -83,6 +83,7 @@ class GitHubWorkflowDispatcher:
             logger.error(f"[SECURITY] Unauthorized workflow dispatch attempt: '{workflow_file}'")
             return {
                 "success": False,
+                "status": "DISPATCH_REJECTED",
                 "action": "DISPATCH_REJECTED",
                 "workflow": workflow_file,
                 "error": f"Workflow '{workflow_file}' is not in authorized whitelist.",
@@ -95,6 +96,7 @@ class GitHubWorkflowDispatcher:
             logger.warning("[GITHUB_DISPATCH] Dispatch failed: GITHUB_PAT is not configured.")
             return {
                 "success": False,
+                "status": "DISPATCH_FAILED",
                 "action": "DISPATCH_FAILED",
                 "workflow": workflow_file,
                 "error": "Server-side GitHub Personal Access Token (GITHUB_PAT) is not configured.",
@@ -106,6 +108,7 @@ class GitHubWorkflowDispatcher:
             logger.warning("[GITHUB_DISPATCH] Dispatch failed: Repository owner or name missing.")
             return {
                 "success": False,
+                "status": "DISPATCH_FAILED",
                 "action": "DISPATCH_FAILED",
                 "workflow": workflow_file,
                 "error": "GitHub repository owner or name not configured (GITHUB_REPOSITORY_OWNER / GITHUB_REPOSITORY_NAME).",
@@ -138,6 +141,7 @@ class GitHubWorkflowDispatcher:
                     logger.info(f"[GITHUB_DISPATCH] Successfully dispatched '{workflow_file}' on {self.owner}/{self.repo} (ref: {target_ref})")
                     return {
                         "success": True,
+                        "status": "DISPATCH_ACCEPTED",
                         "action": "DISPATCH_ACCEPTED",
                         "workflow": workflow_file,
                         "workflow_name": ALLOWED_WORKFLOWS[workflow_file],
@@ -150,6 +154,7 @@ class GitHubWorkflowDispatcher:
                 else:
                     return {
                         "success": False,
+                        "status": "DISPATCH_FAILED",
                         "action": "DISPATCH_FAILED",
                         "workflow": workflow_file,
                         "error": f"Unexpected GitHub API response code: {status_code}",
@@ -185,6 +190,7 @@ class GitHubWorkflowDispatcher:
 
             return {
                 "success": False,
+                "status": "DISPATCH_FAILED",
                 "action": "DISPATCH_FAILED",
                 "workflow": workflow_file,
                 "error": error_summary,
@@ -196,6 +202,7 @@ class GitHubWorkflowDispatcher:
             logger.error(f"[GITHUB_DISPATCH_NETWORK_ERROR] {url_err}")
             return {
                 "success": False,
+                "status": "DISPATCH_FAILED",
                 "action": "DISPATCH_FAILED",
                 "workflow": workflow_file,
                 "error": f"Network error connecting to GitHub API: {url_err.reason}",
@@ -207,6 +214,7 @@ class GitHubWorkflowDispatcher:
             logger.error(f"[GITHUB_DISPATCH_EXCEPTION] {generic_err}")
             return {
                 "success": False,
+                "status": "DISPATCH_FAILED",
                 "action": "DISPATCH_FAILED",
                 "workflow": workflow_file,
                 "error": f"Unexpected error during workflow dispatch: {str(generic_err)}",
@@ -214,9 +222,100 @@ class GitHubWorkflowDispatcher:
                 "status_code": 500
             }
 
-    def dispatch_produce_buffer(self, ref: Optional[str] = None) -> Dict[str, Any]:
-        """Triggers produce_buffer.yml (01 Buffer Producer)."""
-        return self.dispatch_workflow("produce_buffer.yml", ref=ref)
+    def get_workflow_runs(self, workflow_file: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """Queries GitHub Actions API for recent runs of a specific workflow."""
+        if not self._pat or not self.owner or not self.repo:
+            return []
+
+        url = f"https://api.github.com/repos/{self.owner}/{self.repo}/actions/workflows/{workflow_file}/runs?per_page={limit}"
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {self._pat}",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "Historia-Mission-Control-Dispatcher"
+        }
+        req = Request(url, headers=headers)
+        try:
+            with urlopen(req, timeout=self.timeout_sec) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data.get("workflow_runs", [])
+        except Exception as e:
+            logger.warning(f"Error querying GitHub workflow runs for '{workflow_file}': {e}")
+            return []
+
+    def get_active_workflow_run(self, workflow_file: str) -> Optional[Dict[str, Any]]:
+        """Checks if any run for the given workflow is currently queued or in progress."""
+        runs = self.get_workflow_runs(workflow_file, limit=5)
+        for run in runs:
+            if run.get("status") in ("queued", "in_progress", "requested", "waiting"):
+                return run
+        return None
+
+    def get_workflow_run_jobs(self, run_id: int) -> Dict[str, Any]:
+        """Fetches job and step execution details for granular progress reporting."""
+        if not self._pat or not self.owner or not self.repo:
+            return {"jobs": [], "step_summary": {}}
+
+        url = f"https://api.github.com/repos/{self.owner}/{self.repo}/actions/runs/{run_id}/jobs"
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {self._pat}",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "Historia-Mission-Control-Dispatcher"
+        }
+        req = Request(url, headers=headers)
+        try:
+            with urlopen(req, timeout=self.timeout_sec) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                jobs = data.get("jobs", [])
+                completed_steps = 0
+                total_steps = 0
+                current_step_name = "Queued"
+
+                for j in jobs:
+                    for s in j.get("steps", []):
+                        total_steps += 1
+                        if s.get("status") == "completed":
+                            completed_steps += 1
+                        elif s.get("status") == "in_progress":
+                            current_step_name = s.get("name", "In Progress")
+
+                return {
+                    "jobs": jobs,
+                    "step_summary": {
+                        "completed_steps": completed_steps,
+                        "total_steps": total_steps,
+                        "current_step": current_step_name
+                    }
+                }
+        except Exception as e:
+            logger.warning(f"Error fetching jobs for run {run_id}: {e}")
+            return {"jobs": [], "step_summary": {}}
+
+    def get_latest_workflow_run(self, workflow_file: str) -> Optional[Dict[str, Any]]:
+        """Fetches the most recent workflow run metadata and active step details."""
+        runs = self.get_workflow_runs(workflow_file, limit=1)
+        if not runs:
+            return None
+        latest = runs[0]
+        run_id = latest["id"]
+        details = self.get_workflow_run_jobs(run_id)
+        latest["jobs"] = details.get("jobs", [])
+        latest["step_summary"] = details.get("step_summary", {})
+        return latest
+
+    def dispatch_produce_buffer(
+        self,
+        ref: Optional[str] = None,
+        target_buffer: int = 12,
+        batch_count: int = 0
+    ) -> Dict[str, Any]:
+        """Triggers produce_buffer.yml (01 Buffer Producer) with target parameters."""
+        inputs = {
+            "target_buffer": str(target_buffer),
+            "batch_count": str(batch_count)
+        }
+        return self.dispatch_workflow("produce_buffer.yml", ref=ref, inputs=inputs)
 
     def dispatch_autopilot(self, ref: Optional[str] = None) -> Dict[str, Any]:
         """Triggers autopilot.yml (02 YouTube Autopilot Publisher)."""
