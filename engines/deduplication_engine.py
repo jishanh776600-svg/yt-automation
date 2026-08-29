@@ -454,8 +454,9 @@ class StoryDeduplicationEngine:
                 f"}}"
             )
 
+            from config.settings import GEMINI_MODEL
             response = gemini_client.generate_content(
-                model="gemini-3.6-flash",
+                model=GEMINI_MODEL,
                 contents=prompt
             )
             raw = response.text.strip().replace("```json", "").replace("```", "").strip()

@@ -183,8 +183,9 @@ class TopicDiscoveryEngine:
                     f"Format each as: Title | Category | 1-sentence factual summary. "
                     f"Do NOT use generic facts. Prioritize strange laws, unusual wars, or documented mysteries."
                 )
+                from config.settings import GEMINI_MODEL
                 response = gemini_client.generate_content(
-                    model="gemini-3.6-flash",
+                    model=GEMINI_MODEL,
                     contents=prompt
                 )
                 lines = response.text.strip().split("\n")

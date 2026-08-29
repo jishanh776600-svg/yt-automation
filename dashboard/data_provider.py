@@ -184,6 +184,21 @@ class SystemDataProvider:
 
     def get_publishing_status(self, db: Session) -> Dict[str, Any]:
         """Calculates today's published & scheduled count, remaining slots, and next release."""
+        # 0. Auto-reconcile any real scheduled uploads whose publishAt has elapsed
+        try:
+            past_scheduled = db.query(UploadRecord).filter(
+                UploadRecord.status == "SCHEDULED",
+                UploadRecord.scheduled_publish_at <= datetime.utcnow(),
+                UploadRecord.youtube_video_id.isnot(None),
+                ~UploadRecord.youtube_video_id.like("TEST_%"),
+                ~UploadRecord.youtube_video_id.like("YT_%")
+            ).first()
+            if past_scheduled:
+                from engines.upload_engine import UploadEngine
+                UploadEngine().reconcile_scheduled_uploads(db)
+        except Exception as auto_rec_err:
+            logger.debug(f"[PUBLISHING_STATUS] Auto-reconciliation notice: {auto_rec_err}")
+
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         today_end = today_start + timedelta(days=1)
         
@@ -358,6 +373,21 @@ class SystemDataProvider:
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         today_end = today_start + timedelta(days=1)
 
+        # 0. Auto-reconcile any real scheduled uploads whose publishAt has elapsed
+        try:
+            past_scheduled = db.query(UploadRecord).filter(
+                UploadRecord.status == "SCHEDULED",
+                UploadRecord.scheduled_publish_at <= now,
+                UploadRecord.youtube_video_id.isnot(None),
+                ~UploadRecord.youtube_video_id.like("TEST_%"),
+                ~UploadRecord.youtube_video_id.like("YT_%")
+            ).first()
+            if past_scheduled:
+                from engines.upload_engine import UploadEngine
+                UploadEngine().reconcile_scheduled_uploads(db)
+        except Exception as auto_rec_err:
+            logger.debug(f"[SCHEDULED_QUEUE] Auto-reconciliation notice: {auto_rec_err}")
+
         # 1. Query all active scheduled uploads + recent published uploads
         records = db.query(UploadRecord).filter(
             UploadRecord.status.in_(["SCHEDULED", "PUBLISHED", "TEST_VERIFIED"])
@@ -402,6 +432,9 @@ class SystemDataProvider:
 
             if r.status == "SCHEDULED":
                 if r.scheduled_publish_at:
+                    if today_start <= r.scheduled_publish_at < today_end:
+                        scheduled_today.append(r)
+
                     diff_sec = int((r.scheduled_publish_at - now).total_seconds())
                     if diff_sec > 0:
                         recon_state = "PENDING_RELEASE"
@@ -409,8 +442,6 @@ class SystemDataProvider:
                         m = (diff_sec % 3600) // 60
                         time_until_str = f"in {h}h {m}m"
                         future_scheduled.append(r)
-                        if today_start <= r.scheduled_publish_at < today_end:
-                            scheduled_today.append(r)
                     else:
                         recon_state = "NEEDS_RECONCILIATION"
                         h_ago = abs(diff_sec) // 3600
@@ -1154,34 +1185,32 @@ class SystemDataProvider:
         Zero synthetic metrics.
         """
         try:
-            # Subquery to get latest snapshot_time per upload_id
+            # Query latest snapshot per youtube_video_id
             subq = (
                 db.query(
-                    PerformanceSnapshot.upload_id,
-                    func.max(PerformanceSnapshot.snapshot_time).label("max_time")
+                    PerformanceSnapshot.youtube_video_id,
+                    func.max(PerformanceSnapshot.id).label("max_snap_id")
                 )
-                .group_by(PerformanceSnapshot.upload_id)
+                .filter(PerformanceSnapshot.youtube_video_id.isnot(None))
+                .group_by(PerformanceSnapshot.youtube_video_id)
                 .subquery()
             )
 
             query = (
                 db.query(UploadRecord, PerformanceSnapshot, VideoAnalysisRecord)
-                .outerjoin(
-                    subq,
-                    UploadRecord.id == subq.c.upload_id
-                )
-                .outerjoin(
-                    PerformanceSnapshot,
-                    (PerformanceSnapshot.upload_id == UploadRecord.id) & 
-                    (PerformanceSnapshot.snapshot_time == subq.c.max_time)
-                )
+                .join(subq, UploadRecord.youtube_video_id == subq.c.youtube_video_id)
+                .join(PerformanceSnapshot, PerformanceSnapshot.id == subq.c.max_snap_id)
                 .outerjoin(
                     VideoAnalysisRecord,
                     VideoAnalysisRecord.upload_id == UploadRecord.id
                 )
-                .filter(UploadRecord.youtube_video_id.isnot(None))
+                .filter(
+                    UploadRecord.youtube_video_id.isnot(None),
+                    ~UploadRecord.youtube_video_id.ilike("dQw4w9WgXcQ%")
+                )
+                .group_by(UploadRecord.youtube_video_id)
                 .order_by(
-                    desc(func.coalesce(PerformanceSnapshot.views, 0)),
+                    desc(PerformanceSnapshot.views),
                     desc(UploadRecord.published_at),
                     desc(UploadRecord.created_at)
                 )

@@ -308,13 +308,16 @@ class GitHubWorkflowDispatcher:
         self,
         ref: Optional[str] = None,
         target_buffer: int = 12,
-        batch_count: int = 0
+        batch_count: int = 0,
+        active_voice: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Triggers produce_buffer.yml (01 Buffer Producer) with target parameters."""
+        """Triggers produce_buffer.yml (01 Buffer Producer) with target parameters and active voice."""
         inputs = {
             "target_buffer": str(target_buffer),
             "batch_count": str(batch_count)
         }
+        if active_voice:
+            inputs["active_voice"] = str(active_voice)
         return self.dispatch_workflow("produce_buffer.yml", ref=ref, inputs=inputs)
 
     def dispatch_autopilot(self, ref: Optional[str] = None) -> Dict[str, Any]:

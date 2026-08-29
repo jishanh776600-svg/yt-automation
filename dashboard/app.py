@@ -128,8 +128,7 @@ class VoicePreviewRequest(BaseModel):
 
 @app.on_event("startup")
 def on_startup():
-    init_db()
-    # In cloud environments, safely materialize OAuth credentials from environment if provided
+    # 1. In cloud environments, safely materialize OAuth credentials from environment if provided
     token_json_env = os.getenv("TOKEN_JSON", "").strip()
     if token_json_env and not (PROJECT_ROOT / "token.json").exists():
         try:
@@ -143,6 +142,37 @@ def on_startup():
             (PROJECT_ROOT / "client_secret.json").write_text(client_secret_env, encoding="utf-8")
         except Exception:
             pass
+
+    # 2. Synchronize canonical database from Google Drive Vault if available and needed
+    token_present = (PROJECT_ROOT / "token.json").exists()
+    try:
+        from core.database_sync import download_canonical_database, get_database_stats
+        from config.settings import DB_PATH
+        stats = get_database_stats(DB_PATH) if DB_PATH.exists() else {}
+        is_empty = stats.get("topics", 0) <= 0 or stats.get("jobs", 0) <= 0
+        if (is_empty or os.getenv("CLOUD_MODE", "false").lower() == "true") and token_present:
+            download_canonical_database()
+    except Exception as db_sync_err:
+        import logging
+        logging.getLogger("Startup").warning(f"[STARTUP] Canonical database sync notice: {db_sync_err}")
+
+    # 3. Ensure all table schemas and column migrations are applied
+    init_db()
+
+    # 4. Reconcile YouTube publication status
+    if token_present:
+        try:
+            from core.database import SessionLocal
+            from engines.upload_engine import UploadEngine
+            db = SessionLocal()
+            try:
+                uploader = UploadEngine()
+                uploader.reconcile_scheduled_uploads(db)
+            finally:
+                db.close()
+        except Exception as rec_err:
+            import logging
+            logging.getLogger("Startup").debug(f"[STARTUP] Initial YouTube reconciliation notice: {rec_err}")
 
 
 # ==============================================================================

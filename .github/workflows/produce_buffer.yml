@@ -22,6 +22,11 @@ on:
         required: false
         default: '0'
         type: string
+      active_voice:
+        description: 'Authoritative voice identifier to use for this production run'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
@@ -66,6 +71,9 @@ jobs:
           echo "PEXELS_API_KEY=${PEXELS_API_KEY}" > .env
           echo "GEMINI_API_KEY=${GEMINI_API_KEY}" >> .env
           echo "TEST_MODE=false" >> .env
+          if [ -n "${{ inputs.active_voice }}" ]; then
+            echo "KOKORO_VOICE=${{ inputs.active_voice }}" >> .env
+          fi
           echo "${TOKEN_JSON}" > token.json
           echo "${CLIENT_SECRET_JSON}" > client_secret.json
 
@@ -77,14 +85,19 @@ jobs:
         run: |
           BATCH_COUNT="${{ inputs.batch_count }}"
           TARGET_BUFFER="${{ inputs.target_buffer }}"
+          VOICE_INPUT="${{ inputs.active_voice }}"
+          VOICE_FLAG=""
+          if [ -n "$VOICE_INPUT" ]; then
+            VOICE_FLAG="--voice $VOICE_INPUT"
+          fi
 
           if [ -n "$BATCH_COUNT" ] && [ "$BATCH_COUNT" -gt 0 ] 2>/dev/null; then
-            echo "[*] Running targeted batch production for $BATCH_COUNT Shorts..."
-            python main.py --produce-batch "$BATCH_COUNT"
+            echo "[*] Running targeted batch production for $BATCH_COUNT Shorts (Voice: ${VOICE_INPUT:-default})..."
+            python main.py --produce-batch "$BATCH_COUNT" $VOICE_FLAG
           else
             TARGET=${TARGET_BUFFER:-12}
-            echo "[*] Auditing and maintaining reserve buffer (Target: $TARGET Shorts in 01_READY)..."
-            python main.py --maintain-buffer "$TARGET"
+            echo "[*] Auditing and maintaining reserve buffer (Target: $TARGET Shorts in 01_READY, Voice: ${VOICE_INPUT:-default})..."
+            python main.py --maintain-buffer "$TARGET" $VOICE_FLAG
           fi
 
       - name: Upload & Synchronize Database to Cloud Vault

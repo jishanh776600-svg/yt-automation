@@ -69,7 +69,7 @@ console = Console(force_terminal=False)
 class ShortsPipeline:
     """End-to-end production and publishing orchestrator."""
 
-    def __init__(self):
+    def __init__(self, voice: Optional[str] = None):
         init_db()
         self.topic_engine = TopicDiscoveryEngine()
         self.research_engine = ResearchEngine()
@@ -88,6 +88,14 @@ class ShortsPipeline:
         self.drive_engine = DriveVaultEngine()
         self.experiment_manager = ExperimentManager()
         self.recovery_manager = RecoveryManager(self.drive_engine, self.upload_engine)
+
+        from engines.tts_engine import get_active_voice
+        db = SessionLocal()
+        try:
+            self.run_voice = voice or os.getenv("KOKORO_VOICE") or get_active_voice(db)
+        finally:
+            db.close()
+        logger.info(f"[PIPELINE_INIT] Run-scoped authoritative voice captured: '{self.run_voice}'")
 
     def _render_and_qa_job(self, db, job: Job, topic: Topic, force: bool = False) -> Tuple[Optional[RenderOutput], Optional[Dict[str, Any]]]:
         """Internal helper: Executes research -> script -> visuals -> voice -> audio -> render -> QA -> SEO."""
@@ -129,11 +137,11 @@ class ShortsPipeline:
         StateMachine.transition(db, job, JobState.VISUALS_READY, f"Prepared {len(shots)} 1080x1920 vertical visuals")
 
         # 5. VOICE SYNTHESIS (Kokoro-v1.0 ONNX)
-        StateMachine.transition(db, job, JobState.VOICE_GENERATING, "Generating documentary voiceover")
-        voice_asset, audio_duration = self.tts_engine.generate_narration(db, script.full_text)
+        StateMachine.transition(db, job, JobState.VOICE_GENERATING, f"Generating documentary voiceover ({self.run_voice})")
+        voice_asset, audio_duration = self.tts_engine.generate_narration(db, script.full_text, voice=self.run_voice)
         assets_used.append(voice_asset)
-        StateMachine.transition(db, job, JobState.VOICE_READY, f"Voice synthesized ({audio_duration}s)")
-        console.print(f"[green][+] Narration Generated:[/green] {audio_duration:.1f}s via {voice_asset.source}")
+        StateMachine.transition(db, job, JobState.VOICE_READY, f"Voice synthesized ({audio_duration}s, voice={self.run_voice})")
+        console.print(f"[green][+] Narration Generated:[/green] {audio_duration:.1f}s via {voice_asset.source} [cyan]({self.run_voice})[/cyan]")
 
         # 6. CAPTION GENERATION (Faster-Whisper)
         voice_path = Path(voice_asset.local_path)
@@ -302,6 +310,8 @@ class ShortsPipeline:
         except Exception as e:
             logger.exception(f"Producer error on job {job_id}: {e}")
             StateMachine.flag_needs_review(db, job, f"Producer exception: {str(e)}")
+            if "QuotaExhausted" in type(e).__name__ or "generaterequestsperday" in str(e).lower() or "quota exhausted" in str(e).lower():
+                raise e
             return None
         finally:
             db.close()
@@ -330,13 +340,26 @@ class ShortsPipeline:
 
             success_count = 0
             total_attempts = 0
+            consecutive_failures = 0
 
             while success_count < effective_count and total_attempts < MAX_PRODUCTION_ATTEMPTS_CEILING:
                 total_attempts += 1
                 console.print(f"\n[bold cyan]>>> Generating Batch Item {success_count + 1}/{effective_count} (Attempt {total_attempts}/{MAX_PRODUCTION_ATTEMPTS_CEILING}) <<<[/bold cyan]")
-                job = self.produce_single_to_vault()
-                if job:
-                    success_count += 1
+                try:
+                    job = self.produce_single_to_vault()
+                    if job:
+                        success_count += 1
+                        consecutive_failures = 0
+                    else:
+                        consecutive_failures += 1
+                        if consecutive_failures >= 3:
+                            logger.error("[BATCH] 3 consecutive single production failures encountered. Halting safely.")
+                            break
+                except Exception as fatal_e:
+                    if "QuotaExhausted" in type(fatal_e).__name__ or "quota" in str(fatal_e).lower() or "429" in str(fatal_e):
+                        logger.error(f"[BATCH] Fatal Gemini quota exhaustion detected: {fatal_e}. Halting batch production cleanly.")
+                        break
+                    raise fatal_e
                 time.sleep(2)
 
             if total_attempts >= MAX_PRODUCTION_ATTEMPTS_CEILING and success_count < effective_count:
@@ -376,6 +399,7 @@ class ShortsPipeline:
 
         produced_count = 0
         total_attempts = 0
+        consecutive_failures = 0
         try:
             while total_attempts < MAX_PRODUCTION_ATTEMPTS_CEILING:
                 current_stock = self.drive_engine.get_ready_stock_count()
@@ -397,9 +421,21 @@ class ShortsPipeline:
 
                 total_attempts += 1
                 console.print(f"\n[bold yellow][*] Reserve Deficit: {needed} Shorts remaining (Current: {current_stock}/{clamped_target}). Producing next Short (Attempt {total_attempts})...[/bold yellow]")
-                job = self.produce_single_to_vault()
-                if job:
-                    produced_count += 1
+                try:
+                    job = self.produce_single_to_vault()
+                    if job:
+                        produced_count += 1
+                        consecutive_failures = 0
+                    else:
+                        consecutive_failures += 1
+                        if consecutive_failures >= 3:
+                            logger.error("[BUFFER] 3 consecutive production failures encountered. Halting buffer maintenance safely.")
+                            break
+                except Exception as fatal_e:
+                    if "QuotaExhausted" in type(fatal_e).__name__ or "quota" in str(fatal_e).lower() or "429" in str(fatal_e):
+                        logger.error(f"[BUFFER] Fatal Gemini quota exhaustion detected: {fatal_e}. Halting buffer maintenance cleanly.")
+                        break
+                    raise fatal_e
                 time.sleep(2)
 
             return produced_count
@@ -807,11 +843,12 @@ def main():
     parser.add_argument("--harvest-analytics", action="store_true", help="Harvest performance metrics for eligible published Shorts")
     parser.add_argument("--learn", action="store_true", help="Execute closed-loop learning cycle and update strategy weights")
     parser.add_argument("--force", action="store_true", help="Force cycle even if daily limit is met")
+    parser.add_argument("--voice", type=str, default=None, help="Explicit active voice identifier to use for this run (overrides default/DB)")
     parser.add_argument("--dashboard", action="store_true", help="Launch FastAPI web dashboard")
     parser.add_argument("--daemon", action="store_true", help="Run continuous scheduler (Strictly 4 Shorts/day)")
     args = parser.parse_args()
 
-    pipeline = ShortsPipeline()
+    pipeline = ShortsPipeline(voice=args.voice)
 
     if args.health_check:
         from engines.health_checker import HealthChecker, HealthStatus, CheckStatus

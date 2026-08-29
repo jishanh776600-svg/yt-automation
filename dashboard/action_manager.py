@@ -81,11 +81,14 @@ class ActionManager:
 
         from config.settings import CLOUD_MODE
         if CLOUD_MODE and not force_local:
-            logger.info(f"[ACTION:CLOUD] CLOUD_MODE active. Dispatching produce_buffer.yml (Current Stock: {current_stock}/{target})...")
+            from engines.tts_engine import get_active_voice
+            active_v = get_active_voice(db)
+            logger.info(f"[ACTION:CLOUD] CLOUD_MODE active. Dispatching produce_buffer.yml (Current Stock: {current_stock}/{target}, Voice: {active_v})...")
             batch_count = count if count == 1 else 0
             return self.github_dispatcher.dispatch_produce_buffer(
                 target_buffer=target,
-                batch_count=batch_count
+                batch_count=batch_count,
+                active_voice=active_v
             )
 
         # Local execution fallback for offline development
@@ -206,13 +209,8 @@ class ActionManager:
     def trigger_sync_youtube(self, db: Session) -> Dict[str, Any]:
         """
         Executes real-time synchronization between YouTube, SQLite, and Google Drive Vault.
-        In CLOUD_MODE, requests autopilot.yml workflow dispatch on GitHub Actions for cloud reconciliation.
+        Performs direct status reconciliation and syncs canonical state to Drive Vault.
         """
-        from config.settings import CLOUD_MODE
-        if CLOUD_MODE:
-            logger.info("[ACTION:CLOUD] CLOUD_MODE active. Dispatching autopilot.yml for reconciliation...")
-            return self.github_dispatcher.dispatch_autopilot()
-
         try:
             from engines.upload_engine import UploadEngine
             uploader = UploadEngine()
@@ -231,6 +229,12 @@ class ActionManager:
                                 moved_files.append(pf["name"])
                 except Exception as drive_err:
                     logger.warning(f"Drive file sync error during YouTube sync: {drive_err}")
+
+                try:
+                    from core.database_sync import upload_canonical_database
+                    upload_canonical_database()
+                except Exception:
+                    pass
 
             return {
                 "success": True,
@@ -407,6 +411,15 @@ class ActionManager:
             set_active_voice(db, voice_id)
             voice_info = next((v for v in AVAILABLE_VOICES if v["id"] == voice_id), None)
             display_name = voice_info["display_name"] if voice_info else voice_id
+
+            # Sync updated configuration to Google Drive canonical database if available
+            try:
+                from core.database_sync import upload_canonical_database
+                upload_canonical_database()
+                logger.info(f"[VOICE CONFIG] Canonical database successfully synced to Drive vault with voice '{voice_id}'.")
+            except Exception as sync_err:
+                logger.debug(f"[VOICE CONFIG] Cloud DB sync notice (skipped or offline): {sync_err}")
+
             return {
                 "success": True,
                 "message": f"Active production voice updated to {display_name} ({voice_id}).",

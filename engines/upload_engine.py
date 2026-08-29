@@ -334,7 +334,7 @@ class UploadEngine:
 
         # 1. Handle synthetic/staging records
         for rec in list(scheduled_records):
-            if rec.youtube_video_id and (rec.youtube_video_id.startswith("TEST_") or self._is_test_mode()):
+            if rec.youtube_video_id and (rec.youtube_video_id.startswith("TEST_") or rec.youtube_video_id.startswith("YT_") or self._is_test_mode()):
                 if rec.scheduled_publish_at and rec.scheduled_publish_at <= now:
                     rec.status = "PUBLISHED"
                     rec.published_at = rec.scheduled_publish_at
@@ -376,24 +376,73 @@ class UploadEngine:
                     continue
 
                 try:
-                    res = youtube.videos().list(part="status,snippet", id=rec.youtube_video_id).execute()
+                    res = youtube.videos().list(part="status,snippet,statistics", id=rec.youtube_video_id).execute()
                     items = res.get("items", [])
                     if not items:
                         logger.warning(f"[RECONCILE] Video {rec.youtube_video_id} not found on YouTube.")
                         continue
 
                     status_obj = items[0].get("status", {})
+                    snippet_obj = items[0].get("snippet", {})
+                    stats_obj = items[0].get("statistics", {})
                     privacy = status_obj.get("privacyStatus")
 
                     if privacy == "public":
                         # YouTube made it public!
                         rec.status = "PUBLISHED"
-                        rec.published_at = datetime.utcnow()
+                        yt_pub_str = snippet_obj.get("publishedAt")
+                        if yt_pub_str:
+                            try:
+                                rec.published_at = datetime.fromisoformat(yt_pub_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                            except Exception:
+                                rec.published_at = datetime.utcnow()
+                        else:
+                            rec.published_at = datetime.utcnow()
                         rec.privacy_status = "public"
+
+                        # Record/update immediate performance snapshot
+                        try:
+                            from core.models import PerformanceSnapshot
+                            views = int(stats_obj.get("viewCount", 0))
+                            likes = int(stats_obj.get("likeCount", 0))
+                            comments = int(stats_obj.get("commentCount", 0))
+                            snap = db.query(PerformanceSnapshot).filter(
+                                PerformanceSnapshot.upload_id == rec.id
+                            ).first()
+                            if snap:
+                                snap.views = views
+                                snap.likes = likes
+                                snap.comments = comments
+                                snap.snapshot_time = datetime.utcnow()
+                            else:
+                                snap = PerformanceSnapshot(
+                                    upload_id=rec.id,
+                                    youtube_video_id=rec.youtube_video_id,
+                                    views=views,
+                                    likes=likes,
+                                    comments=comments,
+                                    snapshot_time=datetime.utcnow()
+                                )
+                                db.add(snap)
+                        except Exception as snap_err:
+                            logger.debug(f"[RECONCILE] Snapshot recording notice: {snap_err}")
                         
                         job = db.query(Job).filter(Job.id == rec.job_id).first()
                         if job:
                             job.state = JobState.PUBLISHED.value
+
+                        # Relocate corresponding video file from 02_PROCESSING to 03_PUBLISHED in Drive Vault
+                        try:
+                            from engines.drive_engine import DriveVaultEngine
+                            drive = DriveVaultEngine()
+                            proc_files = drive.list_files_in_folder("02_PROCESSING")
+                            for pf in proc_files:
+                                props = pf.get("properties", {}) or {}
+                                if props.get("job_id") == rec.job_id or (rec.job_id and rec.job_id in pf.get("name", "")):
+                                    drive.move_file_in_vault(pf["id"], from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
+                                    logger.info(f"[RECONCILE] Moved file '{pf['name']}' to 03_PUBLISHED in Drive.")
+                        except Exception as drive_mv_err:
+                            logger.debug(f"[RECONCILE] Drive vault file move notice: {drive_mv_err}")
 
                         reconciled.append({
                             "job_id": rec.job_id,

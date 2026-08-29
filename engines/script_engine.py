@@ -283,8 +283,9 @@ class ScriptEngine:
                 f"- Hook 3: Unexpected Specific Consequence (e.g. 'A single potato-eating pig almost sparked an armed war.')\n"
                 f"Output strictly valid JSON with key 'hooks' containing a list of 3 strings."
             )
+            from config.settings import GEMINI_MODEL
             response = gemini_client.generate_content(
-                model="gemini-3.6-flash",
+                model=GEMINI_MODEL,
                 contents=prompt
             )
             raw = response.text.strip().replace("```json", "").replace("```", "").strip()
@@ -352,8 +353,9 @@ class ScriptEngine:
             f"\nOutput strictly valid JSON with keys: hook, context, escalation, reveal, loop_twist"
         )
 
+        from config.settings import GEMINI_MODEL
         response = gemini_client.generate_content(
-            model="gemini-3.6-flash",
+            model=GEMINI_MODEL,
             contents=prompt
         )
         raw_text = response.text.strip().replace("```json", "").replace("```", "").strip()

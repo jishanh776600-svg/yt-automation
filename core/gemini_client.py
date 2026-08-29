@@ -150,6 +150,20 @@ class GeminiClient:
                 is_transient, server_delay = is_retryable_exception(exc)
                 msg = str(exc)
                 is_429 = "429" in msg or "resource_exhausted" in msg.lower() or "quota" in msg.lower()
+                is_daily_quota = "perday" in msg.lower() or "generaterequestsperday" in msg.lower()
+
+                if is_daily_quota:
+                    from config.settings import GEMINI_FALLBACK_MODEL
+                    if model != GEMINI_FALLBACK_MODEL and GEMINI_FALLBACK_MODEL:
+                        logger.warning(
+                            f"[GEMINI_FALLBACK] Daily quota exhausted for model '{model}'. "
+                            f"Switching immediately to fallback model '{GEMINI_FALLBACK_MODEL}'..."
+                        )
+                        model = GEMINI_FALLBACK_MODEL
+                        continue
+                    err_summary = f"Daily API quota exhausted for Gemini model '{model}': {exc}"
+                    logger.error(f"[GEMINI_EXHAUSTED] {err_summary}")
+                    raise GeminiQuotaExhaustedError(err_summary) from exc
 
                 if not (is_transient or is_429):
                     # Permanent error (e.g. invalid argument, unrecoverable) - do not retry

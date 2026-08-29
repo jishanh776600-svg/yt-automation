@@ -283,16 +283,22 @@ class TTSEngine:
 
         return False, None, ""
 
-    def generate_narration(self, db: Session, text: str, speed_multiplier: float = 1.0) -> Tuple[AssetRecord, float]:
+    def generate_narration(
+        self,
+        db: Session,
+        text: str,
+        speed_multiplier: float = 1.0,
+        voice: Optional[str] = None
+    ) -> Tuple[AssetRecord, float]:
         """
-        Generates full narration audio using the persistent active voice setting,
+        Generates full narration audio using the persistent active voice setting (or explicit run voice),
         adjusts speed if needed to fit 21-25s, and saves AssetRecord with verified license.
         Guarantees that active voice resolution is 100% identical to the preview path.
         """
         asset_id = f"aud_{uuid.uuid4().hex[:12]}"
         wav_path = self.voice_dir / f"{asset_id}.wav"
 
-        active_voice = get_active_voice(db)
+        active_voice = voice or get_active_voice(db)
         v_cfg = resolve_voice_config(active_voice)
         kokoro_v = v_cfg.get("kokoro_voice", active_voice)
         edge_v = v_cfg.get("edge_voice", "en-US-GuyNeural")

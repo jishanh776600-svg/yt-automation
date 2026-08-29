@@ -132,14 +132,26 @@ def download_canonical_database(
                 shutil.copy2(target, backup_path)
             except Exception:
                 pass
-            target.unlink()
 
-        temp_path.replace(target)
-        if target.with_suffix(".prev_backup").exists():
+            # Use SQLite native online backup to copy into target without Windows/WAL file lock collisions
+            src_conn = sqlite3.connect(str(temp_path))
+            dest_conn = sqlite3.connect(str(target), timeout=30.0)
+            src_conn.backup(dest_conn)
+            src_conn.close()
+            dest_conn.close()
+
             try:
-                target.with_suffix(".prev_backup").unlink(missing_ok=True)
+                temp_path.unlink(missing_ok=True)
             except Exception:
                 pass
+
+            if backup_path.exists():
+                try:
+                    backup_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+        else:
+            temp_path.replace(target)
 
         logger.info(f"[+] Canonical database successfully synchronized from Drive!")
         logger.info(f"    Path: {target}")
