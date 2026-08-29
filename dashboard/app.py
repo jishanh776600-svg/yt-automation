@@ -421,7 +421,7 @@ def api_cloud_workflows(session: Dict[str, Any] = Depends(get_current_session)):
 
 
 @app.get("/api/workflows/status/produce_buffer")
-def api_produce_buffer_status(session: Dict[str, Any] = Depends(get_current_session)):
+def api_produce_buffer_status(session: Optional[Dict[str, Any]] = Depends(get_optional_session)):
     """Returns real-time GitHub Actions status for produce_buffer.yml."""
     from dashboard.github_client import GitHubWorkflowDispatcher
     dispatcher = GitHubWorkflowDispatcher()
@@ -446,7 +446,7 @@ def api_produce_buffer_status(session: Dict[str, Any] = Depends(get_current_sess
 
 
 @app.get("/api/workflows/status/{workflow_file}")
-def api_workflow_status(workflow_file: str, session: Dict[str, Any] = Depends(get_current_session)):
+def api_workflow_status(workflow_file: str, session: Optional[Dict[str, Any]] = Depends(get_optional_session)):
     """Returns real-time GitHub Actions status for a specific workflow."""
     from dashboard.github_client import GitHubWorkflowDispatcher, ALLOWED_WORKFLOWS
     if workflow_file not in ALLOWED_WORKFLOWS:

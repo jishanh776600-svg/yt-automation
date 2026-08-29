@@ -21,12 +21,6 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        function dismissCloudBanner() {
-            const banner = document.getElementById('cloud-workflow-banner');
-            if (banner) banner.classList.add('hidden');
-        }
-    </script>
-    <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
@@ -48,12 +42,6 @@
                 }
             }
         }
-    
-        function dismissCloudBanner() {
-            const banner = document.getElementById('cloud-workflow-banner');
-            if (banner) banner.classList.add('hidden');
-        }
-    
     </script>
     
     <style>
@@ -225,18 +213,22 @@
         </header>
 
         <!-- IN-FLIGHT CLOUD BANNER (Test requirement) -->
-        <div id="cloud-workflow-banner" class="hidden bg-sky-950/80 border-b border-sky-800/80 px-6 py-2 flex items-center justify-between text-xs font-mono text-sky-200">
-            <div class="flex items-center gap-2">
-                <span id="cloud-banner-badge" class="px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[10px] font-bold text-sky-300">IN-FLIGHT</span>
+        <div id="cloud-workflow-banner" class="hidden bg-sky-950/90 border-b border-sky-800 px-6 py-2.5 flex items-center justify-between text-xs font-mono text-sky-200" style="display: none;">
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <span id="cloud-banner-badge" class="px-2 py-0.5 rounded bg-sky-900 border border-sky-700 text-[10px] font-bold text-sky-300">IN-FLIGHT</span>
                 <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
                 <span id="cloud-banner-workflow" class="font-bold text-sky-300">produce_buffer.yml</span>
+                <a id="cloud-banner-run-link" href="#" target="_blank" rel="noopener noreferrer" class="hidden px-2 py-0.5 rounded bg-spaceBlack border border-borderSubtle text-[11px] text-amber-300 hover:text-amber-200 font-mono items-center gap-1 transition" title="View run in GitHub Actions">
+                    <span id="cloud-banner-run-id">Run #--</span>
+                    <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                </a>
                 <span>—</span>
-                <span id="cloud-banner-msg">Cloud runner execution in progress...</span>
+                <span id="cloud-banner-msg" class="text-slate-200">Cloud runner execution in progress...</span>
                 <span id="cloud-banner-time" class="text-slate-400 text-[10px]">--:-- UTC</span>
             </div>
-            <div class="flex items-center gap-3">
-                <span id="cloud-banner-elapsed" class="text-sky-400 font-bold">0s</span>
-                <button onclick="dismissCloudBanner()" class="text-slate-400 hover:text-slate-200 text-xs">✕</button>
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <span id="cloud-banner-elapsed" class="text-sky-400 font-bold bg-spaceBlack px-2 py-0.5 rounded border border-borderSubtle">0s</span>
+                <button onclick="dismissCloudBanner()" class="text-slate-400 hover:text-slate-200 text-xs px-1.5 py-0.5 rounded hover:bg-spaceBlack transition" title="Dismiss banner">✕</button>
             </div>
         </div>
 
@@ -1460,11 +1452,16 @@
             });
         }
 
-        // Initialize on DOM load
-        document.addEventListener('DOMContentLoaded', () => {
-            initVoicePlayer();
+        // Initialize on DOM ready safely
+        function onDomReady() {
             initWorkflowStatusRecovery();
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', onDomReady);
+        } else {
+            onDomReady();
+        }
 
         // Set Active Voice
         async function handleSetVoice(voiceId) {
@@ -1554,15 +1551,19 @@
         let _workflowPollTimer = null;
         let _isTrackingActiveWorkflow = false;
 
-        function updateWorkflowBannerUI(status, message, badgeText, badgeClass, elapsedText) {
+        function updateWorkflowBannerUI(status, message, badgeText, badgeClass, elapsedText, runId, runUrl) {
             const banner = document.getElementById('cloud-workflow-banner');
             const bannerMsg = document.getElementById('cloud-banner-msg');
             const bannerWorkflow = document.getElementById('cloud-banner-workflow');
             const bannerBadge = document.getElementById('cloud-banner-badge');
             const bannerElapsed = document.getElementById('cloud-banner-elapsed');
+            const bannerRunLink = document.getElementById('cloud-banner-run-link');
+            const bannerRunId = document.getElementById('cloud-banner-run-id');
 
             if (!banner) return;
             banner.classList.remove('hidden');
+            banner.style.display = 'flex';
+
             if (bannerWorkflow) bannerWorkflow.innerText = 'produce_buffer.yml';
 
             if (bannerBadge) {
@@ -1571,11 +1572,30 @@
             }
             if (bannerMsg && message) bannerMsg.innerText = message;
             if (bannerElapsed && elapsedText !== undefined) bannerElapsed.innerText = elapsedText;
+            if (bannerRunId && runId) bannerRunId.innerText = `Run #${runId}`;
+            if (bannerRunLink) {
+                if (runUrl) {
+                    bannerRunLink.href = runUrl;
+                    bannerRunLink.classList.remove('hidden');
+                    bannerRunLink.style.display = 'inline-flex';
+                } else {
+                    bannerRunLink.classList.add('hidden');
+                    bannerRunLink.style.display = 'none';
+                }
+            }
         }
 
         function hideWorkflowBanner() {
             const banner = document.getElementById('cloud-workflow-banner');
-            if (banner) banner.classList.add('hidden');
+            const bannerRunLink = document.getElementById('cloud-banner-run-link');
+            if (banner) {
+                banner.classList.add('hidden');
+                banner.style.display = 'none';
+            }
+            if (bannerRunLink) {
+                bannerRunLink.classList.add('hidden');
+                bannerRunLink.style.display = 'none';
+            }
             _isTrackingActiveWorkflow = false;
         }
 
@@ -1588,7 +1608,9 @@
 
         async function fetchWorkflowStatus() {
             try {
-                const res = await fetch('/api/workflows/status/produce_buffer');
+                const res = await fetch('/api/workflows/status/produce_buffer', {
+                    credentials: 'same-origin'
+                });
                 if (!res.ok) return null;
                 return await res.json();
             } catch (err) {
@@ -1601,15 +1623,19 @@
             if (!info) return false;
             const bannerElapsed = document.getElementById('cloud-banner-elapsed');
 
+            const active = info.active_run || (info.latest_run && ['queued', 'in_progress', 'requested', 'waiting'].includes((info.latest_run.status || '').toLowerCase()) ? info.latest_run : null);
+            const isRunActive = Boolean(info.is_active || active);
+
             // 1. If backend indicates an active run (queued, in_progress, waiting, requested)
-            if (info.is_active && info.active_run) {
+            if (isRunActive && active) {
                 _isTrackingActiveWorkflow = true;
-                const active = info.active_run;
                 const status = (active.status || 'in_progress').toLowerCase();
                 const stepSummary = active.step_summary || {};
                 const currentStep = stepSummary.current_step || (status === 'queued' ? 'Queued in runner queue' : 'Cloud runner execution in progress...');
                 const completedSteps = stepSummary.completed_steps || 0;
                 const totalSteps = stepSummary.total_steps || 0;
+                const runId = active.id;
+                const runUrl = active.html_url || (runId ? `https://github.com/jishanh776600-svg/yt-automation/actions/runs/${runId}` : null);
 
                 // Accurate elapsed time calculated from actual run creation / start
                 const startIso = active.run_started_at || active.created_at;
@@ -1627,8 +1653,10 @@
                         status,
                         'Queued in GitHub Actions queue — waiting for runner...',
                         'QUEUED',
-                        'px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[10px] font-bold text-sky-300',
-                        elapsedStr
+                        'px-2 py-0.5 rounded bg-sky-900 border border-sky-700 text-[10px] font-bold text-sky-300',
+                        elapsedStr,
+                        runId,
+                        runUrl
                     );
                 } else {
                     // in_progress
@@ -1637,29 +1665,34 @@
                         status,
                         stepText,
                         'RUNNING',
-                        'px-1.5 py-0.5 rounded bg-amber-900/80 border border-amber-700 text-[10px] font-bold text-amber-300',
-                        elapsedStr
+                        'px-2 py-0.5 rounded bg-amber-900/80 border border-amber-700 text-[10px] font-bold text-amber-300',
+                        elapsedStr,
+                        runId,
+                        runUrl
                     );
                 }
                 return true;
             }
 
-            // 2. If workflow is NOT active
-            if (_isTrackingActiveWorkflow) {
-                // Workflow just finished while dashboard was actively tracking it
+            // 2. If workflow just completed while tracking OR recently completed (< 3 mins ago)
+            const latest = info.latest_run;
+            if (_isTrackingActiveWorkflow && latest) {
                 _isTrackingActiveWorkflow = false;
                 stopWorkflowStatusPolling();
 
-                const latest = info.latest_run;
                 const conclusion = (latest && latest.conclusion) ? latest.conclusion : 'completed';
+                const runId = latest.id;
+                const runUrl = latest.html_url || (runId ? `https://github.com/jishanh776600-svg/yt-automation/actions/runs/${runId}` : null);
 
                 if (conclusion === 'success') {
                     updateWorkflowBannerUI(
                         'completed',
                         'Buffer refill completed successfully. Refreshing vault...',
                         'COMPLETED',
-                        'px-1.5 py-0.5 rounded bg-emerald-900/80 border border-emerald-700 text-[10px] font-bold text-emerald-300',
-                        bannerElapsed ? bannerElapsed.innerText : ''
+                        'px-2 py-0.5 rounded bg-emerald-900/80 border border-emerald-700 text-[10px] font-bold text-emerald-300',
+                        bannerElapsed ? bannerElapsed.innerText : '',
+                        runId,
+                        runUrl
                     );
                     setTimeout(() => window.location.reload(), 2500);
                 } else {
@@ -1667,8 +1700,10 @@
                         'completed',
                         `Workflow finished with conclusion: ${conclusion}`,
                         (conclusion || 'FAILED').toUpperCase(),
-                        'px-1.5 py-0.5 rounded bg-rose-900/80 border border-rose-700 text-[10px] font-bold text-rose-300',
-                        bannerElapsed ? bannerElapsed.innerText : ''
+                        'px-2 py-0.5 rounded bg-rose-900/80 border border-rose-700 text-[10px] font-bold text-rose-300',
+                        bannerElapsed ? bannerElapsed.innerText : '',
+                        runId,
+                        runUrl
                     );
                 }
                 return false;
@@ -1689,7 +1724,7 @@
                 'dispatched',
                 'Waiting for GitHub Actions runner provision...',
                 'DISPATCHED',
-                'px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[10px] font-bold text-sky-300',
+                'px-2 py-0.5 rounded bg-sky-900 border border-sky-700 text-[10px] font-bold text-sky-300',
                 '0s'
             );
 
@@ -1711,7 +1746,10 @@
         async function initWorkflowStatusRecovery() {
             try {
                 const info = await fetchWorkflowStatus();
-                if (info && info.is_active && info.active_run) {
+                const active = info ? (info.active_run || (info.latest_run && ['queued', 'in_progress', 'requested', 'waiting'].includes((info.latest_run.status || '').toLowerCase()) ? info.latest_run : null)) : null;
+                const isRunActive = Boolean(info && (info.is_active || active));
+
+                if (isRunActive && active) {
                     // Reconstruct active workflow state from backend & resume polling
                     renderWorkflowRunState(info);
                     if (!_workflowPollTimer) {

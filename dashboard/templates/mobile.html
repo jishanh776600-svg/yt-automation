@@ -81,9 +81,9 @@
     </header>
 
     <!-- MOBILE CLOUD BANNER (Test requirement) -->
-    <div id="mobile-cloud-banner" class="hidden bg-sky-950 border-b border-sky-800 px-4 py-2 text-xs font-mono text-sky-200 flex items-center justify-between">
+    <div id="mobile-cloud-banner" class="hidden bg-sky-950 border-b border-sky-800 px-4 py-2 text-xs font-mono text-sky-200 flex items-center justify-between" style="display: none;">
         <div class="flex items-center gap-2 truncate">
-            <span id="mobile-cloud-badge" class="px-1.5 py-0.2 rounded bg-sky-900 border border-sky-700 text-[9px] font-bold text-sky-300">IN-FLIGHT</span>
+            <span id="mobile-cloud-badge" class="px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[9px] font-bold text-sky-300">IN-FLIGHT</span>
             <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping flex-shrink-0"></span>
             <span id="mobile-cloud-workflow" class="font-bold text-sky-300 truncate">produce_buffer.yml</span>
             <span id="mobile-cloud-msg" class="truncate">Cloud execution active</span>
@@ -380,7 +380,9 @@
         function getCsrfToken() {
             const meta = document.querySelector('meta[name="csrf-token"]');
             return meta ? meta.getAttribute('content') : '';
-               // =====================================================================
+        }
+
+        // =====================================================================
         // GLOBAL HIGH-PERFORMANCE MOBILE WEBAUDIO VOICE ENGINE & STATE MACHINE
         // =====================================================================
         window._mobVoiceCache = {};
@@ -947,6 +949,7 @@
 
             if (!banner) return;
             banner.classList.remove('hidden');
+            banner.style.display = 'flex';
             if (bannerWorkflow) bannerWorkflow.innerText = 'produce_buffer.yml';
 
             if (bannerBadge) {
@@ -958,7 +961,10 @@
 
         function hideMobileWorkflowBanner() {
             const banner = document.getElementById('mobile-cloud-banner');
-            if (banner) banner.classList.add('hidden');
+            if (banner) {
+                banner.classList.add('hidden');
+                banner.style.display = 'none';
+            }
             _isMobileTrackingActiveWorkflow = false;
         }
 
@@ -972,9 +978,11 @@
         function renderMobileWorkflowRunState(info) {
             if (!info) return false;
 
-            if (info.is_active && info.active_run) {
+            const active = info.active_run || (info.latest_run && ['queued', 'in_progress', 'requested', 'waiting'].includes((info.latest_run.status || '').toLowerCase()) ? info.latest_run : null);
+            const isRunActive = Boolean(info.is_active || active);
+
+            if (isRunActive && active) {
                 _isMobileTrackingActiveWorkflow = true;
-                const active = info.active_run;
                 const status = (active.status || 'in_progress').toLowerCase();
                 const stepSummary = active.step_summary || {};
                 const currentStep = stepSummary.current_step || (status === 'queued' ? 'Queued in runner queue' : 'Executing');
@@ -986,7 +994,7 @@
                         status,
                         'Queued in runner queue...',
                         'QUEUED',
-                        'px-1.5 py-0.2 rounded bg-sky-900 border border-sky-700 text-[9px] font-bold text-sky-300'
+                        'px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[9px] font-bold text-sky-300'
                     );
                 } else {
                     const stepText = totalSteps > 0 ? `Step ${completedSteps}/${totalSteps}: ${currentStep}` : currentStep;
@@ -994,7 +1002,7 @@
                         status,
                         stepText,
                         'RUNNING',
-                        'px-1.5 py-0.2 rounded bg-amber-900/80 border border-amber-700 text-[9px] font-bold text-amber-300'
+                        'px-1.5 py-0.5 rounded bg-amber-900/80 border border-amber-700 text-[9px] font-bold text-amber-300'
                     );
                 }
                 return true;
@@ -1012,7 +1020,7 @@
                         'completed',
                         'Refill completed! Refreshing...',
                         'COMPLETED',
-                        'px-1.5 py-0.2 rounded bg-emerald-900/80 border border-emerald-700 text-[9px] font-bold text-emerald-300'
+                        'px-1.5 py-0.5 rounded bg-emerald-900/80 border border-emerald-700 text-[9px] font-bold text-emerald-300'
                     );
                     setTimeout(() => window.location.reload(), 2500);
                 } else {
@@ -1020,7 +1028,7 @@
                         'completed',
                         `Finished: ${conclusion}`,
                         (conclusion || 'FAILED').toUpperCase(),
-                        'px-1.5 py-0.2 rounded bg-rose-900/80 border border-rose-700 text-[9px] font-bold text-rose-300'
+                        'px-1.5 py-0.5 rounded bg-rose-900/80 border border-rose-700 text-[9px] font-bold text-rose-300'
                     );
                 }
                 return false;
@@ -1039,11 +1047,11 @@
                 'dispatched',
                 'Waiting for runner provision...',
                 'DISPATCHED',
-                'px-1.5 py-0.2 rounded bg-sky-900 border border-sky-700 text-[9px] font-bold text-sky-300'
+                'px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[9px] font-bold text-sky-300'
             );
 
             try {
-                const res = await fetch('/api/workflows/status/produce_buffer');
+                const res = await fetch('/api/workflows/status/produce_buffer', { credentials: 'same-origin' });
                 if (res.ok) {
                     const info = await res.json();
                     renderMobileWorkflowRunState(info);
@@ -1054,7 +1062,7 @@
 
             _mobileWorkflowPollTimer = setInterval(async () => {
                 try {
-                    const res = await fetch('/api/workflows/status/produce_buffer');
+                    const res = await fetch('/api/workflows/status/produce_buffer', { credentials: 'same-origin' });
                     if (res.ok) {
                         const info = await res.json();
                         renderMobileWorkflowRunState(info);
@@ -1067,15 +1075,18 @@
 
         async function initMobileWorkflowStatusRecovery() {
             try {
-                const res = await fetch('/api/workflows/status/produce_buffer');
+                const res = await fetch('/api/workflows/status/produce_buffer', { credentials: 'same-origin' });
                 if (res.ok) {
                     const info = await res.json();
-                    if (info && info.is_active && info.active_run) {
+                    const active = info ? (info.active_run || (info.latest_run && ['queued', 'in_progress', 'requested', 'waiting'].includes((info.latest_run.status || '').toLowerCase()) ? info.latest_run : null)) : null;
+                    const isRunActive = Boolean(info && (info.is_active || active));
+
+                    if (isRunActive && active) {
                         renderMobileWorkflowRunState(info);
                         if (!_mobileWorkflowPollTimer) {
                             _mobileWorkflowPollTimer = setInterval(async () => {
                                 try {
-                                    const r = await fetch('/api/workflows/status/produce_buffer');
+                                    const r = await fetch('/api/workflows/status/produce_buffer', { credentials: 'same-origin' });
                                     if (r.ok) {
                                         const latest = await r.json();
                                         renderMobileWorkflowRunState(latest);
@@ -1098,9 +1109,15 @@
             stopMobileWorkflowStatusPolling();
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        function onMobileDomReady() {
             initMobileWorkflowStatusRecovery();
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', onMobileDomReady);
+        } else {
+            onMobileDomReady();
+        }
     </script>
 </body>
 </html>
