@@ -516,6 +516,7 @@ def api_voice_preview(
             "voice_id": req.voice_id,
             "display_name": voice_entry["display_name"],
             "format": mime_type,
+            "audio_base64": b64_audio,
             "audio_url": f"data:{mime_type};base64,{b64_audio}"
         }
     except Exception as e:

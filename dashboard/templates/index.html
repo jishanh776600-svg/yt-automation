@@ -747,8 +747,18 @@
                         <span class="text-xs font-mono text-brandGold">Active Voice: {{ state.voice_config.active_voice_name }}</span>
                     </div>
 
-                    <!-- Hidden Audio Player for Preview -->
-                    <audio id="voice-preview-player" class="hidden"></audio>
+                    <!-- Tactical Voice Preview Console & Audio Player -->
+                    <div id="voice-preview-console" class="p-3.5 bg-spaceBlack rounded-xl border border-borderSubtle space-y-2 font-mono">
+                        <div class="flex items-center justify-between text-xs">
+                            <div class="flex items-center gap-2">
+                                <span id="voice-player-indicator" class="w-2 h-2 rounded-full bg-slate-500"></span>
+                                <span id="voice-player-status" class="font-bold text-slate-400">VOICE PREVIEW CONSOLE — IDLE</span>
+                            </div>
+                            <span id="voice-player-voice-name" class="text-brandGold font-bold">Select a voice to preview</span>
+                        </div>
+                        <audio id="voice-preview-player" class="w-full h-8 rounded bg-spaceDark border border-borderSubtle text-xs" controls></audio>
+                        <div id="voice-player-notice" class="hidden text-[11px] text-amber-400 bg-amber-950/30 p-2 rounded border border-amber-900/50"></div>
+                    </div>
 
                     <!-- Available Voices Grid -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1007,14 +1017,68 @@
             return meta ? meta.getAttribute('content') : '';
         }
 
+        // Global Voice Preview Audio State Manager
+        let currentPlayingVoiceId = null;
+
+        function base64ToBlob(base64Data, contentType) {
+            const sliceSize = 1024;
+            const byteCharacters = atob(base64Data);
+            const bytesLength = byteCharacters.length;
+            const slicesCount = Math.ceil(bytesLength / sliceSize);
+            const byteArrays = new Array(slicesCount);
+
+            for (let sliceIndex = 0; sliceIndex < slicesCount; ++sliceIndex) {
+                const begin = sliceIndex * sliceSize;
+                const end = Math.min(begin + sliceSize, bytesLength);
+                const bytes = new Array(end - begin);
+                for (let offset = begin, i = 0; offset < end; ++i, ++offset) {
+                    bytes[i] = byteCharacters.charCodeAt(offset);
+                }
+                byteArrays[sliceIndex] = new Uint8Array(bytes);
+            }
+            return new Blob(byteArrays, { type: contentType });
+        }
+
+        function resetAllPreviewButtons() {
+            document.querySelectorAll('[id^="preview-btn-"]').forEach(el => {
+                el.disabled = false;
+                el.innerHTML = `<svg class="w-3.5 h-3.5 text-brandGold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span>Preview</span>`;
+            });
+        }
+
         // Voice Preview Handler
         async function handlePreviewVoice(voiceId) {
+            const player = document.getElementById('voice-preview-player');
+            const statusEl = document.getElementById('voice-player-status');
+            const nameEl = document.getElementById('voice-player-voice-name');
+            const indicatorEl = document.getElementById('voice-player-indicator');
+            const noticeEl = document.getElementById('voice-player-notice');
             const btn = document.getElementById(`preview-btn-${voiceId}`);
-            const origHtml = btn ? btn.innerHTML : '';
+
+            // Toggle pause/stop if already playing
+            if (currentPlayingVoiceId === voiceId && player && !player.paused) {
+                player.pause();
+                player.currentTime = 0;
+                resetAllPreviewButtons();
+                if (statusEl) statusEl.innerText = 'VOICE PREVIEW CONSOLE — STOPPED';
+                if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-slate-500';
+                currentPlayingVoiceId = null;
+                return;
+            }
+
+            resetAllPreviewButtons();
+            if (noticeEl) {
+                noticeEl.classList.add('hidden');
+                noticeEl.innerText = '';
+            }
+
             if (btn) {
                 btn.disabled = true;
-                btn.innerHTML = `<span class="animate-pulse text-brandGold">Synthesizing...</span>`;
+                btn.innerHTML = `<svg class="animate-spin w-3.5 h-3.5 text-brandGold" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg><span class="text-brandGold font-bold">Synthesizing...</span>`;
             }
+            if (statusEl) statusEl.innerText = `VOICE PREVIEW — SYNTHESIZING (${voiceId})...`;
+            if (nameEl) nameEl.innerText = `Synthesizing audio...`;
+            if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
 
             try {
                 const res = await fetch('/api/voice/preview', {
@@ -1035,7 +1099,10 @@
                         const text = await res.text();
                         if (text && text.length < 150) errorMsg = text;
                     }
+                    if (statusEl) statusEl.innerText = `VOICE PREVIEW — FAILED (${res.status})`;
+                    if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-rose-500';
                     alert(`Voice Preview Failed: ${errorMsg}`);
+                    resetAllPreviewButtons();
                     return;
                 }
 
@@ -1043,24 +1110,88 @@
                 try {
                     data = await res.json();
                 } catch (parseErr) {
+                    if (statusEl) statusEl.innerText = 'VOICE PREVIEW — PARSE ERROR';
+                    if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-rose-500';
                     alert(`Voice Preview Error: Received non-JSON response from server (HTTP ${res.status})`);
+                    resetAllPreviewButtons();
                     return;
                 }
 
-                if (data && data.audio_url) {
-                    const player = document.getElementById('voice-preview-player');
-                    if (player) {
-                        player.src = data.audio_url;
-                        player.play().catch(e => console.log('Audio playback notice:', e));
+                if (data && (data.audio_base64 || data.audio_url)) {
+                    let audioSrc = data.audio_url;
+                    const mime = data.format || 'audio/mpeg';
+
+                    // Convert base64 to Blob URL for fast native browser decoding
+                    try {
+                        if (data.audio_base64) {
+                            const blob = base64ToBlob(data.audio_base64, mime);
+                            audioSrc = URL.createObjectURL(blob);
+                        }
+                    } catch (blobErr) {
+                        console.warn('Blob URL generation fallback to data_url:', blobErr);
                     }
+
+                    if (player) {
+                        currentPlayingVoiceId = voiceId;
+                        player.src = audioSrc;
+                        player.load();
+
+                        if (nameEl) nameEl.innerText = `${data.display_name || voiceId} (${mime})`;
+                        if (statusEl) statusEl.innerText = `VOICE PREVIEW — PLAYING: ${data.display_name || voiceId}`;
+                        if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
+
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-400 animate-pulse" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg><span class="text-emerald-400 font-bold">Playing...</span>`;
+                        }
+
+                        // Attach event listeners
+                        player.onended = () => {
+                            resetAllPreviewButtons();
+                            if (statusEl) statusEl.innerText = `VOICE PREVIEW — COMPLETED (${data.display_name || voiceId})`;
+                            if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-slate-500';
+                            currentPlayingVoiceId = null;
+                        };
+
+                        player.onerror = (e) => {
+                            console.error('Audio playback error event:', e);
+                            resetAllPreviewButtons();
+                            if (statusEl) statusEl.innerText = 'VOICE PREVIEW — PLAYBACK ERROR';
+                            if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-rose-500';
+                            if (noticeEl) {
+                                noticeEl.classList.remove('hidden');
+                                noticeEl.innerText = 'Audio stream could not be decoded by browser. Click Play controls directly.';
+                            }
+                            currentPlayingVoiceId = null;
+                        };
+
+                        // Trigger playback
+                        const playPromise = player.play();
+                        if (playPromise !== undefined) {
+                            playPromise.catch(playErr => {
+                                console.warn('Browser autoplay notice:', playErr);
+                                if (statusEl) statusEl.innerText = `VOICE PREVIEW — READY (Click Play)`;
+                                if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-amber-400';
+                                if (btn) {
+                                    btn.disabled = false;
+                                    btn.innerHTML = `<svg class="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span class="text-amber-400 font-bold">Play Audio</span>`;
+                                }
+                                if (noticeEl) {
+                                    noticeEl.classList.remove('hidden');
+                                    noticeEl.innerText = '⚠️ Audio playback was paused by browser policy. Click the Play button in the player bar above to listen.';
+                                }
+                            });
+                        }
+                    }
+                } else {
+                    alert('Voice Preview Error: No audio payload returned by server.');
+                    resetAllPreviewButtons();
                 }
             } catch (err) {
+                if (statusEl) statusEl.innerText = 'VOICE PREVIEW — NETWORK ERROR';
+                if (indicatorEl) indicatorEl.className = 'w-2 h-2 rounded-full bg-rose-500';
                 alert(`Voice Preview Network Error: ${err.message}`);
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = origHtml;
-                }
+                resetAllPreviewButtons();
             }
         }
 

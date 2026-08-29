@@ -255,7 +255,7 @@ class TTSEngine:
             if success and temp_mp3_path.exists():
                 audio_data = temp_mp3_path.read_bytes()
                 temp_mp3_path.unlink(missing_ok=True)
-                return True, audio_data, "audio/mp3"
+                return True, audio_data, "audio/mpeg"
         except Exception as fb_err:
             logger.warning(f"Edge TTS fallback preview failed: {fb_err}")
             temp_mp3_path.unlink(missing_ok=True)
