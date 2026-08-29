@@ -475,6 +475,95 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Canonical Cloud Database Sync (00_SYSTEM/pipeline.db) -->
+            <div id="db-sync-card" class="bg-obsidian p-4 rounded-xl border border-indigo-900/50 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-2.5">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-indigo-400 font-bold text-sm">🗄️</span>
+                        <div>
+                            <span class="font-bold text-xs text-indigo-300 font-mono uppercase tracking-wide">Canonical Cloud Database Persistence</span>
+                            <span class="text-[10px] text-slate-500 font-mono ml-1.5">(YouTube_Shorts_Vault/00_SYSTEM/pipeline.db)</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span id="db-sync-integrity-badge" class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold {% if state.database_sync.integrity_valid %}bg-emerald-950 text-emerald-400 border border-emerald-800{% else %}bg-rose-950 text-rose-400 border border-rose-800{% endif %}">
+                            {% if state.database_sync.integrity_valid %}✓ INTEGRITY VALID{% else %}✕ INTEGRITY ERROR{% endif %}
+                        </span>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-900 text-slate-400 border border-slate-800">
+                            {{ state.database_sync.concurrency_group or 'pipeline-cloud-execution' }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+                    <div class="space-y-1">
+                        <div class="text-[10px] text-slate-500 uppercase">Canonical Location</div>
+                        <div class="text-slate-200 font-bold flex items-center space-x-1">
+                            <span class="text-indigo-400">📁</span>
+                            <span>{{ state.database_sync.canonical_vault_folder or '00_SYSTEM' }}/{{ state.database_sync.canonical_filename or 'pipeline.db' }}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-500">
+                            Size: <strong id="db-sync-size" class="text-slate-300">{{ ((state.database_sync.size_bytes or 0) / 1024 / 1024)|round(2) }} MB</strong> ({{ state.database_sync.size_bytes or 0 }} B)
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="text-[10px] text-slate-500 uppercase">SHA256 Checksum</div>
+                        <div id="db-sync-sha256" class="text-amber-300 font-mono text-[11px] truncate" title="{{ state.database_sync.sha256 or 'N/A' }}">
+                            {% if state.database_sync.sha256 %}
+                            {{ state.database_sync.sha256[:16] }}...{{ state.database_sync.sha256[-8:] }}
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </div>
+                        <div class="text-[10px] text-slate-500">Verified before cloud upload</div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="text-[10px] text-slate-500 uppercase">SQLite Integrity Check</div>
+                        <div id="db-sync-msg" class="text-slate-200 font-mono text-[11px] flex items-center space-x-1">
+                            <span class="{% if state.database_sync.integrity_valid %}text-emerald-400{% else %}text-rose-400{% endif %}">●</span>
+                            <span>PRAGMA integrity: {{ state.database_sync.integrity_message or 'ok' }}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-500">WAL Checkpoint: TRUNCATE</div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="text-[10px] text-slate-500 uppercase">Persistence Architecture</div>
+                        <div class="text-sky-300 font-bold text-[11px]">Private Cloud Vault</div>
+                        <div class="text-[10px] text-slate-500">Zero Workstation Dependency</div>
+                    </div>
+                </div>
+
+                <!-- Table Counts Breakdown -->
+                <div class="pt-2 border-t border-borderSubtle">
+                    <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-1.5">Canonical Database Table Record Counts</div>
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center font-mono text-xs">
+                        <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                            <div class="text-[9px] text-slate-500 uppercase">Topics</div>
+                            <div id="db-count-topics" class="text-sm font-bold text-slate-200 mt-0.5">{{ state.database_sync.table_counts.get('topics', 0) if state.database_sync.table_counts else 0 }}</div>
+                        </div>
+                        <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                            <div class="text-[9px] text-slate-500 uppercase">Scripts</div>
+                            <div id="db-count-scripts" class="text-sm font-bold text-slate-200 mt-0.5">{{ state.database_sync.table_counts.get('scripts', 0) if state.database_sync.table_counts else 0 }}</div>
+                        </div>
+                        <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                            <div class="text-[9px] text-slate-500 uppercase">Jobs</div>
+                            <div id="db-count-jobs" class="text-sm font-bold text-sky-400 mt-0.5">{{ state.database_sync.table_counts.get('jobs', 0) if state.database_sync.table_counts else 0 }}</div>
+                        </div>
+                        <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                            <div class="text-[9px] text-slate-500 uppercase">Uploads</div>
+                            <div id="db-count-uploads" class="text-sm font-bold text-amber-400 mt-0.5">{{ state.database_sync.table_counts.get('uploads', 0) if state.database_sync.table_counts else 0 }}</div>
+                        </div>
+                        <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                            <div class="text-[9px] text-slate-500 uppercase">Snapshots</div>
+                            <div id="db-count-snapshots" class="text-sm font-bold text-purple-400 mt-0.5">{{ state.database_sync.table_counts.get('performance_snapshots', 0) if state.database_sync.table_counts else 0 }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </section>
 
         <!-- ================================================================== -->
@@ -1000,6 +1089,99 @@
 
         </div>
 
+        <!-- ================================================================== -->
+        <!-- 12. EXTERNAL SERVICE LIMITS & PROVIDER QUOTAS                      -->
+        <!-- ================================================================== -->
+        <section class="bg-panel border border-borderSubtle rounded-2xl p-5 shadow-xl space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-3">
+                <div class="flex items-center space-x-2">
+                    <span class="text-amber-400 font-bold text-base">⚡</span>
+                    <div>
+                        <h2 class="text-sm font-bold font-mono text-slate-100 uppercase tracking-wider">External API Quotas & Provider Service Limits</h2>
+                        <p class="text-[11px] text-slate-400 font-mono">Real-time observed limits across 5 core automation providers (Zero synthetic metrics)</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2 text-xs font-mono text-slate-400">
+                    <span>Active Providers: <strong class="text-sky-400">5</strong></span>
+                </div>
+            </div>
+
+            <div id="desktop-quotas-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3.5">
+                {% if state.service_quotas and state.service_quotas.services %}
+                {% for s in state.service_quotas.services %}
+                <div class="bg-obsidian p-4 rounded-xl border border-borderSubtle flex flex-col justify-between space-y-3 font-mono text-xs">
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-start">
+                            <span class="font-bold text-slate-100 text-xs truncate max-w-[130px]" title="{{ s.display_name }}">{{ s.display_name }}</span>
+                            <span class="px-2 py-0.5 rounded text-[9px] font-bold
+                                {% if s.status == 'SAFE' or s.status == 'OK' %}bg-emerald-950 text-emerald-300 border border-emerald-700
+                                {% elif s.status == 'WARNING' %}bg-amber-950 text-amber-300 border border-amber-700
+                                {% elif s.status == 'CRITICAL' %}bg-rose-950 text-rose-300 border border-rose-700
+                                {% else %}bg-slate-900 text-slate-400 border border-slate-700{% endif %}">
+                                {{ s.status }}
+                            </span>
+                        </div>
+
+                        <div class="space-y-1 text-[11px] text-slate-300 pt-1 border-t border-borderSubtle">
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Usage:</span>
+                                <span class="text-slate-200 font-bold">
+                                    {% if s.unit == 'bytes' and s.limit %}
+                                    {{ (s.used / (1024**3))|round(2) }} / {{ (s.limit / (1024**3))|round(2) }} GB
+                                    {% elif s.used is not none and s.used is defined %}
+                                    {% if s.limit %}{{ s.used }} / {{ s.limit }}{% else %}{{ s.used }} {{ s.unit }}{% endif %}
+                                    {% else %}
+                                    —
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Remaining:</span>
+                                <span class="text-sky-300 font-bold">
+                                    {% if s.unit == 'bytes' and s.limit and s.remaining is not none %}
+                                    {{ (s.remaining / (1024**3))|round(2) }} GB
+                                    {% elif s.remaining is not none and s.remaining is defined %}
+                                    {{ s.remaining }} {{ s.unit }}
+                                    {% else %}
+                                    —
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <div class="flex justify-between text-[10px]">
+                                <span class="text-slate-500">Reset:</span>
+                                <span class="text-slate-400">{{ s.reset_type }}</span>
+                            </div>
+
+                            <div class="flex justify-between text-[10px]">
+                                <span class="text-slate-500">Source:</span>
+                                <span class="text-slate-400">{{ s.measurement_type }}</span>
+                            </div>
+
+                            <div class="flex justify-between text-[10px]">
+                                <span class="text-slate-500">Impact:</span>
+                                <span class="{% if s.automation_impact == 'HIGH' %}text-rose-400{% elif s.automation_impact == 'MEDIUM' %}text-amber-400{% else %}text-slate-400{% endif %} font-bold">{{ s.automation_impact }}</span>
+                            </div>
+
+                            <div class="flex justify-between text-[10px]">
+                                <span class="text-slate-500">Fallback:</span>
+                                <span class="{% if s.fallback_available %}text-emerald-400{% else %}text-slate-500{% endif %} font-bold">{% if s.fallback_available %}YES{% else %}NO{% endif %}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-[10px] text-slate-400 pt-1.5 border-t border-borderSubtle leading-relaxed">{{ s.message or '' }}</p>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="col-span-5 bg-obsidian p-6 rounded-xl text-center text-xs font-mono text-slate-500">
+                    Loading external provider quotas...
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
     </main>
 
     <!-- Footer -->
@@ -1320,6 +1502,10 @@
                         }
                     }
 
+                    // Render live Database Sync & Service Quotas telemetry
+                    if (state.database_sync) renderDatabaseSync(state.database_sync);
+                    if (state.service_quotas) renderServiceQuotas(state.service_quotas);
+
                     if (showToastFeedback) {
                         showToast('STATE SYNCED', 'Telemetry updated from live system.', true);
                     }
@@ -1331,6 +1517,129 @@
                     showToast('SYNC FAILED', 'Could not reach backend API', false);
                 }
             }
+        }
+
+
+        function renderDatabaseSync(sync) {
+            if (!sync) return;
+            
+            const badge = document.getElementById('db-sync-integrity-badge');
+            if (badge) {
+                if (sync.integrity_valid) {
+                    badge.className = 'px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-400 border border-emerald-800';
+                    badge.innerText = '✓ INTEGRITY VALID';
+                } else {
+                    badge.className = 'px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-950 text-rose-400 border border-rose-800';
+                    badge.innerText = '✕ INTEGRITY ERROR';
+                }
+            }
+
+            const sizeEl = document.getElementById('db-sync-size');
+            if (sizeEl && sync.size_bytes !== undefined) {
+                const mb = (sync.size_bytes / 1024 / 1024).toFixed(2);
+                sizeEl.innerText = `${mb} MB`;
+            }
+
+            const shaEl = document.getElementById('db-sync-sha256');
+            if (shaEl && sync.sha256) {
+                shaEl.title = sync.sha256;
+                shaEl.innerText = `${sync.sha256.substring(0, 16)}...${sync.sha256.substring(sync.sha256.length - 8)}`;
+            }
+
+            const msgEl = document.getElementById('db-sync-msg');
+            if (msgEl && sync.integrity_message) {
+                msgEl.innerHTML = `<span class="${sync.integrity_valid ? 'text-emerald-400' : 'text-rose-400'}">●</span> <span>PRAGMA integrity: ${sync.integrity_message}</span>`;
+            }
+
+            if (sync.table_counts) {
+                const tc = sync.table_counts;
+                const topEl = document.getElementById('db-count-topics');
+                const scrEl = document.getElementById('db-count-scripts');
+                const jobEl = document.getElementById('db-count-jobs');
+                const uplEl = document.getElementById('db-count-uploads');
+                const snpEl = document.getElementById('db-count-snapshots');
+                if (topEl && tc.topics !== undefined) topEl.innerText = tc.topics;
+                if (scrEl && tc.scripts !== undefined) scrEl.innerText = tc.scripts;
+                if (jobEl && tc.jobs !== undefined) jobEl.innerText = tc.jobs;
+                if (uplEl && tc.uploads !== undefined) uplEl.innerText = tc.uploads;
+                if (snpEl && tc.performance_snapshots !== undefined) snpEl.innerText = tc.performance_snapshots;
+            }
+        }
+
+        function renderServiceQuotas(sq) {
+            if (!sq || !sq.services) return;
+            const container = document.getElementById('desktop-quotas-container');
+            if (!container) return;
+
+            container.innerHTML = sq.services.map(s => {
+                let statusBadge = '';
+                if (s.status === 'SAFE' || s.status === 'OK') {
+                    statusBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700">SAFE</span>';
+                } else if (s.status === 'WARNING') {
+                    statusBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-950 text-amber-300 border border-amber-700">WARN</span>';
+                } else if (s.status === 'CRITICAL') {
+                    statusBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-rose-950 text-rose-300 border border-rose-700">CRIT</span>';
+                } else {
+                    statusBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-900 text-slate-400 border border-slate-700">UNKNOWN</span>';
+                }
+
+                let usageDisplay = '—';
+                let remainingDisplay = '—';
+                if (s.unit === 'bytes' && s.limit) {
+                    const usedGb = (s.used / (1024 ** 3)).toFixed(2);
+                    const limitGb = (s.limit / (1024 ** 3)).toFixed(2);
+                    usageDisplay = `${usedGb} / ${limitGb} GB`;
+                    remainingDisplay = `${((s.limit - s.used) / (1024 ** 3)).toFixed(2)} GB`;
+                } else {
+                    if (s.used !== null && s.used !== undefined) {
+                        usageDisplay = s.limit ? `${s.used.toLocaleString()} / ${s.limit.toLocaleString()}` : `${s.used.toLocaleString()}`;
+                    }
+                    if (s.remaining !== null && s.remaining !== undefined) {
+                        remainingDisplay = `${s.remaining.toLocaleString()} ${s.unit}`;
+                    }
+                }
+
+                const impactClass = s.automation_impact === 'HIGH' ? 'text-rose-400' : (s.automation_impact === 'MEDIUM' ? 'text-amber-400' : 'text-slate-400');
+                const fallbackClass = s.fallback_available ? 'text-emerald-400' : 'text-slate-500';
+
+                return `
+                    <div class="bg-obsidian p-4 rounded-xl border border-borderSubtle flex flex-col justify-between space-y-3 font-mono text-xs">
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-start">
+                                <span class="font-bold text-slate-100 text-xs truncate max-w-[130px]" title="${s.display_name}">${s.display_name}</span>
+                                ${statusBadge}
+                            </div>
+                            <div class="space-y-1 text-[11px] text-slate-300 pt-1 border-t border-borderSubtle">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500">Usage:</span>
+                                    <span class="text-slate-200 font-bold">${usageDisplay}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500">Remaining:</span>
+                                    <span class="text-sky-300 font-bold">${remainingDisplay}</span>
+                                </div>
+                                <div class="flex justify-between text-[10px]">
+                                    <span class="text-slate-500">Reset:</span>
+                                    <span class="text-slate-400">${s.reset_type}</span>
+                                </div>
+                                <div class="flex justify-between text-[10px]">
+                                    <span class="text-slate-500">Source:</span>
+                                    <span class="text-slate-400">${s.measurement_type}</span>
+                                </div>
+                                <div class="flex justify-between text-[10px]">
+                                    <span class="text-slate-500">Impact:</span>
+                                    <span class="${impactClass} font-bold">${s.automation_impact}</span>
+                                </div>
+                                <div class="flex justify-between text-[10px]">
+                                    <span class="text-slate-500">Fallback:</span>
+                                    <span class="${fallbackClass} font-bold">${s.fallback_available ? 'YES' : 'NO'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-slate-400 pt-1.5 border-t border-borderSubtle leading-relaxed">${s.message || ''}</p>
+                    </div>
+                `;
+            }).join('');
         }
 
         // Periodic auto-sync every 15s (Phase 4 requirement)

@@ -321,7 +321,9 @@ def index(request: Request, db: Session = Depends(get_db)):
             "cloud_workflows": state["cloud_workflows"],
             "timeline": state["timeline"],
             "activity_feed": state["activity_feed"],
-            "review_queue": review_queue
+            "review_queue": review_queue,
+            "database_sync": state.get("database_sync", {}),
+            "service_quotas": state.get("service_quotas", {})
         }
     )
 
