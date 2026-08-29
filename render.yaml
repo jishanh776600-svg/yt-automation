@@ -1,9 +1,9 @@
 # ==============================================================================
-# Render Blueprint Specification - Historia Emergency Mission Control
+# Render Blueprint Specification - AL AMR (الأمر) Mission Control
 # ==============================================================================
 services:
   - type: web
-    name: historia-mission-control
+    name: al-amr
     runtime: docker
     plan: free
     region: oregon

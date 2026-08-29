@@ -152,7 +152,7 @@ class TestCloudDeploymentPhase73(unittest.TestCase):
         # Authenticated
         resp_auth = self.client.get("/mobile", cookies=self.auth_cookies)
         self.assertEqual(resp_auth.status_code, 200)
-        self.assertIn("Historia // Emergency Mission Control", resp_auth.text)
+        self.assertIn("AL AMR", resp_auth.text)
 
     # --------------------------------------------------------------------------
     # 6. AUTHENTICATION & CSRF SAFETY
