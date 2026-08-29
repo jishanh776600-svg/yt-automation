@@ -116,10 +116,10 @@ class TestPublicRepositorySecurityPhase108(unittest.TestCase):
         res = subprocess.run(["git", "ls-files"], capture_output=True, text=True)
         tracked_files = [f.strip() for f in res.stdout.splitlines() if f.strip()]
 
-        forbidden = [".env", "token.json", "client_secret.json", "client_secrets.json", "id_rsa"]
+        forbidden = [".env", "token.json", "client_secret.json", "client_secrets.json", "id_rsa", "data/database/pipeline.db", "pipeline.db"]
         for f in tracked_files:
             for bad in forbidden:
-                self.assertNotEqual(f, bad, f"Tracked file '{f}' violates credential exclusion rules")
+                self.assertNotEqual(f, bad, f"Tracked file '{f}' violates credential/database exclusion rules")
 
     def test_07_workflows_contain_no_hardcoded_secrets(self):
         """Test 7: All GitHub Actions workflows reference credentials strictly through secrets."""

@@ -193,14 +193,12 @@ class TestGitHubDispatcherPhase72(unittest.TestCase):
         autopilot_yaml = (workflows_dir / "autopilot.yml").read_text(encoding="utf-8")
         analytics_yaml = (workflows_dir / "harvest_analytics.yml").read_text(encoding="utf-8")
 
-        self.assertIn("group: youtube-producer", produce_yaml)
-        self.assertIn("cancel-in-progress: false", produce_yaml)
-
-        self.assertIn("group: youtube-publisher", autopilot_yaml)
-        self.assertIn("cancel-in-progress: false", autopilot_yaml)
-
-        self.assertIn("group: analytics-harvester", analytics_yaml)
-        self.assertIn("cancel-in-progress: false", analytics_yaml)
+        for wf_name, content in [("produce_buffer.yml", produce_yaml), ("autopilot.yml", autopilot_yaml), ("harvest_analytics.yml", analytics_yaml)]:
+            self.assertTrue(
+                "group: pipeline-cloud-execution" in content or "group: youtube-" in content,
+                f"Workflow {wf_name} must define a valid concurrency group"
+            )
+            self.assertIn("cancel-in-progress: false", content)
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: analytics-harvester
+  group: pipeline-cloud-execution
   cancel-in-progress: false
 
 jobs:
@@ -53,15 +53,24 @@ jobs:
           echo "${TOKEN_JSON}" > token.json
           echo "${CLIENT_SECRET_JSON}" > client_secret.json
 
+      - name: Download & Verify Canonical Database from Cloud Vault
+        run: |
+          python -m core.database_sync download
+
       - name: Harvest YouTube Performance Snapshots
         run: |
           python main.py --harvest-analytics
+
+      - name: Upload & Synchronize Database to Cloud Vault
+        if: success()
+        run: |
+          python -m core.database_sync upload
 
       - name: Commit Performance Snapshots & Updated Database
         if: always()
         run: |
           git config --global user.name 'Analytics Harvester Bot'
           git config --global user.email 'bot@github-actions.local'
-          git add data/database/pipeline.db data/LEARNING_LOG.md 2>/dev/null || true
+          git add data/LEARNING_LOG.md 2>/dev/null || true
           git commit -m "Auto-harvest daily YouTube performance snapshots [skip ci]" || echo "No changes to commit"
           git push origin main || echo "Push skipped"

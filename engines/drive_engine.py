@@ -20,7 +20,7 @@ from config.settings import PROJECT_ROOT
 logger = logging.getLogger(__name__)
 
 VAULT_ROOT_NAME = "YouTube_Shorts_Vault"
-SUBFOLDERS = ["01_READY", "02_PROCESSING", "03_PUBLISHED", "04_FAILED"]
+SUBFOLDERS = ["00_SYSTEM", "01_READY", "02_PROCESSING", "03_PUBLISHED", "04_FAILED"]
 
 
 class DriveVaultEngine:
@@ -135,6 +135,7 @@ class DriveVaultEngine:
         """
         structure: Dict[str, Optional[str]] = {
             "root": None,
+            "00_SYSTEM": None,
             "01_READY": None,
             "02_PROCESSING": None,
             "03_PUBLISHED": None,
@@ -302,3 +303,112 @@ class DriveVaultEngine:
         except Exception as e:
             logger.warning(f"Could not count ready stock: {e}")
             return 0
+
+    def find_file_in_folder(self, folder_name: str, filename: str) -> Optional[Dict[str, Any]]:
+        """Finds a specific non-trashed file by name inside a vault subfolder."""
+        drive = self.get_drive_service()
+        folder_id = self.get_folder_id(folder_name, create_if_missing=False)
+        query = f"'{folder_id}' in parents and name = '{filename}' and trashed = false"
+        try:
+            res = drive.files().list(
+                q=query,
+                spaces="drive",
+                fields="files(id, name, mimeType, size, createdTime, md5Checksum)",
+                pageSize=1
+            ).execute()
+            files = res.get("files", [])
+            return files[0] if files else None
+        except Exception as e:
+            logger.error(f"Error querying file '{filename}' in folder '{folder_name}': {e}")
+            raise
+
+    def upload_database(
+        self,
+        local_path: Path,
+        filename: str = "pipeline.db"
+    ) -> Dict[str, Any]:
+        """
+        Uploads or updates the canonical SQLite database in 00_SYSTEM/.
+        If the file already exists in Drive, updates it in-place preserving its file ID.
+        """
+        if not local_path.exists():
+            raise FileNotFoundError(f"Database file not found: {local_path}")
+
+        drive = self.get_drive_service()
+        system_folder_id = self.get_folder_id("00_SYSTEM", create_if_missing=True)
+
+        existing = self.find_file_in_folder("00_SYSTEM", filename)
+
+        from googleapiclient.http import MediaFileUpload
+        media = MediaFileUpload(
+            str(local_path),
+            mimetype="application/x-sqlite3",
+            resumable=True
+        )
+
+        if existing:
+            file_id = existing["id"]
+            logger.info(f"Updating canonical database in Drive (File ID: {file_id}, size: {local_path.stat().st_size} bytes)...")
+            file_obj = drive.files().update(
+                fileId=file_id,
+                media_body=media,
+                fields="id, name, size, md5Checksum, modifiedTime"
+            ).execute()
+            logger.info(f"[+] Successfully updated canonical database in Drive: ID={file_obj.get('id')}")
+            return file_obj
+        else:
+            file_metadata = {
+                "name": filename,
+                "parents": [system_folder_id],
+                "description": "Historia Production SQLite Database"
+            }
+            logger.info(f"Uploading new canonical database to Drive (00_SYSTEM/{filename})...")
+            file_obj = drive.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields="id, name, size, md5Checksum, modifiedTime"
+            ).execute()
+            logger.info(f"[+] Successfully created canonical database in Drive: ID={file_obj.get('id')}")
+            return file_obj
+
+    def download_database(
+        self,
+        local_dest_path: Path,
+        filename: str = "pipeline.db"
+    ) -> Path:
+        """
+        Downloads the canonical SQLite database from 00_SYSTEM/ to local filesystem.
+        Fails closed if the remote file does not exist.
+        """
+        existing = self.find_file_in_folder("00_SYSTEM", filename)
+        if not existing:
+            raise FileNotFoundError(
+                f"Canonical database '{filename}' was not found in Drive vault '00_SYSTEM'. "
+                f"Refusing to proceed without valid remote database."
+            )
+
+        file_id = existing["id"]
+        local_dest_path.parent.mkdir(parents=True, exist_ok=True)
+        drive = self.get_drive_service()
+
+        from googleapiclient.http import MediaIoBaseDownload
+        request = drive.files().get_media(fileId=file_id)
+        temp_dest = local_dest_path.with_suffix(".tmp_download")
+        with open(temp_dest, "wb") as f:
+            downloader = MediaIoBaseDownload(f, request, chunksize=1024 * 1024 * 2)
+            done = False
+            while not done:
+                status, done = downloader.next_chunk()
+
+        # Atomic replacement after complete download
+        if local_dest_path.exists():
+            local_dest_path.unlink()
+        temp_dest.replace(local_dest_path)
+
+        logger.info(f"[+] Downloaded canonical database {filename} (ID: {file_id}) to {local_dest_path} ({local_dest_path.stat().st_size} bytes)")
+        return local_dest_path
+
+    def get_database_file_id(self, filename: str = "pipeline.db") -> Optional[str]:
+        """Returns the Drive file ID of the canonical database if it exists."""
+        existing = self.find_file_in_folder("00_SYSTEM", filename)
+        return existing["id"] if existing else None
