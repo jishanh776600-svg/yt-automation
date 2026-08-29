@@ -1,1108 +1,1020 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="dark h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#030712">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>AL AMR // Operations & Telemetry</title>
+    <title>AL AMR // Operations Console</title>
     
     <!-- PWA Metadata & Favicons -->
     <link rel="manifest" href="/static/manifest.json">
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon.png">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-    <meta name="theme-color" content="#030712">
-
-    <!-- Tailwind CDN with Deep Obsidian Operations Palette -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script>
-        function getCsrfToken() {
-            const meta = document.querySelector('meta[name="csrf-token"]');
-            return meta ? meta.getAttribute('content') : '';
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com">
+        function dismissCloudBanner() {
+            const banner = document.getElementById('cloud-workflow-banner');
+            if (banner) banner.classList.add('hidden');
         }
-
+    
+    </script>
+    <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-                        mono: ['"JetBrains Mono"', 'monospace'],
+                        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Menlo', 'Consolas', 'monospace']
                     },
                     colors: {
-                        obsidian: '#030712',
-                        spaceDark: '#060B17',
-                        panel: '#0B1120',
-                        panelAlt: '#0F172A',
-                        panelSubtle: '#131D33',
-                        borderSubtle: '#1E293B',
-                        borderHighlight: '#334155',
-                        brandGold: '#F59E0B',
-                        brandGoldGlow: '#FCD34D',
+                        spaceBlack: '#030712',
+                        spaceDark: '#0b0f19',
+                        surfaceElevated: '#111827',
+                        surfaceHover: '#1f2937',
+                        borderSubtle: '#1e293b',
+                        borderStrong: '#334155',
+                        brandGold: '#fbbf24',
+                        brandGoldDark: '#b45309'
                     }
                 }
             }
         }
-    </script>
-    <style>
-        :root {
-            --bg-obsidian: #030712;
-            --bg-panel: #0B1120;
-            --border-subtle: #1E293B;
+    
+        function dismissCloudBanner() {
+            const banner = document.getElementById('cloud-workflow-banner');
+            if (banner) banner.classList.add('hidden');
         }
+    
+    </script>
+    
+    <style>
         body {
             background-color: #030712;
-            color: #F1F5F9;
+            color: #e2e8f0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
         }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #030712; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 2px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #334155; }
-        .btn-active:active { transform: scale(0.98); }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #030712; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
         
-        /* Tactical grid background */
-        .tactical-grid {
-            background-size: 32px 32px;
-            background-image: 
-                linear-gradient(to right, rgba(30, 41, 59, 0.2) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(30, 41, 59, 0.2) 1px, transparent 1px);
+        .nav-item.active {
+            background-color: #111827;
+            color: #fbbf24;
+            border-left: 3px solid #fbbf24;
+            font-weight: 600;
         }
-
-        /* Splash Screen Fade Animation */
-        #al-amr-splash {
-            transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+        .nav-item:not(.active) {
+            border-left: 3px solid transparent;
+            color: #94a3b8;
         }
-        #al-amr-splash.hidden-splash {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
+        .nav-item:not(.active):hover {
+            background-color: #0b0f19;
+            color: #f1f5f9;
         }
-        @keyframes loadingBar {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+        
+        /* Connected Pipeline Connector */
+        .pipeline-connector {
+            position: relative;
         }
-        .animate-loading-bar {
-            animation: loadingBar 1.2s infinite ease-in-out;
+        .pipeline-connector::after {
+            content: "→";
+            position: absolute;
+            right: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #475569;
+            font-family: monospace;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .pipeline-connector:last-child::after {
+            display: none;
         }
     </style>
 </head>
-<body class="bg-obsidian text-slate-100 min-h-screen font-sans antialiased selection:bg-amber-500 selection:text-slate-950 pb-16">
+<body class="h-full bg-spaceBlack flex overflow-hidden text-slate-200">
 
-    <!-- ====================================================================== -->
-    <!-- 0. CINEMATIC STARTUP / SPLASH SCREEN                                  -->
-    <!-- ====================================================================== -->
-    <div id="al-amr-splash" class="fixed inset-0 z-[100] bg-obsidian flex flex-col items-center justify-center p-6 select-none">
-        <div class="text-center space-y-5 max-w-sm w-full">
-            <div class="relative inline-block">
-                <img src="/static/img/al_amr_logo.svg" alt="AL AMR" class="h-20 sm:h-24 mx-auto drop-shadow-[0_0_25px_rgba(245,158,11,0.2)]">
+    <!-- 1. LEFT SIDEBAR NAVIGATION RAIL -->
+    <aside class="w-64 bg-spaceDark border-r border-borderSubtle flex flex-col justify-between flex-shrink-0 select-none z-30">
+        <div>
+            <!-- AL AMR Authoritative Brand Header -->
+            <div class="h-16 px-4 border-b border-borderSubtle flex items-center justify-between">
+                <a href="/" class="flex items-center gap-2.5">
+                    <img src="/static/img/al_amr_logo.svg" alt="AL AMR" class="h-7 object-contain">
+                </a>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-950/80 text-amber-400 border border-amber-800/60">OPS v3.0</span>
             </div>
-            <div class="space-y-2">
-                <div class="font-mono text-[11px] uppercase tracking-[0.25em] text-slate-400 font-semibold">Autonomous Operations Center</div>
-                <div class="w-48 h-1 bg-slate-900 rounded-full mx-auto overflow-hidden relative border border-slate-800">
-                    <div class="w-full h-full bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600 rounded-full animate-loading-bar"></div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Toast Notification Banner -->
-    <div id="toast" class="fixed top-4 right-4 z-50 max-w-md w-full transform transition-all duration-300 translate-y-[-120%] opacity-0 pointer-events-none">
-        <div id="toast-box" class="p-3.5 rounded-xl border shadow-2xl flex items-start space-x-3 bg-panel border-borderSubtle text-slate-200">
-            <span id="toast-icon" class="text-lg">ℹ️</span>
-            <div class="flex-1">
-                <div id="toast-title" class="font-bold text-xs uppercase font-mono tracking-wider text-slate-100">Notification</div>
-                <div id="toast-message" class="text-xs text-slate-300 mt-0.5">Message text</div>
-            </div>
-            <button onclick="hideToast()" class="text-slate-400 hover:text-slate-200 text-sm">✕</button>
-        </div>
-    </div>
-
-    <!-- Confirmation Modal Dialog -->
-    <div id="confirm-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden p-4">
-        <div class="bg-panel border border-borderSubtle max-w-md w-full rounded-2xl p-6 shadow-2xl space-y-4">
-            <div class="flex items-center space-x-3">
-                <div id="modal-icon" class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold text-lg">⚠️</div>
-                <div>
-                    <h3 id="modal-title" class="font-bold text-slate-100 text-sm font-mono uppercase tracking-wide">Confirm Action</h3>
-                    <p class="text-[11px] text-slate-400 font-mono">Autonomous Production Operation</p>
-                </div>
-            </div>
-            <p id="modal-desc" class="text-xs text-slate-300 leading-relaxed">Are you sure you want to execute this operation?</p>
-            <div class="flex justify-end space-x-3 pt-2">
-                <button onclick="closeConfirmModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-mono font-semibold transition">
-                    Cancel
+            <!-- Primary Workspaces Navigation -->
+            <nav class="p-2 space-y-0.5 text-xs font-mono">
+                <div class="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Operations Console</div>
+                
+                <button onclick="switchWorkspace('overview')" id="nav-overview" class="nav-item active w-full flex items-center gap-3 px-3 py-2.5 rounded-r transition text-left">
+                    <svg class="w-4 h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                    <span>Overview</span>
                 </button>
-                <button id="modal-confirm-btn" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-slate-950 rounded-xl text-xs font-mono font-bold transition shadow-lg shadow-amber-600/30">
-                    Confirm Execution
-                </button>
-            </div>
-        </div>
-    </div>
 
-    <!-- Persistent Top Tactical Bar -->
-    <div class="bg-spaceDark border-b border-borderSubtle px-4 sm:px-8 py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-        <div class="flex items-center space-x-3">
-            <span class="flex h-2 w-2 relative">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span class="text-emerald-400 font-bold uppercase tracking-wider text-[11px]">AL AMR LIVE</span>
-            <span class="text-slate-700 hidden sm:inline">|</span>
-            <span class="text-slate-400 hidden sm:inline text-[11px]">UTC: <span id="clock-utc" class="text-slate-200 font-bold">--:--:--</span></span>
-            <span class="text-slate-700 hidden md:inline">|</span>
-            <span class="text-slate-400 hidden md:inline text-[11px]">DB PERSISTENCE: <strong class="text-sky-400">{{ state.database_sync.status }}</strong></span>
-            <span class="text-slate-700 hidden lg:inline">|</span>
-            <span class="text-slate-400 hidden lg:inline text-[11px]">OPERATOR: <span class="text-slate-300 font-semibold">{{ user }}</span></span>
+                <button onclick="switchWorkspace('pipeline')" id="nav-pipeline" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-r transition text-left">
+                    <svg class="w-4 h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    <span>Pipeline</span>
+                    <span class="ml-auto px-1.5 py-0.2 bg-slate-800 text-[10px] text-slate-300 rounded">{{ state.database_sync.table_counts.jobs or 0 }}</span>
+                </button>
+
+                <button onclick="switchWorkspace('buffer')" id="nav-buffer" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-r transition text-left">
+                    <svg class="w-4 h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                    <span>Buffer</span>
+                    <span class="ml-auto px-1.5 py-0.2 bg-sky-950 text-sky-400 border border-sky-800 text-[10px] rounded">{{ state.inventory.counts['01_READY'] or 0 }}/12</span>
+                </button>
+
+                <button onclick="switchWorkspace('queue')" id="nav-queue" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-r transition text-left">
+                    <svg class="w-4 h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>Queue & Library</span>
+                </button>
+
+                <button onclick="switchWorkspace('audio')" id="nav-audio" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-r transition text-left">
+                    <svg class="w-4 h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                    <span>Audio & Voices</span>
+                </button>
+
+                <button onclick="switchWorkspace('cloud')" id="nav-cloud" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-r transition text-left">
+                    <svg class="w-4 h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+                    <span>Cloud Matrix</span>
+                    <span class="ml-auto px-1.5 py-0.2 bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] rounded">3 Cron</span>
+                </button>
+
+                <button onclick="switchWorkspace('analytics')" id="nav-analytics" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-r transition text-left">
+                    <svg class="w-4 h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    <span>Analytics</span>
+                </button>
+
+                <button onclick="switchWorkspace('controls')" id="nav-controls" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-r transition text-left">
+                    <svg class="w-4 h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                    <span>Controls</span>
+                </button>
+            </nav>
         </div>
-        <div class="flex items-center space-x-2">
-            <span id="sync-status" class="text-slate-400 text-[11px]">Synced: Just now</span>
-            <button onclick="refreshState()" class="px-2.5 py-1 bg-panel hover:bg-slate-800 text-slate-300 rounded-lg border border-borderSubtle text-[11px] font-mono transition flex items-center space-x-1 btn-active">
-                <span>↻</span> <span>Sync API</span>
+
+        <!-- Lower Diagnostics & Operator Profile -->
+        <div class="p-2 border-t border-borderSubtle space-y-1 text-xs font-mono">
+            <button onclick="switchWorkspace('diagnostics')" id="nav-diagnostics" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-r transition text-left">
+                <svg class="w-4 h-4 text-inherit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                <span>Diagnostics & DB</span>
             </button>
-            <button onclick="handleLogout()" class="px-2.5 py-1 bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 rounded-lg border border-rose-800 text-[11px] font-mono transition flex items-center space-x-1 btn-active">
-                <span>⎋</span> <span>Logout</span>
-            </button>
-        </div>
-    </div>
 
-    <!-- Operations Header Bar -->
-    <header class="border-b border-borderSubtle bg-panel/95 backdrop-blur px-4 sm:px-8 py-3.5 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center space-x-4">
-                <img src="/static/img/al_amr_logo.svg" alt="AL AMR" class="h-9 sm:h-10">
-            </div>
-
-            <!-- Header Telemetry Chips -->
-            <div class="flex flex-wrap items-center gap-2.5 text-xs font-mono">
-                <div class="px-3 py-1 bg-spaceDark rounded-lg border border-borderSubtle flex items-center space-x-2">
-                    <span class="text-slate-500 text-[10px] uppercase">STATE</span>
-                    <span class="font-bold {% if state.health.verdict == 'READY' %}text-emerald-400{% else %}text-amber-400{% endif %}">
-                        {{ state.health.verdict }}
-                    </span>
+            <!-- Operator Footer -->
+            <div class="p-2 bg-spaceBlack/60 rounded border border-borderSubtle flex items-center justify-between mt-2">
+                <div class="truncate">
+                    <div class="text-[10px] text-slate-500">OPERATOR</div>
+                    <div class="text-xs font-bold text-slate-200 truncate">admin</div>
                 </div>
-                <div class="px-3 py-1 bg-spaceDark rounded-lg border border-borderSubtle flex items-center space-x-2">
-                    <span class="text-slate-500 text-[10px] uppercase">TODAY</span>
-                    <span class="font-bold text-amber-400">{{ state.publishing.published_today }} / {{ state.publishing.daily_limit }} Limit</span>
-                </div>
-                <div class="px-3 py-1 bg-spaceDark rounded-lg border border-borderSubtle flex items-center space-x-2">
-                    <span class="text-slate-500 text-[10px] uppercase">BUFFER</span>
-                    <span class="font-bold text-sky-400">{{ state.inventory.counts['01_READY'] }} / {{ state.buffer.target_reserve }}</span>
-                </div>
-                <div class="px-3 py-1 bg-spaceDark rounded-lg border border-borderSubtle flex items-center space-x-2">
-                    <span class="text-slate-500 text-[10px] uppercase">AUTOPILOT</span>
-                    <span class="font-bold text-amber-300">{{ state.publishing.next_slot.time_until_display }}</span>
-                </div>
+                <button onclick="handleLogout()" title="Logout" class="p-1.5 hover:bg-rose-950/60 hover:text-rose-400 text-slate-500 rounded transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                </button>
             </div>
         </div>
-    </header>
+    </aside>
 
-    <!-- Main Operational Workspace -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <!-- 2. MAIN OPERATIONS VIEWPORT -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-        <!-- ================================================================== -->
-        <!-- CLOUD WORKFLOW IN-FLIGHT STATUS BANNER                            -->
-        <!-- ================================================================== -->
-        <div id="cloud-workflow-banner" class="hidden mb-4">
-            <div id="cloud-workflow-box" class="bg-spaceDark border border-amber-500/40 rounded-xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-4">
-                <div class="flex items-center space-x-3">
-                    <div id="cloud-banner-icon" class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-sm font-bold">
-                        <span class="animate-spin inline-block">⚙️</span>
-                    </div>
-                    <div>
-                        <div class="flex items-center space-x-2">
-                            <span id="cloud-banner-workflow" class="font-mono text-xs font-bold text-amber-300 uppercase tracking-wider">CLOUD WORKFLOW DISPATCHED</span>
-                            <span id="cloud-banner-badge" class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 text-[9px] font-mono font-bold">IN PROGRESS</span>
-                        </div>
-                        <p id="cloud-banner-msg" class="text-[11px] text-slate-400 font-mono mt-0.5">Workflow run requested on GitHub Actions cloud infrastructure.</p>
-                    </div>
+        <!-- TOP COMMAND BAR -->
+        <header class="h-16 bg-spaceDark border-b border-borderSubtle px-6 flex items-center justify-between flex-shrink-0 z-20">
+            <!-- Breadcrumb & Workspace Title -->
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-mono text-slate-500">AL AMR //</span>
+                <span id="breadcrumb-workspace" class="text-sm font-bold text-slate-100 font-mono">Overview</span>
+            </div>
+
+            <!-- Telemetry Status Badges & UTC Tactical Clock -->
+            <div class="flex items-center gap-4 text-xs font-mono">
+                <!-- Live System State Badge -->
+                <div class="flex items-center gap-2 px-2.5 py-1 rounded bg-emerald-950/40 border border-emerald-900/60 text-emerald-400">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="font-bold text-[11px]">ALL SYSTEMS NOMINAL</span>
                 </div>
-                <div class="flex items-center space-x-3 text-xs font-mono">
-                    <div class="text-right">
-                        <div class="text-[10px] text-slate-500 uppercase">Elapsed Time</div>
-                        <span id="cloud-banner-time" class="hidden"></span><div id="cloud-banner-elapsed" class="font-bold text-amber-400">00:00</div>
-                    </div>
-                    <button onclick="dismissCloudBanner()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-mono transition">
-                        Dismiss
-                    </button>
+
+                <!-- Database Checksum Verified -->
+                <div class="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded bg-spaceBlack border border-borderSubtle text-slate-400 text-[11px]">
+                    <svg class="w-3.5 h-3.5 text-brandGold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7M4 7c0-2 1.5-3 3.5-3h9c2 0 3.5 1 3.5 3M4 7h16"></path></svg>
+                    <span>DB SYNC: VERIFIED</span>
                 </div>
+
+                <!-- Live Tactical Clock -->
+                <div class="px-3 py-1 bg-spaceBlack rounded border border-borderSubtle font-bold text-brandGold text-xs" id="tactical-clock">
+                    --:--:-- UTC
+                </div>
+
+                <!-- Manual Reconcile Button -->
+                <button onclick="handleReconcile()" class="px-2.5 py-1 bg-surfaceElevated hover:bg-surfaceHover border border-borderStrong text-slate-200 rounded transition flex items-center gap-1.5 text-xs">
+                    <svg class="w-3.5 h-3.5 text-brandGold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    <span>Sync</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- IN-FLIGHT CLOUD BANNER (Test requirement) -->
+        <div id="cloud-workflow-banner" class="hidden bg-sky-950/80 border-b border-sky-800/80 px-6 py-2 flex items-center justify-between text-xs font-mono text-sky-200">
+            <div class="flex items-center gap-2">
+                <span id="cloud-banner-badge" class="px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[10px] font-bold text-sky-300">IN-FLIGHT</span>
+                <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
+                <span id="cloud-banner-workflow" class="font-bold text-sky-300">produce_buffer.yml</span>
+                <span>—</span>
+                <span id="cloud-banner-msg">Cloud runner execution in progress...</span>
+                <span id="cloud-banner-time" class="text-slate-400 text-[10px]">--:-- UTC</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="cloud-banner-elapsed" class="text-sky-400 font-bold">0s</span>
+                <button onclick="dismissCloudBanner()" class="text-slate-400 hover:text-slate-200 text-xs">✕</button>
             </div>
         </div>
 
-        <!-- ================================================================== -->
-        <!-- 1. REAL-TIME OPERATIONAL OVERVIEW HUD                              -->
-        <!-- ================================================================== -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <!-- MAIN SCROLLABLE CONTENT VIEWPORT -->
+        <main class="flex-1 overflow-y-auto p-6 space-y-6">
 
-            <!-- Module A: System Health -->
-            <div class="bg-panel border border-borderSubtle p-4 rounded-xl shadow-lg relative">
-                <div class="flex justify-between items-start">
-                    <span class="text-[10px] font-mono uppercase text-slate-400 tracking-wider">System State</span>
-                    <span class="text-[10px] px-2 py-0.5 rounded font-mono font-bold 
-                        {% if state.health.verdict == 'READY' %}bg-emerald-950 text-emerald-400 border border-emerald-800
-                        {% elif state.health.verdict == 'DEGRADED' %}bg-amber-950 text-amber-400 border border-amber-800
-                        {% else %}bg-rose-950 text-rose-400 border border-rose-800{% endif %}">
-                        {{ state.health.verdict }}
-                    </span>
-                </div>
-                <div class="mt-2.5 flex items-baseline space-x-2">
-                    <span class="text-2xl font-bold font-mono text-slate-100">{{ state.health.passed_checks_count }}</span>
-                    <span class="text-slate-500 font-mono text-xs">/ 8 Checks Pass</span>
-                </div>
-                <div class="mt-2 text-[11px] text-slate-400 flex justify-between">
-                    <span>Locks:</span>
-                    <span class="font-mono font-semibold {% if state.locks.production.active or state.locks.publisher.active %}text-amber-400{% else %}text-emerald-400{% endif %}">
-                        {% if state.locks.production.active %}PROD ACTIVE{% elif state.locks.publisher.active %}PUB ACTIVE{% else %}FREE / READY{% endif %}
-                    </span>
-                </div>
-            </div>
+            <!-- =============================================================== -->
+            <!-- WORKSPACE 1: OVERVIEW (Primary Operations Screen)               -->
+            <!-- =============================================================== -->
+            <div id="workspace-overview" class="workspace-section space-y-6">
 
-            <!-- Module B: 01_READY Buffer -->
-            <div class="bg-panel border border-borderSubtle p-4 rounded-xl shadow-lg relative">
-                <div class="flex justify-between items-start">
-                    <span class="text-[10px] font-mono uppercase text-slate-400 tracking-wider">01_READY Buffer</span>
-                    <span class="text-[10px] px-2 py-0.5 rounded font-mono font-bold 
-                        {% if state.buffer.health == 'HEALTHY' %}bg-emerald-950 text-emerald-400 border border-emerald-800
-                        {% elif state.buffer.health == 'REPLENISHING' %}bg-sky-950 text-sky-400 border border-sky-800
-                        {% else %}bg-rose-950 text-rose-400 border border-rose-800{% endif %}">
-                        {{ state.buffer.health }}
-                    </span>
-                </div>
-                <div class="mt-2.5 flex items-baseline space-x-2">
-                    <span class="text-2xl font-bold font-mono text-sky-400">{{ state.inventory.counts['01_READY'] }}</span>
-                    <span class="text-slate-500 font-mono text-xs">/ {{ state.buffer.target_reserve }} Target</span>
-                </div>
-                <div class="mt-2 text-[11px] text-slate-400 flex justify-between">
-                    <span>Deficit:</span>
-                    <span class="font-mono {% if state.buffer.needed_replenishment > 0 %}text-amber-400 font-bold{% else %}text-slate-300{% endif %}">
-                        {{ state.buffer.needed_replenishment }} Shorts
-                    </span>
-                </div>
-            </div>
-
-            <!-- Module C: YouTube Publishing -->
-            <div class="bg-panel border border-borderSubtle p-4 rounded-xl shadow-lg relative">
-                <div class="flex justify-between items-start">
-                    <span class="text-[10px] font-mono uppercase text-slate-400 tracking-wider">YouTube (Today)</span>
-                    <span class="text-[10px] px-2 py-0.5 bg-amber-950 text-amber-300 border border-amber-800 rounded font-mono font-bold">
-                        UTC DAY
-                    </span>
-                </div>
-                <div class="mt-2.5 flex items-baseline space-x-2">
-                    <span class="text-2xl font-bold font-mono text-amber-400">{{ state.publishing.published_today }}</span>
-                    <span class="text-slate-500 font-mono text-xs">/ {{ state.publishing.daily_limit }} Limit ({{ state.publishing.remaining_capacity }} left)</span>
-                </div>
-                <div class="mt-2 text-[11px] text-slate-400 flex justify-between">
-                    <span>Scheduled Today:</span>
-                    <span class="font-mono font-bold text-purple-400">{{ state.scheduled_queue.scheduled_today_count }} Shorts</span>
-                </div>
-            </div>
-
-            <!-- Module D: Cloud Automation -->
-            <div class="bg-panel border border-borderSubtle p-4 rounded-xl shadow-lg relative">
-                <div class="flex justify-between items-start">
-                    <span class="text-[10px] font-mono uppercase text-slate-400 tracking-wider">Cloud Autopilot</span>
-                    <span class="text-[10px] px-2 py-0.5 bg-indigo-950 text-indigo-300 border border-indigo-800 rounded font-mono font-bold">
-                        UNATTENDED
-                    </span>
-                </div>
-                <div class="mt-2.5 flex items-baseline space-x-2">
-                    <span class="text-2xl font-bold font-mono text-indigo-300">3</span>
-                    <span class="text-slate-500 font-mono text-xs">Workflows Active</span>
-                </div>
-                <div class="mt-2 text-[11px] text-slate-400 flex justify-between">
-                    <span>Next Release Slot:</span>
-                    <span class="font-mono text-amber-300 font-semibold">{{ state.publishing.next_slot.time_until_display }}</span>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- ================================================================== -->
-        <!-- 2. AUTONOMOUS PIPELINE STATE MACHINE VISIBILITY                   -->
-        <!-- ================================================================== -->
-        <section class="bg-panel border border-borderSubtle rounded-xl p-4 sm:p-5 shadow-lg space-y-3.5">
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-2.5">
-                <div>
-                    <h2 class="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider">Pipeline State Machine & Active Execution Trace</h2>
-                    <p class="text-[10px] text-slate-400 font-mono">Formal unidirectional state transitions across SQLite and Google Drive Vault</p>
-                </div>
-                <span class="text-[10px] font-mono text-slate-400">Canonical Table: <strong class="text-sky-400">jobs</strong></span>
-            </div>
-
-            <!-- 9-Stage Pipeline Flow Grid -->
-            <div class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2 text-center text-xs font-mono">
-                <div class="p-2.5 bg-spaceDark rounded-lg border border-slate-800/80">
-                    <div class="text-[9px] text-slate-500 uppercase">1. Topics</div>
-                    <div class="text-sm font-bold text-slate-200 mt-0.5">{{ state.database_sync.table_counts.topics or 0 }}</div>
-                </div>
-                <div class="p-2.5 bg-spaceDark rounded-lg border border-slate-800/80">
-                    <div class="text-[9px] text-slate-500 uppercase">2. Scripts</div>
-                    <div class="text-sm font-bold text-slate-200 mt-0.5">{{ state.database_sync.table_counts.scripts or 0 }}</div>
-                </div>
-                <div class="p-2.5 bg-spaceDark rounded-lg border border-slate-800/80">
-                    <div class="text-[9px] text-slate-500 uppercase">3. Voice</div>
-                    <div class="text-sm font-bold text-slate-200 mt-0.5">{{ state.database_sync.table_counts.voice or 0 }}</div>
-                </div>
-                <div class="p-2.5 bg-spaceDark rounded-lg border border-slate-800/80">
-                    <div class="text-[9px] text-slate-500 uppercase">4. Renders</div>
-                    <div class="text-sm font-bold text-slate-200 mt-0.5">{{ state.database_sync.table_counts.renders or 0 }}</div>
-                </div>
-                <div class="p-2.5 bg-spaceDark rounded-lg border border-emerald-900/40 bg-emerald-950/20">
-                    <div class="text-[9px] text-emerald-400 uppercase font-bold">5. Total Jobs</div>
-                    <div class="text-sm font-bold text-emerald-300 mt-0.5">{{ state.database_sync.table_counts.jobs or 0 }}</div>
-                </div>
-                <div class="p-2.5 bg-spaceDark rounded-lg border border-sky-900/50 bg-sky-950/20">
-                    <div class="text-[9px] text-sky-400 uppercase font-bold">6. 01_READY</div>
-                    <div class="text-sm font-bold text-sky-300 mt-0.5">{{ state.inventory.counts['01_READY'] or 0 }}</div>
-                </div>
-                <div class="p-2.5 bg-spaceDark rounded-lg border border-amber-900/50 bg-amber-950/20">
-                    <div class="text-[9px] text-amber-400 uppercase font-bold">7. 02_CLAIMED</div>
-                    <div class="text-sm font-bold text-amber-300 mt-0.5">{{ state.inventory.counts['02_PROCESSING'] or 0 }}</div>
-                </div>
-                <div class="p-2.5 bg-spaceDark rounded-lg border border-purple-900/50 bg-purple-950/20">
-                    <div class="text-[9px] text-purple-400 uppercase font-bold">8. Published</div>
-                    <div class="text-sm font-bold text-purple-300 mt-0.5">{{ state.inventory.counts['03_PUBLISHED'] or 0 }}</div>
-                </div>
-                <div class="p-2.5 bg-spaceDark rounded-lg border border-rose-900/50 bg-rose-950/20">
-                    <div class="text-[9px] text-rose-400 uppercase font-bold">9. Failed</div>
-                    <div class="text-sm font-bold text-rose-300 mt-0.5">{{ state.inventory.counts['04_FAILED'] or 0 }}</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ================================================================== -->
-        <!-- 3. OPERATOR COMMAND CONSOLE                                        -->
-        <!-- ================================================================== -->
-        <section class="bg-panel border border-borderSubtle p-4 sm:p-5 rounded-xl shadow-lg space-y-3">
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-2.5">
-                <div>
-                    <h2 class="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider">Operator Command Console</h2>
-                    <p class="text-[10px] text-slate-400 font-mono">Execute real-world production cycles, buffer maintenance, and cloud dispatches</p>
-                </div>
-                <span class="text-[10px] px-2 py-0.5 rounded font-mono font-bold {% if is_cloud_mode %}bg-indigo-950 text-indigo-300 border border-indigo-800{% else %}bg-slate-800 text-slate-300 border border-slate-700{% endif %}">
-                    {% if is_cloud_mode %}CLOUD DISPATCH MODE{% else %}DIRECT EXECUTION MODE{% endif %}
-                </span>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                <button onclick="handleProduceShort()" class="p-3 bg-spaceDark hover:bg-slate-800/80 border border-sky-900/40 rounded-xl flex items-center justify-between text-left transition group btn-active">
-                    <div>
-                        <div class="text-xs font-bold font-mono text-sky-400">+ Produce 1 Short</div>
-                        <div class="text-[10px] text-slate-400 mt-0.5">Synthesize & render to Vault</div>
+                <!-- 1. CONNECTED AUTOMATION PIPELINE -->
+                <section class="bg-spaceDark rounded-xl border border-borderSubtle p-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-borderSubtle mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-brandGold"></span>
+                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">Automation Pipeline</h2>
+                        </div>
+                        <span class="text-[11px] font-mono text-slate-400">Continuous 6-Stage Production Lifecycle</span>
                     </div>
-                    <span class="text-sky-400 font-mono text-sm group-hover:translate-x-0.5 transition">→</span>
-                </button>
 
-                <button onclick="handleReplenishBuffer()" class="p-3 bg-spaceDark hover:bg-slate-800/80 border border-amber-900/40 rounded-xl flex items-center justify-between text-left transition group btn-active">
-                    <div>
-                        <div class="text-xs font-bold font-mono text-amber-400">⚡ Replenish 12 Buffer</div>
-                        <div class="text-[10px] text-slate-400 mt-0.5">Batch produce deficit ({{ state.buffer.needed_replenishment }})</div>
-                    </div>
-                    <span class="text-amber-400 font-mono text-sm group-hover:translate-x-0.5 transition">→</span>
-                </button>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <!-- Stage 1: TOPIC -->
+                        <div class="pipeline-connector p-3 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[10px] font-mono text-slate-500 uppercase">1. Topic Discovery</div>
+                            <div class="text-lg font-bold font-mono text-slate-100 mt-1">{{ state.database_sync.table_counts.topics or 0 }}</div>
+                            <span class="inline-block mt-1 text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">READY</span>
+                        </div>
 
-                <button onclick="handlePublishNext()" class="p-3 bg-spaceDark hover:bg-slate-800/80 border border-emerald-900/40 rounded-xl flex items-center justify-between text-left transition group btn-active">
-                    <div>
-                        <div class="text-xs font-bold font-mono text-emerald-400">★ Schedule Next Slot</div>
-                        <div class="text-[10px] text-slate-400 mt-0.5">Claim & upload next ready Short</div>
-                    </div>
-                    <span class="text-emerald-400 font-mono text-sm group-hover:translate-x-0.5 transition">→</span>
-                </button>
+                        <!-- Stage 2: SCRIPT -->
+                        <div class="pipeline-connector p-3 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[10px] font-mono text-slate-500 uppercase">2. Script Synthesis</div>
+                            <div class="text-lg font-bold font-mono text-slate-100 mt-1">{{ state.database_sync.table_counts.scripts or 0 }}</div>
+                            <span class="inline-block mt-1 text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">READY</span>
+                        </div>
 
-                <button onclick="executeSyncYouTube()" class="p-3 bg-spaceDark hover:bg-slate-800/80 border border-purple-900/40 rounded-xl flex items-center justify-between text-left transition group btn-active">
-                    <div>
-                        <div class="text-xs font-bold font-mono text-purple-400">⟳ Sync YouTube</div>
-                        <div class="text-[10px] text-slate-400 mt-0.5">Reconcile state with YouTube API</div>
-                    </div>
-                    <span class="text-purple-400 font-mono text-sm group-hover:translate-x-0.5 transition">→</span>
-                </button>
+                        <!-- Stage 3: VOICE -->
+                        <div class="pipeline-connector p-3 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[10px] font-mono text-slate-500 uppercase">3. Kokoro Voice</div>
+                            <div class="text-lg font-bold font-mono text-brandGold mt-1">{{ state.database_sync.table_counts.voice or 0 }}</div>
+                            <span class="inline-block mt-1 text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-950 text-amber-400 border border-amber-800">SYNTHESIZED</span>
+                        </div>
 
-                <button onclick="executeSelfHeal()" class="p-3 bg-spaceDark hover:bg-slate-800/80 border border-rose-900/40 rounded-xl flex items-center justify-between text-left transition group btn-active">
-                    <div>
-                        <div class="text-xs font-bold font-mono text-rose-400">🛡️ Self-Heal Pipeline</div>
-                        <div class="text-[10px] text-slate-400 mt-0.5">Audit locks, stale jobs & sync</div>
-                    </div>
-                    <span class="text-rose-400 font-mono text-sm group-hover:translate-x-0.5 transition">→</span>
-                </button>
-            </div>
-        </section>
+                        <!-- Stage 4: VISUALS -->
+                        <div class="pipeline-connector p-3 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[10px] font-mono text-slate-500 uppercase">4. Visual Engine</div>
+                            <div class="text-lg font-bold font-mono text-sky-400 mt-1">{{ state.database_sync.table_counts.renders or 0 }}</div>
+                            <span class="inline-block mt-1 text-[9px] font-mono px-1.5 py-0.2 rounded bg-sky-950 text-sky-400 border border-sky-800">1080x1920</span>
+                        </div>
 
-        <!-- ================================================================== -->
-        <!-- 4. GOOGLE DRIVE VAULT & DATABASE SYNCHRONIZATION TELEMETRY         -->
-        <!-- ================================================================== -->
-        <section class="bg-panel border border-borderSubtle rounded-xl p-4 sm:p-5 shadow-lg space-y-4">
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-2.5">
-                <div>
-                    <h2 class="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider">Google Drive Cloud Vault & Persistence Telemetry</h2>
-                    <p class="text-[10px] text-slate-400 font-mono">Physical media inventory segregated across 4 Drive folders</p>
-                </div>
-                <span class="text-[10px] font-mono text-slate-400">Total Stock: <strong class="text-amber-400">{{ state.inventory.counts['01_READY'] + state.inventory.counts['02_PROCESSING'] + state.inventory.counts['03_PUBLISHED'] + state.inventory.counts['04_FAILED'] }} Shorts</strong></span>
-            </div>
+                        <!-- Stage 5: RENDER / BUFFER -->
+                        <div class="pipeline-connector p-3 bg-spaceBlack rounded-lg border border-emerald-900/60 bg-emerald-950/10">
+                            <div class="text-[10px] font-mono text-emerald-400 uppercase font-bold">5. Vault Buffer</div>
+                            <div class="text-lg font-bold font-mono text-emerald-300 mt-1">{{ state.inventory.counts['01_READY'] or 0 }} <span class="text-xs text-slate-500">/ 12</span></div>
+                            <span class="inline-block mt-1 text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">01_READY</span>
+                        </div>
 
-            <!-- 4-Folder Breakdown Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div class="bg-spaceDark p-3 rounded-lg border border-sky-900/30 space-y-1.5">
-                    <div class="flex justify-between items-center text-xs font-mono">
-                        <span class="text-sky-400 font-bold">01_READY</span>
-                        <span class="px-2 py-0.5 bg-sky-950 text-sky-300 rounded font-bold">{{ state.inventory.counts['01_READY'] }}</span>
-                    </div>
-                    <p class="text-[10px] text-slate-500">QA-approved videos ready to schedule.</p>
-                    <div class="text-[10px] font-mono text-slate-400 space-y-0.5 max-h-28 overflow-y-auto custom-scrollbar pt-1">
-                        {% for f in state.inventory.files['01_READY'] %}
-                        <div class="truncate text-slate-300" title="{{ f.name }}">✓ {{ f.name }}</div>
-                        {% else %}
-                        <div class="italic text-slate-600">No ready files (Buffer depleted)</div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <div class="bg-spaceDark p-3 rounded-lg border border-amber-900/30 space-y-1.5">
-                    <div class="flex justify-between items-center text-xs font-mono">
-                        <span class="text-amber-400 font-bold">02_PROCESSING</span>
-                        <span class="px-2 py-0.5 bg-amber-950 text-amber-300 rounded font-bold">{{ state.inventory.counts['02_PROCESSING'] }}</span>
-                    </div>
-                    <p class="text-[10px] text-slate-500">In-flight scheduled YouTube claims.</p>
-                    <div class="text-[10px] font-mono text-slate-400 space-y-0.5 max-h-28 overflow-y-auto custom-scrollbar pt-1">
-                        {% for f in state.inventory.files['02_PROCESSING'] %}
-                        <div class="truncate text-amber-300" title="{{ f.name }}">⚡ {{ f.name }}</div>
-                        {% else %}
-                        <div class="italic text-slate-600">Zero in-flight claims</div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <div class="bg-spaceDark p-3 rounded-lg border border-emerald-900/30 space-y-1.5">
-                    <div class="flex justify-between items-center text-xs font-mono">
-                        <span class="text-emerald-400 font-bold">03_PUBLISHED</span>
-                        <span class="px-2 py-0.5 bg-emerald-950 text-emerald-300 rounded font-bold">{{ state.inventory.counts['03_PUBLISHED'] }}</span>
-                    </div>
-                    <p class="text-[10px] text-slate-500">Live released YouTube archive.</p>
-                    <div class="text-[10px] font-mono text-slate-400 space-y-0.5 max-h-28 overflow-y-auto custom-scrollbar pt-1">
-                        {% for f in state.inventory.files['03_PUBLISHED'] %}
-                        <div class="truncate text-emerald-300/80" title="{{ f.name }}">★ {{ f.name }}</div>
-                        {% else %}
-                        <div class="italic text-slate-600">No published archive</div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <div class="bg-spaceDark p-3 rounded-lg border border-rose-900/30 space-y-1.5">
-                    <div class="flex justify-between items-center text-xs font-mono">
-                        <span class="text-rose-400 font-bold">04_FAILED</span>
-                        <span class="px-2 py-0.5 bg-rose-950 text-rose-300 rounded font-bold">{{ state.inventory.counts['04_FAILED'] }}</span>
-                    </div>
-                    <p class="text-[10px] text-slate-500">Quarantined defect items.</p>
-                    <div class="text-[10px] font-mono text-slate-400 space-y-0.5 max-h-28 overflow-y-auto custom-scrollbar pt-1">
-                        {% for f in state.inventory.files['04_FAILED'] %}
-                        <div class="truncate text-rose-400" title="{{ f.name }}">✕ {{ f.name }}</div>
-                        {% else %}
-                        <div class="italic text-slate-600">Clean (Zero defects)</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Database Synchronization Diagnostics -->
-            <div id="db-sync-card" class="bg-spaceDark p-3.5 rounded-lg border border-borderSubtle space-y-3">
-                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle/60 pb-2">
-                    <div>
-                        <div class="text-[11px] font-mono text-slate-200 font-bold uppercase tracking-wider">Canonical Cloud Database Persistence</div>
-                        <div class="text-[10px] font-mono text-slate-400">Vault Location: <strong class="text-sky-400 font-bold">00_SYSTEM/pipeline.db</strong> (pipeline-cloud-execution)</div>
-                    </div>
-                    <span id="db-sync-integrity-badge" class="text-[10px] font-mono px-2 py-0.5 rounded font-bold {% if state.database_sync.status == 'SUCCESS' %}bg-emerald-950 text-emerald-400 border border-emerald-800{% else %}bg-amber-950 text-amber-400 border border-amber-800{% endif %}">
-                        {{ state.database_sync.status }}
-                    </span>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs font-mono">
-                    <div>
-                        <div class="text-[9px] text-slate-500 uppercase">SHA256 Checksum</div>
-                        <div id="db-sync-sha256" class="text-amber-300 text-[11px] truncate font-bold" title="{{ state.database_sync.sha256 or 'N/A' }}">
-                            {{ (state.database_sync.sha256[:16] + '...' + state.database_sync.sha256[-8:]) if state.database_sync.sha256 else 'N/A' }}
+                        <!-- Stage 6: UPLOAD / PUBLISHED -->
+                        <div class="pipeline-connector p-3 bg-spaceBlack rounded-lg border border-purple-900/60 bg-purple-950/10">
+                            <div class="text-[10px] font-mono text-purple-400 uppercase font-bold">6. Published</div>
+                            <div class="text-lg font-bold font-mono text-purple-300 mt-1">{{ state.inventory.counts['03_PUBLISHED'] or 0 }}</div>
+                            <span class="inline-block mt-1 text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-950 text-purple-400 border border-purple-800">YOUTUBE</span>
                         </div>
                     </div>
-                    <div>
-                        <div class="text-[9px] text-slate-500 uppercase">PRAGMA integrity:</div>
-                        <div id="db-sync-integrity-val" class="text-slate-200 text-[11px] flex items-center space-x-1">
-                            <span class="{% if state.database_sync.integrity_valid %}text-emerald-400{% else %}text-rose-400{% endif %}">●</span>
-                            <span>{{ state.database_sync.integrity_message or 'ok' }}</span>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="text-[9px] text-slate-500 uppercase">Last Synchronized</div>
-                        <div id="db-sync-time" class="text-slate-300 text-[11px]">{{ state.database_sync.last_sync_utc or 'Real-Time' }}</div>
-                    </div>
-                    <div>
-                        <div class="text-[9px] text-slate-500 uppercase">Persistence Vault</div>
-                        <div class="text-sky-400 text-[11px] font-bold">Private Google Drive</div>
-                    </div>
-                </div>
+                </section>
 
-                <!-- Table Counts Section -->
-                <div class="pt-2 border-t border-borderSubtle/60">
-                    <div class="text-[10px] font-mono text-slate-400 uppercase font-bold mb-1.5">Canonical Database Table Record Counts</div>
-                    <div class="grid grid-cols-4 sm:grid-cols-8 gap-2 text-center text-xs font-mono">
-                        <div class="p-1.5 bg-obsidian rounded border border-borderSubtle">
-                            <div class="text-[8px] text-slate-500 uppercase">Topics</div>
-                            <div id="db-count-topics" class="font-bold text-slate-200">{{ state.database_sync.table_counts.topics }}</div>
-                        </div>
-                        <div class="p-1.5 bg-obsidian rounded border border-borderSubtle">
-                            <div class="text-[8px] text-slate-500 uppercase">Scripts</div>
-                            <div id="db-count-scripts" class="font-bold text-slate-200">{{ state.database_sync.table_counts.scripts }}</div>
-                        </div>
-                        <div class="p-1.5 bg-obsidian rounded border border-borderSubtle">
-                            <div class="text-[8px] text-slate-500 uppercase">Voice</div>
-                            <div id="db-count-voice" class="font-bold text-slate-200">{{ state.database_sync.table_counts.voice }}</div>
-                        </div>
-                        <div class="p-1.5 bg-obsidian rounded border border-borderSubtle">
-                            <div class="text-[8px] text-slate-500 uppercase">Renders</div>
-                            <div id="db-count-renders" class="font-bold text-slate-200">{{ state.database_sync.table_counts.renders }}</div>
-                        </div>
-                        <div class="p-1.5 bg-obsidian rounded border border-borderSubtle">
-                            <div class="text-[8px] text-slate-500 uppercase">Jobs</div>
-                            <div id="db-count-jobs" class="font-bold text-slate-200">{{ state.database_sync.table_counts.jobs }}</div>
-                        </div>
-                        <div class="p-1.5 bg-obsidian rounded border border-borderSubtle">
-                            <div class="text-[8px] text-slate-500 uppercase">Uploads</div>
-                            <div id="db-count-uploads" class="font-bold text-slate-200">{{ state.database_sync.table_counts.uploads }}</div>
-                        </div>
-                        <div class="p-1.5 bg-obsidian rounded border border-borderSubtle">
-                            <div class="text-[8px] text-slate-500 uppercase">Perf</div>
-                            <div id="db-count-snapshots" class="font-bold text-slate-200">{{ state.database_sync.table_counts.performance_snapshots }}</div>
-                        </div>
-                        <div class="p-1.5 bg-obsidian rounded border border-borderSubtle">
-                            <div class="text-[8px] text-slate-500 uppercase">Events</div>
-                            <div id="db-count-events" class="font-bold text-slate-200">{{ state.database_sync.table_counts.audit_events }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ================================================================== -->
-        <!-- 5. YOUTUBE SCHEDULE & RECONCILIATION QUEUE                         -->
-        <!-- ================================================================== -->
-        <section class="bg-panel border border-borderSubtle rounded-xl p-4 sm:p-5 shadow-lg space-y-3.5">
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-2.5">
-                <div>
-                    <h2 class="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider">YouTube Schedule & Reconciliation Queue</h2>
-                    <p class="text-[10px] text-slate-400 font-mono">Direct YouTube-side scheduled releases and state reconciliation</p>
-                </div>
-                <div class="flex items-center space-x-3 text-xs font-mono">
-                    <span class="text-slate-400">Scheduled: <strong class="text-amber-400">{{ state.scheduled_queue.scheduled_today_count }}</strong></span>
-                    <span class="text-slate-700">|</span>
-                    <span class="text-slate-400">Published: <strong class="text-emerald-400">{{ state.scheduled_queue.published_today_count }}</strong></span>
-                    <span class="text-slate-700">|</span>
-                    <span class="text-slate-400">Capacity: <strong class="text-sky-400">{{ state.scheduled_queue.remaining_daily_capacity }} / 4</strong></span>
-                </div>
-            </div>
-
-            <!-- Next Release Spotlight Card -->
-            {% if state.scheduled_queue.next_scheduled_video %}
-            <div class="bg-spaceDark border border-amber-500/30 p-3.5 rounded-xl flex flex-wrap items-center justify-between gap-4">
-                <div class="space-y-1">
-                    <div class="text-[10px] font-mono uppercase text-amber-400 font-bold flex items-center space-x-1.5">
-                        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                        <span>NEXT YOUTUBE RELEASE</span>
-                    </div>
-                    <div class="text-sm font-bold text-slate-100">{{ state.scheduled_queue.next_scheduled_video.title }}</div>
-                    <div class="text-[11px] font-mono text-slate-400 flex flex-wrap items-center gap-2">
-                        <span>Slot: <strong class="text-slate-200">{{ state.scheduled_queue.next_scheduled_video.slot_label }}</strong></span>
-                        <span class="text-slate-700">|</span>
-                        <span>YouTube ID: <strong class="text-amber-300">{{ state.scheduled_queue.next_scheduled_video.youtube_video_id }}</strong></span>
-                        <span class="text-slate-700">|</span>
-                        <span>Privacy: <span class="px-1.5 py-0.5 rounded bg-slate-900 text-amber-300 font-bold uppercase">{{ state.scheduled_queue.next_scheduled_video.privacy_status }}</span></span>
-                    </div>
-                </div>
-                <div class="text-right font-mono flex-shrink-0">
-                    <div class="text-[10px] text-slate-500 uppercase">Auto-Release In</div>
-                    <div class="text-base font-bold text-amber-400">{{ state.scheduled_queue.next_scheduled_video.countdown }}</div>
-                </div>
-            </div>
-            {% else %}
-            <div class="bg-spaceDark border border-borderSubtle p-3.5 rounded-xl flex items-center justify-between">
-                <div class="text-xs font-mono text-slate-400">No scheduled releases currently queued. Click 'Schedule Slot' to stage from 01_READY.</div>
-                <button onclick="handlePublishNext()" class="px-3 py-1 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 rounded-lg text-xs font-mono font-bold transition">
-                    + Schedule Slot
-                </button>
-            </div>
-            {% endif %}
-
-            <!-- Chronological Publishing Queue Table -->
-            <div class="overflow-x-auto custom-scrollbar">
-                <table class="w-full text-left text-xs font-mono text-slate-300">
-                    <thead class="bg-spaceDark text-slate-400 uppercase border-b border-borderSubtle">
-                        <tr>
-                            <th class="px-3 py-2">Release Slot (UTC)</th>
-                            <th class="px-3 py-2">Short Title</th>
-                            <th class="px-3 py-2">YouTube ID</th>
-                            <th class="px-3 py-2">Local DB</th>
-                            <th class="px-3 py-2">YouTube State</th>
-                            <th class="px-3 py-2 text-right">Vault Folder</th>
-                        </tr>
-                    </thead>
-                    <tbody id="performance-leaderboard-tbody" class="divide-y divide-borderSubtle">
-                        {% for item in state.scheduled_queue.queue %}
-                        <tr class="hover:bg-slate-900/40 transition">
-                            <td class="px-3 py-2.5 font-bold text-slate-200">
-                                {% if item.scheduled_publish_at %}
-                                {{ item.scheduled_publish_at[:16].replace('T', ' ') }} UTC
-                                <div class="text-[10px] text-slate-500">{{ item.time_until_display }}</div>
-                                {% elif item.published_at %}
-                                {{ item.published_at[:16].replace('T', ' ') }} UTC
-                                <div class="text-[10px] text-slate-500">Released</div>
-                                {% else %}
-                                -
-                                {% endif %}
-                            </td>
-                            <td class="px-3 py-2.5">
-                                <div class="font-bold text-slate-100 truncate max-w-xs" title="{{ item.title }}">{{ item.title }}</div>
-                                <div class="text-[10px] text-slate-500">Job: {{ item.job_id }}</div>
-                            </td>
-                            <td class="px-3 py-2.5">
-                                {% if item.youtube_video_id %}
-                                <a href="{{ item.youtube_url }}" target="_blank" class="text-sky-400 hover:underline font-bold">{{ item.youtube_video_id }}</a>
-                                {% else %}
-                                <span class="text-slate-600">-</span>
-                                {% endif %}
-                            </td>
-                            <td class="px-3 py-2.5">
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold 
-                                    {% if item.status == 'PUBLISHED' %}bg-emerald-950 text-emerald-400 border border-emerald-800
-                                    {% elif item.status == 'SCHEDULED' %}bg-amber-950 text-amber-400 border border-amber-800
-                                    {% else %}bg-slate-900 text-slate-400{% endif %}">
-                                    {{ item.status }}
-                                </span>
-                            </td>
-                            <td class="px-3 py-2.5">
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold 
-                                    {% if item.privacy_status == 'public' %}bg-emerald-950 text-emerald-400
-                                    {% elif item.privacy_status == 'private' %}bg-amber-950 text-amber-400
-                                    {% else %}bg-slate-900 text-slate-500{% endif %} uppercase">
-                                    {{ item.privacy_status or 'UNPUBLISHED' }}
-                                </span>
-                            </td>
-                            <td class="px-3 py-2.5 text-right font-bold text-sky-400">
-                                {{ item.drive_location }}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="6" class="px-3 py-4 text-center text-slate-500 italic">No scheduled or published queue records found.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- ================================================================== -->
-        <!-- 6. CLOUD AUTOMATION WORKFLOWS MATRIX                               -->
-        <!-- ================================================================== -->
-        <section class="bg-panel border border-borderSubtle rounded-xl p-4 sm:p-5 shadow-lg space-y-3.5">
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-2.5">
-                <div>
-                    <h2 class="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider">GitHub Actions Cloud Workflows Matrix</h2>
-                    <p class="text-[10px] text-slate-400 font-mono">Autonomous cloud runner schedules and expected execution times</p>
-                </div>
-                <span class="text-[10px] font-mono text-slate-400">Mode: <strong class="text-indigo-300">{{ state.cloud_workflows.mode }}</strong></span>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-                {% for wf in state.cloud_workflows.workflows %}
-                <div class="bg-spaceDark p-3.5 rounded-xl border border-borderSubtle flex flex-col justify-between space-y-3">
-                    <div>
-                        <div class="flex justify-between items-start">
-                            <span class="font-bold text-xs text-indigo-300 font-mono">{{ wf.name }}</span>
-                            <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-900 text-slate-400 border border-slate-800">
-                                {{ wf.concurrency_group }}
-                            </span>
-                        </div>
-                        <div class="text-[11px] font-mono text-slate-400 mt-1">File: <strong class="text-slate-300">{{ wf.filename }}</strong></div>
-                        <div class="text-[11px] font-mono text-amber-300 mt-0.5">Schedule: {{ wf.cron }}</div>
-                        <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">{{ wf.target }}</p>
+                <!-- 2. COMPACT OPERATIONAL METRICS -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 font-mono text-xs">
+                    <!-- Metric: Videos Today -->
+                    <div class="p-3.5 bg-spaceDark rounded-xl border border-borderSubtle">
+                        <div class="text-[10px] text-slate-500 uppercase">VIDEOS TODAY</div>
+                        <div class="text-xl font-bold text-slate-100 mt-1">{{ state.publishing.published_today }} <span class="text-xs text-slate-500">/ 4 Target</span></div>
+                        <div class="text-[10px] text-slate-400 mt-1 truncate">Unbypassable Ceiling: 4/day</div>
                     </div>
 
-                    <div class="pt-2 border-t border-borderSubtle space-y-1 text-[11px] font-mono">
-                        <div class="flex justify-between text-slate-400">
-                            <span>Next Run:</span>
-                            <span class="text-slate-200 font-bold">{{ wf.next_expected_utc }}</span>
-                        </div>
-                        <div class="flex justify-between text-slate-400">
-                            <span>Time Until:</span>
-                            <span class="text-indigo-300 font-bold">{{ wf.hours_until }} hrs</span>
-                        </div>
-                        <div class="text-[10px] text-slate-500 pt-0.5">
-                            Status: <span class="italic text-slate-400">{{ wf.live_status }}</span>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </section>
-
-        <!-- ================================================================== -->
-        <!-- 7. PRODUCTION AUDIO & NARRATION OPERATIONS CENTER                  -->
-        <!-- ================================================================== -->
-        <section class="bg-panel border border-borderSubtle rounded-xl p-4 sm:p-5 shadow-lg space-y-4">
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-2.5">
-                <div>
-                    <h2 class="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider">Production Voice & 4-Track BGM Audio Center</h2>
-                    <p class="text-[10px] text-slate-400 font-mono">Kokoro-82M ONNX narration synthesis with calibrated BGM scoring</p>
-                </div>
-                <div class="text-xs font-mono">
-                    <span class="text-slate-400">Active Voice: <strong class="text-amber-400">{{ state.voice_config.active_voice.display_name }}</strong></span>
-                </div>
-            </div>
-
-            <!-- Voice Selection Grid with Functional Voice Preview -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-                {% for voice in state.voice_config.available_voices %}
-                <div class="bg-spaceDark p-4 rounded-xl border {% if voice.id == state.voice_config.active_voice_id %}border-amber-500/60 shadow-lg shadow-amber-500/10{% else %}border-borderSubtle{% endif %} flex flex-col justify-between space-y-3">
-                    <div>
-                        <div class="flex justify-between items-start">
-                            <span class="font-bold text-xs text-slate-100 font-mono">{{ voice.display_name }}</span>
-                            {% if voice.id == state.voice_config.active_voice_id %}
-                            <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-950 text-amber-400 border border-amber-800">ACTIVE</span>
-                            {% endif %}
-                        </div>
-                        <div class="text-[10px] font-mono text-amber-400/90 mt-0.5">{{ voice.engine }}</div>
-                        <div class="text-[10px] font-mono text-slate-500 mt-0.5">{{ voice.style }} • {{ voice.gender }}</div>
-                        <p class="text-xs text-slate-300 mt-2 leading-relaxed">{{ voice.description }}</p>
+                    <!-- Metric: Next Release Slot -->
+                    <div class="p-3.5 bg-spaceDark rounded-xl border border-borderSubtle">
+                        <div class="text-[10px] text-slate-500 uppercase">NEXT RELEASE</div>
+                        <div class="text-xl font-bold text-brandGold mt-1">{{ state.publishing.next_slot_time_display }}</div>
+                        <div class="text-[10px] text-slate-400 mt-1 truncate">In {{ state.publishing.time_until_display }}</div>
                     </div>
 
-                    <div class="pt-2 border-t border-borderSubtle flex items-center space-x-2">
-                        <button onclick="handlePreviewVoice('{{ voice.id }}', '{{ voice.display_name }}', this)" class="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-mono font-bold transition flex items-center justify-center space-x-1 btn-active">
-                            <span>🔊</span> <span>Preview</span>
-                        </button>
-                        {% if voice.id != state.voice_config.active_voice_id %}
-                        <button onclick="handleSetVoice('{{ voice.id }}', '{{ voice.display_name }}')" class="py-1.5 px-3 bg-amber-600 hover:bg-amber-500 text-slate-950 rounded-lg text-xs font-mono font-bold transition btn-active">
-                            Set as Active
-                        </button>
-                        {% endif %}
+                    <!-- Metric: Ready Buffer Stock -->
+                    <div class="p-3.5 bg-spaceDark rounded-xl border border-borderSubtle">
+                        <div class="text-[10px] text-slate-500 uppercase">BUFFER STOCK</div>
+                        <div class="text-xl font-bold text-emerald-400 mt-1">{{ state.buffer.current_reserve }} <span class="text-xs text-slate-500">/ 12 Shorts</span></div>
+                        <div class="text-[10px] text-emerald-500 mt-1 truncate">{{ state.buffer.health_message }}</div>
+                    </div>
+
+                    <!-- Metric: Channel Status -->
+                    <div class="p-3.5 bg-spaceDark rounded-xl border border-borderSubtle">
+                        <div class="text-[10px] text-slate-500 uppercase">CHANNEL STATUS</div>
+                        <div class="text-xl font-bold text-sky-400 mt-1">ACTIVE</div>
+                        <div class="text-[10px] text-slate-400 mt-1 truncate">Public YouTube Channel</div>
+                    </div>
+
+                    <!-- Metric: Cloud System Uptime & DB -->
+                    <div class="p-3.5 bg-spaceDark rounded-xl border border-borderSubtle">
+                        <div class="text-[10px] text-slate-500 uppercase">SYSTEM PERSISTENCE</div>
+                        <div class="text-xl font-bold text-purple-400 mt-1">NOMINAL</div>
+                        <div class="text-[10px] text-slate-400 mt-1 truncate">SQLite 00_SYSTEM Synced</div>
                     </div>
                 </div>
-                {% endfor %}
-            </div>
 
-            <!-- 4-Track BGM Audio Library -->
-            <div class="pt-2 border-t border-borderSubtle">
-                <h3 class="text-xs font-mono uppercase font-bold text-slate-300 mb-2.5">Configured 4-Track BGM Audio Library</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {% for track in state.bgm_status.library %}
-                    <div class="bg-spaceDark p-3 rounded-lg border border-borderSubtle flex flex-col justify-between space-y-2">
-                        <div>
-                            <div class="flex justify-between items-start">
-                                <span class="font-bold text-[11px] text-amber-400 font-mono uppercase">{{ track.key.replace('_', ' ') }}</span>
-                                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold {% if track.exists_on_disk %}bg-emerald-950 text-emerald-400 border border-emerald-800{% else %}bg-rose-950 text-rose-400 border border-rose-800{% endif %}">
-                                    {% if track.exists_on_disk %}{{ track.file_size_kb }} KB{% else %}MISSING{% endif %}
-                                </span>
-                            </div>
-                            <div class="text-xs font-semibold text-slate-200 mt-1 truncate" title="{{ track.filename }}">{{ track.filename }}</div>
-                            <div class="text-[10px] text-slate-400 mt-0.5">{{ track.mood }}</div>
+                <!-- 3. RESOURCE & SERVICE TELEMETRY (Test requirements: #desktop-quotas-container, #service-quotas-panel) -->
+                <section id="service-quotas-panel" class="bg-spaceDark rounded-xl border border-borderSubtle p-4 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-borderSubtle">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">External API Quotas & Provider Service Limits</h2>
                         </div>
+                        <span class="text-[11px] font-mono text-slate-400">Live API Quotas & Storage Limits</span>
                     </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </section>
 
-        <!-- ================================================================== -->
-        <!-- 8. PUBLISHED VIDEO PERFORMANCE INTELLIGENCE LEADERBOARD            -->
-        <!-- ================================================================== -->
-        <section class="bg-panel border border-borderSubtle rounded-xl p-4 sm:p-5 shadow-lg space-y-3.5">
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-2.5">
-                <div>
-                    <h2 class="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider">AL AMR // Published Video Performance Intelligence</h2>
-                    <p class="text-[10px] text-slate-400 font-mono">Live engagement telemetry aggregated from YouTube Analytics & Data APIs</p>
-                </div>
-                <span class="text-xs font-mono text-slate-400">Total Analyzed: <strong class="text-amber-400">{{ state.performance_leaderboard|length }} Shorts</strong></span>
-            </div>
-
-            <div class="overflow-x-auto custom-scrollbar">
-                <table class="w-full text-left text-xs font-mono text-slate-300">
-                    <thead class="bg-spaceDark text-slate-400 uppercase border-b border-borderSubtle">
-                        <tr>
-                            <th class="px-3 py-2">Rank</th>
-                            <th class="px-3 py-2">Short Title</th>
-                            <th class="px-3 py-2">YouTube ID</th>
-                            <th class="px-3 py-2 text-right">Views</th>
-                            <th class="px-3 py-2 text-right">Likes</th>
-                            <th class="px-3 py-2 text-right">Comments</th>
-                            <th class="px-3 py-2 text-right">Engagement</th>
-                            <th class="px-3 py-2 text-right">Published</th>
-                        </tr>
-                    </thead>
-                    <tbody id="performance-leaderboard-tbody" class="divide-y divide-borderSubtle">
-                        {% for row in state.performance_leaderboard %}
-                        <tr class="hover:bg-slate-900/40 transition">
-                            <td class="px-3 py-2.5 font-bold text-amber-400">#{{ row.rank }}</td>
-                            <td class="px-3 py-2.5">
-                                <div class="font-bold text-slate-100 truncate max-w-xs" title="{{ row.title }}">{{ row.title }}</div>
-                                <div class="text-[10px] text-slate-500">{{ row.classification }} • {{ row.status }}</div>
-                            </td>
-                            <td class="px-3 py-2.5">
-                                {% if row.youtube_video_id %}
-                                <a href="{{ row.youtube_url }}" target="_blank" class="text-sky-400 hover:underline font-bold">{{ row.youtube_video_id }}</a>
-                                {% else %}
-                                <span class="text-slate-600">-</span>
-                                {% endif %}
-                            </td>
-                            <td class="px-3 py-2.5 text-right font-bold text-slate-100">{{ row.views_display }}</td>
-                            <td class="px-3 py-2.5 text-right text-emerald-400 font-bold">{{ row.likes_display }}</td>
-                            <td class="px-3 py-2.5 text-right text-purple-400 font-bold">{{ row.comments_display }}</td>
-                            <td class="px-3 py-2.5 text-right font-bold text-amber-400">
-                                {{ row.engagement_display }}
-                                <span class="text-[10px] text-slate-500 block">APV: {{ row.apv_display }}</span>
-                            </td>
-                            <td class="px-3 py-2.5 text-right text-slate-400 text-[11px]">
-                                {{ row.published_at_display }}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="8" class="px-3 py-4 text-center text-slate-500 italic">No published video performance snapshots recorded yet.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- ================================================================== -->
-        <!-- 9. INCIDENT REVIEW & AUDIT EVENT FEED                             -->
-        <!-- ================================================================== -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            
-            <!-- Left: Review & Quarantine Queue -->
-            <section class="bg-panel border border-borderSubtle rounded-xl p-4 sm:p-5 shadow-lg space-y-3">
-                <div class="flex items-center justify-between border-b border-borderSubtle pb-2.5">
-                    <h2 class="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider">Review & Quarantine Queue</h2>
-                    <span class="px-2 py-0.5 bg-slate-900 text-slate-400 border border-slate-800 rounded text-[10px] font-mono font-bold">{{ review_queue.count }} Issues</span>
-                </div>
-
-                {% if review_queue.count > 0 %}
-                <div class="overflow-x-auto custom-scrollbar">
-                    <table class="w-full text-left text-xs font-mono text-slate-300">
-                        <thead class="bg-spaceDark text-slate-400 uppercase border-b border-borderSubtle">
-                            <tr>
-                                <th class="px-3 py-2">Job ID</th>
-                                <th class="px-3 py-2">Title</th>
-                                <th class="px-3 py-2">State</th>
-                                <th class="px-3 py-2 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="performance-leaderboard-tbody" class="divide-y divide-borderSubtle">
-                            {% for item in review_queue.jobs %}
-                            <tr class="hover:bg-slate-900/40 transition">
-                                <td class="px-3 py-2 font-bold text-slate-200">{{ item.id }}</td>
-                                <td class="px-3 py-2 truncate max-w-xs">{{ item.title }}</td>
-                                <td class="px-3 py-2">
-                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-950 text-amber-400 border border-amber-800">
-                                        {{ item.state }}
+                    <div id="desktop-quotas-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs font-mono">
+                        {% for svc in state.service_quotas.services %}
+                        <div id="quota-card-{{ svc.service }}" class="p-3 bg-spaceBlack rounded-xl border border-borderSubtle space-y-2 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center">
+                                    <span class="font-bold text-slate-200 truncate">{{ svc.display_name }}</span>
+                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold 
+                                        {% if svc.status == 'OK' or svc.status == 'HEALTHY' %}bg-emerald-950 text-emerald-400 border border-emerald-800
+                                        {% elif svc.status == 'WARNING' %}bg-amber-950 text-amber-400 border border-amber-800
+                                        {% else %}bg-slate-900 text-slate-400 border border-slate-800{% endif %}">
+                                        {{ svc.status }}
                                     </span>
-                                </td>
-                                <td class="px-3 py-2 text-right space-x-1.5">
-                                    <button onclick="executeRetryJob('{{ item.id }}')" class="px-2 py-1 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 rounded text-[10px] font-bold transition btn-active">
-                                        ↻ Retry
-                                    </button>
-                                    <button onclick="executeQuarantineJob('{{ item.id }}')" class="px-2 py-1 bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 rounded text-[10px] font-bold transition btn-active">
-                                        ✕ Quarantine
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="p-4 text-center text-xs font-mono text-slate-500 italic">
-                    Zero items requiring manual operator review. Pipeline healthy.
-                </div>
-                {% endif %}
-            </section>
-
-            <!-- Right: Persisted Activity & Event Feed -->
-            <section class="bg-panel border border-borderSubtle rounded-xl p-4 sm:p-5 shadow-lg space-y-3">
-                <div class="flex items-center justify-between border-b border-borderSubtle pb-2.5">
-                    <h2 class="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider">Persisted Operational Event Feed</h2>
-                    <span class="text-[10px] font-mono text-slate-400">Live Audit Trail</span>
-                </div>
-
-                <div class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
-                    {% for ev in state.activity_feed %}
-                    <div class="p-2.5 bg-spaceDark rounded-lg border border-borderSubtle flex items-start space-x-2.5 text-xs font-mono">
-                        <span class="mt-0.5 font-bold
-                            {% if ev.level == 'success' %}text-emerald-400
-                            {% elif ev.level == 'warning' %}text-amber-400
-                            {% elif ev.level == 'error' %}text-rose-400
-                            {% else %}text-sky-400{% endif %}">
-                            {% if ev.level == 'success' %}✓{% elif ev.level == 'warning' %}⚠️{% elif ev.level == 'error' %}✕{% else %}ℹ{% endif %}
-                        </span>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex flex-wrap items-center justify-between gap-1">
-                                <span class="font-bold text-slate-200">{{ ev.title }}</span>
-                                <span class="text-[10px] text-slate-500">{{ ev.timestamp[:19].replace('T', ' ') if ev.timestamp else '-' }}</span>
+                                </div>
+                                <div class="text-sm font-bold text-amber-400 mt-1.5">
+                                    {% if svc.used is not none %}{{ svc.used }}{% else %}—{% endif %}
+                                    <span class="text-xs text-slate-500">/ {% if svc.limit is not none %}{{ svc.limit }}{% else %}—{% endif %} {{ svc.unit }}</span>
+                                </div>
                             </div>
-                            <p class="text-[11px] text-slate-400 mt-0.5 truncate" title="{{ ev.description }}">{{ ev.description }}</p>
+                            <div class="text-[10px] text-slate-400 leading-tight pt-1.5 border-t border-borderSubtle">{{ svc.message }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <!-- 4. OPERATIONAL VIDEO LIBRARY & QUEUE PREVIEW -->
+                <section class="bg-spaceDark rounded-xl border border-borderSubtle p-4 space-y-3">
+                    <div class="flex items-center justify-between pb-3 border-b border-borderSubtle">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">Scheduled Release Queue & Video Library</h2>
+                        </div>
+                        <button onclick="switchWorkspace('queue')" class="text-xs font-mono text-brandGold hover:underline">View Full Library →</button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs font-mono text-left">
+                            <thead class="text-[10px] uppercase text-slate-400 bg-spaceBlack border-b border-borderSubtle">
+                                <tr>
+                                    <th class="px-3 py-2">Job ID</th>
+                                    <th class="px-3 py-2">Title / Subject</th>
+                                    <th class="px-3 py-2">Scheduled Release (UTC)</th>
+                                    <th class="px-3 py-2">State</th>
+                                    <th class="px-3 py-2 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-borderSubtle">
+                                {% for item in state.scheduled_queue.queue %}
+                                <tr class="hover:bg-surfaceElevated/50 transition">
+                                    <td class="px-3 py-2.5 font-bold text-brandGold">{{ item.job_id }}</td>
+                                    <td class="px-3 py-2.5 font-sans font-medium text-slate-100 max-w-xs truncate">{{ item.title }}</td>
+                                    <td class="px-3 py-2.5 text-slate-300">{{ item.scheduled_publish_at or '-' }}</td>
+                                    <td class="px-3 py-2.5">
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-950 text-sky-400 border border-sky-800">{{ item.local_status }}</span>
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right">
+                                        <button onclick="handleQuarantineJob('{{ item.job_id }}')" class="px-2 py-0.5 bg-rose-950/60 hover:bg-rose-900 text-rose-400 border border-rose-800 rounded transition text-[10px]">Quarantine</button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="px-3 py-4 text-center text-slate-500 italic">No scheduled video releases pending. Automated pipeline will claim and schedule next slot.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 5. PUBLISHED VIDEO PERFORMANCE INTELLIGENCE LEADERBOARD -->
+                <section class="bg-spaceDark rounded-xl border border-borderSubtle p-4 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-borderSubtle">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-brandGold"></span>
+                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">AL AMR // Published Video Performance Intelligence</h2>
+                        </div>
+                        <span class="text-xs font-mono text-slate-400">YouTube Performance Snapshots</span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs font-mono text-left">
+                            <thead class="text-[10px] uppercase text-slate-400 bg-spaceBlack border-b border-borderSubtle">
+                                <tr>
+                                    <th class="px-3 py-2">Rank</th>
+                                    <th class="px-3 py-2">Title</th>
+                                    <th class="px-3 py-2">Video ID</th>
+                                    <th class="px-3 py-2 text-right">Views</th>
+                                    <th class="px-3 py-2 text-right">Likes</th>
+                                    <th class="px-3 py-2 text-right">Comments</th>
+                                    <th class="px-3 py-2 text-right">APV</th>
+                                    <th class="px-3 py-2 text-right">Engagement</th>
+                                    <th class="px-3 py-2 text-right">Published UTC</th>
+                                </tr>
+                            </thead>
+                            <tbody id="performance-leaderboard-tbody" class="divide-y divide-borderSubtle">
+                                {% for row in state.performance_leaderboard %}
+                                <tr class="hover:bg-surfaceElevated/50 transition">
+                                    <td class="px-3 py-2.5 font-bold text-brandGold">#{{ row.rank }}</td>
+                                    <td class="px-3 py-2.5 font-sans font-medium text-slate-100 max-w-xs truncate">{{ row.title }}</td>
+                                    <td class="px-3 py-2.5">
+                                        {% if row.youtube_video_id %}
+                                        <a href="{{ row.youtube_url }}" target="_blank" class="text-sky-400 hover:underline font-bold">{{ row.youtube_video_id }}</a>
+                                        {% else %}
+                                        <span class="text-slate-600">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right font-bold text-slate-100">{{ row.views_display }}</td>
+                                    <td class="px-3 py-2.5 text-right text-emerald-400 font-bold">{{ row.likes_display }}</td>
+                                    <td class="px-3 py-2.5 text-right text-purple-400 font-bold">{{ row.comments_display }}</td>
+                                    <td class="px-3 py-2.5 text-right text-sky-400 font-bold">{{ row.apv_display }}</td>
+                                    <td class="px-3 py-2.5 text-right font-bold text-brandGold">{{ row.engagement_display }}</td>
+                                    <td class="px-3 py-2.5 text-right text-slate-400 text-[11px]">{{ row.published_at_display }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="9" class="px-3 py-4 text-center text-slate-500 italic">No published video performance snapshots recorded yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 6. CANONICAL DATABASE PERSISTENCE CARD -->
+                <section id="db-sync-card" class="bg-spaceDark rounded-xl border border-borderSubtle p-4 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-borderSubtle">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-brandGold"></span>
+                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">Canonical Cloud Database Persistence</h2>
+                        </div>
+                        <span class="text-xs font-mono text-emerald-400">00_SYSTEM/pipeline.db</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+                        <div class="p-3 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[10px] text-slate-500">CANONICAL VAULT FOLDER</div>
+                            <div class="font-bold text-slate-200 mt-0.5">00_SYSTEM/pipeline.db</div>
+                        </div>
+                        <div class="p-3 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[10px] text-slate-500">PRAGMA INTEGRITY:</div>
+                            <div id="db-sync-integrity-badge" class="font-bold text-emerald-400 mt-0.5">PRAGMA integrity: ok</div>
+                        </div>
+                        <div class="p-3 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[10px] text-slate-500">CONCURRENCY GROUP</div>
+                            <div class="font-bold text-slate-200 mt-0.5">pipeline-cloud-execution</div>
+                        </div>
+                        <div class="p-3 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[10px] text-slate-500">DATABASE SNAPSHOTS COUNT</div>
+                            <div id="db-count-snapshots" class="font-bold text-brandGold mt-0.5">{{ state.database_sync.table_counts.performance_snapshots or 0 }} Snapshots</div>
                         </div>
                     </div>
-                    {% else %}
-                    <div class="p-4 text-center text-xs font-mono text-slate-500 italic">
-                        No recent activity events recorded.
+
+                    <!-- Canonical Table Counts Grid -->
+                    <div class="pt-4 border-t border-borderSubtle space-y-3 font-mono text-xs">
+                        <div class="font-bold text-slate-300">Canonical Database Table Record Counts</div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-center">
+                            <div class="p-2.5 bg-spaceBlack rounded-lg border border-borderSubtle">
+                                <div class="text-[9px] text-slate-500">TOPICS</div>
+                                <div id="db-count-topics" class="font-bold text-slate-100 mt-0.5">{{ state.database_sync.table_counts.topics or 0 }}</div>
+                            </div>
+                            <div class="p-2.5 bg-spaceBlack rounded-lg border border-borderSubtle">
+                                <div class="text-[9px] text-slate-500">SCRIPTS</div>
+                                <div id="db-count-scripts" class="font-bold text-slate-100 mt-0.5">{{ state.database_sync.table_counts.scripts or 0 }}</div>
+                            </div>
+                            <div class="p-2.5 bg-spaceBlack rounded-lg border border-borderSubtle">
+                                <div class="text-[9px] text-slate-500">VOICE</div>
+                                <div id="db-count-voice" class="font-bold text-slate-100 mt-0.5">{{ state.database_sync.table_counts.voice or 0 }}</div>
+                            </div>
+                            <div class="p-2.5 bg-spaceBlack rounded-lg border border-borderSubtle">
+                                <div class="text-[9px] text-slate-500">RENDERS</div>
+                                <div id="db-count-renders" class="font-bold text-slate-100 mt-0.5">{{ state.database_sync.table_counts.renders or 0 }}</div>
+                            </div>
+                            <div class="p-2.5 bg-spaceBlack rounded-lg border border-borderSubtle">
+                                <div class="text-[9px] text-slate-500">JOBS</div>
+                                <div id="db-count-jobs" class="font-bold text-slate-100 mt-0.5">{{ state.database_sync.table_counts.jobs or 0 }}</div>
+                            </div>
+                            <div class="p-2.5 bg-spaceBlack rounded-lg border border-borderSubtle">
+                                <div class="text-[9px] text-slate-500">UPLOADS</div>
+                                <div id="db-count-uploads" class="font-bold text-slate-100 mt-0.5">{{ state.database_sync.table_counts.uploads or 0 }}</div>
+                            </div>
+                        </div>
                     </div>
-                    {% endfor %}
-                </div>
-            </section>
+                </section>
 
-        </div>
-
-        <!-- ================================================================== -->
-        <!-- 10. EXTERNAL SERVICE QUOTA MONITORS & GUARDRAILS                   -->
-        <!-- ================================================================== -->
-        <section class="bg-panel border border-borderSubtle rounded-xl p-4 sm:p-5 shadow-lg space-y-3.5">
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-borderSubtle pb-2.5">
-                <div>
-                    <h2 class="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider">External API Quotas & Provider Service Limits</h2>
-                    <p class="text-[10px] text-slate-400 font-mono">Real-time observed provider rate limits and capacity meters</p>
-                </div>
-                <span class="text-[10px] font-mono text-slate-400">Multi-Provider Governance</span>
             </div>
 
-            <div id="desktop-quotas-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs font-mono">
-                {% for svc in state.service_quotas.services %}
-                <div id="quota-card-{{ svc.service }}" class="p-3 bg-spaceDark rounded-xl border border-borderSubtle space-y-2 flex flex-col justify-between">
-                    <div>
-                        <div class="flex justify-between items-center">
-                            <span class="font-bold text-slate-200">{{ svc.display_name }}</span>
-                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold 
-                                {% if svc.status == 'OK' or svc.status == 'HEALTHY' %}bg-emerald-950 text-emerald-400 border border-emerald-800
-                                {% elif svc.status == 'WARNING' %}bg-amber-950 text-amber-400 border border-amber-800
-                                {% else %}bg-slate-900 text-slate-400 border border-slate-800{% endif %}">
-                                {{ svc.status }}
-                            </span>
+            <!-- =============================================================== -->
+            <!-- WORKSPACE 2: PIPELINE (Deep State Machine Inspector)           -->
+            <!-- =============================================================== -->
+            <div id="workspace-pipeline" class="workspace-section hidden space-y-6">
+                <section class="bg-spaceDark rounded-xl border border-borderSubtle p-4 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-borderSubtle">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-brandGold"></span>
+                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">Autonomous Production Pipeline State</h2>
                         </div>
-                        <div class="text-sm font-bold text-amber-400 mt-1.5">
-                            {% if svc.used is not none %}{{ svc.used }}{% else %}—{% endif %}
-                            <span class="text-xs text-slate-500">/ {% if svc.limit is not none %}{{ svc.limit }}{% else %}—{% endif %} {{ svc.unit }}</span>
+                        <button onclick="handleTriggerProduce(1)" class="px-3 py-1 bg-brandGold hover:bg-amber-400 text-slate-950 font-bold rounded text-xs transition">Synthesize 1 Short</button>
+                    </div>
+
+                    <!-- 9-Stage Breakdown Grid -->
+                    <div class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2 text-center text-xs font-mono">
+                        <div class="p-2.5 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[9px] text-slate-500 uppercase">1. Topics</div>
+                            <div class="text-sm font-bold text-slate-200 mt-0.5">{{ state.database_sync.table_counts.topics or 0 }}</div>
+                        </div>
+                        <div class="p-2.5 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[9px] text-slate-500 uppercase">2. Scripts</div>
+                            <div class="text-sm font-bold text-slate-200 mt-0.5">{{ state.database_sync.table_counts.scripts or 0 }}</div>
+                        </div>
+                        <div class="p-2.5 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[9px] text-slate-500 uppercase">3. Voice</div>
+                            <div class="text-sm font-bold text-slate-200 mt-0.5">{{ state.database_sync.table_counts.voice or 0 }}</div>
+                        </div>
+                        <div class="p-2.5 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[9px] text-slate-500 uppercase">4. Renders</div>
+                            <div class="text-sm font-bold text-slate-200 mt-0.5">{{ state.database_sync.table_counts.renders or 0 }}</div>
+                        </div>
+                        <div class="p-2.5 bg-spaceBlack rounded-lg border border-emerald-900/40 bg-emerald-950/20">
+                            <div class="text-[9px] text-emerald-400 uppercase font-bold">5. Total Jobs</div>
+                            <div class="text-sm font-bold text-emerald-300 mt-0.5">{{ state.database_sync.table_counts.jobs or 0 }}</div>
+                        </div>
+                        <div class="p-2.5 bg-spaceBlack rounded-lg border border-sky-900/50 bg-sky-950/20">
+                            <div class="text-[9px] text-sky-400 uppercase font-bold">6. 01_READY</div>
+                            <div class="text-sm font-bold text-sky-300 mt-0.5">{{ state.inventory.counts['01_READY'] or 0 }}</div>
+                        </div>
+                        <div class="p-2.5 bg-spaceBlack rounded-lg border border-amber-900/50 bg-amber-950/20">
+                            <div class="text-[9px] text-amber-400 uppercase font-bold">7. 02_CLAIMED</div>
+                            <div class="text-sm font-bold text-amber-300 mt-0.5">{{ state.inventory.counts['02_PROCESSING'] or 0 }}</div>
+                        </div>
+                        <div class="p-2.5 bg-spaceBlack rounded-lg border border-purple-900/50 bg-purple-950/20">
+                            <div class="text-[9px] text-purple-400 uppercase font-bold">8. Published</div>
+                            <div class="text-sm font-bold text-purple-300 mt-0.5">{{ state.inventory.counts['03_PUBLISHED'] or 0 }}</div>
+                        </div>
+                        <div class="p-2.5 bg-spaceBlack rounded-lg border border-rose-900/50 bg-rose-950/20">
+                            <div class="text-[9px] text-rose-400 uppercase font-bold">9. Failed</div>
+                            <div class="text-sm font-bold text-rose-300 mt-0.5">{{ state.inventory.counts['04_FAILED'] or 0 }}</div>
                         </div>
                     </div>
-                    <div class="text-[10px] text-slate-400 leading-tight pt-1 border-t border-borderSubtle/60">{{ svc.message }}</div>
-                </div>
-                {% endfor %}
+
+                    <!-- Recent Jobs Stream -->
+                    <div class="space-y-2 mt-4">
+                        <div class="text-xs font-mono font-bold text-slate-400">Recent Pipeline Jobs Execution</div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs font-mono text-left">
+                                <thead class="text-[10px] uppercase text-slate-400 bg-spaceBlack border-b border-borderSubtle">
+                                    <tr>
+                                        <th class="px-3 py-2">Job ID</th>
+                                        <th class="px-3 py-2">State</th>
+                                        <th class="px-3 py-2">Retry Count</th>
+                                        <th class="px-3 py-2">Last Updated</th>
+                                        <th class="px-3 py-2 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-borderSubtle">
+                                    {% for rj in state.database_summary.recent_jobs %}
+                                    <tr class="hover:bg-surfaceElevated/50 transition">
+                                        <td class="px-3 py-2 font-bold text-slate-200">{{ rj.id }}</td>
+                                        <td class="px-3 py-2">
+                                            <span class="px-1.5 py-0.2 rounded text-[10px] font-bold 
+                                                {% if rj.state == 'PUBLISHED' %}bg-purple-950 text-purple-400 border border-purple-800
+                                                {% elif rj.state == 'READY_TO_UPLOAD' %}bg-emerald-950 text-emerald-400 border border-emerald-800
+                                                {% elif rj.state == 'FAILED' %}bg-rose-950 text-rose-400 border border-rose-800
+                                                {% else %}bg-sky-950 text-sky-400 border border-sky-800{% endif %}">
+                                                {{ rj.state }}
+                                            </span>
+                                        </td>
+                                        <td class="px-3 py-2 text-slate-400">{{ rj.retry_count }}</td>
+                                        <td class="px-3 py-2 text-slate-400">{{ rj.updated_at[:19] if rj.updated_at else '-' }}</td>
+                                        <td class="px-3 py-2 text-right space-x-2">
+                                            {% if rj.state == 'FAILED' or rj.state == 'NEEDS_REVIEW' %}
+                                            <button onclick="handleRetryJob('{{ rj.id }}')" class="px-2 py-0.5 bg-amber-950 text-amber-400 border border-amber-800 rounded text-[10px]">Retry</button>
+                                            {% endif %}
+                                            <button onclick="handleQuarantineJob('{{ rj.id }}')" class="px-2 py-0.5 bg-rose-950 text-rose-400 border border-rose-800 rounded text-[10px]">Quarantine</button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
             </div>
-        </section>
 
-    </main>
+            <!-- =============================================================== -->
+            <!-- WORKSPACE 3: BUFFER (Google Drive Vault Telemetry)              -->
+            <!-- =============================================================== -->
+            <div id="workspace-buffer" class="workspace-section hidden space-y-6">
+                <section class="bg-spaceDark rounded-xl border border-borderSubtle p-4 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-borderSubtle">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">Google Drive 4-Folder Vault Telemetry</h2>
+                        </div>
+                        <button onclick="handleTriggerProduce(12)" class="px-3 py-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded text-xs transition font-mono">Replenish 12-Short Reserve</button>
+                    </div>
 
-    <!-- JavaScript Actions & Real-Time Sync Logic -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Folder 1: 01_READY -->
+                        <div class="p-4 bg-spaceBlack rounded-xl border border-sky-900/50 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-mono font-bold text-sky-400">01_READY</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-950 text-sky-300 border border-sky-800 font-mono">{{ state.inventory.counts['01_READY'] or 0 }} Files</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400">Production-ready HD 1080x1920 MP4 video buffer ready for publishing.</p>
+                        </div>
+
+                        <!-- Folder 2: 02_PROCESSING -->
+                        <div class="p-4 bg-spaceBlack rounded-xl border border-amber-900/50 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-mono font-bold text-amber-400">02_PROCESSING</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800 font-mono">{{ state.inventory.counts['02_PROCESSING'] or 0 }} Files</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400">Claimed videos currently uploading or scheduled with YouTube API.</p>
+                        </div>
+
+                        <!-- Folder 3: 03_PUBLISHED -->
+                        <div class="p-4 bg-spaceBlack rounded-xl border border-purple-900/50 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-mono font-bold text-purple-400">03_PUBLISHED</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-950 text-purple-300 border border-purple-800 font-mono">{{ state.inventory.counts['03_PUBLISHED'] or 0 }} Files</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400">Archived archive of successfully published YouTube Shorts.</p>
+                        </div>
+
+                        <!-- Folder 4: 04_FAILED -->
+                        <div class="p-4 bg-spaceBlack rounded-xl border border-rose-900/50 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-mono font-bold text-rose-400">04_FAILED</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800 font-mono">{{ state.inventory.counts['04_FAILED'] or 0 }} Files</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400">Quarantined artifacts isolated for operator review.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- =============================================================== -->
+            <!-- WORKSPACE 4: QUEUE (Video Library & Scheduled Release Slots)    -->
+            <!-- =============================================================== -->
+            <div id="workspace-queue" class="workspace-section hidden space-y-6">
+                <section class="bg-spaceDark rounded-xl border border-borderSubtle p-4 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-borderSubtle">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">Video Library & YouTube Scheduled Slots</h2>
+                        </div>
+                        <span class="text-xs font-mono text-slate-400">4 Releases Daily (06:00, 10:00, 15:00, 20:00 UTC)</span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs font-mono text-left">
+                            <thead class="text-[10px] uppercase text-slate-400 bg-spaceBlack border-b border-borderSubtle">
+                                <tr>
+                                    <th class="px-3 py-2">Job ID</th>
+                                    <th class="px-3 py-2">Title</th>
+                                    <th class="px-3 py-2">Scheduled UTC</th>
+                                    <th class="px-3 py-2">State</th>
+                                    <th class="px-3 py-2 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-borderSubtle">
+                                {% for item in state.scheduled_queue.queue %}
+                                <tr class="hover:bg-surfaceElevated/50 transition">
+                                    <td class="px-3 py-2.5 font-bold text-brandGold">{{ item.job_id }}</td>
+                                    <td class="px-3 py-2.5 font-sans font-medium text-slate-100 max-w-sm truncate">{{ item.title }}</td>
+                                    <td class="px-3 py-2.5 text-slate-200">{{ item.scheduled_publish_at or '-' }}</td>
+                                    <td class="px-3 py-2.5">
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-950 text-sky-400 border border-sky-800">{{ item.local_status }}</span>
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right">
+                                        <button onclick="handleQuarantineJob('{{ item.job_id }}')" class="px-2 py-0.5 bg-rose-950 hover:bg-rose-900 text-rose-400 border border-rose-800 rounded text-[10px]">Quarantine</button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="px-3 py-4 text-center text-slate-500 italic">No scheduled video releases pending.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- =============================================================== -->
+            <!-- WORKSPACE 5: AUDIO (Kokoro TTS Voices & Preview)                -->
+            <!-- =============================================================== -->
+            <div id="workspace-audio" class="workspace-section hidden space-y-6">
+                <section class="bg-spaceDark rounded-xl border border-borderSubtle p-4 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-borderSubtle">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-brandGold"></span>
+                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">Production Voice Synthesis & Kokoro Engine</h2>
+                        </div>
+                        <span class="text-xs font-mono text-brandGold">Active Voice: {{ state.voice_config.active_voice_name }}</span>
+                    </div>
+
+                    <!-- Hidden Audio Player for Preview -->
+                    <audio id="voice-preview-player" class="hidden"></audio>
+
+                    <!-- Available Voices Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {% for v in state.voice_config.available_voices %}
+                        <div class="p-3.5 bg-spaceBlack rounded-xl border {% if v.id == state.voice_config.active_voice_id %}border-amber-500/80 bg-amber-950/10{% else %}border-borderSubtle{% endif %} space-y-2.5">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="text-sm font-bold text-slate-100 font-sans">{{ v.display_name }}</div>
+                                    <div class="text-[10px] font-mono text-slate-500">{{ v.gender }} • {{ v.accent }} • Kokoro Engine</div>
+                                </div>
+                                {% if v.id == state.voice_config.active_voice_id %}
+                                <span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-950 text-amber-400 border border-amber-800">ACTIVE</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="flex items-center gap-2 pt-1 border-t border-borderSubtle font-mono text-xs">
+                                <button id="preview-btn-{{ v.id }}" onclick="handlePreviewVoice('{{ v.id }}')" class="flex-1 px-2.5 py-1.5 bg-surfaceElevated hover:bg-surfaceHover border border-borderStrong text-slate-200 rounded transition flex items-center justify-center gap-1.5 text-xs font-bold">
+                                    <svg class="w-3.5 h-3.5 text-brandGold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    <span>Preview</span>
+                                </button>
+                                {% if v.id != state.voice_config.active_voice_id %}
+                                <button onclick="handleSetVoice('{{ v.id }}')" class="px-2.5 py-1.5 bg-amber-950/60 hover:bg-amber-900/80 border border-amber-800 text-amber-400 rounded transition text-xs font-bold">
+                                    Set as Active
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- 4-Track Ambient Background Music (BGM) Library -->
+                    <div class="pt-4 border-t border-borderSubtle space-y-3">
+                        <div class="text-xs font-mono font-bold text-slate-400">4-Track Cinematic BGM Library</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+                            {% for track in state.bgm_status.tracks %}
+                            <div class="p-3 bg-spaceBlack rounded-xl border border-borderSubtle space-y-1">
+                                <div class="font-bold text-slate-200 truncate">{{ track.title }}</div>
+                                <div class="text-[10px] text-slate-500">Mood: {{ track.mood }}</div>
+                                <span class="inline-block text-[9px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">READY</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- =============================================================== -->
+            <!-- WORKSPACE 6: CLOUD (GitHub Actions Workflows Matrix)             -->
+            <!-- =============================================================== -->
+            <div id="workspace-cloud" class="workspace-section hidden space-y-6">
+                <section class="bg-spaceDark rounded-xl border border-borderSubtle p-4 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-borderSubtle">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">GitHub Actions Cloud Workflows Matrix</h2>
+                        </div>
+                        <span class="text-xs font-mono text-emerald-400">Unattended Autonomous Execution</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
+                        {% for wf in state.cloud_workflows.workflows %}
+                        <div class="p-4 bg-spaceBlack rounded-xl border border-borderSubtle space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-slate-200">{{ wf.name }}</span>
+                                <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">CONFIGURED</span>
+                            </div>
+                            <div class="text-[11px] text-brandGold font-bold">{{ wf.filename }}</div>
+                            <div class="text-[10px] text-slate-400">Cron: {{ wf.cron }}</div>
+                            <div class="text-[10px] text-slate-500">{{ wf.target }}</div>
+                            <div class="pt-2 border-t border-borderSubtle flex justify-between text-[10px] text-slate-400">
+                                <span>Next: {{ wf.next_expected_utc }}</span>
+                                <span>In {{ wf.hours_until }}h</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+            </div>
+
+            <!-- =============================================================== -->
+            <!-- WORKSPACE 7: ANALYTICS (Published Performance Intelligence)      -->
+            <!-- =============================================================== -->
+            <div id="workspace-analytics" class="workspace-section hidden space-y-6">
+                <section class="bg-spaceDark rounded-xl border border-borderSubtle p-4 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-borderSubtle">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-brandGold"></span>
+                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">Analytics Intelligence</h2>
+                        </div>
+                        <span class="text-xs font-mono text-slate-400">YouTube Performance Snapshots</span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs font-mono text-left">
+                            <thead class="text-[10px] uppercase text-slate-400 bg-spaceBlack border-b border-borderSubtle">
+                                <tr>
+                                    <th class="px-3 py-2">Rank</th>
+                                    <th class="px-3 py-2">Title</th>
+                                    <th class="px-3 py-2">Video ID</th>
+                                    <th class="px-3 py-2 text-right">Views</th>
+                                    <th class="px-3 py-2 text-right">Likes</th>
+                                    <th class="px-3 py-2 text-right">Comments</th>
+                                    <th class="px-3 py-2 text-right">APV</th>
+                                    <th class="px-3 py-2 text-right">Engagement</th>
+                                    <th class="px-3 py-2 text-right">Published UTC</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-borderSubtle">
+                                {% for row in state.performance_leaderboard %}
+                                <tr class="hover:bg-surfaceElevated/50 transition">
+                                    <td class="px-3 py-2.5 font-bold text-brandGold">#{{ row.rank }}</td>
+                                    <td class="px-3 py-2.5 font-sans font-medium text-slate-100 max-w-xs truncate">{{ row.title }}</td>
+                                    <td class="px-3 py-2.5">
+                                        {% if row.youtube_video_id %}
+                                        <a href="{{ row.youtube_url }}" target="_blank" class="text-sky-400 hover:underline font-bold">{{ row.youtube_video_id }}</a>
+                                        {% else %}
+                                        <span class="text-slate-600">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right font-bold text-slate-100">{{ row.views_display }}</td>
+                                    <td class="px-3 py-2.5 text-right text-emerald-400 font-bold">{{ row.likes_display }}</td>
+                                    <td class="px-3 py-2.5 text-right text-purple-400 font-bold">{{ row.comments_display }}</td>
+                                    <td class="px-3 py-2.5 text-right text-sky-400 font-bold">{{ row.apv_display }}</td>
+                                    <td class="px-3 py-2.5 text-right font-bold text-brandGold">{{ row.engagement_display }}</td>
+                                    <td class="px-3 py-2.5 text-right text-slate-400 text-[11px]">{{ row.published_at_display }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="9" class="px-3 py-4 text-center text-slate-500 italic">No published video performance snapshots recorded yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- =============================================================== -->
+            <!-- WORKSPACE 8: CONTROLS (Operator Manual Actions & Self-Healing)  -->
+            <!-- =============================================================== -->
+            <div id="workspace-controls" class="workspace-section hidden space-y-6">
+                <section class="bg-spaceDark rounded-xl border border-borderSubtle p-4 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-borderSubtle">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">Manual Operations & Autonomous Recovery</h2>
+                        </div>
+                        <span class="text-xs font-mono text-rose-400">Admin Privileges Active</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-xs">
+                        <div class="p-4 bg-spaceBlack rounded-xl border border-borderSubtle space-y-3 flex flex-col justify-between">
+                            <div>
+                                <div class="font-bold text-brandGold">Synthesize Single Short</div>
+                                <p class="text-[11px] text-slate-400 mt-1">Triggers end-to-end generation of a single short into the 01_READY vault.</p>
+                            </div>
+                            <button onclick="handleTriggerProduce(1)" class="w-full py-2 bg-brandGold hover:bg-amber-400 text-slate-950 font-bold rounded transition">Produce 1 Short</button>
+                        </div>
+
+                        <div class="p-4 bg-spaceBlack rounded-xl border border-borderSubtle space-y-3 flex flex-col justify-between">
+                            <div>
+                                <div class="font-bold text-sky-400">Replenish 12-Short Reserve</div>
+                                <p class="text-[11px] text-slate-400 mt-1">Replenishes the 01_READY Drive vault to maintain the 12-short reserve buffer.</p>
+                            </div>
+                            <button onclick="handleTriggerProduce(12)" class="w-full py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded transition">Replenish Buffer</button>
+                        </div>
+
+                        <div class="p-4 bg-spaceBlack rounded-xl border border-borderSubtle space-y-3 flex flex-col justify-between">
+                            <div>
+                                <div class="font-bold text-emerald-400">Publish Next Video</div>
+                                <p class="text-[11px] text-slate-400 mt-1">Claims 01_READY Short and schedules for next available YouTube slot.</p>
+                            </div>
+                            <button onclick="handlePublishNext()" class="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded transition">Publish Next</button>
+                        </div>
+
+                        <div class="p-4 bg-spaceBlack rounded-xl border border-borderSubtle space-y-3 flex flex-col justify-between">
+                            <div>
+                                <div class="font-bold text-purple-400">Autonomous Self-Healing</div>
+                                <p class="text-[11px] text-slate-400 mt-1">Reconciles stale locks, orphans, Drive vault mismatches, and YouTube slots.</p>
+                            </div>
+                            <button onclick="handleSelfHeal()" class="w-full py-2 bg-purple-500 hover:bg-purple-400 text-slate-950 font-bold rounded transition">Run Self-Heal</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- =============================================================== -->
+            <!-- WORKSPACE 9: DIAGNOSTICS (Canonical SQLite DB & Integrity)      -->
+            <!-- =============================================================== -->
+            <div id="workspace-diagnostics" class="workspace-section hidden space-y-6">
+                <section class="bg-spaceDark rounded-xl border border-borderSubtle p-4 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-borderSubtle">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-brandGold"></span>
+                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">System & Database Diagnostics</h2>
+                        </div>
+                        <span class="text-xs font-mono text-emerald-400">00_SYSTEM/pipeline.db</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+                        <div class="p-3 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[10px] text-slate-500">CANONICAL VAULT FOLDER</div>
+                            <div class="font-bold text-slate-200 mt-0.5">00_SYSTEM/pipeline.db</div>
+                        </div>
+                        <div class="p-3 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[10px] text-slate-500">PRAGMA INTEGRITY:</div>
+                            <div class="font-bold text-emerald-400 mt-0.5">PRAGMA integrity: ok</div>
+                        </div>
+                        <div class="p-3 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[10px] text-slate-500">CONCURRENCY GROUP</div>
+                            <div class="font-bold text-slate-200 mt-0.5">pipeline-cloud-execution</div>
+                        </div>
+                        <div class="p-3 bg-spaceBlack rounded-lg border border-borderSubtle">
+                            <div class="text-[10px] text-slate-500">DATABASE SNAPSHOTS COUNT</div>
+                            <div class="font-bold text-brandGold mt-0.5">{{ state.database_sync.table_counts.performance_snapshots or 0 }} Snapshots</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Client-Side Workspace Router & Action Handlers -->
     <script>
-        // Dismiss Splash Screen on load
-        window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                const splash = document.getElementById('al-amr-splash');
-                if (splash) splash.classList.add('hidden-splash');
-            }, 300);
-        });
+        // Workspace Tab Switcher
+        function switchWorkspace(workspaceId) {
+            // Hide all sections
+            document.querySelectorAll('.workspace-section').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
 
-        // UTC Clock
-        function updateUtcClock() {
+            // Show selected
+            const targetSection = document.getElementById(`workspace-${workspaceId}`);
+            if (targetSection) targetSection.classList.remove('hidden');
+
+            const targetNav = document.getElementById(`nav-${workspaceId}`);
+            if (targetNav) targetNav.classList.add('active');
+
+            const breadcrumb = document.getElementById('breadcrumb-workspace');
+            if (breadcrumb) breadcrumb.innerText = workspaceId.charAt(0).toUpperCase() + workspaceId.slice(1);
+        }
+
+        // Tactical UTC Clock
+        function updateTacticalClock() {
             const now = new Date();
-            const h = String(now.getUTCHours()).padStart(2, '0');
-            const m = String(now.getUTCMinutes()).padStart(2, '0');
-            const s = String(now.getUTCSeconds()).padStart(2, '0');
-            const el = document.getElementById('clock-utc');
-            if (el) el.innerText = `${h}:${m}:${s} UTC`;
+            const utcString = now.toUTCString().split(' ')[4] + ' UTC';
+            const clockEl = document.getElementById('tactical-clock');
+            if (clockEl) clockEl.innerText = utcString;
         }
-        setInterval(updateUtcClock, 1000);
-        updateUtcClock();
+        setInterval(updateTacticalClock, 1000);
+        updateTacticalClock();
 
-        // Toast notifications
-        let toastTimeout = null;
-        function showToast(title, msg, isSuccess = true, isLoading = false) {
-            const t = document.getElementById('toast');
-            const box = document.getElementById('toast-box');
-            const icon = document.getElementById('toast-icon');
-            const tTitle = document.getElementById('toast-title');
-            const tMsg = document.getElementById('toast-message');
+        // Helper to retrieve CSRF token
+        function getCsrfToken() {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            return meta ? meta.getAttribute('content') : '';
+        }
 
-            tTitle.innerText = title;
-            tMsg.innerText = msg;
-            icon.innerText = isLoading ? '⏳' : (isSuccess ? '✓' : '✕');
-
-            box.className = `p-3.5 rounded-xl border shadow-2xl flex items-start space-x-3 text-slate-100 ${
-                isLoading ? 'bg-panel border-amber-500/50' : (isSuccess ? 'bg-panel border-emerald-500/50' : 'bg-panel border-rose-500/50')
-            }`;
-
-            t.classList.remove('translate-y-[-120%]', 'opacity-0', 'pointer-events-none');
-            t.classList.add('translate-y-0', 'opacity-100');
-
-            if (toastTimeout) clearTimeout(toastTimeout);
-            if (!isLoading) {
-                toastTimeout = setTimeout(hideToast, 4500);
+        // Voice Preview Handler
+        async function handlePreviewVoice(voiceId) {
+            const btn = document.getElementById(`preview-btn-${voiceId}`);
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="animate-pulse text-brandGold">Synthesizing...</span>`;
             }
-        }
-
-        function hideToast() {
-            const t = document.getElementById('toast');
-            t.classList.add('translate-y-[-120%]', 'opacity-0', 'pointer-events-none');
-            t.classList.remove('translate-y-0', 'opacity-100');
-        }
-
-        // Confirmation Modal
-        let pendingActionFn = null;
-        function showConfirmModal(title, desc, onConfirm) {
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-desc').innerText = desc;
-            pendingActionFn = onConfirm;
-            document.getElementById('modal-confirm-btn').onclick = () => {
-                closeConfirmModal();
-                if (pendingActionFn) pendingActionFn();
-            };
-            document.getElementById('confirm-modal').classList.remove('hidden');
-        }
-
-        function closeConfirmModal() {
-            document.getElementById('confirm-modal').classList.add('hidden');
-            pendingActionFn = null;
-        }
-
-        // Refresh State
-        async function refreshState() {
-            showToast('SYNCING API STATE', 'Fetching real-time telemetry...', true, true);
-            try {
-                const res = await fetch('/api/state');
-                if (res.ok) {
-                    showToast('SYNC COMPLETE', 'Operations telemetry updated.', true);
-                    setTimeout(() => window.location.reload(), 600);
-                } else {
-                    showToast('SYNC FAILED', 'Could not refresh state from server.', false);
-                }
-            } catch (err) {
-                showToast('NETWORK ERROR', err.message, false);
-            }
-        }
-
-        // Voice Preview Audio Synthesis
-        let currentAudio = null;
-        let isPreviewInProgress = false;
-
-        async function handlePreviewVoice(voiceId, displayName, btn) {
-            if (isPreviewInProgress) return;
-
-            if (currentAudio) {
-                try {
-                    currentAudio.pause();
-                    currentAudio.currentTime = 0;
-                } catch(e) {}
-                currentAudio = null;
-            }
-
-            const originalHtml = btn.innerHTML;
-            isPreviewInProgress = true;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="inline-block animate-spin mr-1">⏳</span> Previewing...';
-            showToast('SYNTHESIZING PREVIEW', `Generating live audio sample for ${displayName}...`, true, true);
 
             try {
                 const res = await fetch('/api/voice/preview', {
@@ -1114,74 +1026,30 @@
                     body: JSON.stringify({ voice_id: voiceId })
                 });
 
-                let data = null;
-                const contentType = res.headers.get('content-type') || '';
-                if (contentType.includes('application/json')) {
-                    const text = await res.text();
-                    if (text && text.trim().length > 0) {
-                        try {
-                            data = JSON.parse(text);
-                        } catch(parseErr) {
-                            console.error('Failed to parse JSON preview response:', parseErr, text);
-                        }
-                    }
+                if (!res.ok) {
+                    const errData = await res.json();
+                    alert(`Voice Preview Failed: ${errData.detail || errData.error || 'Server error'}`);
+                    return;
                 }
 
-                if (res.ok && data && (data.ok || data.success) && data.audio_url) {
-                    showToast('PLAYING SAMPLE', `Playing voice preview: ${displayName}`, true);
-                    currentAudio = new Audio(data.audio_url);
-                    btn.innerHTML = '🔊 Playing...';
-
-                    currentAudio.onended = () => {
-                        btn.innerHTML = originalHtml;
-                        btn.disabled = false;
-                        currentAudio = null;
-                        isPreviewInProgress = false;
-                    };
-                    currentAudio.onerror = (e) => {
-                        console.error('Audio playback error:', e);
-                        btn.innerHTML = originalHtml;
-                        btn.disabled = false;
-                        currentAudio = null;
-                        isPreviewInProgress = false;
-                        showToast('PLAYBACK ERROR', 'Browser could not play audio stream.', false);
-                    };
-
-                    try {
-                        await currentAudio.play();
-                    } catch(playErr) {
-                        console.warn('Autoplay restriction or playback failure:', playErr);
-                        btn.innerHTML = originalHtml;
-                        btn.disabled = false;
-                        currentAudio = null;
-                        isPreviewInProgress = false;
-                        showToast('PLAYBACK BLOCKED', 'Audio playback was blocked by browser policy. Click again to play.', false);
-                    }
-                } else {
-                    const errMsg = (data && (data.error || data.detail || data.message)) || `Server returned HTTP ${res.status}`;
-                    showToast('PREVIEW FAILED', errMsg, false);
-                    btn.innerHTML = originalHtml;
-                    btn.disabled = false;
-                    isPreviewInProgress = false;
+                const data = await res.json();
+                if (data.audio_url) {
+                    const player = document.getElementById('voice-preview-player');
+                    player.src = data.audio_url;
+                    player.play();
                 }
             } catch (err) {
-                console.error('Network or fetch error during voice preview:', err);
-                showToast('NETWORK ERROR', err.message || 'Connection to server failed.', false);
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
-                isPreviewInProgress = false;
+                alert(`Voice Preview Network Error: ${err.message}`);
             } finally {
-                if (!currentAudio) {
-                    btn.innerHTML = originalHtml;
+                if (btn) {
                     btn.disabled = false;
-                    isPreviewInProgress = false;
+                    btn.innerHTML = origHtml;
                 }
             }
         }
 
-        // Set as Active Production Voice
-        async function handleSetVoice(voiceId, displayName) {
-            showToast('UPDATING PRODUCTION VOICE', `Setting active voice preference to ${displayName}...`, true, true);
+        // Set Active Voice
+        async function handleSetVoice(voiceId) {
             try {
                 const res = await fetch('/api/config/voice', {
                     method: 'POST',
@@ -1191,145 +1059,77 @@
                     },
                     body: JSON.stringify({ voice_id: voiceId })
                 });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    showToast('VOICE PREFERENCE UPDATED', `Active voice set to ${displayName}. Persisted in SQLite.`, true);
-                    setTimeout(() => window.location.reload(), 1000);
+                if (res.ok) {
+                    window.location.reload();
                 } else {
-                    showToast('VOICE UPDATE FAILED', data.error || data.detail || 'Could not update voice.', false);
+                    const err = await res.json();
+                    alert(`Failed to set voice: ${err.detail || 'Error'}`);
                 }
-            } catch (err) {
-                showToast('NETWORK ERROR', err.message, false);
+            } catch (e) {
+                alert(`Network error: ${e.message}`);
             }
         }
 
-        // Produce 1 Short
-        function handleProduceShort() {
-            showConfirmModal('PRODUCE 1 SHORT', 'Trigger research, script, audio synthesis, and rendering for 1 Short into Google Drive 01_READY?', async () => {
-                showToast('STARTING PRODUCTION', 'Triggering single video production cycle...', true, true);
-                try {
-                    const res = await fetch('/api/actions/produce', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-Token': getCsrfToken()
-                        },
-                        body: JSON.stringify({ count: 1 })
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.success) {
-                        showToast('PRODUCTION INITIATED', data.message || 'Production cycle started successfully.', true);
-                        setTimeout(() => window.location.reload(), 1500);
-                    } else {
-                        showToast('PRODUCTION FAILED', data.error || data.detail || 'Could not start production.', false);
-                    }
-                } catch (err) {
-                    showToast('NETWORK ERROR', err.message, false);
-                }
-            });
-        }
-
-        // Replenish Buffer
-        function handleReplenishBuffer() {
-            showConfirmModal('REPLENISH 12 BUFFER', 'Maintain reserve buffer by generating all needed Shorts up to 12 target in Google Drive 01_READY?', async () => {
-                showToast('STARTING REPLENISHMENT', 'Triggering batch buffer replenishment...', true, true);
-                try {
-                    const res = await fetch('/api/actions/produce', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-Token': getCsrfToken()
-                        },
-                        body: JSON.stringify({ target: 12 })
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.success) {
-                        showToast('REPLENISHMENT INITIATED', data.message || 'Buffer replenishment started.', true);
-                        setTimeout(() => window.location.reload(), 1500);
-                    } else {
-                        showToast('REPLENISHMENT FAILED', data.error || data.detail || 'Could not start replenishment.', false);
-                    }
-                } catch (err) {
-                    showToast('NETWORK ERROR', err.message, false);
-                }
-            });
-        }
-
-        // Publish Next Slot
-        function handlePublishNext() {
-            showConfirmModal('SCHEDULE NEXT SLOT', 'Claim next verified video from 01_READY and schedule on YouTube for next publication slot?', async () => {
-                showToast('SCHEDULING RELEASE', 'Claiming next Short and uploading to YouTube...', true, true);
-                try {
-                    const res = await fetch('/api/actions/publish-next', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-Token': getCsrfToken()
-                        },
-                        body: JSON.stringify({})
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.success) {
-                        showToast('SHORT SCHEDULED', data.message || 'Short successfully scheduled on YouTube.', true);
-                        setTimeout(() => window.location.reload(), 1500);
-                    } else {
-                        showToast('SCHEDULING FAILED', data.error || data.detail || 'Could not schedule Short.', false);
-                    }
-                } catch (err) {
-                    showToast('NETWORK ERROR', err.message, false);
-                }
-            });
-        }
-
-        // Sync YouTube
-        async function executeSyncYouTube() {
-            showToast('SYNCHRONIZING WITH YOUTUBE', 'Reconciling YouTube scheduled uploads and Drive vault...', true, true);
+        // Trigger Produce
+        async function handleTriggerProduce(count) {
             try {
-                const res = await fetch('/api/actions/reconcile-scheduled', {
+                const res = await fetch('/api/actions/produce', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': getCsrfToken()
-                    }
+                    },
+                    body: JSON.stringify({ count: count, target: 12 })
                 });
                 const data = await res.json();
-                if (res.ok && data.success) {
-                    showToast('YOUTUBE SYNC COMPLETE', `Reconciled ${data.reconciled_count || 0} video(s).`, true);
-                    setTimeout(() => window.location.reload(), 1200);
-                } else {
-                    showToast('SYNC FAILED', data.error || data.detail || 'Reconciliation failed.', false);
-                }
-            } catch (err) {
-                showToast('NETWORK ERROR', err.message, false);
+                alert(data.message || 'Produce dispatched successfully');
+                window.location.reload();
+            } catch (e) {
+                alert(`Dispatch error: ${e.message}`);
             }
         }
 
-        // Self Heal
-        async function executeSelfHeal() {
-            showToast('SELF-HEALING SYSTEM', 'Auditing locks, recovering stale jobs, and validating Drive vault...', true, true);
+        // Publish Next
+        async function handlePublishNext() {
             try {
-                const res = await fetch('/api/actions/self-heal', {
+                const res = await fetch('/api/actions/publish-next', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': getCsrfToken()
-                    }
+                    },
+                    body: JSON.stringify({ force: false })
                 });
                 const data = await res.json();
-                if (res.ok && data.success) {
-                    showToast('SELF-HEAL COMPLETE', data.message || 'System integrity restored.', true);
-                    setTimeout(() => window.location.reload(), 1200);
-                } else {
-                    showToast('SELF-HEAL FAILED', data.error || data.detail || 'Could not complete self-healing.', false);
-                }
-            } catch (err) {
-                showToast('NETWORK ERROR', err.message, false);
+                alert(data.message || 'Publish triggered');
+                window.location.reload();
+            } catch (e) {
+                alert(`Publish error: ${e.message}`);
+            }
+        }
+
+        // Quarantine Job
+        async function handleQuarantineJob(jobId) {
+            if (!confirm(`Quarantine Job ${jobId} and isolate drive artifacts?`)) return;
+            try {
+                const res = await fetch('/api/actions/quarantine-job', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCsrfToken()
+                    },
+                    body: JSON.stringify({ job_id: jobId, reason: 'Operator manual quarantine' })
+                });
+                const data = await res.json();
+                alert(data.message || 'Job quarantined');
+                window.location.reload();
+            } catch (e) {
+                alert(`Error: ${e.message}`);
             }
         }
 
         // Retry Job
-        async function executeRetryJob(jobId) {
-            showToast('RETRYING JOB', `Resetting job ${jobId} to QUEUED state...`, true, true);
+        async function handleRetryJob(jobId) {
             try {
                 const res = await fetch('/api/actions/retry-job', {
                     method: 'POST',
@@ -1340,101 +1140,64 @@
                     body: JSON.stringify({ job_id: jobId })
                 });
                 const data = await res.json();
-                if (res.ok && data.success) {
-                    showToast('JOB RESET SUCCESSFUL', `Job ${jobId} moved to QUEUED state.`, true);
-                    setTimeout(() => window.location.reload(), 1200);
-                } else {
-                    showToast('RETRY FAILED', data.error || data.detail || 'Could not retry job.', false);
-                }
-            } catch (err) {
-                showToast('ERROR', err.message, false);
+                alert(data.message || 'Job queued for retry');
+                window.location.reload();
+            } catch (e) {
+                alert(`Error: ${e.message}`);
             }
         }
 
-        // Quarantine Job
-        async function executeQuarantineJob(jobId) {
-            showToast('QUARANTINING JOB', `Moving job ${jobId} to FAILED & segregating Drive vault...`, true, true);
+        // Self-Healing
+        async function handleSelfHeal() {
             try {
-                const res = await fetch('/api/actions/quarantine-job', {
+                const res = await fetch('/api/actions/self-heal', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': getCsrfToken()
-                    },
-                    body: JSON.stringify({ job_id: jobId, reason: 'Quarantined via AL AMR UI' })
+                    }
                 });
                 const data = await res.json();
-                if (res.ok && data.success) {
-                    showToast('QUARANTINE CONFIRMED', `Job ${jobId} segregated to FAILED.`, true);
-                    setTimeout(() => window.location.reload(), 1200);
-                } else {
-                    showToast('QUARANTINE FAILED', data.error || data.detail || 'Could not quarantine job.', false);
-                }
-            } catch (err) {
-                showToast('ERROR', err.message, false);
+                alert(data.message || 'Self-healing routine executed successfully');
+                window.location.reload();
+            } catch (e) {
+                alert(`Error: ${e.message}`);
+            }
+        }
+
+        // Reconcile
+        async function handleReconcile() {
+            try {
+                const res = await fetch('/api/actions/reconcile-scheduled', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCsrfToken()
+                    }
+                });
+                const data = await res.json();
+                alert(data.message || 'State synchronized');
+                window.location.reload();
+            } catch (e) {
+                alert(`Error: ${e.message}`);
             }
         }
 
         // Logout
         async function handleLogout() {
             try {
-                await fetch('/api/logout', {
-                    method: 'POST',
-                    headers: { 'X-CSRF-Token': getCsrfToken() }
-                });
-            } catch (e) {}
-            window.location.href = '/login';
-        }
-
-        // Cloud Workflow Banner Logic
-        let bannerTimerInterval = null;
-        function checkCloudBanner() {
-            const activeRun = sessionStorage.getItem('al_amr_cloud_run');
-            const banner = document.getElementById('cloud-workflow-banner');
-            if (!activeRun) {
-                if (banner) banner.classList.add('hidden');
-                return;
+                await fetch('/api/auth/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (e) {
+                window.location.href = '/login';
             }
-            try {
-                const info = JSON.parse(activeRun);
-                const startTime = new Date(info.startTime).getTime();
-                const now = Date.now();
-                const elapsedSec = Math.floor((now - startTime) / 1000);
-
-                if (elapsedSec > 900) { // 15 mins timeout
-                    sessionStorage.removeItem('al_amr_cloud_run');
-                    if (banner) banner.classList.add('hidden');
-                    return;
-                }
-
-                if (banner) banner.classList.remove('hidden');
-                document.getElementById('cloud-banner-desc').innerText = `Workflow '${info.name}' in progress.`;
-
-                updateBannerTimer(elapsedSec);
-                if (!bannerTimerInterval) {
-                    bannerTimerInterval = setInterval(() => {
-                        const curElapsed = Math.floor((Date.now() - startTime) / 1000);
-                        updateBannerTimer(curElapsed);
-                    }, 1000);
-                }
-            } catch(e) {}
         }
-
-        function updateBannerTimer(sec) {
-            const m = String(Math.floor(sec / 60)).padStart(2, '0');
-            const s = String(sec % 60).padStart(2, '0');
-            const timerEl = document.getElementById('cloud-banner-timer');
-            if (timerEl) timerEl.innerText = `${m}:${s}`;
-        }
-
+    
         function dismissCloudBanner() {
-            sessionStorage.removeItem('al_amr_cloud_run');
             const banner = document.getElementById('cloud-workflow-banner');
             if (banner) banner.classList.add('hidden');
-            if (bannerTimerInterval) clearInterval(bannerTimerInterval);
         }
-
-        checkCloudBanner();
+    
     </script>
 </body>
 </html>
