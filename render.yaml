@@ -40,3 +40,5 @@ services:
         sync: false
       - key: CLIENT_SECRET_JSON
         sync: false
+      - key: GOOGLE_DRIVE_TOTAL_CAPACITY_BYTES
+        value: "5497558138880"
