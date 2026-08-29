@@ -229,6 +229,32 @@ class TTSEngine:
                 logger.warning(f"Kokoro preview failed: {e}")
                 temp_path.unlink(missing_ok=True)
 
+            # Fallback to Edge-TTS if Kokoro is unavailable or fails
+            logger.info(f"Kokoro preview unavailable for '{voice_id}'. Falling back to Edge-TTS preview...")
+            edge_fallback_voice = "en-US-ChristopherNeural"
+            if voice_id in ("am_michael", "bm_george", "bm_lewis"):
+                edge_fallback_voice = "en-US-EricNeural"
+            elif voice_id in ("af_bella", "bf_emma"):
+                edge_fallback_voice = "en-US-JennyNeural"
+            elif voice_id in ("af_sarah", "af_nicole", "af_sky"):
+                edge_fallback_voice = "en-US-SaraNeural"
+
+            temp_mp3_path = self.voice_dir / f"{temp_id}.mp3"
+            try:
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                success, _ = loop.run_until_complete(self._generate_edge_tts_async(text, temp_mp3_path, voice=edge_fallback_voice))
+                if success and temp_mp3_path.exists():
+                    audio_data = temp_mp3_path.read_bytes()
+                    temp_mp3_path.unlink(missing_ok=True)
+                    return True, audio_data, "audio/mp3"
+            except Exception as fb_err:
+                logger.warning(f"Edge TTS fallback preview failed: {fb_err}")
+                temp_mp3_path.unlink(missing_ok=True)
+
         return False, None, ""
 
     def generate_narration(self, db: Session, text: str, speed_multiplier: float = 1.0) -> Tuple[AssetRecord, float]:

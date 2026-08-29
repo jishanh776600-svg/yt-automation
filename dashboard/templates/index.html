@@ -1469,14 +1469,21 @@
         }
 
         let currentAudio = null;
+        let isPreviewInProgress = false;
 
         async function handlePreviewVoice(voiceId, displayName, btn) {
+            if (isPreviewInProgress) return;
+
             if (currentAudio) {
-                currentAudio.pause();
+                try {
+                    currentAudio.pause();
+                    currentAudio.currentTime = 0;
+                } catch(e) {}
                 currentAudio = null;
             }
 
             const originalHtml = btn.innerHTML;
+            isPreviewInProgress = true;
             btn.disabled = true;
             btn.innerHTML = '<span class="inline-block animate-spin mr-1">⏳</span> Previewing...';
             showToast('SYNTHESIZING PREVIEW', `Generating live audio sample for ${displayName}...`, true, true);
@@ -1490,32 +1497,69 @@
                     },
                     body: JSON.stringify({ voice_id: voiceId })
                 });
-                const data = await res.json();
-                if (res.ok && data.success && data.audio_url) {
+
+                let data = null;
+                const contentType = res.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    const text = await res.text();
+                    if (text && text.trim().length > 0) {
+                        try {
+                            data = JSON.parse(text);
+                        } catch(parseErr) {
+                            console.error('Failed to parse JSON preview response:', parseErr, text);
+                        }
+                    }
+                }
+
+                if (res.ok && data && (data.ok || data.success) && data.audio_url) {
                     showToast('PLAYING SAMPLE', `Playing voice preview: ${displayName}`, true);
                     currentAudio = new Audio(data.audio_url);
                     btn.innerHTML = '🔊 Playing...';
+
                     currentAudio.onended = () => {
                         btn.innerHTML = originalHtml;
                         btn.disabled = false;
                         currentAudio = null;
+                        isPreviewInProgress = false;
                     };
-                    currentAudio.onerror = () => {
+                    currentAudio.onerror = (e) => {
+                        console.error('Audio playback error:', e);
                         btn.innerHTML = originalHtml;
                         btn.disabled = false;
                         currentAudio = null;
+                        isPreviewInProgress = false;
                         showToast('PLAYBACK ERROR', 'Browser could not play audio stream.', false);
                     };
-                    await currentAudio.play();
+
+                    try {
+                        await currentAudio.play();
+                    } catch(playErr) {
+                        console.warn('Autoplay restriction or playback failure:', playErr);
+                        btn.innerHTML = originalHtml;
+                        btn.disabled = false;
+                        currentAudio = null;
+                        isPreviewInProgress = false;
+                        showToast('PLAYBACK BLOCKED', 'Audio playback was blocked by browser policy. Click again to play.', false);
+                    }
                 } else {
-                    showToast('PREVIEW FAILED', data.error || data.detail || 'Could not generate preview.', false);
+                    const errMsg = (data && (data.error || data.detail || data.message)) || `Server returned HTTP ${res.status}`;
+                    showToast('PREVIEW FAILED', errMsg, false);
                     btn.innerHTML = originalHtml;
                     btn.disabled = false;
+                    isPreviewInProgress = false;
                 }
             } catch (err) {
-                showToast('NETWORK ERROR', err.message, false);
+                console.error('Network or fetch error during voice preview:', err);
+                showToast('NETWORK ERROR', err.message || 'Connection to server failed.', false);
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
+                isPreviewInProgress = false;
+            } finally {
+                if (!currentAudio) {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                    isPreviewInProgress = false;
+                }
             }
         }
 

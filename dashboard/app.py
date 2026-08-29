@@ -483,26 +483,53 @@ def api_voice_preview(
     # 1. Validate voice ID exists in configured catalog
     voice_entry = next((v for v in AVAILABLE_VOICES if v["id"] == req.voice_id), None)
     if not voice_entry:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid voice ID '{req.voice_id}'. Not in configured production voices."
+        return JSONResponse(
+            status_code=400,
+            content={
+                "ok": False,
+                "success": False,
+                "detail": f"Invalid voice ID '{req.voice_id}'. Not in configured production voices.",
+                "error": f"Invalid voice ID '{req.voice_id}'. Not in configured production voices.",
+                "voice_id": req.voice_id
+            }
         )
 
-    tts = TTSEngine()
-    success, audio_bytes, mime_type = tts.generate_preview_sample(req.voice_id)
-    if not success or not audio_bytes:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to synthesize voice preview for '{req.voice_id}'."
-        )
+    try:
+        tts = TTSEngine()
+        success, audio_bytes, mime_type = tts.generate_preview_sample(req.voice_id)
+        if not success or not audio_bytes:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "ok": False,
+                    "success": False,
+                    "detail": f"Failed to synthesize voice preview for '{req.voice_id}'.",
+                    "error": f"Failed to synthesize voice preview for '{req.voice_id}'.",
+                    "voice_id": req.voice_id
+                }
+            )
 
-    b64_audio = base64.b64encode(audio_bytes).decode("utf-8")
-    return {
-        "success": True,
-        "voice_id": req.voice_id,
-        "display_name": voice_entry["display_name"],
-        "audio_url": f"data:{mime_type};base64,{b64_audio}"
-    }
+        b64_audio = base64.b64encode(audio_bytes).decode("utf-8")
+        return {
+            "ok": True,
+            "success": True,
+            "voice_id": req.voice_id,
+            "display_name": voice_entry["display_name"],
+            "format": mime_type,
+            "audio_url": f"data:{mime_type};base64,{b64_audio}"
+        }
+    except Exception as e:
+        logger.error(f"[VOICE_PREVIEW] Preview synthesis exception: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "ok": False,
+                "success": False,
+                "detail": f"Voice preview synthesis error: {str(e)}",
+                "error": f"Voice preview synthesis error: {str(e)}",
+                "voice_id": req.voice_id
+            }
+        )
 
 @app.post("/api/actions/reconcile-scheduled")
 def api_action_reconcile_scheduled(

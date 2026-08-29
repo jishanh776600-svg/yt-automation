@@ -614,13 +614,21 @@
         }
 
         // Voice Preview Audio Synthesis
+        let isMobilePreviewInProgress = false;
+
         async function previewVoice(voiceId, displayName, btn) {
+            if (isMobilePreviewInProgress) return;
+
             if (currentAudio) {
-                currentAudio.pause();
+                try {
+                    currentAudio.pause();
+                    currentAudio.currentTime = 0;
+                } catch(e) {}
                 currentAudio = null;
             }
 
             const originalText = btn.innerHTML;
+            isMobilePreviewInProgress = true;
             btn.disabled = true;
             btn.innerHTML = '⏳ Loading...';
             showToast(`Synthesizing preview for ${displayName}...`, true, '🔊');
@@ -634,32 +642,69 @@
                     },
                     body: JSON.stringify({ voice_id: voiceId })
                 });
-                const data = await res.json();
-                if (res.ok && data.success && data.audio_url) {
+
+                let data = null;
+                const contentType = res.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    const text = await res.text();
+                    if (text && text.trim().length > 0) {
+                        try {
+                            data = JSON.parse(text);
+                        } catch(parseErr) {
+                            console.error('Failed to parse JSON preview response:', parseErr, text);
+                        }
+                    }
+                }
+
+                if (res.ok && data && (data.ok || data.success) && data.audio_url) {
                     showToast(`Playing sample: ${displayName}`, true, '🔊');
                     currentAudio = new Audio(data.audio_url);
                     btn.innerHTML = '🔊 Playing...';
+
                     currentAudio.onended = () => {
                         btn.innerHTML = originalText;
                         btn.disabled = false;
                         currentAudio = null;
+                        isMobilePreviewInProgress = false;
                     };
-                    currentAudio.onerror = () => {
+                    currentAudio.onerror = (e) => {
+                        console.error('Audio playback error:', e);
                         btn.innerHTML = originalText;
                         btn.disabled = false;
                         currentAudio = null;
+                        isMobilePreviewInProgress = false;
                         showToast('Playback error in browser.', false);
                     };
-                    await currentAudio.play();
+
+                    try {
+                        await currentAudio.play();
+                    } catch(playErr) {
+                        console.warn('Autoplay restriction or playback failure:', playErr);
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                        currentAudio = null;
+                        isMobilePreviewInProgress = false;
+                        showToast('Audio playback blocked. Click again to play.', false);
+                    }
                 } else {
-                    showToast(data.error || data.detail || 'Voice preview failed.', false);
+                    const errMsg = (data && (data.error || data.detail || data.message)) || `Server returned HTTP ${res.status}`;
+                    showToast(errMsg, false);
                     btn.innerHTML = originalText;
                     btn.disabled = false;
+                    isMobilePreviewInProgress = false;
                 }
             } catch (err) {
-                showToast(err.message, false);
+                console.error('Network or fetch error during voice preview:', err);
+                showToast(`Network Error: ${err.message || 'Connection failed'}`, false);
                 btn.innerHTML = originalText;
                 btn.disabled = false;
+                isMobilePreviewInProgress = false;
+            } finally {
+                if (!currentAudio) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    isMobilePreviewInProgress = false;
+                }
             }
         }
 
