@@ -1154,6 +1154,25 @@ class SystemDataProvider:
             for j in recent_jobs
         ]
 
+        # Cloud Database Sync Telemetry (Phase 10.12)
+        try:
+            from core.database_sync import compute_sha256, verify_sqlite_integrity, get_database_stats
+            from config.settings import DB_PATH
+            is_valid, msg = verify_sqlite_integrity(DB_PATH) if DB_PATH.exists() else (False, "Missing")
+            db_sync_telemetry = {
+                "canonical_vault_folder": "00_SYSTEM",
+                "canonical_filename": "pipeline.db",
+                "local_db_exists": DB_PATH.exists(),
+                "integrity_valid": is_valid,
+                "integrity_message": msg,
+                "sha256": compute_sha256(DB_PATH) if DB_PATH.exists() else None,
+                "size_bytes": DB_PATH.stat().st_size if DB_PATH.exists() else 0,
+                "table_counts": get_database_stats(DB_PATH) if DB_PATH.exists() else {},
+                "concurrency_group": "pipeline-cloud-execution"
+            }
+        except Exception as sync_err:
+            db_sync_telemetry = {"error": str(sync_err)}
+
         return {
             "data_mode": "LIVE_PRODUCTION_DATA",
             "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -1172,6 +1191,7 @@ class SystemDataProvider:
             "recovery_telemetry": recovery_telemetry,
             "pexels_quota": pexels_quota,
             "service_quotas": service_quotas,
+            "database_sync": db_sync_telemetry,
             "database_summary": {
                 "total_jobs": total_jobs,
                 "needs_review_count": needs_review_count,

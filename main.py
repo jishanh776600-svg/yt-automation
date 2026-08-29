@@ -659,8 +659,20 @@ class ShortsPipeline:
             except Exception as upload_err:
                 logger.error(f"YouTube scheduling failed for Drive file {file_id}: {upload_err}")
                 self.experiment_manager.update_experiment_status(db, job.id, "FAILED", failure_reason=f"YouTube scheduling failed: {str(upload_err)}")
-                self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="04_FAILED")
-                StateMachine.flag_needs_review(db, job, f"YouTube scheduling failed: {str(upload_err)}")
+                
+                # Self-healing classification:
+                # Permanent media integrity failure -> quarantine to 04_FAILED.
+                # Transient network / connection / API failure -> return safely to 01_READY for subsequent slot retry.
+                is_permanent_media_err = "UPLOAD_INTEGRITY" in str(upload_err) or "integrity" in str(upload_err).lower()
+                if is_permanent_media_err:
+                    logger.error(f"Quarantining corrupted file {file_id} to 04_FAILED.")
+                    self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="04_FAILED")
+                    StateMachine.flag_needs_review(db, job, f"YouTube scheduling failed: {str(upload_err)}")
+                else:
+                    logger.warning(f"Transient upload error for {file_id}. Returning file to 01_READY for subsequent slot retry.")
+                    self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="01_READY")
+                    job.state = JobState.READY_TO_UPLOAD.value
+                    db.commit()
                 return False
 
         except Exception as e:

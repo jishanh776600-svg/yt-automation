@@ -135,6 +135,11 @@ def download_canonical_database(
             target.unlink()
 
         temp_path.replace(target)
+        if target.with_suffix(".prev_backup").exists():
+            try:
+                target.with_suffix(".prev_backup").unlink(missing_ok=True)
+            except Exception:
+                pass
 
         logger.info(f"[+] Canonical database successfully synchronized from Drive!")
         logger.info(f"    Path: {target}")
@@ -165,6 +170,15 @@ def upload_canonical_database(
 
     if not source.exists():
         raise FileNotFoundError(f"Local database not found for upload: {source}")
+
+    # Explicit WAL checkpoint to ensure all transactions are flushed to primary DB file
+    try:
+        conn = sqlite3.connect(str(source), timeout=10.0)
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE);")
+        conn.commit()
+        conn.close()
+    except Exception as cp_err:
+        logger.warning(f"WAL checkpoint notice: {cp_err}")
 
     is_valid, msg = verify_sqlite_integrity(source)
     if not is_valid:

@@ -305,18 +305,22 @@ class MetricsCollector:
         logger.info(f"Starting Scheduled Analytics Harvest across {len(uploads)} published videos...")
 
         for upl in uploads:
-            is_eligible, reason = self.is_eligible_for_harvesting(db, upl, now=now)
-            if is_eligible:
-                snap = self.collect_for_upload(db, upl, now=now)
-                if snap:
-                    harvested.append(snap)
-            else:
-                if "IMMATURE" in reason:
-                    skipped_immature.append((upl.title, reason))
-                elif "IDEMPOTENT" in reason:
-                    skipped_idempotent.append((upl.title, reason))
+            try:
+                is_eligible, reason = self.is_eligible_for_harvesting(db, upl, now=now)
+                if is_eligible:
+                    snap = self.collect_for_upload(db, upl, now=now)
+                    if snap:
+                        harvested.append(snap)
                 else:
-                    skipped_other.append((upl.title, reason))
+                    if "IMMATURE" in reason:
+                        skipped_immature.append((upl.title, reason))
+                    elif "IDEMPOTENT" in reason:
+                        skipped_idempotent.append((upl.title, reason))
+                    else:
+                        skipped_other.append((upl.title, reason))
+            except Exception as single_err:
+                logger.warning(f"Error harvesting metrics for upload {upl.id} ({upl.youtube_video_id}): {single_err}. Continuing with remaining uploads.")
+                skipped_other.append((upl.title, f"HARVEST_ERROR: {single_err}"))
 
         summary = {
             "total_uploads_evaluated": len(uploads),

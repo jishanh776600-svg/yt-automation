@@ -258,6 +258,52 @@ class UploadEngine:
             return record
 
         except Exception as e:
+            # Post-failure Channel Reconciliation:
+            # If a network timeout, socket drop, or 503 error occurred during request.execute(),
+            # YouTube may have actually ingested and scheduled the video. Check before re-raising.
+            if not self._is_test_mode():
+                try:
+                    from googleapiclient.discovery import build
+                    from google.oauth2.credentials import Credentials
+                    token_path = PROJECT_ROOT / "token.json"
+                    if token_path.exists():
+                        creds = Credentials.from_authorized_user_file(str(token_path))
+                        yt_check = build("youtube", "v3", credentials=creds)
+                        search_res = yt_check.search().list(
+                            part="snippet",
+                            forMine=True,
+                            q=metadata["title"][:50],
+                            type="video",
+                            maxResults=5
+                        ).execute()
+                        for item in search_res.get("items", []):
+                            item_title = item.get("snippet", {}).get("title", "").strip().lower()
+                            if item_title == norm_title or (norm_title and norm_title in item_title):
+                                rec_id = item.get("id", {}).get("videoId")
+                                if rec_id:
+                                    logger.warning(
+                                        f"[RECOVERY] Exception during upload ({e}), but video was successfully created on YouTube (ID: {rec_id}). Reconciling."
+                                    )
+                                    record = UploadRecord(
+                                        id=upload_id,
+                                        job_id=job.id,
+                                        youtube_video_id=rec_id,
+                                        title=metadata["title"],
+                                        description=metadata["description"],
+                                        tags=",".join(metadata.get("tags", [])),
+                                        privacy_status="private",
+                                        scheduled_publish_at=publish_at_utc,
+                                        published_at=None,
+                                        status="SCHEDULED",
+                                        reconciliation_metadata=f"Recovered after network failure during upload (ID: {rec_id})"
+                                    )
+                                    db.add(record)
+                                    job.state = JobState.SCHEDULED.value
+                                    db.commit()
+                                    return record
+                except Exception as rec_err:
+                    logger.warning(f"[RECOVERY] Post-failure channel search skipped: {rec_err}")
+
             logger.error(f"YouTube scheduling failed for job {job.id}: {e}")
             raise e
 
