@@ -948,3 +948,19 @@
 | `duration_target` | **SWEET_SPOT** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
 | `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
 | `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+
+## Learning Cycle — 2026-08-29 18:25:49 UTC
+
+- **Mature Videos Evaluated**: 51
+- **Channel Performance Baseline**: 22.50/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `category` | ****Unusual Wars**** | 1 | `-26.6%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-14.9%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Unusual Wars** | 2 | `-28.2%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 3 | `-14.7%` | `WEAK_EVIDENCE` | **0.93** | Weak evidence (N=3). Conservative weight adjustment (-14.7% lift). |
+| `duration_target` | **SWEET_SPOT** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
