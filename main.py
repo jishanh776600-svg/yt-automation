@@ -421,7 +421,7 @@ class ShortsPipeline:
             console.print(f"[bold yellow][!] Publisher lock currently held by PID {owner_pid} ('{cmd}'). Publisher halting safely.[/bold yellow]")
             return False
 
-        db = self.SessionLocal()
+        db = getattr(self, "SessionLocal", SessionLocal)()
         console.print(Panel.fit("[bold cyan]Starting True YouTube Scheduled Publisher Execution[/bold cyan]", border_style="cyan"))
 
         temp_download_path = None

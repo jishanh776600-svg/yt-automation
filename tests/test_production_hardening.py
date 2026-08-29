@@ -317,6 +317,35 @@ class TestProductionHardening(unittest.TestCase):
         self.assertEqual(rec.status, "SCHEDULED")
         self.assertEqual(rec.scheduled_publish_at, future_slot.replace(microsecond=0))
 
+    def test_09_publish_next_from_vault_uses_module_sessionlocal_without_injection(self):
+        """
+        Test 9 (Phase 10.5 Regression):
+        Verify publish_next_from_vault() correctly constructs its database session using
+        the module-level SessionLocal without requiring pipeline.SessionLocal injection.
+        Reproduces the exact production environment where ShortsPipeline has no SessionLocal attribute.
+        """
+        from main import ShortsPipeline
+
+        pipeline = ShortsPipeline()
+        # Explicitly verify the production state: ShortsPipeline instance does NOT have SessionLocal attribute
+        self.assertFalse(hasattr(pipeline, "SessionLocal"))
+        with self.assertRaises(AttributeError):
+            _ = pipeline.SessionLocal()
+
+        # Mock drive engine and lock to prevent actual vault mutation or lock contention
+        pipeline.drive_engine = MagicMock()
+        pipeline.drive_engine.list_files_in_folder.return_value = []
+
+        with patch("main.ProcessLock.acquire", return_value=True), \
+             patch("main.ProcessLock.release", return_value=None):
+            # Call publish_next_from_vault() without injecting pipeline.SessionLocal.
+            # Prior to Phase 10.5 fix, this raised: AttributeError: 'ShortsPipeline' object has no attribute 'SessionLocal'.
+            # With Phase 10.5 fix, this must succeed and return False (empty vault).
+            res = pipeline.publish_next_from_vault()
+
+        self.assertFalse(res)
+
 
 if __name__ == "__main__":
     unittest.main()
+
