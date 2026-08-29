@@ -1,13 +1,16 @@
-// Historia Mission Control Service Worker (PWA Shell Only)
+// AL AMR Service Worker (PWA Shell Only)
 // Invariant: ONLY static UI shell assets are cached.
 // Dynamic APIs (/api/*), credentials, and real-time telemetry are NEVER cached.
 
-const CACHE_NAME = 'historia-mission-control-v1';
+const CACHE_NAME = 'al-amr-v2';
 const SHELL_ASSETS = [
-  '/mobile',
+  '/?mobile=true',
   '/static/manifest.json',
+  '/static/img/al_amr_logo.svg',
+  '/static/img/al_amr_mark.svg',
   '/static/icons/icon-192.png',
-  '/static/icons/icon-512.png'
+  '/static/icons/icon-512.png',
+  '/static/favicon.png'
 ];
 
 self.addEventListener('install', (event) => {

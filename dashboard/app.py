@@ -35,7 +35,7 @@ from dashboard.auth import (
 )
 
 app = FastAPI(
-    title="Historia Pipeline // Autonomous Control Center",
+    title="AL AMR // Autonomous Operations Center",
     description="Secured real-time control app and operations center for YouTube Shorts autonomous pipeline.",
     version="3.0.0"
 )

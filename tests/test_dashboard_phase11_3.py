@@ -141,12 +141,12 @@ class TestDashboardPhase113(unittest.TestCase):
                 self.assertIn("queued successfully", res["message"])
 
     def test_07_al_amr_branding_consistency(self):
-        """Verify AL AMR and Arabic (الأمر) identity is consistent across Desktop, Mobile, and Login."""
+        """Verify AL AMR product name and logo identity is consistent across Desktop, Mobile, and Login."""
         # 1. Desktop
         res_desk = self.client.get("/?desktop=true")
         self.assertEqual(res_desk.status_code, 200)
         self.assertIn("AL AMR", res_desk.text)
-        self.assertIn("الأمر", res_desk.text)
+        self.assertIn("al_amr_logo.svg", res_desk.text)
         self.assertNotIn("HISTORIA", res_desk.text)
         self.assertNotIn("Mission Control", res_desk.text)
 
@@ -154,7 +154,7 @@ class TestDashboardPhase113(unittest.TestCase):
         res_mob = self.client.get("/?mobile=true")
         self.assertEqual(res_mob.status_code, 200)
         self.assertIn("AL AMR", res_mob.text)
-        self.assertIn("الأمر", res_mob.text)
+        self.assertIn("al_amr_logo.svg", res_mob.text)
         self.assertNotIn("HISTORIA", res_mob.text)
         self.assertNotIn("Mission Control", res_mob.text)
 
@@ -163,6 +163,6 @@ class TestDashboardPhase113(unittest.TestCase):
         res_login = anon_client.get("/login")
         self.assertEqual(res_login.status_code, 200)
         self.assertIn("AL AMR", res_login.text)
-        self.assertIn("الأمر", res_login.text)
+        self.assertIn("al_amr_logo.svg", res_login.text)
         self.assertNotIn("HISTORIA", res_login.text)
         self.assertNotIn("Mission Control", res_login.text)

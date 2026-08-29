@@ -1,12 +1,12 @@
 {
-  "name": "Historia // Emergency Mission Control",
-  "short_name": "MissionControl",
-  "start_url": "/mobile",
+  "name": "AL AMR",
+  "short_name": "AL AMR",
+  "start_url": "/?mobile=true",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#030712",
   "theme_color": "#030712",
-  "description": "Owner Emergency Remote Mission Control for Autonomous YouTube Pipeline",
+  "description": "AL AMR — Autonomous Media Operations & Production Control",
   "icons": [
     {
       "src": "/static/icons/icon-192.png",

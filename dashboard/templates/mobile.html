@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950 text-slate-100 antialiased selection:bg-sky-500 selection:text-slate-950">
+<html lang="en" class="h-full bg-slate-950 text-slate-100 antialiased selection:bg-amber-500 selection:text-slate-950">
 <head>
     <meta charset="UTF-8">
     <meta name="csrf-token" content="{{ csrf_token }}">
@@ -7,14 +7,16 @@
     <meta name="theme-color" content="#030712">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="MissionControl">
-    <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-    <link rel="icon" type="image/png" href="/static/icons/icon-192.png">
+    <meta name="apple-mobile-web-app-title" content="AL AMR">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon.png">
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
     <title>AL AMR // Operations & Telemetry</title>
 
-    <!-- Tailwind CDN with Custom Cyberpunk Palette -->
+    <!-- Tailwind CDN with Deep Obsidian Palette -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         function getCsrfToken() {
             const meta = document.querySelector('meta[name="csrf-token"]');
@@ -22,602 +24,457 @@
         }
 
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
                         obsidian: '#030712',
-                        panel: '#0B0F19',
-                        panelSubtle: '#111827',
-                        borderSubtle: '#1F2937',
-                        neonEmerald: '#10B981',
-                        neonSky: '#0284C7',
-                        neonRose: '#F43F5E',
-                        neonAmber: '#F59E0B'
+                        spaceDark: '#060B17',
+                        panel: '#0B1120',
+                        panelAlt: '#0F172A',
+                        panelSubtle: '#131D33',
+                        borderSubtle: '#1E293B',
+                        brandGold: '#F59E0B',
                     },
                     fontFamily: {
-                        mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', 'monospace'],
-                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif']
                     }
                 }
             }
         }
     </script>
     <style>
-        /* iOS Safe Area Insets */
-        .safe-top { padding-top: env(safe-area-inset-top, 0px); }
-        .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
-        .btn-touch { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        :root {
+            --bg-obsidian: #030712;
+            --bg-panel: #0B1120;
+            --border-subtle: #1E293B;
+        }
+        body {
+            background-color: #030712;
+            color: #F1F5F9;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Native Fallback CSS (Guarantees styling even if offline / CDN blocked) */
+        .btn-touch { touch-action: manipulation; }
         .btn-touch:active { transform: scale(0.97); }
-        /* Hide scrollbars on tabs */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Splash Screen Fade */
+        #al-amr-splash {
+            transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
+        }
+        #al-amr-splash.hidden-splash {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        @keyframes loadingBar {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        .animate-loading-bar {
+            animation: loadingBar 1.2s infinite ease-in-out;
+        }
     </style>
 </head>
-<body class="h-full bg-obsidian flex flex-col font-sans overflow-hidden select-none">
+<body class="h-full bg-obsidian flex flex-col font-sans select-none overflow-hidden pb-16">
 
-    <!-- OFFLINE / DISCONNECT BANNER -->
-    <div id="offline-banner" class="hidden bg-rose-950/90 border-b border-rose-600 text-rose-200 px-3 py-1.5 text-xs font-mono font-bold flex items-center justify-between z-50">
-        <span class="flex items-center space-x-1.5">
-            <span class="inline-block w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-            <span>OFFLINE — LIVE CONTROL UNAVAILABLE</span>
-        </span>
-        <button onclick="fetchLatestState()" class="underline text-[11px] font-bold">RETRY</button>
+    <!-- ====================================================================== -->
+    <!-- 0. CINEMATIC MOBILE STARTUP / SPLASH SCREEN                            -->
+    <!-- ====================================================================== -->
+    <div id="al-amr-splash" class="fixed inset-0 z-[100] bg-obsidian flex flex-col items-center justify-center p-6 select-none">
+        <div class="text-center space-y-4 max-w-xs w-full">
+            <img src="/static/img/al_amr_logo.svg" alt="AL AMR" class="h-16 mx-auto drop-shadow-[0_0_20px_rgba(245,158,11,0.25)]">
+            <div class="space-y-1.5">
+                <div class="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold">Autonomous Operations</div>
+                <div class="w-36 h-1 bg-slate-900 rounded-full mx-auto overflow-hidden border border-slate-800">
+                    <div class="w-full h-full bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600 rounded-full animate-loading-bar"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- TOP HEADER -->
-    <header class="bg-panel border-b border-borderSubtle px-4 pt-3 pb-2.5 safe-top flex-shrink-0 z-40">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-                <div class="w-7 h-7 rounded-lg bg-sky-950 border border-sky-500 flex items-center justify-center text-sky-400 font-mono font-black text-xs">
-                    H
-                </div>
-                <div>
-                    <h1 class="text-xs font-mono font-black tracking-widest text-slate-100 uppercase">AL AMR <span class="text-[10px] text-slate-400 font-sans tracking-normal ml-1 opacity-80 font-normal">(الأمر)</span></h1>
-                    <div class="text-[10px] font-mono text-slate-400 flex items-center space-x-2">
-                        <span id="utc-clock">--:--:-- UTC</span>
-                        <span>•</span>
-                        <span id="cloud-cadence" class="text-sky-400">4x Daily Autonomous</span>
-                    </div>
-                </div>
+    <!-- Mobile Toast Notification -->
+    <div id="toast" class="fixed top-3 left-3 right-3 z-50 transform transition-all duration-300 translate-y-[-140%] opacity-0 pointer-events-none">
+        <div id="toast-box" class="p-3 rounded-xl border shadow-2xl flex items-start space-x-2.5 bg-panel border-borderSubtle text-slate-100">
+            <span id="toast-icon" class="text-base">ℹ️</span>
+            <div class="flex-1">
+                <div id="toast-title" class="font-bold text-xs uppercase font-mono tracking-wider text-slate-100">Notification</div>
+                <div id="toast-message" class="text-[11px] text-slate-300 mt-0.5">Message text</div>
             </div>
+            <button onclick="hideToast()" class="text-slate-400 text-sm">✕</button>
+        </div>
+    </div>
 
-            <!-- Health Status Pill -->
-            <div class="flex items-center space-x-1.5">
-                <span id="status-pill" class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wide flex items-center space-x-1.5 bg-emerald-950 border border-emerald-500 text-emerald-300">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span id="status-text">HEALTHY</span>
-                </span>
-                <button onclick="fetchLatestState()" class="p-1.5 bg-panelSubtle hover:bg-slate-800 border border-borderSubtle rounded-lg text-slate-300 btn-touch">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                </button>
-            </div>
+    <!-- Mobile Header -->
+    <header class="bg-spaceDark border-b border-borderSubtle px-4 py-2.5 flex items-center justify-between flex-shrink-0 z-30">
+        <div class="flex items-center space-x-2.5">
+            <img src="/static/img/al_amr_mark.svg" alt="AL AMR" class="h-7 w-7">
+            <span class="font-mono text-sm font-extrabold tracking-widest text-slate-100 uppercase">AL AMR</span>
+        </div>
+        <div class="flex items-center space-x-2 text-xs font-mono">
+            <span class="px-2 py-0.5 rounded font-bold {% if state.health.verdict == 'READY' %}bg-emerald-950 text-emerald-400 border border-emerald-800{% else %}bg-amber-950 text-amber-400 border border-amber-800{% endif %} text-[10px]">
+                {{ state.health.verdict }}
+            </span>
+            <button onclick="refreshState()" class="px-2 py-1 bg-panel hover:bg-slate-800 text-slate-300 rounded border border-borderSubtle text-[10px] btn-touch">
+                ↻
+            </button>
+            <button onclick="handleLogout()" class="px-2 py-1 bg-rose-950/60 text-rose-300 rounded border border-rose-800 text-[10px] btn-touch">
+                ⎋
+            </button>
         </div>
     </header>
 
-    <!-- MAIN SCROLLABLE CONTENT AREA -->
-    <main class="flex-1 overflow-y-auto p-3.5 space-y-3.5 pb-24 safe-bottom">
-
-        <!-- TAB 1: HOME (OVERVIEW) -->
-        <div id="view-home" class="space-y-3.5">
-
-        <!-- AL AMR CLOUD WORKFLOW IN-FLIGHT STATUS BANNER (PHASE 11.3) -->
-        <div id="mobile-cloud-banner" class="hidden bg-gradient-to-r from-panel via-slate-900 to-panel border border-amber-500/50 rounded-2xl p-3.5 shadow-xl space-y-2">
-            <div class="flex items-center justify-between">
-                <span id="mobile-cloud-badge" class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-950 text-amber-300 border border-amber-600 tracking-wider uppercase">
-                    CLOUD WORKFLOW DISPATCHED
-                </span>
-                <span id="mobile-cloud-elapsed" class="text-[10px] font-mono font-bold text-amber-400">0s</span>
+    <!-- Mobile In-Flight Workflow Banner -->
+    <div id="mobile-cloud-banner" class="hidden px-3 pt-2">
+        <div class="bg-spaceDark border border-amber-500/40 rounded-xl p-2.5 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <span class="animate-spin text-xs">⚙️</span>
+                <span id="mobile-cloud-badge" class="hidden"></span><span id="mobile-cloud-workflow" class="hidden"></span><span id="mobile-cloud-msg" class="font-mono text-[10px] text-amber-300 font-semibold">Workflow in progress...</span>
             </div>
-            <div class="text-xs font-mono font-bold text-slate-100" id="mobile-cloud-workflow">produce_buffer.yml</div>
-            <p id="mobile-cloud-msg" class="text-[10px] text-slate-300 font-mono leading-relaxed">
-                Runner executing in GitHub Actions... Dispatched at <span id="mobile-cloud-time" class="text-amber-300 font-bold">--:--:-- UTC</span>
-            </p>
-            <div class="text-right pt-1">
-                <button onclick="dismissMobileCloudBanner()" class="px-2.5 py-1 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg text-[10px] font-mono btn-touch">
-                    Dismiss
-                </button>
+            <div class="flex items-center space-x-2 font-mono text-[10px]">
+                <span id="mobile-banner-timer" class="text-amber-400 font-bold">00:00</span>
+                <button onclick="dismissMobileCloudBanner()" class="text-slate-400 hover:text-slate-200">✕</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Tab Navigation Bar -->
+    <nav class="bg-panel border-b border-borderSubtle px-2 py-1.5 flex items-center space-x-1 overflow-x-auto no-scrollbar flex-shrink-0 z-20 text-xs font-mono">
+        <button onclick="switchTab('tab-overview')" id="nav-tab-overview" class="tab-btn px-3 py-1 rounded-lg bg-amber-600/20 text-amber-400 border border-amber-500/40 font-bold whitespace-nowrap btn-touch">Overview</button>
+        <button onclick="switchTab('tab-pipeline')" id="nav-tab-pipeline" class="tab-btn px-3 py-1 rounded-lg text-slate-400 hover:text-slate-200 border border-transparent whitespace-nowrap btn-touch">Pipeline</button>
+        <button onclick="switchTab('tab-buffer')" id="nav-tab-buffer" class="tab-btn px-3 py-1 rounded-lg text-slate-400 hover:text-slate-200 border border-transparent whitespace-nowrap btn-touch">Buffer</button>
+        <button onclick="switchTab('tab-queue')" id="nav-tab-queue" class="tab-btn px-3 py-1 rounded-lg text-slate-400 hover:text-slate-200 border border-transparent whitespace-nowrap btn-touch">Queue</button>
+        <button onclick="switchTab('tab-audio')" id="nav-tab-audio" class="tab-btn px-3 py-1 rounded-lg text-slate-400 hover:text-slate-200 border border-transparent whitespace-nowrap btn-touch">Audio</button>
+        <button onclick="switchTab('tab-actions')" id="nav-tab-actions" class="tab-btn px-3 py-1 rounded-lg text-slate-400 hover:text-slate-200 border border-transparent whitespace-nowrap btn-touch">Actions</button>
+        <button onclick="switchTab('tab-perf')" id="nav-tab-perf" class="tab-btn px-3 py-1 rounded-lg text-slate-400 hover:text-slate-200 border border-transparent whitespace-nowrap btn-touch">Perf</button>
+    </nav>
+
+    <!-- Scrollable Content Area -->
+    <main class="flex-1 overflow-y-auto custom-scrollbar p-3.5 space-y-4">
+
+        <!-- TAB 1: OVERVIEW -->
+        <div id="tab-overview" class="tab-pane space-y-3">
+            <div class="grid grid-cols-2 gap-2.5">
+                <div class="bg-panel border border-borderSubtle p-3 rounded-xl">
+                    <div class="text-[9px] font-mono text-slate-400 uppercase">System State</div>
+                    <div class="text-base font-bold font-mono text-slate-100 mt-0.5">{{ state.health.passed_checks_count }} / 8 Checks</div>
+                    <div class="text-[10px] text-slate-500 font-mono mt-0.5">Integrity: {{ state.database_sync.integrity_message }}</div>
+                </div>
+                <div class="bg-panel border border-borderSubtle p-3 rounded-xl">
+                    <div class="text-[9px] font-mono text-slate-400 uppercase">01_READY Buffer</div>
+                    <div class="text-base font-bold font-mono text-sky-400 mt-0.5">{{ state.inventory.counts['01_READY'] }} / {{ state.buffer.target_reserve }}</div>
+                    <div class="text-[10px] text-amber-400 font-mono mt-0.5">Deficit: {{ state.buffer.needed_replenishment }} Shorts</div>
+                </div>
+                <div class="bg-panel border border-borderSubtle p-3 rounded-xl">
+                    <div class="text-[9px] font-mono text-slate-400 uppercase">YouTube Today</div>
+                    <div class="text-base font-bold font-mono text-amber-400 mt-0.5">{{ state.publishing.published_today }} / 4 Limit</div>
+                    <div class="text-[10px] text-purple-400 font-mono mt-0.5">Sched: {{ state.scheduled_queue.scheduled_today_count }}</div>
+                </div>
+                <div class="bg-panel border border-borderSubtle p-3 rounded-xl">
+                    <div class="text-[9px] font-mono text-slate-400 uppercase">Next Slot</div>
+                    <div class="text-sm font-bold font-mono text-amber-300 mt-0.5">{{ state.publishing.next_slot.time_until_display }}</div>
+                    <div class="text-[10px] text-indigo-300 font-mono mt-0.5">3 Workflows</div>
+                </div>
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div class="bg-panel border border-borderSubtle p-3.5 rounded-xl space-y-2">
+                <div class="text-[10px] font-mono text-slate-400 uppercase font-bold">Quick Operations</div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="handleProduceShort()" class="py-2.5 px-3 bg-spaceDark hover:bg-slate-800 border border-sky-900/40 rounded-lg text-left btn-touch">
+                        <div class="text-xs font-bold font-mono text-sky-400">+ Produce 1</div>
+                        <div class="text-[9px] text-slate-500 font-mono">Render to Vault</div>
+                    </button>
+                    <button onclick="handleReplenishBuffer()" class="py-2.5 px-3 bg-spaceDark hover:bg-slate-800 border border-amber-900/40 rounded-lg text-left btn-touch">
+                        <div class="text-xs font-bold font-mono text-amber-400">⚡ Replenish 12</div>
+                        <div class="text-[9px] text-slate-500 font-mono">Fill Deficit</div>
+                    </button>
+                </div>
             </div>
         </div>
 
-            
-            <!-- NEXT RELEASE SPOTLIGHT CARD -->
-            <div class="bg-gradient-to-br from-panel to-sky-950/40 border border-sky-500/40 rounded-2xl p-4 shadow-lg space-y-2.5">
-                <div class="flex items-center justify-between">
-                    <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-sky-400 flex items-center space-x-1.5">
-                        <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
-                        <span>Next YouTube Release</span>
-                    </span>
-                    <span id="spotlight-countdown" class="px-2.5 py-0.5 rounded-md bg-sky-950 border border-sky-500 text-sky-300 font-mono text-xs font-black">
-                        --:--:--
-                    </span>
-                </div>
-                <div>
-                    <h2 id="spotlight-title" class="text-sm font-bold text-slate-100 line-clamp-1">Searching YouTube Scheduled Queue...</h2>
-                    <div class="text-[10px] font-mono text-slate-400 mt-1 flex flex-wrap gap-x-2 gap-y-1">
-                        <span>Slot: <strong id="spotlight-slot" class="text-sky-300">--:-- UTC</strong></span>
-                        <span>•</span>
-                        <span>YT ID: <strong id="spotlight-ytid" class="text-amber-400 font-mono">--</strong></span>
-                        <span>•</span>
-                        <span>Vault: <strong id="spotlight-vault" class="text-emerald-400">02_PROCESSING</strong></span>
+        <!-- TAB 2: PIPELINE -->
+        <div id="tab-pipeline" class="tab-pane hidden space-y-3">
+            <div class="bg-panel border border-borderSubtle p-3.5 rounded-xl space-y-3">
+                <div class="text-xs font-bold font-mono text-slate-100 uppercase">9-Stage Pipeline State</div>
+                <div class="grid grid-cols-3 gap-2 text-center text-xs font-mono">
+                    <div class="p-2 bg-spaceDark rounded-lg border border-borderSubtle">
+                        <div class="text-[9px] text-slate-500">1. Topics</div>
+                        <div class="font-bold text-slate-200">{{ state.database_sync.table_counts.topics or 0 }}</div>
+                    </div>
+                    <div class="p-2 bg-spaceDark rounded-lg border border-borderSubtle">
+                        <div class="text-[9px] text-slate-500">2. Scripts</div>
+                        <div class="font-bold text-slate-200">{{ state.database_sync.table_counts.scripts or 0 }}</div>
+                    </div>
+                    <div class="p-2 bg-spaceDark rounded-lg border border-borderSubtle">
+                        <div class="text-[9px] text-slate-500">3. Voice</div>
+                        <div class="font-bold text-slate-200">{{ state.database_sync.table_counts.voice or 0 }}</div>
+                    </div>
+                    <div class="p-2 bg-spaceDark rounded-lg border border-borderSubtle">
+                        <div class="text-[9px] text-slate-500">4. Renders</div>
+                        <div class="font-bold text-slate-200">{{ state.database_sync.table_counts.renders or 0 }}</div>
+                    </div>
+                    <div class="p-2 bg-spaceDark rounded-lg border border-emerald-900/40">
+                        <div class="text-[9px] text-emerald-400">5. Jobs</div>
+                        <div class="font-bold text-emerald-300">{{ state.database_sync.table_counts.jobs or 0 }}</div>
+                    </div>
+                    <div class="p-2 bg-spaceDark rounded-lg border border-sky-900/40">
+                        <div class="text-[9px] text-sky-400">6. 01_READY</div>
+                        <div class="font-bold text-sky-300">{{ state.inventory.counts['01_READY'] or 0 }}</div>
+                    </div>
+                    <div class="p-2 bg-spaceDark rounded-lg border border-amber-900/40">
+                        <div class="text-[9px] text-amber-400">7. 02_CLAIMED</div>
+                        <div class="font-bold text-amber-300">{{ state.inventory.counts['02_PROCESSING'] or 0 }}</div>
+                    </div>
+                    <div class="p-2 bg-spaceDark rounded-lg border border-purple-900/40">
+                        <div class="text-[9px] text-purple-400">8. Published</div>
+                        <div class="font-bold text-purple-300">{{ state.inventory.counts['03_PUBLISHED'] or 0 }}</div>
+                    </div>
+                    <div class="p-2 bg-spaceDark rounded-lg border border-rose-900/40">
+                        <div class="text-[9px] text-rose-400">9. Failed</div>
+                        <div class="font-bold text-rose-300">{{ state.inventory.counts['04_FAILED'] or 0 }}</div>
                     </div>
                 </div>
             </div>
+        </div>
 
-
-            <!-- AL AMR PUBLISHED VIDEO PERFORMANCE LEADERBOARD -->
-            <div class="bg-panel border border-borderSubtle rounded-2xl p-4 shadow-lg space-y-3">
-                <div class="flex items-center justify-between border-b border-borderSubtle pb-2.5">
-                    <span class="text-xs font-mono font-bold uppercase tracking-wider text-slate-100 flex items-center space-x-1.5">
-                        <span class="text-amber-400">📊</span>
-                        <span>Published Performance</span>
-                    </span>
-                    <span id="mobile-leaderboard-count" class="px-2 py-0.5 rounded bg-sky-950 text-sky-400 font-mono text-[10px] font-bold">
-                        {{ (state.performance_leaderboard or [])|length }} Ranked
-                    </span>
+        <!-- TAB 3: BUFFER -->
+        <div id="tab-buffer" class="tab-pane hidden space-y-3">
+            <div class="bg-panel border border-borderSubtle p-3.5 rounded-xl space-y-2">
+                <div class="flex justify-between items-center text-xs font-mono">
+                    <span class="text-sky-400 font-bold">01_READY Vault ({{ state.inventory.counts['01_READY'] }})</span>
+                    <span class="text-slate-400 text-[10px]">Target: 12</span>
                 </div>
-
-                <div id="mobile-performance-leaderboard" class="space-y-2 max-h-80 overflow-y-auto custom-scrollbar">
-                    {% for v in (state.performance_leaderboard or []) %}
-                    <div class="bg-obsidian p-3 rounded-xl border border-borderSubtle space-y-2 font-mono text-xs">
-                        <div class="flex justify-between items-start">
-                            <div class="flex items-center space-x-1.5">
-                                {% if v.rank == 1 %}
-                                <span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-600 text-[10px] font-bold">🥇 #1</span>
-                                {% elif v.rank == 2 %}
-                                <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-600 text-[10px] font-bold">🥈 #2</span>
-                                {% elif v.rank == 3 %}
-                                <span class="px-1.5 py-0.5 rounded bg-amber-950/40 text-amber-500 border border-amber-800 text-[10px] font-bold">🥉 #3</span>
-                                {% else %}
-                                <span class="text-slate-500 font-bold">#{{ v.rank }}</span>
-                                {% endif %}
-                                <span class="font-bold text-slate-100 line-clamp-1 text-[11px]" title="{{ v.title }}">{{ v.title }}</span>
-                            </div>
-                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold {% if v.classification == 'OUTPERFORMER' %}bg-emerald-950 text-emerald-300 border border-emerald-700{% elif v.classification == 'AVERAGE' %}bg-sky-950 text-sky-300 border border-sky-700{% else %}bg-slate-900 text-slate-400 border border-slate-700{% endif %}">
-                                {{ v.classification if v.classification != 'UNRATED' else v.status }}
-                            </span>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-1.5 text-[10px] text-slate-300 bg-slate-900/60 p-2 rounded-lg">
-                            <div><span class="text-slate-500">Views:</span> <strong class="text-slate-100">{{ v.views_display }}</strong></div>
-                            <div><span class="text-slate-500">Likes:</span> <strong class="text-slate-200">{{ v.likes_display }}</strong></div>
-                            <div><span class="text-slate-500">Eng:</span> <strong class="text-sky-300">{{ v.engagement_display }}</strong></div>
-                            <div><span class="text-slate-500">APV:</span> <span class="text-purple-300">{{ v.apv_display }}</span></div>
-                            <div class="col-span-2"><span class="text-slate-500">Published:</span> <span class="text-slate-400">{{ v.published_at_display }}</span></div>
-                        </div>
-
-                        {% if v.youtube_url %}
-                        <div class="text-right pt-0.5">
-                            <a href="{{ v.youtube_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-1 text-[10px] font-bold text-sky-400 hover:text-sky-300 underline">
-                                <span>Watch on YouTube</span>
-                                <span>↗</span>
-                            </a>
-                        </div>
-                        {% endif %}
-                    </div>
+                <div class="space-y-1 max-h-48 overflow-y-auto custom-scrollbar text-[11px] font-mono">
+                    {% for f in state.inventory.files['01_READY'] %}
+                    <div class="p-1.5 bg-spaceDark rounded border border-borderSubtle truncate text-slate-200" title="{{ f.name }}">✓ {{ f.name }}</div>
                     {% else %}
-                    <div class="text-center py-4 text-xs font-mono text-slate-500 italic">
-                        No published video analytics recorded yet.
-                    </div>
+                    <div class="text-slate-500 italic text-xs py-2 text-center">Buffer empty (0 ready Shorts)</div>
                     {% endfor %}
                 </div>
             </div>
 
-            <!-- BUFFER & PUBLISHING METRICS GRID -->
-            <div class="grid grid-cols-2 gap-3">
-                <!-- Buffer Card -->
-                <div class="bg-panel border border-borderSubtle rounded-xl p-3 space-y-1.5">
-                    <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Drive 01_READY</div>
-                    <div class="flex items-baseline space-x-1.5">
-                        <span id="buffer-ready" class="text-xl font-mono font-black text-emerald-400">--</span>
-                        <span class="text-xs font-mono text-slate-500">/ 12 Target</span>
-                    </div>
-                    <div class="text-[10px] font-mono text-slate-400 flex justify-between border-t border-slate-800 pt-1">
-                        <span>Deficit: <strong id="buffer-deficit" class="text-amber-400">--</strong></span>
-                        <span>Runway: <strong id="buffer-runway" class="text-sky-400">--h</strong></span>
-                    </div>
+            <div class="bg-panel border border-borderSubtle p-3.5 rounded-xl space-y-2">
+                <div class="flex justify-between items-center text-xs font-mono">
+                    <span class="text-amber-400 font-bold">02_PROCESSING ({{ state.inventory.counts['02_PROCESSING'] }})</span>
+                    <span class="text-slate-400 text-[10px]">In-Flight</span>
                 </div>
-
-                <!-- Daily Publishing Card -->
-                <div class="bg-panel border border-borderSubtle rounded-xl p-3 space-y-1.5">
-                    <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Today's Shorts</div>
-                    <div class="flex items-baseline space-x-1.5">
-                        <span id="pub-today" class="text-xl font-mono font-black text-sky-400">--</span>
-                        <span class="text-xs font-mono text-slate-500">/ 4 Daily Max</span>
-                    </div>
-                    <div class="text-[10px] font-mono text-slate-400 flex justify-between border-t border-slate-800 pt-1">
-                        <span>Sched: <strong id="sched-today" class="text-sky-300">--</strong></span>
-                        <span>Cap: <strong id="cap-today" class="text-emerald-400">--</strong></span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VAULT 4-FOLDER INVENTORY BREAKDOWN -->
-            <div class="bg-panel border border-borderSubtle rounded-xl p-3.5 space-y-2">
-                <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex justify-between">
-                    <span>Google Drive Vault Lifecycle</span>
-                    <span class="text-sky-400">Connected</span>
-                </div>
-                <div class="grid grid-cols-4 gap-1.5 text-center font-mono">
-                    <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
-                        <div class="text-[9px] text-slate-400">01_READY</div>
-                        <div id="vault-ready" class="text-sm font-bold text-emerald-400 mt-0.5">--</div>
-                    </div>
-                    <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
-                        <div class="text-[9px] text-slate-400">02_PROC</div>
-                        <div id="vault-proc" class="text-sm font-bold text-sky-400 mt-0.5">--</div>
-                    </div>
-                    <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
-                        <div class="text-[9px] text-slate-400">03_PUB</div>
-                        <div id="vault-pub" class="text-sm font-bold text-slate-300 mt-0.5">--</div>
-                    </div>
-                    <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800">
-                        <div class="text-[9px] text-slate-400">04_FAIL</div>
-                        <div id="vault-fail" class="text-sm font-bold text-rose-400 mt-0.5">--</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PROCESS LOCKS CARD -->
-            <div class="bg-panel border border-borderSubtle rounded-xl p-3.5 space-y-2">
-                <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex justify-between">
-                    <span>ProcessLock Diagnostics</span>
-                    <span id="locks-summary" class="text-emerald-400">Free</span>
-                </div>
-                <div class="grid grid-cols-2 gap-2 text-xs font-mono">
-                    <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex justify-between items-center">
-                        <span class="text-slate-400">Producer:</span>
-                        <span id="lock-prod-status" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400">FREE</span>
-                    </div>
-                    <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex justify-between items-center">
-                        <span class="text-slate-400">Publisher:</span>
-                        <span id="lock-pub-status" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400">FREE</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- API & SERVICE LIMITS PANEL -->
-            <div class="bg-panel border border-borderSubtle rounded-xl p-3.5 space-y-2.5">
-                <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex justify-between items-center">
-                    <span>API & Service Limits</span>
-                    <span class="text-[10px] font-mono text-sky-400">5 Providers</span>
-                </div>
-                <div id="service-quotas-list" class="space-y-2">
-                    <div class="p-3 bg-slate-900/80 rounded-lg border border-slate-800 text-center text-xs font-mono text-slate-500">
-                        Loading provider quotas...
-                    </div>
-                </div>
-            </div>
-
-            <!-- QUICK EMERGENCY ACTION BUTTONS -->
-            <div class="space-y-2 pt-1">
-                <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Fast Recovery Controls</div>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="confirmTriggerAction('PUBLISH_NEXT', 'Schedule Next Short', 'Claim next verified Short from 01_READY and schedule on YouTube?')" class="bg-sky-600 hover:bg-sky-500 text-white font-mono text-xs font-bold py-2.5 px-3 rounded-xl border border-sky-400 shadow-md flex items-center justify-center space-x-1.5 btn-touch">
-                        <span>🚀</span>
-                        <span>Publish Next</span>
-                    </button>
-                    <button onclick="confirmTriggerAction('REPLENISH', 'Replenish Buffer (Target 12)', 'Trigger autonomous replenishment to restore 12 ready reserve Shorts?')" class="bg-slate-800 hover:bg-slate-700 text-slate-100 font-mono text-xs font-bold py-2.5 px-3 rounded-xl border border-slate-700 flex items-center justify-center space-x-1.5 btn-touch">
-                        <span>⚡</span>
-                        <span>Replenish (12)</span>
-                    </button>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="confirmTriggerAction('SELF_HEAL', 'Run Autonomous Self-Healing', 'Execute stale job recovery, 02_PROCESSING reconciliation, and Drive audit?')" class="bg-slate-900 hover:bg-slate-800 text-emerald-400 font-mono text-xs font-bold py-2 px-3 rounded-xl border border-emerald-950 flex items-center justify-center space-x-1.5 btn-touch">
-                        <span>🛡️</span>
-                        <span>Self-Heal</span>
-                    </button>
-                    <button onclick="confirmTriggerAction('SYNC_YT', 'Synchronize YouTube', 'Query YouTube Data API and reconcile scheduled video statuses?')" class="bg-slate-900 hover:bg-slate-800 text-sky-400 font-mono text-xs font-bold py-2 px-3 rounded-xl border border-sky-950 flex items-center justify-center space-x-1.5 btn-touch">
-                        <span>🔄</span>
-                        <span>Sync YouTube</span>
-                    </button>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- TAB 2: QUEUE (SCHEDULED RELEASES) -->
-        <div id="view-queue" class="hidden space-y-3">
-            <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex justify-between">
-                <span>YouTube Scheduled Queue</span>
-                <span id="queue-count" class="text-sky-400">0 Active</span>
-            </div>
-            <div id="queue-list" class="space-y-2">
-                <!-- Dynamically Populated -->
-                <div class="bg-panel border border-borderSubtle rounded-xl p-4 text-center text-xs font-mono text-slate-500">
-                    Loading scheduled queue...
+                <div class="space-y-1 max-h-36 overflow-y-auto custom-scrollbar text-[11px] font-mono">
+                    {% for f in state.inventory.files['02_PROCESSING'] %}
+                    <div class="p-1.5 bg-spaceDark rounded border border-borderSubtle truncate text-amber-300" title="{{ f.name }}">⚡ {{ f.name }}</div>
+                    {% else %}
+                    <div class="text-slate-500 italic text-xs py-2 text-center">Zero in-flight claims</div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
 
-        <!-- TAB 3: ERRORS & ATTENTION -->
-        <div id="view-errors" class="hidden space-y-3">
-            <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex justify-between">
-                <span>Failed & In-Review Jobs</span>
-                <span id="attention-count" class="text-rose-400">0 Items</span>
-            </div>
-            <div id="errors-list" class="space-y-2.5">
-                <!-- Dynamically Populated -->
-                <div class="bg-panel border border-borderSubtle rounded-xl p-4 text-center text-xs font-mono text-emerald-400">
-                    ✓ Zero failed or in-review jobs. Pipeline healthy.
+        <!-- TAB 4: QUEUE -->
+        <div id="tab-queue" class="tab-pane hidden space-y-3">
+            <div class="bg-panel border border-borderSubtle p-3.5 rounded-xl space-y-2.5">
+                <div class="flex justify-between items-center text-xs font-mono">
+                    <span class="text-slate-100 font-bold uppercase">Scheduled Queue</span>
+                    <button onclick="handlePublishNext()" class="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-800 rounded text-[10px] font-bold btn-touch">+ Schedule</button>
+                </div>
+                <div class="space-y-1.5 text-xs font-mono">
+                    {% for item in state.scheduled_queue.queue %}
+                    <div class="p-2.5 bg-spaceDark rounded-lg border border-borderSubtle space-y-1">
+                        <div class="flex justify-between items-start">
+                            <span class="font-bold text-slate-100 truncate max-w-[200px]">{{ item.title }}</span>
+                            <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-950 text-amber-400">{{ item.status }}</span>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-slate-400">
+                            <span>Slot: {{ item.scheduled_publish_at[:16].replace('T', ' ') if item.scheduled_publish_at else '-' }}</span>
+                            <span class="text-sky-400">{{ item.drive_location }}</span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-slate-500 italic text-xs py-3 text-center">No scheduled items in queue.</div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
 
-        <!-- TAB 4: ACTIONS (ALL EMERGENCY CONTROLS & VOICES) -->
-        <div id="view-actions" class="hidden space-y-4">
-            
-            <!-- MASTER EMERGENCY SUITE -->
-            <div class="bg-panel border border-borderSubtle rounded-2xl p-4 space-y-3">
-                <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Emergency Operations Suite</div>
+        <!-- TAB 5: AUDIO -->
+        <div id="tab-audio" class="tab-pane hidden space-y-3">
+            <div class="bg-panel border border-borderSubtle p-3.5 rounded-xl space-y-2.5">
+                <div class="text-xs font-bold font-mono text-slate-100 uppercase">Production Voice Synthesis</div>
                 <div class="space-y-2">
-                    <button onclick="confirmTriggerAction('PRODUCE_ONE', 'Produce Single Short', 'Trigger research, script, visuals, voice, render, QA and deposit in 01_READY?')" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 py-2.5 px-3 rounded-xl font-mono text-xs font-bold flex items-center justify-between btn-touch">
-                        <span class="flex items-center space-x-2"><span>🎬</span><span>Produce 1 Short to Vault</span></span>
-                        <span class="text-slate-500">→</span>
-                    </button>
-                    <button onclick="confirmTriggerAction('REPLENISH', 'Replenish Reserve (Target 12)', 'Maintain reserve buffer to 12 Shorts in Google Drive?')" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 py-2.5 px-3 rounded-xl font-mono text-xs font-bold flex items-center justify-between btn-touch">
-                        <span class="flex items-center space-x-2"><span>⚡</span><span>Replenish Buffer to 12</span></span>
-                        <span class="text-slate-500">→</span>
-                    </button>
-                    <button onclick="confirmTriggerAction('PUBLISH_NEXT', 'Publish Next Short', 'Claim from 01_READY and schedule on YouTube at next canonical slot?')" class="w-full bg-sky-950/60 hover:bg-sky-900/80 text-sky-200 border border-sky-600/50 py-2.5 px-3 rounded-xl font-mono text-xs font-bold flex items-center justify-between btn-touch">
-                        <span class="flex items-center space-x-2"><span>🚀</span><span>Publish Next from 01_READY</span></span>
-                        <span class="text-sky-400">→</span>
-                    </button>
-                    <button onclick="confirmTriggerAction('SYNC_YT', 'Sync YouTube Status', 'Reconcile YouTube Data API with SQLite and Google Drive?')" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 py-2.5 px-3 rounded-xl font-mono text-xs font-bold flex items-center justify-between btn-touch">
-                        <span class="flex items-center space-x-2"><span>🔄</span><span>Sync YouTube Reconciliation</span></span>
-                        <span class="text-slate-500">→</span>
-                    </button>
-                    <button onclick="confirmTriggerAction('SELF_HEAL', 'Autonomous Self-Healing', 'Scan for stale jobs, processing files, and Drive mismatches?')" class="w-full bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-200 border border-emerald-600/40 py-2.5 px-3 rounded-xl font-mono text-xs font-bold flex items-center justify-between btn-touch">
-                        <span class="flex items-center space-x-2"><span>🛡️</span><span>Execute Master Self-Healing</span></span>
-                        <span class="text-emerald-400">→</span>
-                    </button>
-                    <button onclick="confirmTriggerAction('RELEASE_PROD_LOCK', 'Release Production Lock', 'Forcibly release production lock file? (Use only if process is dead)')" class="w-full bg-rose-950/40 hover:bg-rose-900/60 text-rose-200 border border-rose-600/40 py-2.5 px-3 rounded-xl font-mono text-xs font-bold flex items-center justify-between btn-touch">
-                        <span class="flex items-center space-x-2"><span>🔓</span><span>Release Stale Production Lock</span></span>
-                        <span class="text-rose-400">→</span>
-                    </button>
-                    <button onclick="confirmTriggerAction('RELEASE_PUB_LOCK', 'Release Publisher Lock', 'Forcibly release publisher lock file? (Use only if process is dead)')" class="w-full bg-rose-950/40 hover:bg-rose-900/60 text-rose-200 border border-rose-600/40 py-2.5 px-3 rounded-xl font-mono text-xs font-bold flex items-center justify-between btn-touch">
-                        <span class="flex items-center space-x-2"><span>🔓</span><span>Release Stale Publisher Lock</span></span>
-                        <span class="text-rose-400">→</span>
-                    </button>
+                    {% for voice in state.voice_config.available_voices %}
+                    <div class="p-3 bg-spaceDark rounded-xl border {% if voice.id == state.voice_config.active_voice_id %}border-amber-500/50{% else %}border-borderSubtle{% endif %} space-y-2">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-bold text-xs font-mono text-slate-100">{{ voice.display_name }}</div>
+                                <div class="text-[10px] font-mono text-amber-400">{{ voice.style }} • {{ voice.gender }}</div>
+                            </div>
+                            {% if voice.id == state.voice_config.active_voice_id %}
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-950 text-amber-400 border border-amber-800">ACTIVE</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-[11px] text-slate-300 leading-tight">{{ voice.description }}</p>
+                        <div class="flex items-center space-x-2 pt-1 border-t border-borderSubtle">
+                            <button onclick="handlePreviewVoice('{{ voice.id }}', '{{ voice.display_name }}', this)" class="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-mono font-bold btn-touch">
+                                🔊 Preview
+                            </button>
+                            {% if voice.id != state.voice_config.active_voice_id %}
+                            <button onclick="handleSetVoice('{{ voice.id }}', '{{ voice.display_name }}')" class="py-1.5 px-3 bg-amber-600 hover:bg-amber-500 text-slate-950 rounded-lg text-xs font-mono font-bold btn-touch">
+                                Set as Active
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
-
-            <!-- VOICE SELECTOR & PREVIEW -->
-            <div class="bg-panel border border-borderSubtle rounded-2xl p-4 space-y-3">
-                <div class="flex justify-between items-center">
-                    <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Voice Selector & Preview</span>
-                    <span id="active-voice-badge" class="text-xs font-mono font-bold text-sky-400">Active: am_adam</span>
-                </div>
-                <div id="voice-cards" class="space-y-2">
-                    <!-- Dynamically Populated with 6 voices -->
-                </div>
-            </div>
-
-            <!-- 4-TRACK BGM LIBRARY STATUS -->
-            <div class="bg-panel border border-borderSubtle rounded-2xl p-4 space-y-3">
-                <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider">4-Track BGM Mood Library</div>
-                <div id="bgm-tracks-list" class="space-y-1.5">
-                    <!-- Dynamically Populated -->
-                </div>
-            </div>
-
         </div>
 
-        <!-- TAB 5: ACTIVITY FEED -->
-        <div id="view-activity" class="hidden space-y-3">
-            <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex justify-between">
-                <span>Real Persisted System Activity</span>
-                <span class="text-sky-400">Latest 20 Events</span>
+        <!-- TAB 6: ACTIONS -->
+        <div id="tab-actions" class="tab-pane hidden space-y-3">
+            <div class="bg-panel border border-borderSubtle p-3.5 rounded-xl space-y-2.5">
+                <div class="text-xs font-bold font-mono text-slate-100 uppercase">Operator Functional Controls</div>
+                <div class="space-y-2">
+                    <button onclick="handleProduceShort()" class="w-full p-3 bg-spaceDark hover:bg-slate-800 border border-sky-900/40 rounded-xl text-left flex justify-between items-center btn-touch">
+                        <div>
+                            <div class="text-xs font-bold font-mono text-sky-400">+ Produce 1 Short</div>
+                            <div class="text-[10px] text-slate-400">Synthesize & render to Vault</div>
+                        </div>
+                        <span class="text-sky-400 font-mono">→</span>
+                    </button>
+                    <button onclick="handleReplenishBuffer()" class="w-full p-3 bg-spaceDark hover:bg-slate-800 border border-amber-900/40 rounded-xl text-left flex justify-between items-center btn-touch">
+                        <div>
+                            <div class="text-xs font-bold font-mono text-amber-400">⚡ Replenish 12 Buffer</div>
+                            <div class="text-[10px] text-slate-400">Batch produce deficit ({{ state.buffer.needed_replenishment }})</div>
+                        </div>
+                        <span class="text-amber-400 font-mono">→</span>
+                    </button>
+                    <button onclick="handlePublishNext()" class="w-full p-3 bg-spaceDark hover:bg-slate-800 border border-emerald-900/40 rounded-xl text-left flex justify-between items-center btn-touch">
+                        <div>
+                            <div class="text-xs font-bold font-mono text-emerald-400">★ Schedule Next Slot</div>
+                            <div class="text-[10px] text-slate-400">Claim & upload next ready Short</div>
+                        </div>
+                        <span class="text-emerald-400 font-mono">→</span>
+                    </button>
+                    <button onclick="executeSyncYouTube()" class="w-full p-3 bg-spaceDark hover:bg-slate-800 border border-purple-900/40 rounded-xl text-left flex justify-between items-center btn-touch">
+                        <div>
+                            <div class="text-xs font-bold font-mono text-purple-400">⟳ Sync YouTube</div>
+                            <div class="text-[10px] text-slate-400">Reconcile state with YouTube API</div>
+                        </div>
+                        <span class="text-purple-400 font-mono">→</span>
+                    </button>
+                    <button onclick="executeSelfHeal()" class="w-full p-3 bg-spaceDark hover:bg-slate-800 border border-rose-900/40 rounded-xl text-left flex justify-between items-center btn-touch">
+                        <div>
+                            <div class="text-xs font-bold font-mono text-rose-400">🛡️ Self-Heal Pipeline</div>
+                            <div class="text-[10px] text-slate-400">Audit locks & recover stale state</div>
+                        </div>
+                        <span class="text-rose-400 font-mono">→</span>
+                    </button>
+                </div>
             </div>
-            <div id="activity-feed-list" class="space-y-2 font-mono text-xs">
-                <!-- Dynamically Populated -->
+        </div>
+
+        <!-- TAB 7: PERFORMANCE -->
+        <div id="tab-perf" class="tab-pane hidden space-y-3">
+            <div class="bg-panel border border-borderSubtle p-3.5 rounded-xl space-y-2.5">
+                <div class="text-xs font-bold font-mono text-slate-100 uppercase">Published Performance</div>
+                <div id="mobile-performance-leaderboard" class="space-y-2 text-xs font-mono">
+                    {% for row in state.performance_leaderboard %}
+                    <div class="p-3 bg-spaceDark rounded-xl border border-borderSubtle space-y-1.5">
+                        <div class="flex justify-between items-start">
+                            <span class="font-bold text-amber-400">#{{ row.rank }}</span>
+                            <span class="font-bold text-slate-100 truncate max-w-[220px]">{{ row.title }}</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1 text-[11px] text-center pt-1 border-t border-borderSubtle">
+                            <div><span class="text-slate-500">Views:</span> <strong class="text-slate-100">{{ row.views_display }}</strong></div>
+                            <div><span class="text-slate-500">Likes:</span> <strong class="text-emerald-400">{{ row.likes_display }}</strong></div>
+                            <div><span class="text-slate-500">Engage:</span> <strong class="text-amber-400">{{ row.engagement_display }}</strong></div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-slate-500 italic text-xs py-3 text-center">No performance snapshots available yet.</div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
 
     </main>
 
-    <!-- REUSABLE CONFIRMATION MODAL -->
-    <div id="confirm-modal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-panel border border-borderSubtle rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-2xl">
-            <div class="flex items-start space-x-3">
-                <div class="p-2 rounded-xl bg-amber-950 border border-amber-500 text-amber-300 text-lg">⚠️</div>
-                <div>
-                    <h3 id="modal-title" class="font-bold text-sm text-slate-100">Confirm Operation</h3>
-                    <p id="modal-desc" class="text-xs text-slate-300 mt-1 leading-relaxed">Are you sure you want to trigger this action?</p>
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-2.5 pt-2">
-                <button onclick="closeModal()" class="w-full py-2.5 bg-slate-800 text-slate-300 rounded-xl font-mono text-xs font-bold btn-touch">CANCEL</button>
-                <button id="modal-confirm-btn" class="w-full py-2.5 bg-sky-600 text-white rounded-xl font-mono text-xs font-bold btn-touch">CONFIRM</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- FLOATING TOAST NOTIFICATION -->
-    <div id="toast" class="hidden fixed top-16 left-4 right-4 z-50 p-3.5 rounded-xl border font-mono text-xs shadow-2xl flex items-center justify-between">
-        <div class="flex items-center space-x-2">
-            <span id="toast-icon">ℹ️</span>
-            <span id="toast-msg">Notification</span>
-        </div>
-        <button onclick="hideToast()" class="text-slate-400 hover:text-slate-200">✕</button>
-    </div>
-
-    <!-- BOTTOM NAVIGATION BAR (TOUCH OPTIMIZED) -->
-    <nav class="bg-panel/95 backdrop-blur-md border-t border-borderSubtle fixed bottom-0 left-0 right-0 safe-bottom z-40">
-        <div class="grid grid-cols-5 h-14">
-            <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center justify-center space-y-1 text-sky-400 btn-touch">
-                <span class="text-base">🏠</span>
-                <span class="text-[9px] font-mono font-bold">HOME</span>
-            </button>
-            <button onclick="switchTab('queue')" id="nav-queue" class="flex flex-col items-center justify-center space-y-1 text-slate-400 hover:text-slate-200 btn-touch">
-                <span class="text-base">📺</span>
-                <span class="text-[9px] font-mono font-bold">QUEUE</span>
-            </button>
-            <button onclick="switchTab('errors')" id="nav-errors" class="flex flex-col items-center justify-center space-y-1 text-slate-400 hover:text-slate-200 btn-touch">
-                <span class="text-base">⚠️</span>
-                <span class="text-[9px] font-mono font-bold">ERRORS</span>
-            </button>
-            <button onclick="switchTab('actions')" id="nav-actions" class="flex flex-col items-center justify-center space-y-1 text-slate-400 hover:text-slate-200 btn-touch">
-                <span class="text-base">⚡</span>
-                <span class="text-[9px] font-mono font-bold">ACTIONS</span>
-            </button>
-            <button onclick="switchTab('activity')" id="nav-activity" class="flex flex-col items-center justify-center space-y-1 text-slate-400 hover:text-slate-200 btn-touch">
-                <span class="text-base">📋</span>
-                <span class="text-[9px] font-mono font-bold">ACTIVITY</span>
-            </button>
-        </div>
-    </nav>
-
-    <!-- JAVASCRIPT ENGINE -->
+    <!-- JavaScript & Mobile PWA Controllers -->
     <script>
-        // Session CSRF Token
-        
+        // Dismiss Splash
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const splash = document.getElementById('al-amr-splash');
+                if (splash) splash.classList.add('hidden-splash');
+            }, 300);
+        });
 
-        let currentAudio = null;
-        let pendingAction = null;
-
-        // Service Worker Registration
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').catch(err => {
-                    console.log('SW registration notice:', err);
-                });
-            });
-        }
-
-        // Live UTC Clock
-        function updateClock() {
-            const now = new Date();
-            const utc = now.toUTCString().split(' ')[4];
-            document.getElementById('utc-clock').innerText = utc + ' UTC';
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
-
-        // Tab Navigation Switcher
+        // Tab Switching
         function switchTab(tabId) {
-            const tabs = ['home', 'queue', 'errors', 'actions', 'activity'];
-            tabs.forEach(t => {
-                const view = document.getElementById(`view-${t}`);
-                const nav = document.getElementById(`nav-${t}`);
-                if (t === tabId) {
-                    view.classList.remove('hidden');
-                    nav.className = 'flex flex-col items-center justify-center space-y-1 text-sky-400 font-bold btn-touch';
-                } else {
-                    view.classList.add('hidden');
-                    nav.className = 'flex flex-col items-center justify-center space-y-1 text-slate-400 hover:text-slate-200 btn-touch';
-                }
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.className = 'tab-btn px-3 py-1 rounded-lg text-slate-400 hover:text-slate-200 border border-transparent whitespace-nowrap btn-touch';
             });
+            const activePane = document.getElementById(tabId);
+            const activeBtn = document.getElementById('nav-' + tabId);
+            if (activePane) activePane.classList.remove('hidden');
+            if (activeBtn) {
+                activeBtn.className = 'tab-btn px-3 py-1 rounded-lg bg-amber-600/20 text-amber-400 border border-amber-500/40 font-bold whitespace-nowrap btn-touch';
+            }
         }
 
-        // Toast Feedback
-        function showToast(msg, isSuccess = true, icon = null) {
-            const toast = document.getElementById('toast');
-            const toastMsg = document.getElementById('toast-msg');
-            const toastIcon = document.getElementById('toast-icon');
+        // Toast Notifications
+        let toastTimeout = null;
+        function showToast(title, msg, isSuccess = true) {
+            const t = document.getElementById('toast');
+            const box = document.getElementById('toast-box');
+            const icon = document.getElementById('toast-icon');
+            const tTitle = document.getElementById('toast-title');
+            const tMsg = document.getElementById('toast-message');
 
-            toastMsg.innerText = msg;
-            toastIcon.innerText = icon || (isSuccess ? '✓' : '⚠️');
+            tTitle.innerText = title;
+            tMsg.innerText = msg;
+            icon.innerText = isSuccess ? '✓' : '✕';
 
-            if (isSuccess) {
-                toast.className = 'fixed top-16 left-4 right-4 z-50 p-3 rounded-xl border border-emerald-500 bg-emerald-950/95 text-emerald-200 font-mono text-xs shadow-2xl flex items-center justify-between';
-            } else {
-                toast.className = 'fixed top-16 left-4 right-4 z-50 p-3 rounded-xl border border-rose-500 bg-rose-950/95 text-rose-200 font-mono text-xs shadow-2xl flex items-center justify-between';
-            }
+            box.className = `p-3 rounded-xl border shadow-2xl flex items-start space-x-2.5 text-slate-100 ${
+                isSuccess ? 'bg-panel border-emerald-500/50' : 'bg-panel border-rose-500/50'
+            }`;
 
-            toast.classList.remove('hidden');
-            setTimeout(hideToast, 3500);
+            t.classList.remove('translate-y-[-140%]', 'opacity-0', 'pointer-events-none');
+            t.classList.add('translate-y-0', 'opacity-100');
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(hideToast, 4000);
         }
 
         function hideToast() {
-            document.getElementById('toast').classList.add('hidden');
+            const t = document.getElementById('toast');
+            t.classList.add('translate-y-[-140%]', 'opacity-0', 'pointer-events-none');
+            t.classList.remove('translate-y-0', 'opacity-100');
         }
 
-        // Confirmation Modal
-        function confirmTriggerAction(actionType, title, desc, payload = {}) {
-            pendingAction = { type: actionType, payload: payload };
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-desc').innerText = desc;
-            
-            const btn = document.getElementById('modal-confirm-btn');
-            btn.onclick = () => executePendingAction();
-            document.getElementById('confirm-modal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            pendingAction = null;
-            document.getElementById('confirm-modal').classList.add('hidden');
-        }
-
-        async function executePendingAction() {
-            if (!pendingAction) return;
-            const { type, payload } = pendingAction;
-            closeModal();
-            
-            showToast(`Executing ${type}...`, true, '⏳');
-
-            let url = '';
-            let body = {};
-
-            if (type === 'PUBLISH_NEXT') {
-                url = '/api/actions/publish-next';
-                body = {};
-            } else if (type === 'REPLENISH') {
-                url = '/api/actions/produce';
-                body = { target: 12, count: 1 };
-            } else if (type === 'PRODUCE_ONE') {
-                url = '/api/actions/produce';
-                body = { count: 1, target: 12 };
-            } else if (type === 'SYNC_YT') {
-                url = '/api/actions/reconcile-scheduled';
-                body = {};
-            } else if (type === 'SELF_HEAL') {
-                url = '/api/actions/self-heal';
-                body = {};
-            } else if (type === 'RETRY_JOB') {
-                url = '/api/actions/retry-job';
-                body = { job_id: payload.job_id };
-            } else if (type === 'QUARANTINE_JOB') {
-                url = '/api/actions/quarantine-job';
-                body = { job_id: payload.job_id, reason: 'Quarantined via Mobile AL AMR' };
-            } else if (type === 'RELEASE_PROD_LOCK') {
-                url = '/api/actions/release-lock';
-                body = { lock_name: 'production', force: true };
-            } else if (type === 'RELEASE_PUB_LOCK') {
-                url = '/api/actions/release-lock';
-                body = { lock_name: 'publisher', force: true };
-            }
-
+        // Refresh State
+        async function refreshState() {
+            showToast('SYNCING', 'Refreshing operations telemetry...', true);
             try {
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': getCsrfToken()
-                    },
-                    body: JSON.stringify(body)
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    if (data.action === 'DISPATCH_ACCEPTED' || data.workflow || data.mode === 'CLOUD_DISPATCH') {
-                        recordMobileInflightWorkflow(data.workflow || data.workflow_name || 'Cloud Workflow', pendingAction ? pendingAction.type : 'Cloud Operation');
-                        showToast(data.message || 'Cloud workflow dispatched. Runner executing in GitHub Actions...', true, '⏳');
-                    } else {
-                        showToast(data.message || 'Operation succeeded.', true);
-                    }
-                    await fetchLatestState();
-                } else {
-                    showToast(data.error || data.detail || 'Operation rejected by safety guardrail.', false);
+                const res = await fetch('/api/state');
+                if (res.ok) {
+                    setTimeout(() => window.location.reload(), 600);
                 }
-            } catch (err) {
-                showToast(`Network Error: ${err.message}`, false);
+            } catch (e) {
+                showToast('NETWORK ERROR', e.message, false);
             }
         }
 
         // Voice Preview Audio Synthesis
-        let isMobilePreviewInProgress = false;
+        let currentAudio = null;
+        let isPreviewInProgress = false;
 
-        async function previewVoice(voiceId, displayName, btn) {
-            if (isMobilePreviewInProgress) return;
+        async function handlePreviewVoice(voiceId, displayName, btn) {
+            if (isPreviewInProgress) return;
 
             if (currentAudio) {
                 try {
@@ -627,11 +484,11 @@
                 currentAudio = null;
             }
 
-            const originalText = btn.innerHTML;
-            isMobilePreviewInProgress = true;
+            const originalHtml = btn.innerHTML;
+            isPreviewInProgress = true;
             btn.disabled = true;
-            btn.innerHTML = '⏳ Loading...';
-            showToast(`Synthesizing preview for ${displayName}...`, true, '🔊');
+            btn.innerHTML = '⏳ Synthesizing...';
+            showToast('PREVIEW', `Generating live sample for ${displayName}...`, true);
 
             try {
                 const res = await fetch('/api/voice/preview', {
@@ -651,66 +508,63 @@
                         try {
                             data = JSON.parse(text);
                         } catch(parseErr) {
-                            console.error('Failed to parse JSON preview response:', parseErr, text);
+                            console.error('JSON parse error:', parseErr);
                         }
                     }
                 }
 
                 if (res.ok && data && (data.ok || data.success) && data.audio_url) {
-                    showToast(`Playing sample: ${displayName}`, true, '🔊');
+                    showToast('PLAYING', `Sample: ${displayName}`, true);
                     currentAudio = new Audio(data.audio_url);
                     btn.innerHTML = '🔊 Playing...';
 
                     currentAudio.onended = () => {
-                        btn.innerHTML = originalText;
+                        btn.innerHTML = originalHtml;
                         btn.disabled = false;
                         currentAudio = null;
-                        isMobilePreviewInProgress = false;
+                        isPreviewInProgress = false;
                     };
-                    currentAudio.onerror = (e) => {
-                        console.error('Audio playback error:', e);
-                        btn.innerHTML = originalText;
+                    currentAudio.onerror = () => {
+                        btn.innerHTML = originalHtml;
                         btn.disabled = false;
                         currentAudio = null;
-                        isMobilePreviewInProgress = false;
-                        showToast('Playback error in browser.', false);
+                        isPreviewInProgress = false;
+                        showToast('PLAYBACK ERROR', 'Audio playback failed.', false);
                     };
 
                     try {
                         await currentAudio.play();
                     } catch(playErr) {
-                        console.warn('Autoplay restriction or playback failure:', playErr);
-                        btn.innerHTML = originalText;
+                        btn.innerHTML = originalHtml;
                         btn.disabled = false;
                         currentAudio = null;
-                        isMobilePreviewInProgress = false;
-                        showToast('Audio playback blocked. Click again to play.', false);
+                        isPreviewInProgress = false;
+                        showToast('BLOCKED', 'Audio playback was blocked. Tap again.', false);
                     }
                 } else {
-                    const errMsg = (data && (data.error || data.detail || data.message)) || `Server returned HTTP ${res.status}`;
-                    showToast(errMsg, false);
-                    btn.innerHTML = originalText;
+                    const errMsg = (data && (data.error || data.detail)) || `HTTP ${res.status}`;
+                    showToast('PREVIEW FAILED', errMsg, false);
+                    btn.innerHTML = originalHtml;
                     btn.disabled = false;
-                    isMobilePreviewInProgress = false;
+                    isPreviewInProgress = false;
                 }
             } catch (err) {
-                console.error('Network or fetch error during voice preview:', err);
-                showToast(`Network Error: ${err.message || 'Connection failed'}`, false);
-                btn.innerHTML = originalText;
+                showToast('NETWORK ERROR', err.message, false);
+                btn.innerHTML = originalHtml;
                 btn.disabled = false;
-                isMobilePreviewInProgress = false;
+                isPreviewInProgress = false;
             } finally {
                 if (!currentAudio) {
-                    btn.innerHTML = originalText;
+                    btn.innerHTML = originalHtml;
                     btn.disabled = false;
-                    isMobilePreviewInProgress = false;
+                    isPreviewInProgress = false;
                 }
             }
         }
 
-        // Set Active Production Voice
-        async function setActiveVoice(voiceId, displayName) {
-            showToast(`Setting active voice to ${displayName}...`, true, '⚙️');
+        // Set as Active Production Voice
+        async function handleSetVoice(voiceId, displayName) {
+            showToast('UPDATING', `Setting active voice to ${displayName}...`, true);
             try {
                 const res = await fetch('/api/config/voice', {
                     method: 'POST',
@@ -722,427 +576,112 @@
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
-                    showToast(`Active voice set to ${displayName}.`, true);
-                    await fetchLatestState();
+                    showToast('UPDATED', `Voice set to ${displayName}`, true);
+                    setTimeout(() => window.location.reload(), 1000);
                 } else {
-                    showToast(data.error || data.detail || 'Could not set active voice.', false);
+                    showToast('UPDATE FAILED', data.error || data.detail, false);
                 }
             } catch (err) {
-                showToast(err.message, false);
+                showToast('NETWORK ERROR', err.message, false);
             }
         }
 
-        // Master State Telemetry Poller
-        
-        // =========================================================================
-        // AL AMR MOBILE CLOUD WORKFLOW BANNER ENGINE (PHASE 11.3)
-        // =========================================================================
-        const MOBILE_INFLIGHT_KEY = 'al_amr_inflight_workflow';
-
-        function recordMobileInflightWorkflow(workflowName, actionTitle) {
-            const info = {
-                workflow: workflowName,
-                action: actionTitle,
-                dispatchedAt: new Date().toISOString(),
-                dispatchedTimestamp: Date.now()
-            };
+        // Operations Handlers
+        async function handleProduceShort() {
+            if (!confirm('Produce 1 Short into Google Drive 01_READY?')) return;
+            showToast('PRODUCTION', 'Triggering single video production...', true);
             try {
-                sessionStorage.setItem(MOBILE_INFLIGHT_KEY, JSON.stringify(info));
+                const res = await fetch('/api/actions/produce', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ count: 1 })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast('INITIATED', 'Production started.', true);
+                    setTimeout(() => window.location.reload(), 1500);
+                }
+            } catch(e) { showToast('ERROR', e.message, false); }
+        }
+
+        async function handleReplenishBuffer() {
+            if (!confirm('Replenish reserve buffer to 12 Shorts in Google Drive?')) return;
+            showToast('REPLENISHMENT', 'Triggering batch buffer replenishment...', true);
+            try {
+                const res = await fetch('/api/actions/produce', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ target: 12 })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast('INITIATED', 'Replenishment started.', true);
+                    setTimeout(() => window.location.reload(), 1500);
+                }
+            } catch(e) { showToast('ERROR', e.message, false); }
+        }
+
+        async function handlePublishNext() {
+            if (!confirm('Claim and publish next Short from 01_READY on YouTube?')) return;
+            showToast('PUBLISHING', 'Claiming and scheduling next Short...', true);
+            try {
+                const res = await fetch('/api/actions/publish-next', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast('SCHEDULED', 'Short scheduled on YouTube.', true);
+                    setTimeout(() => window.location.reload(), 1500);
+                }
+            } catch(e) { showToast('ERROR', e.message, false); }
+        }
+
+        async function executeSyncYouTube() {
+            showToast('SYNCING', 'Reconciling YouTube state...', true);
+            try {
+                const res = await fetch('/api/actions/reconcile-scheduled', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() }
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast('SYNCED', `Reconciled ${data.reconciled_count || 0} videos.`, true);
+                    setTimeout(() => window.location.reload(), 1200);
+                }
+            } catch(e) { showToast('ERROR', e.message, false); }
+        }
+
+        async function executeSelfHeal() {
+            showToast('SELF-HEALING', 'Auditing pipeline & recovering state...', true);
+            try {
+                const res = await fetch('/api/actions/self-heal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() }
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast('HEALED', 'System integrity restored.', true);
+                    setTimeout(() => window.location.reload(), 1200);
+                }
+            } catch(e) { showToast('ERROR', e.message, false); }
+        }
+
+        async function handleLogout() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': getCsrfToken() }
+                });
             } catch(e) {}
-            renderMobileInflightBanner(info, 'IN_FLIGHT', 0);
+            window.location.href = '/login';
         }
 
-        function dismissMobileCloudBanner() {
-            try {
-                sessionStorage.removeItem(MOBILE_INFLIGHT_KEY);
-            } catch(e) {}
-            const banner = document.getElementById('mobile-cloud-banner');
-            if (banner) banner.classList.add('hidden');
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js').catch(e => console.log('SW registration notice:', e));
         }
-
-        function checkMobileInflightStatus() {
-            let saved = null;
-            try {
-                const item = sessionStorage.getItem(MOBILE_INFLIGHT_KEY);
-                if (item) saved = JSON.parse(item);
-            } catch(e) {}
-
-            if (!saved) {
-                const banner = document.getElementById('mobile-cloud-banner');
-                if (banner) banner.classList.add('hidden');
-                return;
-            }
-
-            const elapsedSec = Math.floor((Date.now() - saved.dispatchedTimestamp) / 1000);
-            if (elapsedSec > 480) {
-                renderMobileInflightBanner(saved, 'TIMEOUT', elapsedSec);
-                return;
-            }
-            renderMobileInflightBanner(saved, 'IN_FLIGHT', elapsedSec);
-        }
-
-        function renderMobileInflightBanner(savedInfo, status = 'IN_FLIGHT', elapsedSec = 0) {
-            if (!savedInfo) {
-                try {
-                    const item = sessionStorage.getItem(MOBILE_INFLIGHT_KEY);
-                    if (item) savedInfo = JSON.parse(item);
-                } catch(e) {}
-            }
-            if (!savedInfo) return;
-
-            const banner = document.getElementById('mobile-cloud-banner');
-            if (!banner) return;
-
-            banner.classList.remove('hidden');
-            const badge = document.getElementById('mobile-cloud-badge');
-            const wfEl = document.getElementById('mobile-cloud-workflow');
-            const msgEl = document.getElementById('mobile-cloud-msg');
-            const timeEl = document.getElementById('mobile-cloud-time');
-            const elapsedEl = document.getElementById('mobile-cloud-elapsed');
-
-            const dt = new Date(savedInfo.dispatchedAt);
-            const timeStr = dt.toUTCString().split(' ')[4] + ' UTC';
-
-            if (status === 'TIMEOUT') {
-                if (badge) {
-                    badge.className = 'px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-rose-950 text-rose-300 border border-rose-600 tracking-wider uppercase';
-                    badge.innerText = 'WORKFLOW TIMEOUT';
-                }
-                if (msgEl) {
-                    msgEl.innerHTML = `Runner executing longer than expected (> 8 mins). Check GitHub Actions tab for execution logs.`;
-                }
-            } else {
-                if (badge) {
-                    badge.className = 'px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-950 text-amber-300 border border-amber-600 tracking-wider uppercase';
-                    badge.innerText = 'CLOUD WORKFLOW DISPATCHED';
-                }
-                if (msgEl) {
-                    msgEl.innerHTML = `Runner executing in GitHub Actions... Dispatched at <span class="text-amber-300 font-bold">${timeStr}</span>`;
-                }
-            }
-
-            if (wfEl) wfEl.innerText = savedInfo.workflow || savedInfo.action || 'Cloud Runner';
-            if (timeEl) timeEl.innerText = timeStr;
-            if (elapsedEl) elapsedEl.innerText = `${elapsedSec}s`;
-        }
-
-        async function fetchLatestState() {
-            try {
-                const res = await fetch('/api/state');
-                if (res.ok) {
-                    const state = await res.json();
-                    document.getElementById('offline-banner').classList.add('hidden');
-                    renderState(state);
-                } else {
-                    document.getElementById('offline-banner').classList.remove('hidden');
-                }
-            } catch (e) {
-                document.getElementById('offline-banner').classList.remove('hidden');
-            }
-        }
-
-        function renderState(state) {
-            // 1. Overall Health Status
-            const health = state.health || {};
-            const verdict = health.verdict || 'UNKNOWN';
-            const statusPill = document.getElementById('status-pill');
-            const statusText = document.getElementById('status-text');
-
-            if (verdict === 'READY') {
-                statusPill.className = 'px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wide flex items-center space-x-1.5 bg-emerald-950 border border-emerald-500 text-emerald-300';
-                statusText.innerText = 'HEALTHY';
-            } else if (verdict === 'DEGRADED') {
-                statusPill.className = 'px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wide flex items-center space-x-1.5 bg-amber-950 border border-amber-500 text-amber-300';
-                statusText.innerText = 'WARNING';
-            } else {
-                statusPill.className = 'px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wide flex items-center space-x-1.5 bg-rose-950 border border-rose-500 text-rose-300';
-                statusText.innerText = 'CRITICAL';
-            }
-
-            // 2. Next Release Spotlight
-            if (state.scheduled_queue && state.scheduled_queue.next_scheduled_video) {
-                const nsv = state.scheduled_queue.next_scheduled_video;
-                document.getElementById('spotlight-title').innerText = nsv.title || 'Scheduled Short';
-                document.getElementById('spotlight-slot').innerText = nsv.slot_label || '--:-- UTC';
-                document.getElementById('spotlight-ytid').innerText = nsv.youtube_video_id || '--';
-                document.getElementById('spotlight-vault').innerText = nsv.drive_location || '02_PROCESSING';
-                document.getElementById('spotlight-countdown').innerText = nsv.countdown || '--:--:--';
-            } else {
-                document.getElementById('spotlight-title').innerText = 'No Scheduled Video in Queue';
-                document.getElementById('spotlight-countdown').innerText = '00:00:00';
-            }
-
-            // 3. Buffer & Publishing Metrics
-            const buffer = state.buffer || {};
-            const pub = state.publishing || {};
-            const sq = state.scheduled_queue || {};
-
-            document.getElementById('buffer-ready').innerText = buffer.ready_stock || 0;
-            document.getElementById('buffer-deficit').innerText = buffer.deficit || 0;
-            document.getElementById('buffer-runway').innerText = (buffer.estimated_runway_days ? Math.round(buffer.estimated_runway_days * 24) : 0) + 'h';
-
-            document.getElementById('pub-today').innerText = pub.published_today || 0;
-            document.getElementById('sched-today').innerText = sq.scheduled_today_count || 0;
-            document.getElementById('cap-today').innerText = sq.remaining_daily_capacity !== undefined ? sq.remaining_daily_capacity : (4 - (pub.published_today || 0));
-
-            // 4. Drive Vault Counts
-            const inv = state.inventory || {};
-            const counts = inv.counts || {};
-            document.getElementById('vault-ready').innerText = counts['01_READY'] || 0;
-            document.getElementById('vault-proc').innerText = counts['02_PROCESSING'] || 0;
-            document.getElementById('vault-pub').innerText = counts['03_PUBLISHED'] || 0;
-            document.getElementById('vault-fail').innerText = counts['04_FAILED'] || 0;
-
-            // 5. ProcessLocks
-            const locks = state.locks || {};
-            const prodLock = locks.production || {};
-            const pubLock = locks.publisher || {};
-
-            const prodEl = document.getElementById('lock-prod-status');
-            const pubEl = document.getElementById('lock-pub-status');
-
-            if (prodLock.active) {
-                prodEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 border border-amber-500 text-amber-300';
-                prodEl.innerText = `ACTIVE (${prodLock.held_by_pid || 'PID'})`;
-            } else {
-                prodEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-emerald-400';
-                prodEl.innerText = 'FREE';
-            }
-
-            if (pubLock.active) {
-                pubEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-sky-950 border border-sky-500 text-sky-300';
-                pubEl.innerText = `ACTIVE (${pubLock.held_by_pid || 'PID'})`;
-            } else {
-                pubEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-emerald-400';
-                pubEl.innerText = 'FREE';
-            }
-
-            // 5b. Service Quotas & Limits Rendering
-            const quotasContainer = document.getElementById('service-quotas-list');
-            if (quotasContainer && state.service_quotas && state.service_quotas.services) {
-                const services = state.service_quotas.services;
-                quotasContainer.innerHTML = services.map(s => {
-                    let statusBadge = '';
-                    if (s.status === 'SAFE' || s.status === 'OK') {
-                        statusBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-950 border border-emerald-500 text-emerald-300">SAFE</span>';
-                    } else if (s.status === 'WARNING') {
-                        statusBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-950 border border-amber-500 text-amber-300">WARN</span>';
-                    } else if (s.status === 'CRITICAL') {
-                        statusBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-rose-950 border border-rose-500 text-rose-300">CRIT</span>';
-                    } else {
-                        statusBadge = '<span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-800 border border-slate-600 text-slate-300">UNKNOWN</span>';
-                    }
-
-                    let usageDisplay = '—';
-                    let remainingDisplay = '—';
-                    if (s.unit === 'bytes' && s.limit) {
-                        const usedGb = (s.used / (1024 ** 3)).toFixed(2);
-                        const limitGb = (s.limit / (1024 ** 3)).toFixed(2);
-                        usageDisplay = `${usedGb} / ${limitGb} GB`;
-                        remainingDisplay = `${((s.limit - s.used) / (1024 ** 3)).toFixed(2)} GB`;
-                    } else {
-                        if (s.used !== null && s.used !== undefined) {
-                            usageDisplay = s.limit ? `${s.used.toLocaleString()} / ${s.limit.toLocaleString()}` : `${s.used.toLocaleString()}`;
-                        }
-                        if (s.remaining !== null && s.remaining !== undefined) {
-                            remainingDisplay = `${s.remaining.toLocaleString()} ${s.unit}`;
-                        }
-                    }
-
-                    return `
-                        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 space-y-2 font-mono text-xs">
-                            <div class="flex justify-between items-center">
-                                <div class="font-bold text-slate-100 flex items-center space-x-1.5">
-                                    <span>${s.display_name}</span>
-                                </div>
-                                ${statusBadge}
-                            </div>
-                            <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-slate-300">
-                                <div><span class="text-slate-500">Usage:</span> <strong class="text-slate-200">${usageDisplay}</strong></div>
-                                <div><span class="text-slate-500">Remaining:</span> <strong class="text-sky-300">${remainingDisplay}</strong></div>
-                                <div><span class="text-slate-500">Reset:</span> <span class="text-slate-400">${s.reset_type}</span></div>
-                                <div><span class="text-slate-500">Source:</span> <span class="text-slate-400">${s.measurement_type}</span></div>
-                                <div><span class="text-slate-500">Impact:</span> <span class="${s.automation_impact === 'HIGH' ? 'text-rose-400' : (s.automation_impact === 'MEDIUM' ? 'text-amber-400' : 'text-slate-400')}">${s.automation_impact}</span></div>
-                                <div><span class="text-slate-500">Fallback:</span> <span class="${s.fallback_available ? 'text-emerald-400' : 'text-slate-500'}">${s.fallback_available ? 'YES' : 'NO'}</span></div>
-                            </div>
-                            <p class="text-[10px] text-slate-400 pt-0.5 border-t border-slate-800/80 leading-tight">${s.message || ''}</p>
-                        </div>
-                    `;
-                }).join('');
-            }
-
-            // 6. Scheduled Queue List Tab
-            const queueList = document.getElementById('queue-list');
-            const queueItems = (state.scheduled_queue && state.scheduled_queue.scheduled_slots) || [];
-            document.getElementById('queue-count').innerText = `${queueItems.length} Scheduled`;
-
-            // 7. Render Performance Leaderboard
-            if (state.performance_leaderboard) {
-                const countEl = document.getElementById('mobile-leaderboard-count');
-                if (countEl) countEl.innerText = `${state.performance_leaderboard.length} Ranked`;
-
-                const container = document.getElementById('mobile-performance-leaderboard');
-                if (container) {
-                    if (state.performance_leaderboard.length === 0) {
-                        container.innerHTML = '<div class="text-center py-4 text-xs font-mono text-slate-500 italic">No published video analytics recorded yet.</div>';
-                    } else {
-                        container.innerHTML = state.performance_leaderboard.map(v => {
-                            let rankBadge = '';
-                            if (v.rank === 1) rankBadge = '<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-600 text-[10px] font-bold">🥇 #1</span>';
-                            else if (v.rank === 2) rankBadge = '<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-600 text-[10px] font-bold">🥈 #2</span>';
-                            else if (v.rank === 3) rankBadge = '<span class="px-1.5 py-0.5 rounded bg-amber-950/40 text-amber-500 border border-amber-800 text-[10px] font-bold">🥉 #3</span>';
-                            else rankBadge = `<span class="text-slate-500 font-bold">#${v.rank}</span>`;
-
-                            const watchLink = v.youtube_url ? `<div class="text-right pt-0.5"><a href="${v.youtube_url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-1 text-[10px] font-bold text-sky-400 hover:text-sky-300 underline"><span>Watch on YouTube</span><span>↗</span></a></div>` : '';
-
-                            return `
-                                <div class="bg-obsidian p-3 rounded-xl border border-borderSubtle space-y-2 font-mono text-xs">
-                                    <div class="flex justify-between items-start">
-                                        <div class="flex items-center space-x-1.5">
-                                            ${rankBadge}
-                                            <span class="font-bold text-slate-100 line-clamp-1 text-[11px]" title="${v.title}">${v.title}</span>
-                                        </div>
-                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-900 text-slate-400 border border-slate-700">
-                                            ${v.classification !== 'UNRATED' ? v.classification : v.status}
-                                        </span>
-                                    </div>
-                                    <div class="grid grid-cols-3 gap-1.5 text-[10px] text-slate-300 bg-slate-900/60 p-2 rounded-lg">
-                                        <div><span class="text-slate-500">Views:</span> <strong class="text-slate-100">${v.views_display}</strong></div>
-                                        <div><span class="text-slate-500">Likes:</span> <strong class="text-slate-200">${v.likes_display}</strong></div>
-                                        <div><span class="text-slate-500">Eng:</span> <strong class="text-sky-300">${v.engagement_display}</strong></div>
-                                        <div><span class="text-slate-500">APV:</span> <span class="text-purple-300">${v.apv_display}</span></div>
-                                        <div class="col-span-2"><span class="text-slate-500">Published:</span> <span class="text-slate-400">${v.published_at_display}</span></div>
-                                    </div>
-                                    ${watchLink}
-                                </div>
-                            `;
-                        }).join('');
-                    }
-                }
-            }
-
-
-            if (queueItems.length === 0) {
-                queueList.innerHTML = '<div class="bg-panel border border-borderSubtle rounded-xl p-4 text-center text-xs font-mono text-slate-500">No videos currently scheduled on YouTube.</div>';
-            } else {
-                queueList.innerHTML = queueItems.map(item => `
-                    <div class="bg-panel border border-borderSubtle rounded-xl p-3 space-y-1.5">
-                        <div class="flex justify-between items-start">
-                            <h3 class="font-bold text-xs text-slate-100 line-clamp-1">${item.title}</h3>
-                            <span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-sky-950 border border-sky-500 text-sky-300">${item.status}</span>
-                        </div>
-                        <div class="text-[10px] font-mono text-slate-400 flex justify-between">
-                            <span>Slot: <strong class="text-sky-300">${item.slot_label}</strong></span>
-                            <span>ID: <strong class="text-amber-400">${item.youtube_video_id}</strong></span>
-                        </div>
-                    </div>
-                `).join('');
-            }
-
-            // 7. Errors & Attention Tab
-            const errorsList = document.getElementById('errors-list');
-            const dbSummary = state.database_summary || {};
-            const recentJobs = dbSummary.recent_jobs || [];
-            const attentionJobs = recentJobs.filter(j => j.state === 'FAILED' || j.state === 'NEEDS_REVIEW');
-            document.getElementById('attention-count').innerText = `${attentionJobs.length} Items`;
-
-            if (attentionJobs.length === 0) {
-                errorsList.innerHTML = '<div class="bg-panel border border-borderSubtle rounded-xl p-4 text-center text-xs font-mono text-emerald-400">✓ Zero failed or in-review jobs. Pipeline healthy.</div>';
-            } else {
-                errorsList.innerHTML = attentionJobs.map(j => `
-                    <div class="bg-panel border border-rose-900/50 rounded-xl p-3 space-y-2">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <span class="text-xs font-bold font-mono text-slate-100">${j.id}</span>
-                                <div class="text-[10px] font-mono text-rose-400 mt-0.5">${j.state} • Retries: ${j.retry_count || 0}</div>
-                            </div>
-                            <span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-rose-950 border border-rose-500 text-rose-300">ATTENTION</span>
-                        </div>
-                        <p class="text-[11px] text-slate-300 bg-slate-900/80 p-2 rounded border border-slate-800 font-mono">${j.error_message || 'Unspecified error'}</p>
-                        <div class="flex space-x-2 pt-1">
-                            <button onclick="confirmTriggerAction('RETRY_JOB', 'Retry Job', 'Reset job ${j.id} to QUEUED state for reprocessing?', { job_id: '${j.id}' })" class="flex-1 py-1.5 bg-slate-800 hover:bg-sky-700 text-slate-200 rounded-lg text-xs font-mono font-bold btn-touch">
-                                ↺ Retry
-                            </button>
-                            <button onclick="confirmTriggerAction('QUARANTINE_JOB', 'Quarantine Job', 'Move job ${j.id} and associated Drive files to 04_FAILED?', { job_id: '${j.id}' })" class="flex-1 py-1.5 bg-rose-950 hover:bg-rose-900 text-rose-200 border border-rose-700 rounded-lg text-xs font-mono font-bold btn-touch">
-                                🛑 Quarantine
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-
-            // 8. Voice Controls Tab
-            const voiceConfig = state.voice_config || {};
-            const activeVoiceId = voiceConfig.active_voice_id || 'am_adam';
-            document.getElementById('active-voice-badge').innerText = `Active: ${activeVoiceId}`;
-
-            const voiceCards = document.getElementById('voice-cards');
-            const voices = voiceConfig.available_voices || [];
-            voiceCards.innerHTML = voices.map(v => `
-                <div class="bg-slate-900/80 border ${v.id === activeVoiceId ? 'border-sky-500 bg-sky-950/20' : 'border-borderSubtle'} rounded-xl p-3 space-y-2">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <div class="font-bold text-xs text-slate-100">${v.display_name}</div>
-                            <div class="text-[9px] font-mono text-sky-400">${v.engine} • ${v.style}</div>
-                        </div>
-                        <span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold ${v.id === activeVoiceId ? 'bg-sky-500 text-slate-950' : 'bg-slate-800 text-slate-400'}">
-                            ${v.id === activeVoiceId ? 'IN USE' : 'AVAILABLE'}
-                        </span>
-                    </div>
-                    <div class="flex space-x-2 pt-1">
-                        <button onclick="previewVoice('${v.id}', '${v.display_name}', this)" class="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg text-xs font-mono font-bold btn-touch">
-                            🔊 Preview
-                        </button>
-                        ${v.id !== activeVoiceId ? `
-                        <button onclick="setActiveVoice('${v.id}', '${v.display_name}')" class="flex-1 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-mono font-bold btn-touch">
-                            Set Active
-                        </button>
-                        ` : `
-                        <div class="flex-1 py-1.5 bg-sky-950/50 border border-sky-800 text-sky-400 rounded-lg text-xs font-mono font-bold text-center">
-                            ✓ In Use
-                        </div>
-                        `}
-                    </div>
-                </div>
-            `).join('');
-
-            // 9. 4-Track BGM Status
-            const bgmStatus = state.bgm_status || {};
-            const bgmList = document.getElementById('bgm-tracks-list');
-            const bgmTracks = bgmStatus.library || [];
-            bgmList.innerHTML = bgmTracks.map(t => `
-                <div class="bg-slate-900/80 border border-borderSubtle rounded-lg p-2.5 flex justify-between items-center text-xs font-mono">
-                    <div>
-                        <div class="font-bold text-slate-200">${t.name}</div>
-                        <div class="text-[9px] text-slate-400">${t.mood} • ${t.target_lufs} LUFS</div>
-                    </div>
-                    <span class="px-2 py-0.5 rounded text-[9px] font-bold ${t.available ? 'bg-emerald-950 text-emerald-300 border border-emerald-600' : 'bg-rose-950 text-rose-300 border border-rose-600'}">
-                        ${t.available ? 'READY' : 'MISSING'}
-                    </span>
-                </div>
-            `).join('');
-
-            // 10. Activity Feed Tab
-            const activityList = document.getElementById('activity-feed-list');
-            const activities = state.activity_feed || [];
-            if (activities.length === 0) {
-                activityList.innerHTML = '<div class="bg-panel border border-borderSubtle rounded-xl p-4 text-center text-slate-500">No recent activity events.</div>';
-            } else {
-                activityList.innerHTML = activities.map(a => `
-                    <div class="bg-panel border border-borderSubtle rounded-xl p-2.5 space-y-1">
-                        <div class="flex justify-between items-center text-[10px]">
-                            <span class="text-sky-400 font-bold">${a.title}</span>
-                            <span class="text-slate-500">${a.timestamp ? a.timestamp.split('T')[1].replace('Z','') : ''}</span>
-                        </div>
-                        <p class="text-[11px] text-slate-300 font-sans">${a.description}</p>
-                    </div>
-                `).join('');
-            }
-        }
-
-        // Initial Load & Auto-Poll Every 10 Seconds
-        fetchLatestState();
-        setInterval(fetchLatestState, 10000);
     </script>
 </body>
 </html>

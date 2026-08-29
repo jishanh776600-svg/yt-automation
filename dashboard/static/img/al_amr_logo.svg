@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" width="480" height="120" fill="none">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="50%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#78350F"/>
+    </linearGradient>
+    <linearGradient id="coreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFBEB"/>
+      <stop offset="50%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#CBD5E1"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- SHIELD EMBLEM -->
+  <g transform="translate(15, 10)">
+    <!-- Outer Shield Outer Bevel -->
+    <path d="M50 5 L88 28 L88 72 L50 95 L12 72 L12 28 Z" fill="#090D16" stroke="url(#shieldGrad)" stroke-width="2.5" />
+    
+    <!-- Inner Diamond Facets -->
+    <path d="M50 14 L80 33 L80 67 L50 86 L20 67 L20 33 Z" fill="#0B1120" stroke="#B45309" stroke-width="1.2" opacity="0.8"/>
+    
+    <!-- Central Radiant Star / Diamond Core -->
+    <path d="M50 25 L58 45 L78 50 L58 55 L50 75 L42 55 L22 50 L42 45 Z" fill="url(#coreGrad)" filter="url(#glow)"/>
+    
+    <!-- Center Core Dot -->
+    <circle cx="50" cy="50" r="3.5" fill="#FFFFFF"/>
+    
+    <!-- Technical Precision Marks -->
+    <line x1="50" y1="8" x2="50" y2="18" stroke="#FCD34D" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="50" y1="82" x2="50" y2="92" stroke="#FCD34D" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="15" y1="50" x2="25" y2="50" stroke="#FCD34D" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="75" y1="50" x2="85" y2="50" stroke="#FCD34D" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- AL AMR WORDMARK -->
+  <text x="135" y="62" font-family="'JetBrains Mono', 'Inter', 'Segoe UI', sans-serif" font-weight="900" font-size="36" letter-spacing="4" fill="url(#textGrad)">AL AMR</text>
+  
+  <!-- ARABIC SUB-MARK -->
+  <text x="325" y="62" font-family="'Traditional Arabic', 'Amiri', 'Noto Naskh Arabic', sans-serif" font-weight="bold" font-size="28" fill="#F59E0B" opacity="0.95">الأمر</text>
+  
+  <!-- SYSTEM CLASSIFICATION TAGLINE -->
+  <text x="137" y="82" font-family="'JetBrains Mono', monospace" font-weight="600" font-size="10.5" letter-spacing="2.5" fill="#64748B">AUTONOMOUS MEDIA OPERATIONS</text>
+  <rect x="137" y="90" width="280" height="1" fill="#1E293B"/>
+</svg>
