@@ -3,6 +3,8 @@ Constants for History Shorts Pipeline.
 Defines pipeline state machine, video specs, historical niches, scoring weights, and licensing rules.
 """
 from enum import Enum
+from datetime import datetime, timezone, timedelta
+from typing import Tuple, Optional
 
 
 class JobState(str, Enum):
@@ -35,6 +37,36 @@ PUBLISHING_SLOTS_UTC = [
     (15, 0, "15:00 UTC (08:30 PM IST)"),
     (20, 0, "20:00 UTC (01:30 AM IST)"),
 ]
+
+# Canonical Business Timezone (Asia/Kolkata / IST = UTC+5:30)
+BUSINESS_TIMEZONE = "Asia/Kolkata"
+BUSINESS_TZ = timezone(timedelta(hours=5, minutes=30), name=BUSINESS_TIMEZONE)
+
+
+def get_business_day_bounds_utc(reference_dt: Optional[datetime] = None) -> Tuple[datetime, datetime]:
+    """
+    Computes the UTC start and end bounds corresponding to 00:00:00 and 24:00:00
+    of the business calendar day in Asia/Kolkata (UTC+5:30).
+
+    If reference_dt is None, uses current instant.
+    Returns naive UTC datetimes (start_utc, end_utc) suitable for database comparison against UTC columns.
+    """
+    if reference_dt is None:
+        ref_utc = datetime.now(timezone.utc)
+    elif reference_dt.tzinfo is None:
+        ref_utc = reference_dt.replace(tzinfo=timezone.utc)
+    else:
+        ref_utc = reference_dt.astimezone(timezone.utc)
+
+    ref_ist = ref_utc.astimezone(BUSINESS_TZ)
+    today_ist = ref_ist.date()
+
+    start_ist = datetime(today_ist.year, today_ist.month, today_ist.day, 0, 0, 0, tzinfo=BUSINESS_TZ)
+    end_ist = start_ist + timedelta(days=1)
+
+    start_utc = start_ist.astimezone(timezone.utc).replace(tzinfo=None)
+    end_utc = end_ist.astimezone(timezone.utc).replace(tzinfo=None)
+    return start_utc, end_utc
 
 
 class HistoricalCategory(str, Enum):

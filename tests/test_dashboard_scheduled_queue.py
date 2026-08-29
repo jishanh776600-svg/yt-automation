@@ -140,10 +140,10 @@ class TestDashboardScheduledQueue(unittest.TestCase):
 
     def test_04_today_counts_and_daily_capacity(self):
         """Test 4: Verifies scheduled_today_count and remaining_daily_capacity calculations."""
+        from config.constants import get_business_day_bounds_utc
         now = datetime.utcnow()
-        today_slot = now.replace(hour=10, minute=0, second=0, microsecond=0)
-        if today_slot <= now:
-            today_slot = now.replace(hour=20, minute=0, second=0, microsecond=0)
+        start_utc, end_utc = get_business_day_bounds_utc(now)
+        today_slot = start_utc + timedelta(hours=2)
 
         self._create_test_upload(f"job_cap1_{uuid.uuid4().hex[:8]}", "Today Video 1", scheduled_at=today_slot)
         

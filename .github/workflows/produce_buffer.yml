@@ -101,7 +101,7 @@ jobs:
           fi
 
       - name: Upload & Synchronize Database to Cloud Vault
-        if: success()
+        if: always()
         run: |
           python -m core.database_sync upload
 

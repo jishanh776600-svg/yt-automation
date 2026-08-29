@@ -93,7 +93,7 @@ class LoginRequest(BaseModel):
 
 
 class ProduceBufferRequest(BaseModel):
-    count: int = Field(default=12, ge=1, le=24, description="Number of Shorts to produce or target count")
+    count: int = Field(default=0, ge=0, le=24, description="Number of Shorts to produce or 0 for target refill")
     target: int = Field(default=12, ge=1, le=24, description="Target reserve buffer size in Google Drive")
     password: Optional[str] = Field(default=None, description="Admin password for major action re-authentication")
     reauth_token: Optional[str] = Field(default=None, description="Short-lived re-authentication token")
@@ -452,11 +452,20 @@ def api_cloud_workflows(session: Dict[str, Any] = Depends(get_current_session)):
 
 @app.get("/api/workflows/status/produce_buffer")
 def api_produce_buffer_status(session: Optional[Dict[str, Any]] = Depends(get_optional_session)):
-    """Returns real-time GitHub Actions status for produce_buffer.yml."""
+    """Returns real-time GitHub Actions status and explicit production outcome semantics for produce_buffer.yml."""
     from dashboard.github_client import GitHubWorkflowDispatcher
     dispatcher = GitHubWorkflowDispatcher()
     active_run = dispatcher.get_active_workflow_run("produce_buffer.yml")
     latest_run = dispatcher.get_latest_workflow_run("produce_buffer.yml")
+    
+    # Retrieve real-time Drive Vault stock
+    inventory = data_provider.get_drive_inventory()
+    ready_stock = inventory["counts"].get("01_READY", 0)
+    
+    outcome_status = "UNKNOWN"
+    outcome_message = None
+    block_reason = None
+    
     if active_run:
         if latest_run and latest_run.get("id") == active_run.get("id"):
             active_run["jobs"] = latest_run.get("jobs", [])
@@ -465,13 +474,44 @@ def api_produce_buffer_status(session: Optional[Dict[str, Any]] = Depends(get_op
             details = dispatcher.get_workflow_run_jobs(active_run["id"])
             active_run["jobs"] = details.get("jobs", [])
             active_run["step_summary"] = details.get("step_summary", {})
+        outcome_status = "RUNNING" if active_run.get("status") == "in_progress" else "QUEUED"
+        outcome_message = f"Cloud runner execution in progress... (Reserve: {ready_stock}/12 Shorts)"
+    elif latest_run:
+        conclusion = (latest_run.get("conclusion") or "").lower()
+        if conclusion == "failure":
+            outcome_status = "BLOCKED"
+            block_reason = "STEP_FAILURE_OR_QUOTA_EXHAUSTED"
+            outcome_message = f"Buffer refill halted on error or quota limit (0 new videos added, Reserve: {ready_stock}/12)."
+        elif conclusion == "cancelled":
+            outcome_status = "CANCELLED"
+            outcome_message = "Buffer refill workflow was cancelled."
+        elif conclusion == "success":
+            if ready_stock >= 12:
+                outcome_status = "SUCCEEDED"
+                outcome_message = "Buffer refill succeeded. Target reserve fully stocked (12/12)."
+            elif ready_stock > 1:
+                outcome_status = "PARTIAL"
+                outcome_message = f"Partial buffer replenishment: Reserve at {ready_stock}/12 Shorts."
+            else:
+                outcome_status = "BLOCKED"
+                block_reason = "GEMINI_DAILY_QUOTA_EXHAUSTED"
+                outcome_message = f"Buffer refill halted: 0 new videos produced (Gemini quota limit reached). Reserve remains at {ready_stock}/12."
+        else:
+            outcome_status = conclusion.upper() or "COMPLETED"
+            outcome_message = f"Workflow finished with status '{conclusion}' (Reserve: {ready_stock}/12)."
+
     return {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "workflow": "produce_buffer.yml",
         "workflow_name": "01 Buffer Producer",
         "is_active": bool(active_run),
         "active_run": active_run,
-        "latest_run": latest_run
+        "latest_run": latest_run,
+        "current_stock": ready_stock,
+        "target_stock": 12,
+        "outcome": outcome_status,
+        "outcome_message": outcome_message,
+        "block_reason": block_reason
     }
 
 

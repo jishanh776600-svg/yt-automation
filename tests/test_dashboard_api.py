@@ -67,7 +67,7 @@ class TestDashboardAPI(unittest.TestCase):
         self.assertIn("remaining_capacity", pub_status)
         self.assertEqual(
             pub_status["remaining_capacity"],
-            max(0, DAILY_SHORTS_LIMIT - pub_status["published_today"])
+            max(0, DAILY_SHORTS_LIMIT - (pub_status["published_today"] + pub_status.get("scheduled_today", 0)))
         )
         self.assertIn("next_slot", pub_status)
         self.assertIn("configured_slots", pub_status)

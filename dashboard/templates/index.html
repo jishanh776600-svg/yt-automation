@@ -1733,26 +1733,48 @@
                 _isTrackingActiveWorkflow = false;
                 stopWorkflowStatusPolling();
 
-                const conclusion = (latest && latest.conclusion) ? latest.conclusion : 'completed';
+                const outcome = (info.outcome || (latest && latest.conclusion) || 'COMPLETED').toUpperCase();
+                const outcomeMsg = info.outcome_message || (latest && latest.conclusion ? `Workflow finished: ${latest.conclusion}` : 'Workflow finished.');
                 const runId = latest.id;
                 const runUrl = latest.html_url || (runId ? `https://github.com/jishanh776600-svg/yt-automation/actions/runs/${runId}` : null);
 
-                if (conclusion === 'success') {
+                if (outcome === 'SUCCEEDED') {
                     updateWorkflowBannerUI(
                         'completed',
-                        'Buffer refill completed successfully. Refreshing vault...',
-                        'COMPLETED',
+                        outcomeMsg,
+                        'SUCCEEDED',
                         'px-2 py-0.5 rounded bg-emerald-900/80 border border-emerald-700 text-[10px] font-bold text-emerald-300',
                         bannerElapsed ? bannerElapsed.innerText : '',
                         runId,
                         runUrl
                     );
                     setTimeout(() => window.location.reload(), 2500);
+                } else if (outcome === 'PARTIAL') {
+                    updateWorkflowBannerUI(
+                        'completed',
+                        outcomeMsg,
+                        'PARTIAL REFILL',
+                        'px-2 py-0.5 rounded bg-amber-900/80 border border-amber-700 text-[10px] font-bold text-amber-300',
+                        bannerElapsed ? bannerElapsed.innerText : '',
+                        runId,
+                        runUrl
+                    );
+                    setTimeout(() => window.location.reload(), 3000);
+                } else if (outcome === 'BLOCKED') {
+                    updateWorkflowBannerUI(
+                        'completed',
+                        outcomeMsg,
+                        'REFILL BLOCKED',
+                        'px-2 py-0.5 rounded bg-amber-950 border border-amber-700 text-[10px] font-bold text-amber-300',
+                        bannerElapsed ? bannerElapsed.innerText : '',
+                        runId,
+                        runUrl
+                    );
                 } else {
                     updateWorkflowBannerUI(
                         'completed',
-                        `Workflow finished with conclusion: ${conclusion}`,
-                        (conclusion || 'FAILED').toUpperCase(),
+                        outcomeMsg,
+                        outcome,
                         'px-2 py-0.5 rounded bg-rose-900/80 border border-rose-700 text-[10px] font-bold text-rose-300',
                         bannerElapsed ? bannerElapsed.innerText : '',
                         runId,

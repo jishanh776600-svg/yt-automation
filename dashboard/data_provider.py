@@ -17,7 +17,7 @@ from sqlalchemy import func, desc
 from config.settings import GOOGLE_DRIVE_TOTAL_CAPACITY_BYTES
 
 from config.settings import PROJECT_ROOT, TEST_MODE, KOKORO_VOICE
-from config.constants import DAILY_SHORTS_LIMIT, JobState
+from config.constants import DAILY_SHORTS_LIMIT, JobState, get_business_day_bounds_utc, BUSINESS_TIMEZONE
 from core.database import SessionLocal, get_db
 from core.models import (
     Job, Topic, UploadRecord, RenderOutput, QAReport,
@@ -199,13 +199,13 @@ class SystemDataProvider:
         except Exception as auto_rec_err:
             logger.debug(f"[PUBLISHING_STATUS] Auto-reconciliation notice: {auto_rec_err}")
 
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        today_end = today_start + timedelta(days=1)
+        today_start, today_end = get_business_day_bounds_utc()
         
         published_records_today = db.query(UploadRecord).filter(
             UploadRecord.published_at >= today_start,
             UploadRecord.published_at < today_end,
-            UploadRecord.status == "PUBLISHED"
+            UploadRecord.status == "PUBLISHED",
+            UploadRecord.published_at.isnot(None)
         ).order_by(UploadRecord.published_at.desc()).all()
 
         scheduled_records_today = db.query(UploadRecord).filter(
@@ -244,7 +244,7 @@ class SystemDataProvider:
         next_slot_info = {
             "slot_label": f"{next_unoccupied.strftime('%b %d, %Y')} at {next_unoccupied.strftime('%H:%M')} UTC",
             "slot_iso": next_unoccupied.isoformat() + "Z",
-            "is_today": next_unoccupied.date() == today_start.date(),
+            "is_today": today_start <= next_unoccupied < today_end,
             "time_until_display": f"{int((next_unoccupied - datetime.utcnow()).total_seconds() // 3600)}h {int(((next_unoccupied - datetime.utcnow()).total_seconds() % 3600) // 60)}m"
         }
 
@@ -370,8 +370,7 @@ class SystemDataProvider:
         and reconciliation state across SQLite, YouTube, and Google Drive Vault.
         """
         now = datetime.utcnow()
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        today_end = today_start + timedelta(days=1)
+        today_start, today_end = get_business_day_bounds_utc(now)
 
         # 0. Auto-reconcile any real scheduled uploads whose publishAt has elapsed
         try:

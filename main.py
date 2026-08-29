@@ -316,11 +316,22 @@ class ShortsPipeline:
         finally:
             db.close()
 
-    def produce_batch(self, count: int = 1) -> int:
+    def _write_production_summary(self, summary: Dict[str, Any]) -> None:
+        """Persists machine-readable outcome summary for GitHub Actions and dashboard."""
+        try:
+            summary_path = PROJECT_ROOT / "data" / "production_summary.json"
+            summary_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(summary_path, "w", encoding="utf-8") as f:
+                json.dump(summary, f, indent=2)
+            console.print(f"[bold cyan][PRODUCTION_SUMMARY][/bold cyan] {json.dumps(summary)}")
+        except Exception as e:
+            logger.warning(f"Could not persist production summary: {e}")
+
+    def produce_batch(self, count: int = 3) -> Tuple[int, Dict[str, Any]]:
         """
-        PRODUCER MODE: Generates N Shorts in sequence and deposits each into Google Drive '01_READY'.
-        Applies process locking, hard batch ceilings, and attempt limits.
-        Returns number of successfully deposited videos.
+        BATCH PRODUCER: Generates multiple complete YouTube Shorts sequentially into Google Drive Vault.
+        Acquires process lock, validates production quota, generates assets, renders, QAs,
+        and uploads directly to Google Drive '01_READY' folder.
         """
         lock = ProcessLock(name="production", command_name="produce-batch")
         if not lock.acquire():
@@ -328,7 +339,7 @@ class ShortsPipeline:
             owner_pid = info.get("pid") if info else "unknown"
             cmd = info.get("command") if info else "unknown"
             console.print(f"[bold yellow][!] Production lock currently held by PID {owner_pid} ('{cmd}'). Batch producer exiting safely.[/bold yellow]")
-            return 0
+            return 0, {"outcome": "BLOCKED", "block_reason": "LOCK_HELD", "produced_count": 0}
 
         try:
             # Enforce hard batch ceiling
@@ -338,9 +349,11 @@ class ShortsPipeline:
 
             console.print(Panel.fit(f"[bold magenta]=== Starting Batch Production ({effective_count} Shorts | Safety Ceiling: {MAX_BATCH_PRODUCTION_CEILING}) ===[/bold magenta]", border_style="magenta"))
 
+            initial_stock = self.drive_engine.get_ready_stock_count()
             success_count = 0
             total_attempts = 0
             consecutive_failures = 0
+            block_reason = None
 
             while success_count < effective_count and total_attempts < MAX_PRODUCTION_ATTEMPTS_CEILING:
                 total_attempts += 1
@@ -353,10 +366,12 @@ class ShortsPipeline:
                     else:
                         consecutive_failures += 1
                         if consecutive_failures >= 3:
+                            block_reason = "CONSECUTIVE_FAILURES"
                             logger.error("[BATCH] 3 consecutive single production failures encountered. Halting safely.")
                             break
                 except Exception as fatal_e:
                     if "QuotaExhausted" in type(fatal_e).__name__ or "quota" in str(fatal_e).lower() or "429" in str(fatal_e):
+                        block_reason = "GEMINI_DAILY_QUOTA_EXHAUSTED"
                         logger.error(f"[BATCH] Fatal Gemini quota exhaustion detected: {fatal_e}. Halting batch production cleanly.")
                         break
                     raise fatal_e
@@ -364,19 +379,45 @@ class ShortsPipeline:
 
             if total_attempts >= MAX_PRODUCTION_ATTEMPTS_CEILING and success_count < effective_count:
                 logger.warning(f"Batch production reached maximum attempt ceiling ({MAX_PRODUCTION_ATTEMPTS_CEILING}). Halting safely.")
+                if not block_reason:
+                    block_reason = "ATTEMPT_CEILING_REACHED"
 
-            ready_stock = self.drive_engine.get_ready_stock_count()
+            final_stock = self.drive_engine.get_ready_stock_count()
+            
+            if success_count >= effective_count:
+                outcome = "SUCCEEDED"
+            elif success_count > 0:
+                outcome = "PARTIAL"
+            elif block_reason:
+                outcome = "BLOCKED"
+            else:
+                outcome = "FAILED"
+
+            summary = {
+                "action": "PRODUCE_BATCH",
+                "outcome": outcome,
+                "block_reason": block_reason,
+                "requested_count": effective_count,
+                "produced_count": success_count,
+                "initial_stock": initial_stock,
+                "final_stock": final_stock,
+                "voice": self.run_voice,
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            }
+            self._write_production_summary(summary)
+
             console.print(Panel.fit(
                 f"[bold green]=== Batch Production Complete ===[/bold green]\n"
+                f"Outcome: [bold]{outcome}[/bold] (Reason: {block_reason or 'None'})\n"
                 f"Successfully Produced: [bold]{success_count}/{effective_count}[/bold] (Total Attempts: {total_attempts})\n"
-                f"Total Ready Stock in Drive (01_READY): [bold cyan]{ready_stock} Shorts[/bold cyan]",
-                border_style="green"
+                f"Total Ready Stock in Drive (01_READY): [bold cyan]{final_stock} Shorts[/bold cyan]",
+                border_style="green" if outcome == "SUCCEEDED" else ("yellow" if outcome == "PARTIAL" else "red")
             ))
-            return success_count
+            return success_count, summary
         finally:
             lock.release()
 
-    def maintain_buffer(self, target_stock: int = 12) -> int:
+    def maintain_buffer(self, target_stock: int = 12) -> Tuple[int, Dict[str, Any]]:
         """
         BUFFER MANAGER: Checks current ready stock in Drive '01_READY'.
         If stock < target_stock, dynamically calculates deficit per iteration and generates
@@ -395,11 +436,15 @@ class ShortsPipeline:
         except ProcessLockError as e:
             logger.warning(f"Production lock already held: {e}")
             console.print(f"[bold yellow][!] Production lock active: {e}[/bold yellow]")
-            return 0
+            return 0, {"outcome": "BLOCKED", "block_reason": "LOCK_HELD", "produced_count": 0}
 
+        initial_stock = self.drive_engine.get_ready_stock_count()
+        initial_needed = max(0, clamped_target - initial_stock)
         produced_count = 0
         total_attempts = 0
         consecutive_failures = 0
+        block_reason = None
+
         try:
             while total_attempts < MAX_PRODUCTION_ATTEMPTS_CEILING:
                 current_stock = self.drive_engine.get_ready_stock_count()
@@ -417,6 +462,8 @@ class ShortsPipeline:
 
                 if produced_count >= MAX_BATCH_PRODUCTION_CEILING:
                     logger.warning(f"Batch production reached session limit ({MAX_BATCH_PRODUCTION_CEILING}). Halting safely.")
+                    if not block_reason:
+                        block_reason = "SESSION_LIMIT_REACHED"
                     break
 
                 total_attempts += 1
@@ -429,16 +476,50 @@ class ShortsPipeline:
                     else:
                         consecutive_failures += 1
                         if consecutive_failures >= 3:
+                            block_reason = "CONSECUTIVE_FAILURES"
                             logger.error("[BUFFER] 3 consecutive production failures encountered. Halting buffer maintenance safely.")
                             break
                 except Exception as fatal_e:
                     if "QuotaExhausted" in type(fatal_e).__name__ or "quota" in str(fatal_e).lower() or "429" in str(fatal_e):
+                        block_reason = "GEMINI_DAILY_QUOTA_EXHAUSTED"
                         logger.error(f"[BUFFER] Fatal Gemini quota exhaustion detected: {fatal_e}. Halting buffer maintenance cleanly.")
                         break
                     raise fatal_e
                 time.sleep(2)
 
-            return produced_count
+            final_stock = self.drive_engine.get_ready_stock_count()
+            
+            if initial_needed == 0 or produced_count >= initial_needed or final_stock >= clamped_target:
+                outcome = "SUCCEEDED"
+            elif produced_count > 0:
+                outcome = "PARTIAL"
+            elif block_reason:
+                outcome = "BLOCKED"
+            else:
+                outcome = "FAILED"
+
+            summary = {
+                "action": "MAINTAIN_BUFFER",
+                "outcome": outcome,
+                "block_reason": block_reason,
+                "requested_deficit": initial_needed,
+                "produced_count": produced_count,
+                "initial_stock": initial_stock,
+                "final_stock": final_stock,
+                "target_stock": clamped_target,
+                "voice": self.run_voice,
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            }
+            self._write_production_summary(summary)
+
+            console.print(Panel.fit(
+                f"[bold green]=== Buffer Maintenance Complete ===[/bold green]\n"
+                f"Outcome: [bold]{outcome}[/bold] (Reason: {block_reason or 'None'})\n"
+                f"Produced: [bold]{produced_count}/{initial_needed}[/bold] (Total Attempts: {total_attempts})\n"
+                f"Vault Reserve: [bold cyan]{final_stock}/{clamped_target} Shorts[/bold cyan]",
+                border_style="green" if outcome == "SUCCEEDED" else ("yellow" if outcome == "PARTIAL" else "red")
+            ))
+            return produced_count, summary
         finally:
             lock.release()
 
@@ -936,9 +1017,17 @@ def main():
         finally:
             db.close()
     elif args.maintain_buffer > 0:
-        pipeline.maintain_buffer(target_stock=args.maintain_buffer)
+        res = pipeline.maintain_buffer(target_stock=args.maintain_buffer)
+        count = res[0] if isinstance(res, tuple) else res
+        summary = res[1] if isinstance(res, tuple) else {}
+        if summary.get("outcome") in ("BLOCKED", "FAILED"):
+            sys.exit(2)
     elif args.produce_batch > 0:
-        pipeline.produce_batch(count=args.produce_batch)
+        res = pipeline.produce_batch(count=args.produce_batch)
+        count = res[0] if isinstance(res, tuple) else res
+        summary = res[1] if isinstance(res, tuple) else {}
+        if summary.get("outcome") in ("BLOCKED", "FAILED"):
+            sys.exit(2)
     elif args.publish_next:
         pipeline.publish_next_from_vault(force=args.force, target_file_id=args.file_id)
     elif args.run_once or args.test:
