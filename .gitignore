@@ -36,11 +36,11 @@ test_*.aac
 *.db-wal
 
 # Database (Persisted Privately in Google Drive 00_SYSTEM/ - Never tracked in Git)
-data/database/pipeline.db
-data/database/*.db*
-*.db
-*.db-journal
+data/database/*
 !data/database/.gitkeep
+*.db
+*.db-*
+*.prev_backup
 
 # Keep empty structure
 !data/database/.gitkeep
