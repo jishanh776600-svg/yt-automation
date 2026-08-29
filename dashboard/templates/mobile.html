@@ -13,6 +13,7 @@
     <!-- PWA Manifest & Icons -->
     <link rel="manifest" href="/static/manifest.json">
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="brand-logo" href="/static/img/al_amr_logo.svg">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
     
     <!-- Fonts -->
@@ -49,7 +50,8 @@
                 extend: {
                     fontFamily: {
                         sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'Menlo', 'Consolas', 'monospace']
+                        mono: ['JetBrains Mono', 'Menlo', 'Consolas', 'monospace'],
+                        cinzel: ['Cinzel', 'serif']
                     },
                     colors: {
                         spaceBlack: '#030712',
@@ -69,9 +71,15 @@
 <body class="bg-spaceBlack text-slate-200 min-h-screen">
 
     <!-- COMPACT MOBILE COMMAND HEADER -->
-    <header class="sticky top-0 bg-spaceDark/95 backdrop-blur border-b border-borderSubtle px-4 py-3 flex items-center justify-between z-30">
-        <div class="flex items-center gap-2">
-            <img src="/static/img/al_amr_logo.svg" alt="AL AMR" class="h-6 object-contain">
+    <header class="sticky top-0 bg-spaceDark/95 backdrop-blur border-b border-borderSubtle px-4 py-2.5 flex items-center justify-between z-30">
+        <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded overflow-hidden border border-borderSubtle bg-spaceBlack flex items-center justify-center p-0.5 shadow-inner flex-shrink-0">
+                <img src="/static/branding/al-amr-logo.jpeg" alt="AL AMR Official Brand Emblem" class="w-full h-full object-contain filter contrast-125 brightness-110">
+            </div>
+            <div class="flex items-center gap-1.5">
+                <span class="font-cinzel font-bold text-xs tracking-wider text-slate-100 uppercase">AL AMR</span>
+                <span class="text-brandGold text-[10px] font-bold">الأمر</span>
+            </div>
         </div>
         <div class="flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>

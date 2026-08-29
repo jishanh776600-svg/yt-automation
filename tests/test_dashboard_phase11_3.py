@@ -134,11 +134,12 @@ class TestDashboardPhase113(unittest.TestCase):
 
         with patch("config.settings.CLOUD_MODE", True):
             with patch.object(self.action_manager.github_dispatcher, "dispatch_produce_buffer", return_value=mock_dispatch_response):
-                res = self.action_manager.trigger_buffer_production(self.db, count=1, target=12)
-                self.assertTrue(res["success"])
-                self.assertEqual(res["action"], "DISPATCH_ACCEPTED")
-                self.assertEqual(res["workflow"], "produce_buffer.yml")
-                self.assertIn("queued successfully", res["message"])
+                with patch.object(self.action_manager.github_dispatcher, "get_active_workflow_run", return_value=None):
+                    res = self.action_manager.trigger_buffer_production(self.db, count=1, target=12)
+                    self.assertTrue(res["success"])
+                    self.assertEqual(res["action"], "DISPATCH_ACCEPTED")
+                    self.assertEqual(res["workflow"], "produce_buffer.yml")
+                    self.assertIn("queued successfully", res["message"])
 
     def test_07_al_amr_branding_consistency(self):
         """Verify AL AMR product name and logo identity is consistent across Desktop, Mobile, and Login."""
