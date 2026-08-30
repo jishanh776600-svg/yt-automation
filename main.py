@@ -92,6 +92,11 @@ class ShortsPipeline:
         self.drive_engine = DriveVaultEngine()
         self.experiment_manager = ExperimentManager()
         self.recovery_manager = RecoveryManager(self.drive_engine, self.upload_engine)
+        
+        from engines.editing_director import EditingDirector
+        from engines.sfx_manager import SFXManager
+        self.editing_director = EditingDirector()
+        self.sfx_manager = SFXManager()
 
         from engines.tts_engine import get_active_voice, AVAILABLE_VOICES
         db = SessionLocal()
@@ -154,11 +159,23 @@ class ShortsPipeline:
         StateMachine.transition(db, job, JobState.VOICE_READY, f"Voice synthesized ({audio_duration}s, voice={self.run_voice})")
         console.print(f"[green][+] Narration Generated:[/green] {audio_duration:.1f}s via {voice_asset.source} [cyan]({self.run_voice})[/cyan]")
 
-        # 6. CAPTION GENERATION (Faster-Whisper)
-        voice_path = Path(voice_asset.local_path)
-        ass_path = self.caption_engine.generate_ass_subtitles(voice_path)
+        # 5.5. AUTONOMOUS EDITING DIRECTING
+        StateMachine.transition(db, job, JobState.PLANNING_MEDIA, "Directing scene pacing, motion, and sound design")
+        editing_plan = self.editing_director.plan_editing(
+            db=db,
+            job_id=job.id,
+            topic=topic,
+            script=script,
+            shots=shots,
+            asset_map=asset_map
+        )
+        console.print(f"[green][+] Editing Plan Formulated:[/green] {editing_plan.overall_profile} profile ({editing_plan.total_sfx_count} SFX cues)")
 
-        # 7. AUDIO MIXING (Voice + Intelligent BGM at -13dB & -14 LUFS)
+        # 6. CAPTION GENERATION (Faster-Whisper + Semantic Word Emphasis)
+        voice_path = Path(voice_asset.local_path)
+        ass_path = self.caption_engine.generate_ass_subtitles(voice_path, editing_plan=editing_plan)
+
+        # 7. AUDIO MIXING (Voice + Contextual SFX Layer + Adaptive BGM at -14 LUFS)
         music_asset = self.audio_mixer.get_background_music(
             db=db,
             category=topic.category,
@@ -167,18 +184,33 @@ class ShortsPipeline:
             script_text=script.full_text
         )
         assets_used.append(music_asset)
+
+        # Render contextual SFX layer
+        sfx_layer_path = self.renders_dir / f"sfx_{job.id}.wav"
+        all_sfx_cues = []
+        if editing_plan and hasattr(editing_plan, "scenes"):
+            for sc in editing_plan.scenes:
+                all_sfx_cues.extend(sc.sfx_cues)
+
+        rendered_sfx_layer = self.sfx_manager.render_sfx_layer(
+            sfx_cues=all_sfx_cues,
+            total_duration=audio_duration,
+            output_path=sfx_layer_path
+        )
+
         master_audio_path = RENDERS_DIR / f"master_{job.id}.aac"
         master_audio_path, bgm_only_path = self.audio_mixer.mix_audio(
             voice_path=voice_path,
             music_path=Path(music_asset.local_path),
             output_path=master_audio_path,
             duration=audio_duration,
-            job_id=job.id
+            job_id=job.id,
+            sfx_layer_path=rendered_sfx_layer
         )
-        StateMachine.transition(db, job, JobState.AUDIO_READY, "Master audio mixed with audible BGM (-13dB) and normalized")
+        StateMachine.transition(db, job, JobState.AUDIO_READY, "Master audio mixed with audible BGM (-13dB), SFX layer, and normalized")
 
-        # 8. FFMPEG COMPOSITION (1080x1920 MP4)
-        StateMachine.transition(db, job, JobState.EDITING, "Compositing 1080x1920 vertical video")
+        # 8. FFMPEG COMPOSITION (1080x1920 MP4 with Editing Directives)
+        StateMachine.transition(db, job, JobState.EDITING, "Compositing 1080x1920 vertical video with editing plan")
         render_output = self.render_engine.assemble_short(
             db=db,
             job_id=job.id,
@@ -187,7 +219,8 @@ class ShortsPipeline:
             master_audio_path=master_audio_path,
             ass_subtitle_path=ass_path,
             bgm_mood=strategy.get("bgm_mood"),
-            motion_style=strategy.get("motion_style", "DYNAMIC_ZOOM_PAN")
+            motion_style=strategy.get("motion_style", "AI_DIRECTED_MOTION"),
+            editing_plan=editing_plan
         )
 
         # 9. QUALITY CONTROL (QA) WITH AUTOMATED BGM FAIL-SAFE REPAIR LOOP
@@ -268,6 +301,8 @@ class ShortsPipeline:
                 "voice": self.run_voice,
                 "bgm_track": music_asset.source if music_asset else "unknown",
                 "duration_sec": render_output.duration_sec,
+                "editing_profile": editing_plan.overall_profile if editing_plan else "GENERAL_DOCUMENTARY",
+                "sfx_events": editing_plan.total_sfx_count if editing_plan else 0,
                 "rendered_at": datetime.utcnow().isoformat() + "Z"
             }
             with open(meta_file, "w", encoding="utf-8") as mf:

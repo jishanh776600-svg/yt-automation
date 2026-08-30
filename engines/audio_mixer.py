@@ -329,10 +329,12 @@ class AudioMixer:
         output_path: Path,
         duration: float,
         bgm_volume_db: float = BGM_MIX_VOLUME_DB,
-        job_id: str = ""
+        job_id: str = "",
+        sfx_layer_path: Optional[Path] = None
     ) -> Tuple[Path, Path]:
         """
-        Produces Stage B (BGM-only) and Stage C (Master mixed audio normalized to -14.0 LUFS).
+        Produces Stage B (BGM-only) and Stage C (Master mixed audio normalized to -14.0 LUFS)
+        incorporating Voice (dominant), SFX layer (ducked accents), and BGM (ducked bed).
         Returns: (master_audio_path, bgm_only_path)
         """
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -346,17 +348,29 @@ class AudioMixer:
             bgm_volume_db=bgm_volume_db
         )
 
-        filter_complex = (
-            f"[0:a]aresample={AUDIO_SAMPLE_RATE},aformat=channel_layouts=stereo[v];"
-            f"[1:a]aformat=channel_layouts=stereo[bgm];"
-            f"[v][bgm]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[mixed];"
-            f"[mixed]loudnorm=I={TARGET_LUFS}:LRA=7:tp=-1.0[outa]"
-        )
+        has_sfx = bool(sfx_layer_path and sfx_layer_path.exists() and sfx_layer_path.stat().st_size > 1000)
+
+        if has_sfx:
+            filter_complex = (
+                f"[0:a]aresample={AUDIO_SAMPLE_RATE},aformat=channel_layouts=stereo[v];"
+                f"[1:a]aresample={AUDIO_SAMPLE_RATE},aformat=channel_layouts=stereo[bgm];"
+                f"[2:a]aresample={AUDIO_SAMPLE_RATE},aformat=channel_layouts=stereo[sfx];"
+                f"[v][bgm][sfx]amix=inputs=3:duration=first:dropout_transition=2:normalize=0[mixed];"
+                f"[mixed]loudnorm=I={TARGET_LUFS}:LRA=7:tp=-1.0[outa]"
+            )
+            cmd_inputs = ["-i", str(voice_path), "-i", str(bgm_only_path), "-i", str(sfx_layer_path)]
+        else:
+            filter_complex = (
+                f"[0:a]aresample={AUDIO_SAMPLE_RATE},aformat=channel_layouts=stereo[v];"
+                f"[1:a]aformat=channel_layouts=stereo[bgm];"
+                f"[v][bgm]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[mixed];"
+                f"[mixed]loudnorm=I={TARGET_LUFS}:LRA=7:tp=-1.0[outa]"
+            )
+            cmd_inputs = ["-i", str(voice_path), "-i", str(bgm_only_path)]
 
         cmd = [
             FFMPEG_EXE, "-y",
-            "-i", str(voice_path),
-            "-i", str(bgm_only_path),
+            *cmd_inputs,
             "-filter_complex", filter_complex,
             "-map", "[outa]",
             "-ac", "2",
@@ -367,8 +381,8 @@ class AudioMixer:
         ]
 
         logger.info(
-            f"Mixing master audio (Voice: {voice_path.name} + BGM: {music_path.name} at {bgm_volume_db}dB, "
-            f"Master Target: {TARGET_LUFS} LUFS, Duration: {duration:.2f}s)"
+            f"Mixing master audio (Voice: {voice_path.name} + BGM: {music_path.name} at {bgm_volume_db}dB "
+            f"+ SFX: {'YES' if has_sfx else 'NONE'}, Master Target: {TARGET_LUFS} LUFS, Duration: {duration:.2f}s)"
         )
         res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
