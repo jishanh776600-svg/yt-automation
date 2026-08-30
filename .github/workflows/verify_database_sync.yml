@@ -43,6 +43,60 @@ jobs:
           echo "${TOKEN_JSON}" > token.json
           echo "${CLIENT_SECRET_JSON}" > client_secret.json
 
+      - name: Single DeepSeek Direct API Live Test
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          python -c "
+          import os, json, urllib.request
+          from urllib.error import HTTPError
+
+          api_key = os.environ.get('DEEPSEEK_API_KEY', '').strip()
+          if not api_key:
+              print('[DEEPSEEK_DIRECT_RESULT] HTTP_STATUS=N/A MODEL=deepseek-chat RECEIVED=NO CONTENT=NONE ERROR=Secret_Not_Configured PASS=FAIL')
+              exit(0)
+
+          endpoint = 'https://api.deepseek.com/chat/completions'
+          model = 'deepseek-chat'
+
+          payload = json.dumps({
+              'model': model,
+              'messages': [{'role': 'user', 'content': 'Reply with exactly: DEEPSEEK_OK'}],
+              'temperature': 0,
+              'max_tokens': 10,
+              'stream': False
+          }).encode('utf-8')
+
+          headers = {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': f'Bearer {api_key}',
+              'User-Agent': 'AL-AMR-DirectTest/1.0'
+          }
+
+          req = urllib.request.Request(endpoint, data=payload, headers=headers, method='POST')
+
+          try:
+              with urllib.request.urlopen(req, timeout=30.0) as resp:
+                  status_code = resp.status
+                  body = resp.read().decode('utf-8')
+                  data = json.loads(body)
+                  content = data.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+                  has_ok = 'DEEPSEEK_OK' in content
+                  pass_str = 'PASS' if status_code == 200 and has_ok else 'FAIL'
+                  print(f'[DEEPSEEK_DIRECT_RESULT] HTTP_STATUS={status_code} MODEL={model} RECEIVED=YES CONTENT={content} ERROR=None PASS={pass_str}')
+          except HTTPError as e:
+              err_body = e.read().decode('utf-8', errors='ignore')
+              try:
+                  err_json = json.loads(err_body)
+                  detail = err_json.get('error', {}).get('message') or err_json.get('message') or err_json.get('detail') or err_body[:100]
+              except Exception:
+                  detail = err_body[:100]
+              print(f'[DEEPSEEK_DIRECT_RESULT] HTTP_STATUS={e.code} MODEL={model} RECEIVED=NO CONTENT=NONE ERROR={detail} PASS=FAIL')
+          except Exception as e:
+              print(f'[DEEPSEEK_DIRECT_RESULT] HTTP_STATUS=ERROR MODEL={model} RECEIVED=NO CONTENT=NONE ERROR={type(e).__name__} PASS=FAIL')
+          "
+
       - name: Step 1 - Download Canonical DB from Private Drive Vault
         run: |
           python -m core.database_sync download
