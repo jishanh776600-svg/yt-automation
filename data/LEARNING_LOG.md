@@ -1404,3 +1404,24 @@
 
 | Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 11:39:47 UTC
+
+- **Mature Videos Evaluated**: 54
+- **Channel Performance Baseline**: 23.70/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Eerie / Unsolved / Mysterious** | 1 | `+212.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 3 | `-27.9%` | `WEAK_EVIDENCE` | **0.86** | Weak evidence (N=3). Conservative weight adjustment (-27.8% lift). |
+| `category` | ****Unusual Wars**** | 1 | `-30.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-19.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Unusual Wars** | 2 | `-31.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Ancient Mysteries** | 1 | `+212.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 3 | `-19.2%` | `WEAK_EVIDENCE` | **0.90** | Weak evidence (N=3). Conservative weight adjustment (-19.2% lift). |
+| `duration_target` | **EXTENDED_26S** | 1 | `+212.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `duration_target` | **SWEET_SPOT** | 3 | `-27.9%` | `WEAK_EVIDENCE` | **0.86** | Weak evidence (N=3). Conservative weight adjustment (-27.8% lift). |
+| `hook_archetype` | **MYSTERY_CURIOSITY** | 1 | `+212.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-27.9%` | `WEAK_EVIDENCE` | **0.86** | Weak evidence (N=3). Conservative weight adjustment (-27.8% lift). |
+| `motion_style` | **SLOW_CINEMATIC_ZOOM** | 1 | `+212.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-27.9%` | `WEAK_EVIDENCE` | **0.86** | Weak evidence (N=3). Conservative weight adjustment (-27.8% lift). |
