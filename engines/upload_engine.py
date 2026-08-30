@@ -352,9 +352,10 @@ class UploadEngine:
                     })
                 scheduled_records = [r for r in scheduled_records if r.id != rec.id]
 
+        if reconciled:
+            db.commit()
+
         if not scheduled_records:
-            if reconciled:
-                db.commit()
             return reconciled
 
         # 2. Production Reconciliation via YouTube API

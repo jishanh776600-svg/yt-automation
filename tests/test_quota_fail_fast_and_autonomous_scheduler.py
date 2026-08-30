@@ -404,7 +404,7 @@ class TestComprehensiveAutonomousPipeline(unittest.TestCase):
     def test_scenario_s_drive_db_youtube_reconciliation(self):
         """Scenario S: Drive / DB / YouTube reconciliation transitions public video and cleans up processing."""
         today_start, today_end = get_business_day_bounds_utc()
-        past_time = today_start + timedelta(hours=1)
+        past_time = datetime.utcnow() - timedelta(hours=1)
 
         # Upload record that was scheduled in the past
         upl = UploadRecord(

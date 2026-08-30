@@ -182,7 +182,32 @@ class DriveVaultEngine:
         return folder_id
 
     def list_files_in_folder(self, folder_name: str, limit: int = 50) -> List[Dict[str, Any]]:
-        """Lists all non-trashed files within a specific vault subfolder."""
+        """Lists all non-trashed files within a specific vault subfolder (Drive API or local fallback)."""
+        if not self.token_path.exists():
+            local_vault_dir = PROJECT_ROOT / "data" / "vault_ready" if folder_name == "01_READY" else (PROJECT_ROOT / "data" / "vault" / folder_name)
+            local_vault_dir.mkdir(parents=True, exist_ok=True)
+            files = []
+            for f in sorted(local_vault_dir.glob("*.mp4")):
+                meta_path = f.with_suffix(".meta.json")
+                props = {}
+                desc = ""
+                if meta_path.exists():
+                    try:
+                        props = json.loads(meta_path.read_text(encoding="utf-8"))
+                        desc = props.get("description", "")
+                    except Exception:
+                        pass
+                files.append({
+                    "id": f"local_{f.name}",
+                    "name": f.name,
+                    "mimeType": "video/mp4",
+                    "size": f.stat().st_size,
+                    "createdTime": datetime.fromtimestamp(f.stat().st_ctime).isoformat() + "Z",
+                    "description": desc,
+                    "properties": props
+                })
+            return files[:limit]
+
         drive = self.get_drive_service()
         folder_id = self.get_folder_id(folder_name, create_if_missing=False)
 
@@ -209,16 +234,39 @@ class DriveVaultEngine:
         metadata_properties: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         """
-        Uploads a rendered MP4 video file to a specific vault subfolder.
+        Uploads a rendered MP4 video file to a specific vault subfolder (Drive API with local staging fallback).
         """
         if not local_path.exists():
             raise FileNotFoundError(f"Local file not found: {local_path}")
+
+        filename = custom_filename or local_path.name
+        import shutil
+
+        # Always maintain local staging
+        local_staging_dir = PROJECT_ROOT / "data" / "vault_ready" if target_folder == "01_READY" else (PROJECT_ROOT / "data" / "vault" / target_folder)
+        local_staging_dir.mkdir(parents=True, exist_ok=True)
+        local_target = local_staging_dir / filename
+        if local_path != local_target:
+            shutil.copy2(local_path, local_target)
+        if metadata_properties:
+            meta_path = local_target.with_suffix(".meta.json")
+            meta_path.write_text(json.dumps(metadata_properties, indent=2), encoding="utf-8")
+
+        if not self.token_path.exists():
+            logger.info(f"[+] Saved '{filename}' to local staging vault: '{target_folder}'")
+            return {
+                "id": f"local_{filename}",
+                "name": filename,
+                "size": local_path.stat().st_size,
+                "webViewLink": "",
+                "createdTime": datetime.utcnow().isoformat() + "Z",
+                "parents": [target_folder]
+            }
 
         drive = self.get_drive_service()
         folder_id = self.get_folder_id(target_folder, create_if_missing=True)
 
         from googleapiclient.http import MediaFileUpload
-        filename = custom_filename or local_path.name
 
         file_metadata = {
             "name": filename,

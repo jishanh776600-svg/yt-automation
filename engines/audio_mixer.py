@@ -26,58 +26,66 @@ from core.models import AssetRecord
 logger = logging.getLogger(__name__)
 
 
-# 4 Approved Core BGM Tracks with detailed Mood & Context Mappings
+# 4 Approved Core BGM Tracks with distinct Mood & Context Mappings
 BGM_LIBRARY = {
     "best_historical": {
         "primary_files": ["No copyright Best Historical.wav", "No copyright Best Historical.mp3"],
-        "display_name": "No copyright Best Historical...",
-        "mood": "Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities",
+        "display_name": "No copyright Best Historical",
+        "mood": "Historical / Serious Documentary / Royal / Medieval / Warfare",
         "default_intensity": "Medium-High",
-        "description": "Epic historical orchestral music designed for historical mystery, war, disaster, strange historical events, and serious documentaries.",
+        "description": "Epic historical orchestral music designed for medieval warfare, monarchies, royal scandals, ancient empires, and serious historical politics.",
         "keywords": [
-            "war", "battle", "disaster", "bizarre", "oddity", "riot", "conflict", "empire", "king",
-            "queen", "court", "law", "army", "parliament", "revolution", "monarch", "dynasty",
-            "coronation", "treaty", "feud", "scandal", "privy", "latrine", "rebellion", "emperor",
-            "pope", "crusade", "medieval", "royal", "duel", "regime", "conquest", "siege"
+            "war", "battle", "army", "empire", "king", "queen", "court", "parliament",
+            "revolution", "monarch", "dynasty", "coronation", "treaty", "feud", "rebellion",
+            "emperor", "pope", "crusade", "medieval", "royal", "duel", "regime", "conquest",
+            "siege", "knight", "throne", "castle", "crown", "republic", "legion", "armada",
+            "commander", "soldier", "navy", "military", "napoleon", "caesar", "churchill",
+            "latrine", "privy", "scandal", "erfurt", "tax", "beards", "laws", "aristocrats", "collapse"
         ]
     },
     "emotional_sad": {
-        "primary_files": ["Empty - Emotional Sad Background.mp3", "Empty - Emotional Sad Background.wav"],
-        "display_name": "Empty - Emotional Sad Background...",
+        "primary_files": ["Empty - Emotional Sad Background.wav", "Empty - Emotional Sad Background.mp3"],
+        "display_name": "Empty - Emotional Sad Background",
         "mood": "Emotional / Sad / Mournful / Poignant / Human Tragedy",
         "default_intensity": "Subdued-Poignant",
-        "description": "Deeply emotional and somber melody for tragic stories, personal loss, heartfelt sacrifice, and poignant historical moments.",
+        "description": "Deeply emotional and somber melody for tragic human events, personal loss, poignant sacrifices, heartbreak, and mourning.",
         "keywords": [
             "sad", "tragedy", "tragic", "emotional", "loss", "grief", "poignant", "mourn", "sacrifice",
             "heartbreak", "death", "tears", "memorial", "ruin", "sorrow", "farewell", "crying",
             "dying", "famine", "plague", "victim", "burial", "fatal", "suffering", "sorrowful",
-            "heartbreaking", "perished", "massacre", "destitution", "orphan", "starved", "grave"
+            "heartbreaking", "perished", "massacre", "destitution", "orphan", "starved", "grave",
+            "lonely", "tear", "sympathy", "deprived", "destitute", "grieving", "sorrow", "regret"
         ]
     },
     "flux_ambient": {
-        "primary_files": ["The Flux Beneath It All.mp3", "The Flux Beneath It All.wav"],
-        "display_name": "The Flux Beneath It All.mp3",
-        "mood": "Dark / Intense / Dramatic / Mysterious / Scientific Wonder / Intrigue",
+        "primary_files": ["The Flux Beneath It All.wav", "The Flux Beneath It All.mp3"],
+        "display_name": "The Flux Beneath It All",
+        "mood": "Dark Mystery / Atmospheric Intrigue / Scientific Wonder / Bizarre Oddity",
         "default_intensity": "Atmospheric-Tense",
-        "description": "Atmospheric, ambient curiosity and dark mysterious pulse for unexplained secrets, lost civilizations, strange inventions, and scientific wonder.",
+        "description": "Atmospheric ambient pulse for unexplained mysteries, bizarre historical oddities, strange cataclysms, disasters, scientific discoveries, and curiosity.",
         "keywords": [
             "mystery", "secret", "strange", "lost", "invention", "wonder", "science", "curiosity",
             "puzzle", "ancient", "unexplained", "phenomenon", "intrigue", "dark", "riddle",
             "cryptic", "alchemist", "astronomy", "unknown", "hidden", "discovery", "experiment",
-            "baffling", "artifact", "voynich", "roanoke", "atlantis", "conspiracy", "code", "anomaly", "alien"
+            "baffling", "artifact", "voynich", "roanoke", "atlantis", "conspiracy", "code",
+            "anomaly", "alien", "weird", "disaster", "cataclysm", "eruption",
+            "volcano", "tsunami", "explosion", "stink", "molasses", "smell", "flood",
+            "miracle", "supernatural", "unbelievable", "peculiar", "unusual", "mysterious"
         ]
     },
     "suspense_climax": {
         "primary_files": ["No Copyright Background Music.wav", "No Copyright Background Music.mp3"],
         "display_name": "No Copyright Background Music",
-        "mood": "High Tension / Suspense / Dramatic Build-Up / Thriller / General Documentary",
+        "mood": "High Tension / Suspense / Thriller / Heist / Race Against Time",
         "default_intensity": "High-Driving",
-        "description": "Intense cinematic build-up with dramatic tempo for races against time, high-stakes escapes, shocking reveals, and escalating tension.",
+        "description": "Intense cinematic build-up with driving tempo for high-stakes tension, thrilling escapes, heists, manhunts, assassinations, and urgent countdowns.",
         "keywords": [
             "suspense", "tension", "climax", "escape", "hunt", "chase", "race", "danger",
             "thriller", "build", "shock", "intense", "countdown", "panic", "heist", "manhunt",
             "assassination", "robbery", "ambush", "plot", "trapped", "deadly", "urgent",
-            "strike", "pursuit", "breakout", "hostage", "bomb", "confrontation", "alarm"
+            "strike", "pursuit", "breakout", "hostage", "bomb", "confrontation", "alarm",
+            "ticking", "undercover", "spy", "infiltrate", "stealth", "infiltrator", "fugitive",
+            "assassin", "pursuer", "critical", "threat", "danger", "peril", "emergency"
         ]
     }
 }
@@ -187,16 +195,23 @@ class AudioMixer:
                 script_score = sum(1 for kw in info["keywords"] if kw in script_lower)
                 scores[key] = cat_score + title_score + sum_score + script_score
 
-            max_score = max(scores.values())
-            if max_score > 0:
-                selected_key = max(scores, key=scores.get)
+            max_score = max(scores.values()) if scores else 0
+            keys_with_max = [k for k, v in scores.items() if v == max_score] if max_score > 0 else []
+
+            if max_score > 0 and len(keys_with_max) == 1:
+                selected_key = keys_with_max[0]
                 detected_intensity = BGM_LIBRARY[selected_key]["default_intensity"]
                 score_str = ", ".join(f"{k}:{v}" for k, v in scores.items())
                 reason = f"Keyword matching ({selected_key} with {scores[selected_key]} pts [{score_str}])"
             else:
-                selected_key = "best_historical"
-                detected_intensity = "Medium-High"
-                reason = "Documentary baseline track for historical oddities"
+                # Deterministic balanced rotation across the 4 valid tracks
+                import hashlib
+                hash_input = f"{title}_{category}_{summary}_{script_text[:50]}"
+                hash_int = int(hashlib.md5(hash_input.encode("utf-8")).hexdigest(), 16)
+                keys_list = list(BGM_LIBRARY.keys())
+                selected_key = keys_list[hash_int % len(keys_list)]
+                detected_intensity = BGM_LIBRARY[selected_key]["default_intensity"]
+                reason = f"Deterministic balanced rotation across 4 BGM tracks (Hash index: {hash_int % len(keys_list)})"
 
             detected_mood = BGM_LIBRARY[selected_key]["mood"]
 

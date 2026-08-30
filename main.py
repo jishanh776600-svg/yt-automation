@@ -93,10 +93,16 @@ class ShortsPipeline:
         self.experiment_manager = ExperimentManager()
         self.recovery_manager = RecoveryManager(self.drive_engine, self.upload_engine)
 
-        from engines.tts_engine import get_active_voice
+        from engines.tts_engine import get_active_voice, AVAILABLE_VOICES
         db = SessionLocal()
         try:
-            self.run_voice = voice or os.getenv("KOKORO_VOICE") or get_active_voice(db)
+            authoritative_db_voice = get_active_voice(db)
+            chosen_voice = voice or authoritative_db_voice or os.getenv("KOKORO_VOICE") or "am_adam"
+            valid_voice_ids = [v["id"] for v in AVAILABLE_VOICES]
+            if chosen_voice not in valid_voice_ids:
+                logger.warning(f"Voice '{chosen_voice}' not in AVAILABLE_VOICES. Defaulting to 'am_adam'.")
+                chosen_voice = "am_adam"
+            self.run_voice = chosen_voice
         finally:
             db.close()
         logger.info(f"[PIPELINE_INIT] Run-scoped authoritative voice captured: '{self.run_voice}'")
@@ -199,7 +205,7 @@ class ShortsPipeline:
         if not passed_qa and qa_report.failure_reasons and ("Audio" in qa_report.failure_reasons or "BGM" in qa_report.failure_reasons or "loudness" in qa_report.failure_reasons):
             console.print(f"[yellow][!] Audio QA discrepancy detected ({qa_report.failure_reasons}). Executing automatic repair pass...[/yellow]")
             try:
-                repair_music = Path(self.audio_mixer.music_dir / "No copyright Best Historical.wav")
+                repair_music = Path(music_asset.local_path)
                 master_audio_path, bgm_only_path = self.audio_mixer.mix_audio(
                     voice_path=voice_path,
                     music_path=repair_music,
@@ -215,8 +221,8 @@ class ShortsPipeline:
                     asset_map=asset_map,
                     master_audio_path=master_audio_path,
                     ass_subtitle_path=ass_path,
-                    bgm_mood="Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities",
-                    motion_style="DYNAMIC_ZOOM_PAN"
+                    bgm_mood=strategy.get("bgm_mood", "Documentary"),
+                    motion_style=strategy.get("motion_style", "DYNAMIC_VIDEO_MOTION")
                 )
                 passed_qa, qa_report = self.qa_engine.run_qa(
                     db=db,
@@ -241,6 +247,37 @@ class ShortsPipeline:
         # 10. SEO METADATA
         metadata = self.seo_engine.generate_metadata(topic, script)
         console.print(f"[cyan]SEO Title:[/cyan] [bold]{metadata['title']}[/bold]")
+
+        # 11. AUTOMATIC CANONICAL READY STAGING
+        try:
+            local_video_path = Path(render_output.video_path)
+            ready_staging_dir = PROJECT_ROOT / "data" / "vault_ready"
+            ready_staging_dir.mkdir(parents=True, exist_ok=True)
+            import shutil
+            staged_local_file = ready_staging_dir / f"READY_{job.id}_{local_video_path.name}"
+            if not staged_local_file.exists():
+                shutil.copy2(local_video_path, staged_local_file)
+
+            meta_file = ready_staging_dir / f"READY_{job.id}_{local_video_path.stem}.meta.json"
+            meta_payload = {
+                "job_id": job.id,
+                "topic_id": topic.id,
+                "title": metadata.get("title", topic.title),
+                "tags": metadata.get("tags", []),
+                "description": metadata.get("description", ""),
+                "voice": self.run_voice,
+                "bgm_track": music_asset.source if music_asset else "unknown",
+                "duration_sec": render_output.duration_sec,
+                "rendered_at": datetime.utcnow().isoformat() + "Z"
+            }
+            with open(meta_file, "w", encoding="utf-8") as mf:
+                json.dump(meta_payload, mf, indent=2)
+
+            # Transition state machine to READY_TO_UPLOAD
+            StateMachine.transition(db, job, JobState.READY_TO_UPLOAD, "QA Passed and deposited in 01_READY staging vault")
+            console.print(f"[bold green][+] Short automatically staged to READY queue (Job: {job.id})[/bold green]")
+        except Exception as stage_err:
+            logger.warning(f"Local READY staging notice: {stage_err}")
 
         return render_output, metadata
 

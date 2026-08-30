@@ -105,7 +105,7 @@ class ActionManager:
 
         try:
             from main import ShortsPipeline
-            pipeline = ShortsPipeline()
+            pipeline = ShortsPipeline(voice=active_v)
             if count == 1:
                 logger.info("[ACTION] Producing single Short...")
                 job = pipeline.produce_single_to_vault()
