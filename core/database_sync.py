@@ -81,12 +81,17 @@ def get_database_stats(file_path: Path) -> dict:
     try:
         conn = sqlite3.connect(str(file_path), timeout=5.0)
         cursor = conn.cursor()
-        for table in ["topics", "scripts", "jobs", "uploads", "performance_snapshots"]:
+        for table in ["topics", "scripts", "jobs", "uploads", "performance_snapshots", "renders", "assets"]:
             try:
                 cursor.execute(f"SELECT COUNT(*) FROM {table}")
                 stats[table] = cursor.fetchone()[0]
             except Exception:
-                stats[table] = -1
+                stats[table] = 0
+        try:
+            cursor.execute("SELECT COUNT(*) FROM assets WHERE asset_type='voice'")
+            stats["voice"] = cursor.fetchone()[0]
+        except Exception:
+            stats["voice"] = 0
         cursor.close()
         conn.close()
     except Exception as e:

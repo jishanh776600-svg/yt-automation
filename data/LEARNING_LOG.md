@@ -981,7 +981,7 @@
 | `hook_archetype` | **MYSTERY_CURIOSITY** | 1 | `+206.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
 | `motion_style` | **SLOW_CINEMATIC_ZOOM** | 1 | `+206.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
 
-## Learning Cycle — 2026-08-30 09:24:17 UTC
+## Learning Cycle — 2026-08-30 09:06:02 UTC
 
 - **Mature Videos Evaluated**: 51
 - **Channel Performance Baseline**: 22.49/100
@@ -997,7 +997,7 @@
 | `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
 | `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
 
-## Learning Cycle — 2026-08-30 09:26:40 UTC
+## Learning Cycle — 2026-08-30 09:16:25 UTC
 
 - **Mature Videos Evaluated**: 51
 - **Channel Performance Baseline**: 22.49/100
@@ -1012,3 +1012,395 @@
 | `duration_target` | **SWEET_SPOT** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
 | `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
 | `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+
+## Learning Cycle — 2026-08-30 09:05:20 UTC
+
+- **Mature Videos Evaluated**: 51
+- **Channel Performance Baseline**: 22.49/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `category` | ****Unusual Wars**** | 1 | `-26.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-14.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Unusual Wars** | 2 | `-28.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 3 | `-14.8%` | `WEAK_EVIDENCE` | **0.93** | Weak evidence (N=3). Conservative weight adjustment (-14.9% lift). |
+| `duration_target` | **SWEET_SPOT** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+
+## Learning Cycle — 2026-08-30 09:17:25 UTC
+
+- **Mature Videos Evaluated**: 51
+- **Channel Performance Baseline**: 22.49/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `category` | ****Unusual Wars**** | 1 | `-26.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-14.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Unusual Wars** | 2 | `-28.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 3 | `-14.8%` | `WEAK_EVIDENCE` | **0.93** | Weak evidence (N=3). Conservative weight adjustment (-14.9% lift). |
+| `duration_target` | **SWEET_SPOT** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+
+## Learning Cycle — 2026-08-30 09:17:27 UTC
+
+- **Mature Videos Evaluated**: 51
+- **Channel Performance Baseline**: 22.49/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `category` | ****Unusual Wars**** | 1 | `-26.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-14.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Unusual Wars** | 2 | `-28.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 3 | `-14.8%` | `WEAK_EVIDENCE` | **0.93** | Weak evidence (N=3). Conservative weight adjustment (-14.9% lift). |
+| `duration_target` | **SWEET_SPOT** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+
+## Learning Cycle — 2026-08-30 09:17:28 UTC
+
+- **Mature Videos Evaluated**: 51
+- **Channel Performance Baseline**: 22.49/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `category` | ****Unusual Wars**** | 1 | `-26.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-14.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Unusual Wars** | 2 | `-28.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 3 | `-14.8%` | `WEAK_EVIDENCE` | **0.93** | Weak evidence (N=3). Conservative weight adjustment (-14.9% lift). |
+| `duration_target` | **SWEET_SPOT** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+
+## Learning Cycle — 2026-08-30 09:17:29 UTC
+
+- **Mature Videos Evaluated**: 51
+- **Channel Performance Baseline**: 22.49/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `category` | ****Unusual Wars**** | 1 | `-26.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-14.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Unusual Wars** | 2 | `-28.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 3 | `-14.8%` | `WEAK_EVIDENCE` | **0.93** | Weak evidence (N=3). Conservative weight adjustment (-14.9% lift). |
+| `duration_target` | **SWEET_SPOT** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+
+## Learning Cycle — 2026-08-30 09:17:30 UTC
+
+- **Mature Videos Evaluated**: 51
+- **Channel Performance Baseline**: 22.49/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `category` | ****Unusual Wars**** | 1 | `-26.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-14.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Unusual Wars** | 2 | `-28.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 3 | `-14.8%` | `WEAK_EVIDENCE` | **0.93** | Weak evidence (N=3). Conservative weight adjustment (-14.9% lift). |
+| `duration_target` | **SWEET_SPOT** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+
+## Learning Cycle — 2026-08-30 09:17:32 UTC
+
+- **Mature Videos Evaluated**: 51
+- **Channel Performance Baseline**: 22.49/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `category` | ****Unusual Wars**** | 1 | `-26.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-14.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Unusual Wars** | 2 | `-28.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 3 | `-14.8%` | `WEAK_EVIDENCE` | **0.93** | Weak evidence (N=3). Conservative weight adjustment (-14.9% lift). |
+| `duration_target` | **SWEET_SPOT** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+
+## Learning Cycle — 2026-08-30 09:17:39 UTC
+
+- **Mature Videos Evaluated**: 51
+- **Channel Performance Baseline**: 22.49/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `category` | ****Unusual Wars**** | 1 | `-26.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-14.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Unusual Wars** | 2 | `-28.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 3 | `-14.8%` | `WEAK_EVIDENCE` | **0.93** | Weak evidence (N=3). Conservative weight adjustment (-14.9% lift). |
+| `duration_target` | **SWEET_SPOT** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-24.0%` | `WEAK_EVIDENCE` | **0.88** | Weak evidence (N=3). Conservative weight adjustment (-24.0% lift). |
+
+## Learning Cycle — 2026-08-30 09:17:58 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:17:59 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:18:00 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:18:01 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:18:01 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:18:03 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:18:08 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:18:32 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:18:33 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:18:34 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:18:34 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:18:35 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:18:37 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:18:43 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:18:53 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:19:12 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:19:12 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:19:13 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:19:14 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:19:15 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:19:16 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:19:23 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:19:24 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:19:25 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:19:26 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:19:26 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:19:28 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:25:34 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:25:34 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:25:35 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:25:36 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:25:36 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-30 09:25:38 UTC
+
+- **Mature Videos Evaluated**: 0
+- **Channel Performance Baseline**: 50.00/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |

@@ -306,14 +306,14 @@
                                 <div class="pipeline-connector p-2.5 bg-spaceWell rounded border border-borderHairline">
                                     <div class="text-[9px] text-slate-500 uppercase tracking-tight">01. Discovery</div>
                                     <div class="text-base font-bold text-slate-100 mt-1">{{ state.database_sync.table_counts.topics or 0 }}</div>
-                                    <span class="inline-block mt-1 text-[8px] px-1.5 py-0.2 rounded bg-spaceDark text-slate-400 border border-borderHairline">READY</span>
+                                    <span class="inline-block mt-1 text-[8px] px-1.5 py-0.2 rounded bg-spaceDark text-slate-400 border border-borderHairline">TOPICS</span>
                                 </div>
 
                                 <!-- Stage 2: SCRIPT -->
                                 <div class="pipeline-connector p-2.5 bg-spaceWell rounded border border-borderHairline">
                                     <div class="text-[9px] text-slate-500 uppercase tracking-tight">02. Script</div>
                                     <div class="text-base font-bold text-slate-100 mt-1">{{ state.database_sync.table_counts.scripts or 0 }}</div>
-                                    <span class="inline-block mt-1 text-[8px] px-1.5 py-0.2 rounded bg-spaceDark text-slate-400 border border-borderHairline">SYNTH</span>
+                                    <span class="inline-block mt-1 text-[8px] px-1.5 py-0.2 rounded bg-spaceDark text-slate-400 border border-borderHairline">SCRIPTS</span>
                                 </div>
 
                                 <!-- Stage 3: VOICE -->
@@ -334,14 +334,14 @@
                                 <div class="pipeline-connector p-2.5 bg-spaceWell rounded border border-emerald-900/40 bg-emerald-950/10">
                                     <div class="text-[9px] text-emerald-400 uppercase tracking-tight font-bold">05. Vault</div>
                                     <div class="text-base font-bold text-emerald-300 mt-1">{{ state.inventory.counts['01_READY'] or 0 }} <span class="text-[10px] text-slate-500">/ 12</span></div>
-                                    <span class="inline-block mt-1 text-[8px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60">READY</span>
+                                    <span class="inline-block mt-1 text-[8px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60">RESERVE</span>
                                 </div>
 
                                 <!-- Stage 6: PUBLISHED -->
                                 <div class="pipeline-connector p-2.5 bg-spaceWell rounded border border-purple-900/40 bg-purple-950/10">
                                     <div class="text-[9px] text-purple-400 uppercase tracking-tight font-bold">06. Live</div>
                                     <div class="text-base font-bold text-purple-300 mt-1">{{ state.inventory.counts['03_PUBLISHED'] or 0 }}</div>
-                                    <span class="inline-block mt-1 text-[8px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-400 border border-purple-800/60">YOUTUBE</span>
+                                    <span class="inline-block mt-1 text-[8px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-400 border border-purple-800/60">VAULT</span>
                                 </div>
                             </div>
                         </section>
