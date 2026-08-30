@@ -134,7 +134,7 @@ class GeminiClient:
         self.deepseek_api_key = deepseek_api_key or DEEPSEEK_API_KEY
         self.primary_model = GEMINI_MODEL
         self.secondary_model = secondary_model or GEMINI_MODEL_SECONDARY or GEMINI_MODEL
-        self.deepseek_model = deepseek_model or DEEPSEEK_MODEL or "deepseek-chat"
+        self.deepseek_model = deepseek_model or DEEPSEEK_MODEL or "deepseek-ai/deepseek-r1"
         self.rate_limiter = rate_limiter or get_shared_rate_limiter()
         self.sleeper = sleeper
         self._provider_lock = threading.Lock()
@@ -297,7 +297,7 @@ class GeminiClient:
         if base_delay is None:
             base_delay = 0.05 if is_test else 2.0
 
-        endpoint = DEEPSEEK_BASE_URL or "https://api.deepseek.com/chat/completions"
+        endpoint = DEEPSEEK_BASE_URL or "https://integrate.api.nvidia.com/v1/chat/completions"
 
         # Format user prompt
         if isinstance(contents, str):
@@ -471,22 +471,23 @@ class GeminiClient:
                 # Check if another provider remains
                 remaining = [p for p in all_providers if not self.is_provider_exhausted(p["name"])]
                 if remaining:
+                    next_prov = remaining[0]["name"].upper()
                     logger.warning(
                         f"[AI_FAILOVER] Provider '{prov_name.upper()}' quota/balance exhausted. "
-                        f"Failing over to provider '{remaining[0]['name'].upper()}'..."
+                        f"Switching immediately to {next_prov} provider account (model: '{remaining[0]['model']}')..."
                     )
                     continue
                 else:
                     logger.error(
-                        "[AI_EXHAUSTED] ALL configured AI providers exhausted API quotas. Halting production cleanly."
+                        "[AI_EXHAUSTED] All configured Gemini providers exhausted daily API quotas. Halting production cleanly."
                     )
                     raise GeminiQuotaExhaustedError(
-                        "All configured AI providers exhausted API quotas."
+                        "All configured Gemini providers exhausted daily API quotas."
                     ) from quota_err
 
         if last_err:
             raise last_err
-        raise GeminiQuotaExhaustedError("All configured AI providers exhausted API quotas.")
+        raise GeminiQuotaExhaustedError("All configured Gemini providers exhausted daily API quotas.")
 
 
 _SHARED_LIMITER: Optional[GeminiRateLimiter] = None

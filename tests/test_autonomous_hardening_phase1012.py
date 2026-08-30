@@ -18,7 +18,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from config.settings import PROJECT_ROOT, DB_PATH
 from core.models import Job, UploadRecord, RenderOutput
@@ -69,7 +69,7 @@ class TestAutonomousHardeningPhase1012(unittest.TestCase):
         job = Job(id="job_test_rec_001", state=JobState.READY_TO_UPLOAD.value)
         render = RenderOutput(id="rnd_001", job_id="job_test_rec_001", video_path="data/renders/fake.mp4")
         metadata = {"title": "The Great Boston Molasses Flood", "description": "Test", "tags": ["history"]}
-        scheduled_at = datetime(2026, 8, 30, 15, 0, 0)
+        scheduled_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=1)
 
         # Mock validate_media_integrity to succeed
         engine.validate_media_integrity = MagicMock()

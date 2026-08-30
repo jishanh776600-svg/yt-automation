@@ -510,14 +510,14 @@ def api_produce_buffer_status(session: Optional[Dict[str, Any]] = Depends(get_op
         elif conclusion == "success":
             if ready_stock >= TARGET_RESERVE_BUFFER:
                 outcome_status = "SUCCEEDED"
-                outcome_message = f"Buffer refill succeeded. Target reserve fully stocked ({ready_stock}/{TARGET_RESERVE_BUFFER})."
-            elif ready_stock > 0:
+                outcome_message = f"Buffer refill succeeded. Target reserve fully stocked ({TARGET_RESERVE_BUFFER}/{TARGET_RESERVE_BUFFER})."
+            elif ready_stock > 1:
                 outcome_status = "PARTIAL"
                 outcome_message = f"Partial buffer replenishment: Reserve at {ready_stock}/{TARGET_RESERVE_BUFFER} Shorts."
             else:
                 outcome_status = "BLOCKED"
-                block_reason = "REFILL_HALTED_ON_QUOTA_OR_LIMIT"
-                outcome_message = f"Buffer refill halted with 0 new Shorts produced (Reserve remains at {ready_stock}/{TARGET_RESERVE_BUFFER})."
+                block_reason = "GEMINI_DAILY_QUOTA_EXHAUSTED"
+                outcome_message = f"Buffer refill halted: 0 new videos produced (Gemini quota limit reached). Reserve remains at {ready_stock}/{TARGET_RESERVE_BUFFER}."
         else:
             outcome_status = conclusion.upper() or "COMPLETED"
             outcome_message = f"Workflow finished with status '{conclusion}' (Reserve: {ready_stock}/{TARGET_RESERVE_BUFFER})."
