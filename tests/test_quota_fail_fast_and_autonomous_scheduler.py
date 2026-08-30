@@ -390,7 +390,7 @@ class TestComprehensiveAutonomousPipeline(unittest.TestCase):
         for i in range(2):
             self.db.add(UploadRecord(id=f"upl_r_pub_{i}", job_id=f"j_pub_{i}", youtube_video_id=f"YT_PUB_{i}", title=f"Pub {i}", description="T", status="PUBLISHED", published_at=today_start + timedelta(hours=1+i)))
         # 1 scheduled today
-        self.db.add(UploadRecord(id="upl_r_sched", job_id="j_sched", youtube_video_id="YT_SCHED", title="Sched", description="T", status="SCHEDULED", scheduled_publish_at=now_utc + timedelta(hours=2)))
+        self.db.add(UploadRecord(id="upl_r_sched", job_id="j_sched", youtube_video_id="YT_SCHED", title="Sched", description="T", status="SCHEDULED", scheduled_publish_at=today_start + timedelta(hours=14)))
         self.db.commit()
 
         provider = SystemDataProvider()

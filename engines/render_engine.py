@@ -1,8 +1,9 @@
 """
 Render Engine.
 Automated FFmpeg video composition for YouTube Shorts (1080x1920, 9:16 vertical).
-Applies Ken Burns zoom/pan motion to still images, sequences visual shots,
-mixes audio, and burns in synchronized stylized ASS captions.
+Supports seamless 1080p/720p stock video clips (scaled & cropped to 9:16) and Ken Burns
+still images with natural color preservation (zero dark edge darkening/dull overlays).
+Sequences visual shots, mixes audio, and burns in synchronized stylized ASS captions.
 """
 import os
 import uuid
@@ -25,23 +26,74 @@ class RenderEngine:
         self.renders_dir = RENDERS_DIR
         self.renders_dir.mkdir(parents=True, exist_ok=True)
 
-    def render_shot_clip(self, image_path: Path, duration: float, motion: str, output_path: Path) -> Path:
+    def render_video_shot_clip(self, video_path: Path, duration: float, output_path: Path) -> Path:
+        """
+        Renders a video clip into a 1080x1920 vertical 9:16 MP4 clip.
+        Uses intelligent center-crop scaling and automatic looping for shorter clips.
+        Maintains completely natural footage appearance with zero dark edge darkening or dimming.
+        """
+        vf_filter = (
+            f"scale={VIDEO_WIDTH}:{VIDEO_HEIGHT}:force_original_aspect_ratio=increase,"
+            f"crop={VIDEO_WIDTH}:{VIDEO_HEIGHT}:(iw-{VIDEO_WIDTH})/2:(ih-{VIDEO_HEIGHT})/2,"
+            f"setsar=1,format=yuv420p"
+        )
+
+        # Use stream_loop -1 to ensure short clips never produce blank/frozen frames
+        cmd = [
+            FFMPEG_EXE, "-y",
+            "-stream_loop", "-1",
+            "-ss", "0",
+            "-i", str(video_path),
+            "-t", str(duration),
+            "-vf", vf_filter,
+            "-c:v", "libx264",
+            "-preset", "slow",
+            "-crf", "18",
+            "-pix_fmt", "yuv420p",
+            "-r", str(VIDEO_FPS),
+            "-an",
+            str(output_path)
+        ]
+
+        logger.info(f"Rendering video shot clip ({duration:.1f}s): {output_path.name}")
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if res.returncode != 0:
+            logger.warning(f"Video clip render warning: {res.stderr.decode('utf-8', errors='ignore')}")
+            # Fast fallback without stream_loop
+            cmd_fallback = [
+                FFMPEG_EXE, "-y",
+                "-i", str(video_path),
+                "-t", str(duration),
+                "-vf", f"scale={VIDEO_WIDTH}:{VIDEO_HEIGHT}:force_original_aspect_ratio=increase,crop={VIDEO_WIDTH}:{VIDEO_HEIGHT},format=yuv420p",
+                "-c:v", "libx264",
+                "-preset", "ultrafast",
+                "-pix_fmt", "yuv420p",
+                "-r", str(VIDEO_FPS),
+                "-an",
+                str(output_path)
+            ]
+            subprocess.run(cmd_fallback, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        return output_path
+
+    def render_image_shot_clip(self, image_path: Path, duration: float, motion: str, output_path: Path) -> Path:
         """
         Renders a single image into a 1080x1920 vertical video clip with Ken Burns motion.
+        Maintains natural visual clarity with zero dark edge darkening or global contrast crushing.
         """
         frames = int(duration * VIDEO_FPS)
         # Ken Burns zoom expressions for 1080x1920 with high-precision subpixel motion
         if motion == "zoom_in":
-            zoom_filter = f"zoompan=z='min(zoom+0.0018,1.28)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS}"
+            zoom_filter = f"zoompan=z='min(zoom+0.0015,1.20)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS}"
         elif motion == "zoom_out":
-            zoom_filter = f"zoompan=z='if(lte(zoom,1.0),1.28,max(1.001,zoom-0.0018))':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS}"
+            zoom_filter = f"zoompan=z='if(lte(zoom,1.0),1.20,max(1.001,zoom-0.0015))':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS}"
         elif motion == "pan_left":
-            zoom_filter = f"zoompan=z='1.18':d={frames}:x='if(lte(on,1),(iw-iw/zoom)/2,x+1.2)':y='ih/2-(ih/zoom/2)':s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS}"
+            zoom_filter = f"zoompan=z='1.15':d={frames}:x='if(lte(on,1),(iw-iw/zoom)/2,x+1.0)':y='ih/2-(ih/zoom/2)':s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS}"
         else:
-            zoom_filter = f"zoompan=z='min(zoom+0.0015,1.22)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS}"
+            zoom_filter = f"zoompan=z='min(zoom+0.0012,1.16)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS}"
 
-        # Cinematic clarity filter: subtle sharpening (unsharp) + contrast enhancement + soft vignette
-        filter_str = f"{zoom_filter},unsharp=5:5:0.8:5:5:0.0,eq=contrast=1.08:saturation=1.12:brightness=0.01,vignette=PI/4.5,format=yuv420p"
+        # Clean natural clarity filter (unsharp for subtle edge sharpness, natural vivid colors, zero edge darkening)
+        filter_str = f"{zoom_filter},unsharp=3:3:0.4:3:3:0.0,format=yuv420p"
 
         cmd = [
             FFMPEG_EXE, "-y",
@@ -54,10 +106,11 @@ class RenderEngine:
             "-crf", "18",
             "-pix_fmt", "yuv420p",
             "-r", str(VIDEO_FPS),
+            "-an",
             str(output_path)
         ]
 
-        logger.info(f"Rendering shot clip ({motion}): {output_path.name}")
+        logger.info(f"Rendering image shot clip ({motion}): {output_path.name}")
         res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if res.returncode != 0:
             logger.warning(f"Ken burns render warning: {res.stderr.decode('utf-8', errors='ignore')}")
@@ -72,11 +125,22 @@ class RenderEngine:
                 "-preset", "ultrafast",
                 "-pix_fmt", "yuv420p",
                 "-r", str(VIDEO_FPS),
+                "-an",
                 str(output_path)
             ]
             subprocess.run(cmd_fallback, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         return output_path
+
+    def render_shot_clip(self, media_path: Path, duration: float, motion: str, output_path: Path) -> Path:
+        """
+        Polymorphic shot renderer: dispatches to video or image rendering based on file extension/type.
+        """
+        suffix = media_path.suffix.lower()
+        if suffix in [".mp4", ".mov", ".mkv", ".webm"]:
+            return self.render_video_shot_clip(media_path, duration, output_path)
+        else:
+            return self.render_image_shot_clip(media_path, duration, motion, output_path)
 
     def assemble_short(
         self,
@@ -101,7 +165,7 @@ class RenderEngine:
         # Infer motion style if not explicitly supplied
         if not motion_style:
             motions = {s.get("camera_motion", "zoom_in") for s in shots_data}
-            motion_style = "DYNAMIC_ZOOM_PAN" if len(motions) > 1 else "KEN_BURNS_STANDARD"
+            motion_style = "DYNAMIC_VIDEO_MOTION" if any(getattr(asset_map.get(s["shot_id"]), "asset_type", "") == "video" for s in shots_data) else ("DYNAMIC_ZOOM_PAN" if len(motions) > 1 else "KEN_BURNS_STANDARD")
 
         # Infer BGM mood if not explicitly supplied
         if not bgm_mood:
@@ -121,11 +185,11 @@ class RenderEngine:
             for idx, shot in enumerate(shots_data):
                 shot_id = shot["shot_id"]
                 asset = asset_map.get(shot_id)
-                img_path = Path(asset.local_path) if asset else (ASSETS_CACHE_DIR / "fallback.jpg")
+                media_path = Path(asset.local_path) if asset else (ASSETS_DIR / "fallback.jpg")
                 clip_out = self.renders_dir / f"clip_{job_id}_{idx}.mp4"
 
                 self.render_shot_clip(
-                    image_path=img_path,
+                    media_path=media_path,
                     duration=shot["duration"],
                     motion=shot.get("camera_motion", "zoom_in"),
                     output_path=clip_out

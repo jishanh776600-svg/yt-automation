@@ -130,11 +130,12 @@ class ShortsPipeline:
         shots = self.storyboard_engine.create_storyboard(script)
         StateMachine.transition(db, job, JobState.VISUALS_SEARCHING, f"Planned {len(shots)} cinematic shots")
 
-        # 4. ASSET ACQUISITION (Pexels + Anti-Duplication)
+        # 4. ASSET ACQUISITION (Pexels Video First + Anti-Duplication)
         assets_used = []
         asset_map = {}
+        used_urls_in_job = set()
         for shot in shots:
-            asset = self.asset_fetcher.fetch_asset_for_shot(db, shot)
+            asset = self.asset_fetcher.fetch_asset_for_shot(db, shot, used_urls_in_job=used_urls_in_job)
             assets_used.append(asset)
             asset_map[shot["shot_id"]] = asset
 

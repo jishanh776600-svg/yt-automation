@@ -155,10 +155,11 @@ class TestPexelsQuotaPhase81(unittest.TestCase):
             asset = self.fetcher.fetch_asset_for_shot(self.db, shot_data)
             self.assertEqual(asset.source, "pexels")
 
-            # Verify provider_usage contains exactly 1 API record (the /v1/search call)
+            # Verify provider_usage contains API records but zero CDN download records
             usage_records = self.db.query(ProviderUsage).filter(ProviderUsage.provider_name == "pexels").all()
-            self.assertEqual(len(usage_records), 1)
-            self.assertEqual(usage_records[0].endpoint, "/v1/search")
+            self.assertGreaterEqual(len(usage_records), 1)
+            for rec in usage_records:
+                self.assertIn(rec.endpoint, ["/videos/search", "/v1/search"])
 
     def test_10_provider_telemetry_persisted_correctly(self):
         """Test direct persistence function record_pexels_telemetry."""
