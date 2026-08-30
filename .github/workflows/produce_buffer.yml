@@ -15,7 +15,7 @@ on:
       target_buffer:
         description: 'Target reserve stock in Drive (01_READY)'
         required: false
-        default: '12'
+        default: '6'
         type: string
       batch_count:
         description: 'Force generate specific number of Shorts (0 = auto-replenish to target)'
@@ -99,7 +99,7 @@ jobs:
             echo "[*] Running targeted batch production for $BATCH_COUNT Shorts (Voice: ${VOICE_INPUT:-default})..."
             python main.py --produce-batch "$BATCH_COUNT" $VOICE_FLAG
           else
-            TARGET=${TARGET_BUFFER:-12}
+            TARGET=${TARGET_BUFFER:-6}
             echo "[*] Auditing and maintaining reserve buffer (Target: $TARGET Shorts in 01_READY, Voice: ${VOICE_INPUT:-default})..."
             python main.py --maintain-buffer "$TARGET" $VOICE_FLAG || true
           fi

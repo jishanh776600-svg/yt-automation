@@ -485,17 +485,39 @@ def api_produce_buffer_status(session: Optional[Dict[str, Any]] = Depends(get_op
         elif conclusion == "cancelled":
             outcome_status = "CANCELLED"
             outcome_message = "Buffer refill workflow was cancelled."
+        # Check structured production summary if available
+        prod_summary_file = PROJECT_ROOT / "data" / "production_summary.json"
+        summary_data = None
+        if prod_summary_file.exists():
+            try:
+                with open(prod_summary_file, "r", encoding="utf-8") as f:
+                    summary_data = json.load(f)
+            except Exception:
+                pass
+
+        if summary_data and summary_data.get("action") == "MAINTAIN_BUFFER":
+            outcome_status = summary_data.get("outcome", "COMPLETED")
+            block_reason = summary_data.get("block_reason")
+            produced = summary_data.get("produced_count", 0)
+            if outcome_status == "SUCCEEDED":
+                outcome_message = f"Buffer refill succeeded. Target reserve fully stocked ({ready_stock}/{TARGET_RESERVE_BUFFER})."
+            elif outcome_status == "PARTIAL":
+                outcome_message = f"Partial buffer replenishment: {produced} new Shorts produced. Reserve at {ready_stock}/{TARGET_RESERVE_BUFFER}."
+            elif outcome_status == "BLOCKED":
+                outcome_message = f"Buffer refill blocked ({block_reason or 'Quota limit'}). Reserve remains at {ready_stock}/{TARGET_RESERVE_BUFFER}."
+            else:
+                outcome_message = f"Buffer maintenance completed ({outcome_status}). Reserve: {ready_stock}/{TARGET_RESERVE_BUFFER}."
         elif conclusion == "success":
             if ready_stock >= TARGET_RESERVE_BUFFER:
                 outcome_status = "SUCCEEDED"
-                outcome_message = f"Buffer refill succeeded. Target reserve fully stocked ({TARGET_RESERVE_BUFFER}/{TARGET_RESERVE_BUFFER})."
-            elif ready_stock > 1:
+                outcome_message = f"Buffer refill succeeded. Target reserve fully stocked ({ready_stock}/{TARGET_RESERVE_BUFFER})."
+            elif ready_stock > 0:
                 outcome_status = "PARTIAL"
                 outcome_message = f"Partial buffer replenishment: Reserve at {ready_stock}/{TARGET_RESERVE_BUFFER} Shorts."
             else:
                 outcome_status = "BLOCKED"
-                block_reason = "GEMINI_DAILY_QUOTA_EXHAUSTED"
-                outcome_message = f"Buffer refill halted: 0 new videos produced (Gemini quota limit reached). Reserve remains at {ready_stock}/{TARGET_RESERVE_BUFFER}."
+                block_reason = "REFILL_HALTED_ON_QUOTA_OR_LIMIT"
+                outcome_message = f"Buffer refill halted with 0 new Shorts produced (Reserve remains at {ready_stock}/{TARGET_RESERVE_BUFFER})."
         else:
             outcome_status = conclusion.upper() or "COMPLETED"
             outcome_message = f"Workflow finished with status '{conclusion}' (Reserve: {ready_stock}/{TARGET_RESERVE_BUFFER})."

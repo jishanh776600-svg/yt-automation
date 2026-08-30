@@ -98,7 +98,8 @@ class GeminiRateLimiter:
 class GeminiClient:
     """
     Wrapper around Google GenAI client providing centralized rate limiting, 429-aware backoff,
-    and automatic fail-fast fallback to secondary independent provider account on quota exhaustion.
+    and automatic failover to secondary provider account on quota exhaustion.
+    Remembers provider exhaustion for the session to prevent retry amplification on dead credentials.
     """
     def __init__(
         self,
@@ -111,14 +112,56 @@ class GeminiClient:
         from config.settings import (
             GEMINI_API_KEY,
             GEMINI_API_KEY_SECONDARY,
+            GEMINI_MODEL,
             GEMINI_MODEL_SECONDARY
         )
         self.api_key = api_key or GEMINI_API_KEY
         self.secondary_api_key = secondary_api_key or GEMINI_API_KEY_SECONDARY
-        self.secondary_model = secondary_model or GEMINI_MODEL_SECONDARY
+        self.primary_model = GEMINI_MODEL
+        self.secondary_model = secondary_model or GEMINI_MODEL_SECONDARY or GEMINI_MODEL
         self.rate_limiter = rate_limiter or get_shared_rate_limiter()
         self.sleeper = sleeper
+        self._provider_lock = threading.Lock()
+        self._exhausted_providers: set = set()
         self.active_provider = "primary"
+
+    def mark_provider_exhausted(self, provider_name: str) -> None:
+        """Marks a provider credential as quota-exhausted for this session."""
+        with self._provider_lock:
+            self._exhausted_providers.add(provider_name.lower())
+            if provider_name.lower() == "primary":
+                self.active_provider = "secondary"
+            logger.warning(
+                f"[GEMINI_PROVIDER] Provider '{provider_name.upper()}' marked EXHAUSTED for active session."
+            )
+
+    def is_provider_exhausted(self, provider_name: str) -> bool:
+        """Returns True if the provider has already been marked quota-exhausted."""
+        with self._provider_lock:
+            return provider_name.lower() in self._exhausted_providers
+
+    def reset_provider_status(self) -> None:
+        """Resets provider exhaustion tracking (useful for test isolation and new daily cycles)."""
+        with self._provider_lock:
+            self._exhausted_providers.clear()
+            self.active_provider = "primary"
+
+    def _get_configured_providers(self, requested_model: Optional[str] = None) -> List[Dict[str, str]]:
+        """Returns ordered list of configured, non-empty provider credentials."""
+        providers = []
+        if self.api_key:
+            providers.append({
+                "name": "primary",
+                "api_key": self.api_key,
+                "model": requested_model or self.primary_model
+            })
+        if self.secondary_api_key and self.secondary_api_key != self.api_key:
+            providers.append({
+                "name": "secondary",
+                "api_key": self.secondary_api_key,
+                "model": self.secondary_model or requested_model or self.primary_model
+            })
+        return providers
 
     def _execute_request(
         self,
@@ -156,28 +199,35 @@ class GeminiClient:
                 return response
             except Exception as exc:
                 last_exception = exc
-                is_transient, server_delay = is_retryable_exception(exc)
                 msg = str(exc)
-                is_429 = "429" in msg or "resource_exhausted" in msg.lower() or "quota" in msg.lower()
-                is_daily_quota = "perday" in msg.lower() or "generaterequestsperday" in msg.lower()
+                msg_lower = msg.lower()
+                is_transient, server_delay = is_retryable_exception(exc)
+                is_429 = "429" in msg or "resource_exhausted" in msg_lower or "quota" in msg_lower
+                is_daily_quota = (
+                    "perday" in msg_lower or
+                    "generaterequestsperday" in msg_lower or
+                    "daily quota" in msg_lower or
+                    "daily request" in msg_lower
+                )
 
                 if is_daily_quota:
                     from config.settings import GEMINI_FALLBACK_MODEL
                     if current_model != GEMINI_FALLBACK_MODEL and GEMINI_FALLBACK_MODEL:
                         logger.warning(
-                            f"[GEMINI_FALLBACK] Daily quota exhausted for model '{current_model}' on {provider_name} provider. "
+                            f"[GEMINI_FALLBACK] Daily quota exhausted for model '{current_model}' on {provider_name.upper()} provider. "
                             f"Switching immediately to fallback model '{GEMINI_FALLBACK_MODEL}'..."
                         )
                         current_model = GEMINI_FALLBACK_MODEL
                         continue
                     # Fail fast out of this provider on daily quota exhaustion
+                    self.mark_provider_exhausted(provider_name)
                     raise GeminiQuotaExhaustedError(
-                        f"Daily API quota exhausted on {provider_name} provider for model '{current_model}'"
+                        f"Daily API quota exhausted on {provider_name.upper()} provider for model '{current_model}'"
                     ) from exc
 
                 if not (is_transient or is_429):
-                    # Permanent error (e.g. invalid argument, unrecoverable) - do not retry
-                    logger.error(f"[GEMINI_ERROR] Non-retryable error from Gemini API on {provider_name} provider: {exc}")
+                    # Permanent error (e.g. invalid argument, unrecoverable, prompt blocked) - do not retry or rotate
+                    logger.error(f"[GEMINI_ERROR] Non-retryable error from Gemini API on {provider_name.upper()} provider: {exc}")
                     raise exc
 
                 if attempt >= max_retries:
@@ -192,12 +242,15 @@ class GeminiClient:
                     delay = min(max_delay, raw) + jitter
 
                 logger.warning(
-                    f"[GEMINI_RATE_LIMIT] 429/Transient failure on {provider_name} provider (attempt {attempt}/{max_retries}): {exc}. "
+                    f"[GEMINI_RATE_LIMIT] 429/Transient failure on {provider_name.upper()} provider (attempt {attempt}/{max_retries}): {exc}. "
                     f"Backing off for {delay:.2f}s before retry..."
                 )
                 self.sleeper(delay)
 
-        err_summary = f"Gemini API rate limit / quota exhausted on {provider_name} provider after {max_retries} attempts"
+        # Retries exhausted on this provider -> mark exhausted if 429/quota
+        if is_429:
+            self.mark_provider_exhausted(provider_name)
+        err_summary = f"Gemini API rate limit / quota exhausted on {provider_name.upper()} provider after {max_retries} attempts"
         logger.error(f"[GEMINI_EXHAUSTED] {err_summary}")
         raise GeminiQuotaExhaustedError(err_summary) from last_exception
 
@@ -212,55 +265,68 @@ class GeminiClient:
     ) -> Any:
         """
         Executes models.generate_content with rate limiting, exponential backoff, and
-        transparent secondary provider fallback upon primary daily quota exhaustion.
+        transparent secondary provider failover upon primary quota exhaustion.
+        Skips previously exhausted providers to prevent retry amplification.
         """
-        if not self.api_key:
-            raise ValueError("GEMINI_API_KEY is not configured.")
+        if not self.api_key and not self.secondary_api_key:
+            raise ValueError("No GEMINI_API_KEY is configured.")
 
-        # Attempt 1: Primary Gemini Provider
-        try:
-            return self._execute_request(
-                api_key=self.api_key,
-                model=model,
-                contents=contents,
-                max_retries=max_retries,
-                base_delay=base_delay,
-                max_delay=max_delay,
-                provider_name="primary",
-                **kwargs
-            )
-        except GeminiQuotaExhaustedError as primary_quota_err:
-            # Check if an independent secondary Gemini credential is configured
-            if self.secondary_api_key and self.secondary_api_key != self.api_key:
-                sec_model = self.secondary_model or model
-                logger.warning(
-                    f"[GEMINI_FALLBACK] Primary Gemini provider quota exhausted. "
-                    f"Switching immediately to SECONDARY Gemini provider account (model: '{sec_model}')..."
+        all_providers = self._get_configured_providers(requested_model=model)
+        if not all_providers:
+            raise ValueError("No valid Gemini provider credentials available.")
+
+        # Determine eligible providers (unexhausted first)
+        available_providers = [p for p in all_providers if not self.is_provider_exhausted(p["name"])]
+
+        if not available_providers:
+            err_msg = "All configured Gemini providers exhausted daily API quotas."
+            logger.error(f"[GEMINI_EXHAUSTED] {err_msg}")
+            raise GeminiQuotaExhaustedError(err_msg)
+
+        last_err = None
+
+        for prov in available_providers:
+            prov_name = prov["name"]
+            prov_key = prov["api_key"]
+            prov_model = prov["model"]
+
+            self.active_provider = prov_name
+            logger.info(f"[GEMINI_REQUEST] Dispatching request to provider '{prov_name.upper()}' (model: '{prov_model}')...")
+
+            try:
+                result = self._execute_request(
+                    api_key=prov_key,
+                    model=prov_model,
+                    contents=contents,
+                    max_retries=max_retries,
+                    base_delay=base_delay,
+                    max_delay=max_delay,
+                    provider_name=prov_name,
+                    **kwargs
                 )
-                self.active_provider = "secondary"
-
-                try:
-                    return self._execute_request(
-                        api_key=self.secondary_api_key,
-                        model=sec_model,
-                        contents=contents,
-                        max_retries=max_retries,
-                        base_delay=base_delay,
-                        max_delay=max_delay,
-                        provider_name="secondary",
-                        **kwargs
+                return result
+            except GeminiQuotaExhaustedError as quota_err:
+                last_err = quota_err
+                self.mark_provider_exhausted(prov_name)
+                # Check if another provider remains
+                remaining = [p for p in all_providers if not self.is_provider_exhausted(p["name"])]
+                if remaining:
+                    logger.warning(
+                        f"[GEMINI_FAILOVER] Provider '{prov_name.upper()}' quota exhausted. "
+                        f"Failing over to provider '{remaining[0]['name'].upper()}'..."
                     )
-                except GeminiQuotaExhaustedError as sec_quota_err:
+                    continue
+                else:
                     logger.error(
-                        "[GEMINI_EXHAUSTED] ALL configured Gemini providers (primary & secondary) "
-                        "exhausted daily API quotas. Halting production cleanly."
+                        "[GEMINI_EXHAUSTED] ALL configured Gemini providers exhausted daily API quotas. Halting production cleanly."
                     )
                     raise GeminiQuotaExhaustedError(
                         "All configured Gemini providers exhausted daily API quotas."
-                    ) from sec_quota_err
+                    ) from quota_err
 
-            # No secondary provider available; re-raise primary quota error
-            raise primary_quota_err
+        if last_err:
+            raise last_err
+        raise GeminiQuotaExhaustedError("All configured Gemini providers exhausted daily API quotas.")
 
 
 _SHARED_LIMITER: Optional[GeminiRateLimiter] = None
