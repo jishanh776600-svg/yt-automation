@@ -420,7 +420,7 @@ class ShortsPipeline:
         finally:
             lock.release()
 
-    def maintain_buffer(self, target_stock: int = 12) -> Tuple[int, Dict[str, Any]]:
+    def maintain_buffer(self, target_stock: int = 6) -> Tuple[int, Dict[str, Any]]:
         """
         BUFFER MANAGER: Checks current ready stock in Drive '01_READY'.
         If stock < target_stock, dynamically calculates deficit per iteration and generates
@@ -974,7 +974,7 @@ def main():
     parser.add_argument("--health-check", action="store_true", help="Run non-destructive production health check and launch readiness gate")
     parser.add_argument("--self-heal", action="store_true", help="Executes master autonomous self-healing, stale recovery, and vault reconciliation")
     parser.add_argument("--json", action="store_true", help="Output health check or diagnostic results in JSON format")
-    parser.add_argument("--maintain-buffer", type=int, nargs="?", const=12, default=0, metavar="TARGET", help="Maintain a reserve of TARGET ready Shorts in Drive 01_READY (default: 12)")
+    parser.add_argument("--maintain-buffer", type=int, nargs="?", const=6, default=0, metavar="TARGET", help="Maintain a reserve of TARGET ready Shorts in Drive 01_READY (default: 6)")
     parser.add_argument("--produce-batch", type=int, default=0, metavar="N", help="Generate N Shorts, verify QA, and deposit in Google Drive 01_READY")
     parser.add_argument("--publish-next", action="store_true", help="Claim next ready Short from Google Drive 01_READY and publish to YouTube")
     parser.add_argument("--schedule-ready", action="store_true", help="Claim and schedule all available READY Shorts up to daily limit")
@@ -986,7 +986,7 @@ def main():
     parser.add_argument("--force", action="store_true", help="Force cycle even if daily limit is met")
     parser.add_argument("--voice", type=str, default=None, help="Explicit active voice identifier to use for this run (overrides default/DB)")
     parser.add_argument("--dashboard", action="store_true", help="Launch FastAPI web dashboard")
-    parser.add_argument("--daemon", action="store_true", help="Run continuous scheduler (Strictly 4 Shorts/day)")
+    parser.add_argument("--daemon", action="store_true", help="Run continuous scheduler (Strictly 3 Shorts/day)")
     args = parser.parse_args()
 
     pipeline = ShortsPipeline(voice=args.voice)
@@ -1096,11 +1096,10 @@ def main():
         pipeline.run_single_job(force=args.force)
     elif args.daemon:
         import schedule
-        console.print("[bold green]Starting automated daemon scheduler (Strictly 4 Shorts/day at 06:00, 10:00, 15:00, 20:00 UTC)...[/bold green]")
+        console.print("[bold green]Starting automated daemon scheduler (Strictly 3 Shorts/day at 06:00, 11:00, 15:00 UTC)...[/bold green]")
         schedule.every().day.at("06:00").do(pipeline.publish_next_from_vault)
-        schedule.every().day.at("10:00").do(pipeline.publish_next_from_vault)
+        schedule.every().day.at("11:00").do(pipeline.publish_next_from_vault)
         schedule.every().day.at("15:00").do(pipeline.publish_next_from_vault)
-        schedule.every().day.at("20:00").do(pipeline.publish_next_from_vault)
         pipeline.publish_next_from_vault()  # Run initial cycle
         while True:
             schedule.run_pending()

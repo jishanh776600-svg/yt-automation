@@ -109,11 +109,11 @@ class TestQuotaMonitorPhase82(unittest.TestCase):
         self.assertEqual(pexels["measurement_type"], "UNKNOWN")
 
     def test_05_youtube_internal_limit_remains_four(self):
-        """Verify YouTube internal production capacity is strictly 4 Shorts/day."""
-        self.assertEqual(DAILY_SHORTS_LIMIT, 4)
+        """Verify YouTube internal production capacity is strictly 3 Shorts/day."""
+        self.assertEqual(DAILY_SHORTS_LIMIT, 3)
         res = self.provider.get_all_service_quotas(self.db)
         yt = next(s for s in res["services"] if s["service"] == "youtube_data_api")
-        self.assertEqual(yt["internal_production_capacity"]["limit"], 4)
+        self.assertEqual(yt["internal_production_capacity"]["limit"], 3)
         self.assertEqual(yt["internal_production_capacity"]["unit"], "Shorts/day")
 
     def test_06_youtube_api_quota_not_fabricated(self):
@@ -215,13 +215,13 @@ class TestQuotaMonitorPhase82(unittest.TestCase):
         self.assertEqual(pexels["remaining"], 0)
 
     def test_14_frontend_contains_limits_panel(self):
-        """Verify mobile.html template includes API & Service Limits container."""
+        """Verify index.html template includes API & Service Limits container."""
         from pathlib import Path
-        template_path = Path("dashboard/templates/mobile.html")
+        template_path = Path("dashboard/templates/index.html")
         self.assertTrue(template_path.exists())
         content = template_path.read_text(encoding="utf-8")
-        self.assertIn("API & Service Limits", content)
-        self.assertIn('id="service-quotas-list"', content)
+        self.assertIn("External API Quotas & Provider Service Limits", content)
+        self.assertIn('id="desktop-quotas-container"', content)
 
     def test_15_frontend_contains_no_secrets(self):
         """Security: Verify mobile.html contains no embedded API keys or tokens."""

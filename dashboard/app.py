@@ -22,7 +22,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from config.settings import PROJECT_ROOT, DATABASE_DIR
 from core.database import get_db, init_db
-from dashboard.data_provider import SystemDataProvider
+from dashboard.data_provider import SystemDataProvider, TARGET_RESERVE_BUFFER
 from dashboard.action_manager import ActionManager
 from dashboard.auth import (
     SESSION_COOKIE_NAME,
@@ -475,30 +475,30 @@ def api_produce_buffer_status(session: Optional[Dict[str, Any]] = Depends(get_op
             active_run["jobs"] = details.get("jobs", [])
             active_run["step_summary"] = details.get("step_summary", {})
         outcome_status = "RUNNING" if active_run.get("status") == "in_progress" else "QUEUED"
-        outcome_message = f"Cloud runner execution in progress... (Reserve: {ready_stock}/12 Shorts)"
+        outcome_message = f"Cloud runner execution in progress... (Reserve: {ready_stock}/{TARGET_RESERVE_BUFFER} Shorts)"
     elif latest_run:
         conclusion = (latest_run.get("conclusion") or "").lower()
         if conclusion == "failure":
             outcome_status = "BLOCKED"
             block_reason = "STEP_FAILURE_OR_QUOTA_EXHAUSTED"
-            outcome_message = f"Buffer refill halted on error or quota limit (0 new videos added, Reserve: {ready_stock}/12)."
+            outcome_message = f"Buffer refill halted on error or quota limit (0 new videos added, Reserve: {ready_stock}/{TARGET_RESERVE_BUFFER})."
         elif conclusion == "cancelled":
             outcome_status = "CANCELLED"
             outcome_message = "Buffer refill workflow was cancelled."
         elif conclusion == "success":
-            if ready_stock >= 12:
+            if ready_stock >= TARGET_RESERVE_BUFFER:
                 outcome_status = "SUCCEEDED"
-                outcome_message = "Buffer refill succeeded. Target reserve fully stocked (12/12)."
+                outcome_message = f"Buffer refill succeeded. Target reserve fully stocked ({TARGET_RESERVE_BUFFER}/{TARGET_RESERVE_BUFFER})."
             elif ready_stock > 1:
                 outcome_status = "PARTIAL"
-                outcome_message = f"Partial buffer replenishment: Reserve at {ready_stock}/12 Shorts."
+                outcome_message = f"Partial buffer replenishment: Reserve at {ready_stock}/{TARGET_RESERVE_BUFFER} Shorts."
             else:
                 outcome_status = "BLOCKED"
                 block_reason = "GEMINI_DAILY_QUOTA_EXHAUSTED"
-                outcome_message = f"Buffer refill halted: 0 new videos produced (Gemini quota limit reached). Reserve remains at {ready_stock}/12."
+                outcome_message = f"Buffer refill halted: 0 new videos produced (Gemini quota limit reached). Reserve remains at {ready_stock}/{TARGET_RESERVE_BUFFER}."
         else:
             outcome_status = conclusion.upper() or "COMPLETED"
-            outcome_message = f"Workflow finished with status '{conclusion}' (Reserve: {ready_stock}/12)."
+            outcome_message = f"Workflow finished with status '{conclusion}' (Reserve: {ready_stock}/{TARGET_RESERVE_BUFFER})."
 
     return {
         "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -508,7 +508,7 @@ def api_produce_buffer_status(session: Optional[Dict[str, Any]] = Depends(get_op
         "active_run": active_run,
         "latest_run": latest_run,
         "current_stock": ready_stock,
-        "target_stock": 12,
+        "target_stock": TARGET_RESERVE_BUFFER,
         "outcome": outcome_status,
         "outcome_message": outcome_message,
         "block_reason": block_reason

@@ -185,6 +185,11 @@ def upload_canonical_database(
     source = source_path or DB_PATH
     engine = drive_engine or DriveVaultEngine()
 
+    # Safety Guard: Block upload if in test environment or using test DB without an injected mock engine
+    if (os.getenv("IS_TEST_ENV", "").lower() == "true" or "test_pipeline" in str(source).lower()) and drive_engine is None:
+        logger.warning("[SAFETY GUARD] Blocked attempt to upload test database to canonical Drive vault 00_SYSTEM/pipeline.db")
+        return {"status": "BLOCKED_TEST_MODE", "message": "Test database cannot be uploaded to canonical Drive vault"}
+
     if not source.exists():
         raise FileNotFoundError(f"Local database not found for upload: {source}")
 

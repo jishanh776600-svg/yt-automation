@@ -86,30 +86,30 @@ class TestYouTubeScheduledPublishing(unittest.TestCase):
 
     def test_02_same_day_slot_allocation(self):
         """Test 2: Verifies progression through same-day publication slots."""
-        # Reference at 07:00 UTC -> Next is 10:00 UTC
-        slot10 = self.scheduler.calculate_next_available_slot(self.db, reference_time=datetime(2026, 9, 1, 7, 0, 0))
-        self.assertEqual(slot10, datetime(2026, 9, 1, 10, 0, 0))
+        # Reference at 07:00 UTC -> Next is 11:00 UTC
+        slot11 = self.scheduler.calculate_next_available_slot(self.db, reference_time=datetime(2026, 9, 1, 7, 0, 0))
+        self.assertEqual(slot11, datetime(2026, 9, 1, 11, 0, 0))
 
-        # Reference at 11:00 UTC -> Next is 15:00 UTC
-        slot15 = self.scheduler.calculate_next_available_slot(self.db, reference_time=datetime(2026, 9, 1, 11, 0, 0))
+        # Reference at 12:00 UTC -> Next is 15:00 UTC
+        slot15 = self.scheduler.calculate_next_available_slot(self.db, reference_time=datetime(2026, 9, 1, 12, 0, 0))
         self.assertEqual(slot15, datetime(2026, 9, 1, 15, 0, 0))
 
-        # Reference at 16:00 UTC -> Next is 20:00 UTC
-        slot20 = self.scheduler.calculate_next_available_slot(self.db, reference_time=datetime(2026, 9, 1, 16, 0, 0))
-        self.assertEqual(slot20, datetime(2026, 9, 1, 20, 0, 0))
+        # Reference at 16:00 UTC -> Next is tomorrow 06:00 UTC
+        slot06 = self.scheduler.calculate_next_available_slot(self.db, reference_time=datetime(2026, 9, 1, 16, 0, 0))
+        self.assertEqual(slot06, datetime(2026, 9, 2, 6, 0, 0))
 
     def test_03_cross_day_rollover(self):
-        """Test 3: Verifies that passing 20:00 UTC automatically rolls over to tomorrow at 06:00 UTC."""
-        ref_time = datetime(2026, 9, 1, 21, 30, 0)  # Past 20:00 UTC
+        """Test 3: Verifies that passing 15:00 UTC automatically rolls over to tomorrow at 06:00 UTC."""
+        ref_time = datetime(2026, 9, 1, 16, 30, 0)  # Past 15:00 UTC
         slot = self.scheduler.calculate_next_available_slot(self.db, reference_time=ref_time)
         self.assertEqual(slot, datetime(2026, 9, 2, 6, 0, 0))
 
     def test_04_four_slot_daily_ceiling(self):
-        """Test 4: Verifies max 4 slots per calendar date; rolls over to next day when full."""
+        """Test 4: Verifies max 3 slots per calendar date; rolls over to next day when full."""
         test_date = date(2026, 10, 5)
-        # Create 4 booked records for 2026-10-05
+        # Create 3 booked records for 2026-10-05
         records = []
-        for h, m in [(6, 0), (10, 0), (15, 0), (20, 0)]:
+        for h, m in [(6, 0), (11, 0), (15, 0)]:
             rec = UploadRecord(
                 id=f"upl_test_{uuid.uuid4().hex[:8]}",
                 job_id=f"job_tmp_{uuid.uuid4().hex[:8]}",
@@ -151,8 +151,8 @@ class TestYouTubeScheduledPublishing(unittest.TestCase):
         try:
             ref_time = datetime(2026, 11, 10, 4, 0, 0)
             slot = self.scheduler.calculate_next_available_slot(self.db, reference_time=ref_time)
-            # Should skip 06:00 and allocate 10:00
-            self.assertEqual(slot, datetime(2026, 11, 10, 10, 0, 0))
+            # Should skip 06:00 and allocate 11:00
+            self.assertEqual(slot, datetime(2026, 11, 10, 11, 0, 0))
         finally:
             self.db.delete(rec)
             self.db.commit()

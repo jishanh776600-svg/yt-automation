@@ -48,7 +48,7 @@ BGM_LIBRARY = {
         "default_intensity": "Subdued-Poignant",
         "description": "Deeply emotional and somber melody for tragic stories, personal loss, heartfelt sacrifice, and poignant historical moments.",
         "keywords": [
-            "sad", "tragedy", "emotional", "loss", "grief", "poignant", "mourn", "sacrifice",
+            "sad", "tragedy", "tragic", "emotional", "loss", "grief", "poignant", "mourn", "sacrifice",
             "heartbreak", "death", "tears", "memorial", "ruin", "sorrow", "farewell", "crying",
             "dying", "famine", "plague", "victim", "burial", "fatal", "suffering", "sorrowful",
             "heartbreaking", "perished", "massacre", "destitution", "orphan", "starved", "grave"
@@ -134,7 +134,8 @@ class AudioMixer:
             f'}}'
         )
 
-        for model_name in ["gemini-2.0-flash", "gemini-1.5-flash"]:
+        from config.settings import GEMINI_MODEL
+        for model_name in [GEMINI_MODEL]:
             try:
                 from core.gemini_client import get_gemini_client
                 gemini_client = get_gemini_client()

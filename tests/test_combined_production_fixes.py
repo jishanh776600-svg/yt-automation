@@ -32,31 +32,31 @@ class TestCombinedProductionFixes(unittest.TestCase):
         cls.dp = SystemDataProvider()
 
     def test_01_drive_reserve_telemetry_consistency_1_stock(self):
-        """Test 1: 1 physical file in 01_READY returns 1/12 across all field aliases."""
+        """Test 1: 1 physical file in 01_READY returns 1/6 across all field aliases."""
         buf = self.dp.get_buffer_status(ready_stock=1)
         self.assertEqual(buf["ready_stock"], 1)
         self.assertEqual(buf["current_reserve"], 1)
-        self.assertEqual(buf["target_reserve"], 12)
+        self.assertEqual(buf["target_reserve"], 6)
         self.assertEqual(buf["health"], "CRITICAL_LOW")
-        self.assertIn("1/12 Shorts", buf["health_message"])
+        self.assertIn("1/6 Shorts", buf["health_message"])
 
     def test_02_drive_reserve_telemetry_consistency_0_stock(self):
-        """Test 2: 0 physical files in 01_READY returns 0/12 across all field aliases."""
+        """Test 2: 0 physical files in 01_READY returns 0/6 across all field aliases."""
         buf = self.dp.get_buffer_status(ready_stock=0)
         self.assertEqual(buf["ready_stock"], 0)
         self.assertEqual(buf["current_reserve"], 0)
-        self.assertEqual(buf["target_reserve"], 12)
+        self.assertEqual(buf["target_reserve"], 6)
         self.assertEqual(buf["health"], "DEPLETED")
-        self.assertIn("0/12 Shorts", buf["health_message"])
+        self.assertIn("0/6 Shorts", buf["health_message"])
 
     def test_03_drive_reserve_telemetry_consistency_12_stock(self):
-        """Test 3: 12 physical files in 01_READY returns 12/12 fully stocked."""
-        buf = self.dp.get_buffer_status(ready_stock=12)
-        self.assertEqual(buf["ready_stock"], 12)
-        self.assertEqual(buf["current_reserve"], 12)
-        self.assertEqual(buf["target_reserve"], 12)
+        """Test 3: 6 physical files in 01_READY returns 6/6 fully stocked."""
+        buf = self.dp.get_buffer_status(ready_stock=6)
+        self.assertEqual(buf["ready_stock"], 6)
+        self.assertEqual(buf["current_reserve"], 6)
+        self.assertEqual(buf["target_reserve"], 6)
         self.assertEqual(buf["health"], "HEALTHY")
-        self.assertIn("12/12 Shorts", buf["health_message"])
+        self.assertIn("6/6 Shorts", buf["health_message"])
 
     def test_04_primary_gemini_success_secondary_not_used(self):
         """Test 4: When primary Gemini succeeds, secondary provider is NEVER invoked."""

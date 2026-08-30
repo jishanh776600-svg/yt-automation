@@ -172,7 +172,9 @@ class TestCloudDeploymentPhase73(unittest.TestCase):
     # --------------------------------------------------------------------------
     def test_11_cloud_mode_routing_integration(self):
         """Test that POST /api/actions/produce dispatches workflow in CLOUD_MODE."""
-        with patch("config.settings.CLOUD_MODE", True),              patch("dashboard.action_manager.GitHubWorkflowDispatcher.dispatch_produce_buffer") as mock_dispatch:
+        with patch("config.settings.CLOUD_MODE", True), \
+             patch("dashboard.app.verify_major_action_auth", return_value=(True, None, "AUTHORIZED")), \
+             patch("dashboard.action_manager.GitHubWorkflowDispatcher.dispatch_produce_buffer") as mock_dispatch:
             mock_dispatch.return_value = {
                 "success": True,
                 "action": "DISPATCH_ACCEPTED",

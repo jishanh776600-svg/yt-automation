@@ -94,7 +94,7 @@ class TestComprehensiveAutonomousPipeline(unittest.TestCase):
             self.assertEqual(res["published_today"], 4)
 
     def test_scenario_b_2pub_0sched_2ready(self):
-        """Scenario B: 2 published + 0 scheduled + 2 READY -> schedule 2."""
+        """Scenario B: 2 published + 0 scheduled + 2 READY -> schedule 1 under 3 daily limit."""
         today_start, today_end = get_business_day_bounds_utc()
         for i in range(2):
             self.db.add(UploadRecord(
@@ -118,13 +118,13 @@ class TestComprehensiveAutonomousPipeline(unittest.TestCase):
                         with patch.object(self.pipeline.drive_engine, "set_file_properties"):
                             with patch("shutil.copy2"):
                                 res = self.pipeline.schedule_ready_buffer(db=self.db)
-                                self.assertEqual(res["scheduled_count"], 2)
+                                self.assertEqual(res["scheduled_count"], 1)
                                 self.assertEqual(res["published_today"], 2)
-                                self.assertEqual(res["scheduled_today"], 2)
+                                self.assertEqual(res["scheduled_today"], 1)
                                 self.assertEqual(res["remaining_capacity"], 0)
 
     def test_scenario_c_2pub_1sched_5ready(self):
-        """Scenario C: 2 published + 1 scheduled + 5 READY -> schedule only 1."""
+        """Scenario C: 2 published + 1 scheduled + 5 READY -> schedule 0 under 3 daily limit."""
         today_start, today_end = get_business_day_bounds_utc()
         now_utc = datetime.utcnow()
         for i in range(2):
@@ -140,17 +140,9 @@ class TestComprehensiveAutonomousPipeline(unittest.TestCase):
 
         fake_files = [{"id": f"f_c_{i}", "name": f"short_job_c_ready_{i}.mp4", "properties": {"job_id": f"job_c_ready_{i}", "title": f"Ready {i}"}} for i in range(5)]
         with patch.object(self.pipeline.drive_engine, "list_files_in_folder", side_effect=lambda f: fake_files if f == "01_READY" else []):
-            def fake_download(fid, path):
-                Path(path).parent.mkdir(parents=True, exist_ok=True)
-                Path(path).write_bytes(b"0" * 600000)
-
-            with patch.object(self.pipeline.drive_engine, "download_video_from_vault", side_effect=fake_download):
-                with patch.object(self.pipeline.upload_engine, "validate_media_integrity"):
-                    with patch.object(self.pipeline.drive_engine, "move_file_in_vault"):
-                        with patch.object(self.pipeline.drive_engine, "set_file_properties"):
-                            with patch("shutil.copy2"):
-                                res = self.pipeline.schedule_ready_buffer(db=self.db)
-                                self.assertEqual(res["scheduled_count"], 1)
+            res = self.pipeline.schedule_ready_buffer(db=self.db)
+            self.assertEqual(res["scheduled_count"], 0)
+            self.assertEqual(res["remaining_capacity"], 0)
 
     def test_scenario_d_4pub_0sched_ready(self):
         """Scenario D: 4 published -> schedule 0."""
@@ -190,15 +182,15 @@ class TestComprehensiveAutonomousPipeline(unittest.TestCase):
         scheduler = PublicationScheduler()
         ref_time = datetime(2026, 8, 30, 7, 0, 0) # 07:00 UTC
         
-        # 1st slot after 07:00 UTC is 10:00 UTC
+        # 1st slot after 07:00 UTC is 11:00 UTC
         s1 = scheduler.calculate_next_available_slot(self.db, reference_time=ref_time)
-        self.assertEqual(s1, datetime(2026, 8, 30, 10, 0, 0))
+        self.assertEqual(s1, datetime(2026, 8, 30, 11, 0, 0))
 
-        # Mark 10:00 UTC as occupied
+        # Mark 11:00 UTC as occupied
         self.db.add(UploadRecord(id="upl_f_1", job_id="job_f_1", youtube_video_id="YT_F1", title="F1", description="T", status="SCHEDULED", scheduled_publish_at=s1))
         self.db.commit()
 
-        # 2nd slot after 10:00 UTC is 15:00 UTC
+        # 2nd slot after 11:00 UTC is 15:00 UTC
         s2 = scheduler.calculate_next_available_slot(self.db, reference_time=ref_time)
         self.assertEqual(s2, datetime(2026, 8, 30, 15, 0, 0))
 
@@ -206,9 +198,9 @@ class TestComprehensiveAutonomousPipeline(unittest.TestCase):
         self.db.add(UploadRecord(id="upl_f_2", job_id="job_f_2", youtube_video_id="YT_F2", title="F2", description="T", status="SCHEDULED", scheduled_publish_at=s2))
         self.db.commit()
 
-        # 3rd slot is 20:00 UTC
+        # 3rd slot rolls over to next day 06:00 UTC
         s3 = scheduler.calculate_next_available_slot(self.db, reference_time=ref_time)
-        self.assertEqual(s3, datetime(2026, 8, 30, 20, 0, 0))
+        self.assertEqual(s3, datetime(2026, 8, 31, 6, 0, 0))
 
     def test_scenario_g_expired_slot_skipped(self):
         """Scenario G: Expired slot is skipped; next valid future slot is allocated."""
@@ -216,8 +208,8 @@ class TestComprehensiveAutonomousPipeline(unittest.TestCase):
         # At 06:10 UTC, the 06:00 UTC slot has already expired
         now_dt = datetime(2026, 8, 30, 6, 10, 0)
         next_slot = scheduler.calculate_next_available_slot(self.db, reference_time=now_dt)
-        # Must allocate 10:00 UTC, NOT 06:00 UTC
-        self.assertEqual(next_slot, datetime(2026, 8, 30, 10, 0, 0))
+        # Must allocate 11:00 UTC, NOT 06:00 UTC
+        self.assertEqual(next_slot, datetime(2026, 8, 30, 11, 0, 0))
 
     def test_scenario_h_idempotent_no_duplicate_upload(self):
         """Scenario H: Duplicate scheduler execution does not duplicate YouTube upload."""
@@ -405,9 +397,9 @@ class TestComprehensiveAutonomousPipeline(unittest.TestCase):
         pub_status = provider.get_publishing_status(self.db)
         self.assertEqual(pub_status["published_today"], 2)
         self.assertEqual(pub_status["scheduled_today"], 1)
-        self.assertEqual(pub_status["remaining_capacity"], 1)
+        self.assertEqual(pub_status["remaining_capacity"], 0)
         self.assertEqual(pub_status["total_booked_today"], 3)
-        self.assertEqual(pub_status["limit_reached"], False)
+        self.assertEqual(pub_status["limit_reached"], True)
 
     def test_scenario_s_drive_db_youtube_reconciliation(self):
         """Scenario S: Drive / DB / YouTube reconciliation transitions public video and cleans up processing."""

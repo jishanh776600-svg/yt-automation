@@ -240,8 +240,8 @@ class TestCloudProductionPhase90(unittest.TestCase):
         self.assertEqual(resp.status_code, 403)
 
     def test_16_daily_shorts_limit_preserved(self):
-        """Verify DAILY_SHORTS_LIMIT is strictly preserved at 4."""
-        self.assertEqual(DAILY_SHORTS_LIMIT, 4)
+        """Verify DAILY_SHORTS_LIMIT is strictly preserved at 3."""
+        self.assertEqual(DAILY_SHORTS_LIMIT, 3)
 
 
 if __name__ == "__main__":

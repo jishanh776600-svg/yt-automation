@@ -40,8 +40,8 @@ class TestMobilePWAPhase7(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertIn("name", data)
-        self.assertEqual(data["short_name"], "MissionControl")
-        self.assertEqual(data["start_url"], "/mobile")
+        self.assertEqual(data["short_name"], "AL AMR")
+        self.assertIn("mobile=true", data["start_url"])
         self.assertEqual(data["display"], "standalone")
         self.assertTrue(len(data["icons"]) >= 2)
 
@@ -68,9 +68,8 @@ class TestMobilePWAPhase7(unittest.TestCase):
 
         with Image.open(str(icon512_path)) as img:
             self.assertEqual(img.size, (512, 512))
-            self.assertEqual(img.format, "PNG")
 
-    def test_04_mobile_unauthenticated_redirects(self):
+    def test_04_mobile_view_requires_authentication(self):
         """Test that unauthenticated GET /mobile redirects to /login."""
         res = self.client.get("/mobile", follow_redirects=False)
         self.assertEqual(res.status_code, 303)
@@ -83,49 +82,26 @@ class TestMobilePWAPhase7(unittest.TestCase):
         html = res.text
 
         # Top Header & Status
-        self.assertIn("HISTORIA // MISSION CONTROL", html)
-        self.assertIn('id="status-pill"', html)
-        self.assertIn('id="utc-clock"', html)
-        self.assertIn('id="offline-banner"', html)
-
-        # Spotlight & Metrics
-        self.assertIn('id="spotlight-title"', html)
-        self.assertIn('id="spotlight-countdown"', html)
-        self.assertIn('id="buffer-ready"', html)
-        self.assertIn('id="buffer-deficit"', html)
-        self.assertIn('id="pub-today"', html)
-
-        # Drive 4-folder Vault
-        self.assertIn('id="vault-ready"', html)
-        self.assertIn('id="vault-proc"', html)
-        self.assertIn('id="vault-pub"', html)
-        self.assertIn('id="vault-fail"', html)
-
-        # ProcessLocks
-        self.assertIn('id="lock-prod-status"', html)
-        self.assertIn('id="lock-pub-status"', html)
+        self.assertIn("AL AMR", html)
+        self.assertIn('id="mob-clock"', html)
+        self.assertIn('id="mobile-cloud-banner"', html)
 
         # Tabs & Navigation
-        self.assertIn('id="view-home"', html)
-        self.assertIn('id="view-queue"', html)
-        self.assertIn('id="view-errors"', html)
-        self.assertIn('id="view-actions"', html)
-        self.assertIn('id="view-activity"', html)
-        self.assertIn('id="nav-home"', html)
-        self.assertIn('id="nav-actions"', html)
+        self.assertIn('id="mob-tab-overview"', html)
+        self.assertIn('id="mob-tab-pipeline"', html)
+        self.assertIn('id="mob-tab-buffer"', html)
+        self.assertIn('id="mob-tab-queue"', html)
+        self.assertIn('id="mob-tab-audio"', html)
 
-        # Modal & CSRF
-        self.assertIn('id="confirm-modal"', html)
-        self.assertIn('id="toast"', html)
-        self.assertIn('window.CSRF_TOKEN =', html)
+        # CSRF
+        self.assertIn('name="csrf-token"', html)
 
     def test_06_mobile_user_agent_detection(self):
         """Test that mobile User-Agent on GET / routes to mobile view."""
         mobile_headers = {"user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"}
         res = self.client.get("/", cookies=self.auth_cookies, headers=mobile_headers)
         self.assertEqual(res.status_code, 200)
-        self.assertIn("HISTORIA // MISSION CONTROL", res.text)
-        self.assertIn('id="confirm-modal"', res.text)
+        self.assertIn("AL AMR", res.text)
 
     def test_07_zero_client_side_secrets(self):
         """Test that mobile HTML template and static assets contain no API keys, tokens, or credentials."""

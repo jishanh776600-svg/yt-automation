@@ -141,7 +141,7 @@
             <div class="grid grid-cols-2 gap-2 text-xs font-mono">
                 <div class="p-3 bg-spaceDark rounded-xl border border-borderSubtle">
                     <div class="text-[9px] text-slate-500">VIDEOS TODAY</div>
-                    <div class="text-lg font-bold text-slate-100 mt-0.5">{{ state.publishing.published_today }} / 4</div>
+                    <div class="text-lg font-bold text-slate-100 mt-0.5">{{ state.publishing.published_today }} / 3</div>
                 </div>
                 <div class="p-3 bg-spaceDark rounded-xl border border-borderSubtle">
                     <div class="text-[9px] text-slate-500">NEXT RELEASE</div>
@@ -149,7 +149,7 @@
                 </div>
                 <div class="p-3 bg-spaceDark rounded-xl border border-borderSubtle">
                     <div class="text-[9px] text-slate-500">BUFFER RESERVE</div>
-                    <div class="text-lg font-bold text-emerald-400 mt-0.5">{{ state.buffer.current_reserve }} / 12</div>
+                    <div class="text-lg font-bold text-emerald-400 mt-0.5">{{ state.buffer.current_reserve }} / 6</div>
                 </div>
                 <div class="p-3 bg-spaceDark rounded-xl border border-borderSubtle">
                     <div class="text-[9px] text-slate-500">STATUS</div>
@@ -212,7 +212,7 @@
                     <div class="text-xl font-bold text-slate-100 mt-1">{{ state.inventory.counts['04_FAILED'] or 0 }}</div>
                 </div>
             </div>
-            <button onclick="handleTriggerProduce(12)" class="w-full py-2.5 bg-sky-500 text-slate-950 font-bold rounded-lg transition text-center mt-2">Replenish 12-Short Reserve</button>
+            <button onclick="handleTriggerProduce(6)" class="w-full py-2.5 bg-sky-500 text-slate-950 font-bold rounded-lg transition text-center mt-2">Replenish 6-Short Reserve</button>
         </div>
 
         <!-- =============================================================== -->

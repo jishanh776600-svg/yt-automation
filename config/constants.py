@@ -33,9 +33,8 @@ class JobState(str, Enum):
 
 PUBLISHING_SLOTS_UTC = [
     (6, 0, "06:00 UTC (11:30 AM IST)"),
-    (10, 0, "10:00 UTC (03:30 PM IST)"),
+    (11, 0, "11:00 UTC (04:30 PM IST)"),
     (15, 0, "15:00 UTC (08:30 PM IST)"),
-    (20, 0, "20:00 UTC (01:30 AM IST)"),
 ]
 
 # Canonical Business Timezone (Asia/Kolkata / IST = UTC+5:30)
@@ -130,7 +129,7 @@ PEXELS_FREE_LIMIT_MONTHLY = 20000
 GEMINI_FREE_RPM = 15
 YOUTUBE_DAILY_QUOTA_LIMIT = 10000
 YOUTUBE_UPLOAD_COST = 1600
-DAILY_SHORTS_LIMIT = 4
+DAILY_SHORTS_LIMIT = 3
 
 # Recovery & Self-Healing Thresholds (Phase 6)
 MAX_JOB_RETRIES = 3

@@ -17,15 +17,15 @@ logger = logging.getLogger(__name__)
 class VideoAnalyzer:
     """Performs video-level statistical classification and root-cause analysis."""
 
-    def compute_channel_baselines(self, db: Session) -> Dict[str, float]:
-        """Calculates rolling median and benchmark metrics across channel history."""
+    def compute_channel_baselines(self, db: Session, uploads: Optional[List[UploadRecord]] = None) -> Dict[str, float]:
+        """Calculates rolling median and benchmark metrics across channel history or scoped upload cohort."""
         # Get latest snapshot for each upload
-        uploads = db.query(UploadRecord).all()
+        target_uploads = uploads if uploads is not None else db.query(UploadRecord).all()
         apv_list = []
         views_list = []
         engagement_list = []
 
-        for upl in uploads:
+        for upl in target_uploads:
             latest_snap = (
                 db.query(PerformanceSnapshot)
                 .filter(PerformanceSnapshot.upload_id == upl.id)

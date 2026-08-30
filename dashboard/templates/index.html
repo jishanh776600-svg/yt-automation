@@ -139,7 +139,7 @@
                 <button onclick="switchWorkspace('buffer')" id="nav-buffer" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-r transition text-left">
                     <svg class="w-4 h-4 text-inherit flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
                     <span class="truncate">Buffer Vault</span>
-                    <span class="ml-auto px-1.5 py-0.5 bg-sky-950/70 text-sky-400 border border-sky-800/60 text-[10px] rounded font-mono">{{ state.inventory.counts['01_READY'] or 0 }}/12</span>
+                    <span class="ml-auto px-1.5 py-0.5 bg-sky-950/70 text-sky-400 border border-sky-800/60 text-[10px] rounded font-mono">{{ state.inventory.counts['01_READY'] or 0 }}/6</span>
                 </button>
 
                 <button onclick="switchWorkspace('queue')" id="nav-queue" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-r transition text-left">
@@ -269,15 +269,15 @@
                                     <h1 class="text-xs font-mono font-bold text-slate-100 uppercase tracking-wider">Autonomous Production Operations</h1>
                                     <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-800/50">STANDBY READY</span>
                                 </div>
-                                <p class="text-[11px] font-mono text-slate-400 mt-0.5">Continuous media pipeline with 4-Short daily publishing ceiling and Google Drive vault synchronization.</p>
+                                <p class="text-[11px] font-mono text-slate-400 mt-0.5">Continuous media pipeline with 3-Short daily publishing ceiling and Google Drive vault synchronization.</p>
                             </div>
                         </div>
 
                         <!-- Rapid Actions -->
                         <div class="flex items-center gap-2.5 flex-shrink-0">
-                            <button onclick="handleTriggerProduce(12)" class="px-3.5 py-1.5 bg-brandGold hover:bg-amber-400 text-spaceBlack font-mono font-bold rounded text-xs transition flex items-center gap-1.5 shadow-sm">
+                            <button onclick="handleTriggerProduce(6)" class="px-3.5 py-1.5 bg-brandGold hover:bg-amber-400 text-spaceBlack font-mono font-bold rounded text-xs transition flex items-center gap-1.5 shadow-sm">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                                <span>Replenish 12-Short Reserve</span>
+                                <span>Replenish 6-Short Reserve</span>
                             </button>
                         </div>
                     </div>
@@ -333,7 +333,7 @@
                                 <!-- Stage 5: VAULT BUFFER -->
                                 <div class="pipeline-connector p-2.5 bg-spaceWell rounded border border-emerald-900/40 bg-emerald-950/10">
                                     <div class="text-[9px] text-emerald-400 uppercase tracking-tight font-bold">05. Vault</div>
-                                    <div class="text-base font-bold text-emerald-300 mt-1">{{ state.inventory.counts['01_READY'] or 0 }} <span class="text-[10px] text-slate-500">/ 12</span></div>
+                                    <div class="text-base font-bold text-emerald-300 mt-1">{{ state.inventory.counts['01_READY'] or 0 }} <span class="text-[10px] text-slate-500">/ 6</span></div>
                                     <span class="inline-block mt-1 text-[8px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60">RESERVE</span>
                                 </div>
 
@@ -455,11 +455,11 @@
                             <!-- Metric 1: Videos Today -->
                             <div class="p-3 bg-spaceDark rounded-lg border border-borderHairline space-y-1.5">
                                 <div class="text-[10px] text-slate-500 uppercase tracking-wide">DAILY UPLOAD CAP</div>
-                                <div class="text-lg font-bold text-slate-100">{{ state.publishing.published_today or 0 }} <span class="text-xs text-slate-500">/ 4 Target</span></div>
+                                <div class="text-lg font-bold text-slate-100">{{ state.publishing.published_today or 0 }} <span class="text-xs text-slate-500">/ 3 Target</span></div>
                                 <div class="w-full bg-spaceWell h-1.5 rounded-full overflow-hidden border border-borderHairline">
-                                    <div class="bg-brandGold h-full" style="width: {{ (((state.publishing.published_today or 0) / 4) * 100)|int }}%"></div>
+                                    <div class="bg-brandGold h-full" style="width: {{ (((state.publishing.published_today or 0) / 3) * 100)|int }}%"></div>
                                 </div>
-                                <div class="text-[10px] text-slate-400 truncate">Ceiling: 4 Shorts/day max</div>
+                                <div class="text-[10px] text-slate-400 truncate">Ceiling: 3 Shorts/day max</div>
                             </div>
 
                             <!-- Metric 2: Next Release Slot -->
@@ -473,14 +473,14 @@
                             <div class="sm:col-span-2 p-3.5 bg-spaceDark rounded-lg border border-borderHairline space-y-2">
                                 <div class="flex items-center justify-between">
                                     <span class="text-[10px] text-slate-500 uppercase tracking-wide">DRIVE VAULT RESERVE</span>
-                                    <span class="text-[10px] font-bold text-emerald-400">{{ state.buffer.ready_stock or state.buffer.current_reserve or 0 }} / 12 Shorts</span>
+                                    <span class="text-[10px] font-bold text-emerald-400">{{ state.buffer.ready_stock or state.buffer.current_reserve or 0 }} / 6 Shorts</span>
                                 </div>
                                 <div class="w-full bg-spaceWell h-2 rounded-full overflow-hidden border border-borderHairline">
-                                    <div class="bg-emerald-500 h-full transition-all" style="width: {{ (((state.buffer.ready_stock or state.buffer.current_reserve or 0) / 12) * 100)|int }}%"></div>
+                                    <div class="bg-emerald-500 h-full transition-all" style="width: {{ (((state.buffer.ready_stock or state.buffer.current_reserve or 0) / 6) * 100)|int }}%"></div>
                                 </div>
                                 <div class="flex items-center justify-between text-[10px] text-slate-400">
                                     <span class="truncate">{{ state.buffer.health_message }}</span>
-                                    <button onclick="handleTriggerProduce(12)" class="text-brandGold hover:underline ml-2 flex-shrink-0">Refill ↗</button>
+                                    <button onclick="handleTriggerProduce(6)" class="text-brandGold hover:underline ml-2 flex-shrink-0">Refill ↗</button>
                                 </div>
                             </div>
                         </div>
@@ -688,7 +688,7 @@
                             <span class="w-2 h-2 rounded-full bg-sky-400"></span>
                             <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">Google Drive 4-Folder Vault Telemetry</h2>
                         </div>
-                        <button onclick="handleTriggerProduce(12)" class="px-3 py-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded text-xs transition font-mono">Replenish 12-Short Reserve</button>
+                        <button onclick="handleTriggerProduce(6)" class="px-3 py-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded text-xs transition font-mono">Replenish 6-Short Reserve</button>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -997,10 +997,10 @@
 
                         <div class="p-4 bg-spaceBlack rounded-xl border border-borderSubtle space-y-3 flex flex-col justify-between">
                             <div>
-                                <div class="font-bold text-sky-400">Replenish 12-Short Reserve</div>
-                                <p class="text-[11px] text-slate-400 mt-1">Replenishes the 01_READY Drive vault to maintain the 12-short reserve buffer.</p>
+                                <div class="font-bold text-sky-400">Replenish 6-Short Reserve</div>
+                                <p class="text-[11px] text-slate-400 mt-1">Replenishes the 01_READY Drive vault to maintain the 6-short reserve buffer.</p>
                             </div>
-                            <button onclick="handleTriggerProduce(12)" class="w-full py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded transition">Replenish Buffer</button>
+                            <button onclick="handleTriggerProduce(6)" class="w-full py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded transition">Replenish Buffer</button>
                         </div>
 
                         <div class="p-4 bg-spaceBlack rounded-xl border border-borderSubtle space-y-3 flex flex-col justify-between">

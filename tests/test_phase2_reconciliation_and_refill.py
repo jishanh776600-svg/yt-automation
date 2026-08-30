@@ -41,12 +41,9 @@ class TestPhase2ReconciliationAndRefill(unittest.TestCase):
         cls.db.close()
 
     def setUp(self):
-        from dashboard.auth import DEFAULT_ADMIN_USER, DEFAULT_ADMIN_PASSWORD
-        login_res = self.client.post("/api/auth/login", json={
-            "username": DEFAULT_ADMIN_USER,
-            "password": DEFAULT_ADMIN_PASSWORD
-        })
-        self.csrf_token = login_res.json().get("csrf_token", "")
+        from dashboard.auth import session_store, SESSION_COOKIE_NAME, DEFAULT_ADMIN_USER, DEFAULT_ADMIN_PASSWORD
+        self.session_id, self.csrf_token = session_store.create_session("admin", duration_hours=1)
+        self.client.cookies.set(SESSION_COOKIE_NAME, self.session_id)
         self.test_ids = []
 
     def tearDown(self):
@@ -114,11 +111,11 @@ class TestPhase2ReconciliationAndRefill(unittest.TestCase):
         self.db.commit()
 
     def test_04_refill_count_calculation_exact(self):
-        """Test 4: Refill deficit calculation for target=12 and current=1 yields 11."""
-        target = 12
+        """Test 4: Refill deficit calculation for target=6 and current=1 yields 5."""
+        target = 6
         current = 1
         deficit = max(target - current, 0)
-        self.assertEqual(deficit, 11)
+        self.assertEqual(deficit, 5)
 
     def test_05_outcome_semantics_blocked_on_zero_output(self):
         """Test 5: Workflow status endpoint correctly reports BLOCKED with reason on 0 output / quota error."""
@@ -140,9 +137,9 @@ class TestPhase2ReconciliationAndRefill(unittest.TestCase):
                     self.assertIn("0 new videos produced", data["outcome_message"])
 
     def test_06_outcome_semantics_partial(self):
-        """Test 6: Workflow status endpoint correctly reports PARTIAL when reserve increased to 5/12."""
+        """Test 6: Workflow status endpoint correctly reports PARTIAL when reserve increased to 3/6."""
         with patch("dashboard.app.data_provider.get_drive_inventory") as mock_inv:
-            mock_inv.return_value = {"counts": {"01_READY": 5}, "files": {}}
+            mock_inv.return_value = {"counts": {"01_READY": 3}, "files": {}}
             with patch("dashboard.github_client.GitHubWorkflowDispatcher.get_active_workflow_run") as mock_active:
                 mock_active.return_value = None
                 with patch("dashboard.github_client.GitHubWorkflowDispatcher.get_latest_workflow_run") as mock_latest:
@@ -155,12 +152,12 @@ class TestPhase2ReconciliationAndRefill(unittest.TestCase):
                     self.assertEqual(res.status_code, 200)
                     data = res.json()
                     self.assertEqual(data["outcome"], "PARTIAL")
-                    self.assertIn("5/12", data["outcome_message"])
+                    self.assertIn("3/6", data["outcome_message"])
 
     def test_07_outcome_semantics_succeeded(self):
-        """Test 7: Workflow status endpoint correctly reports SUCCEEDED when reserve reached 12/12."""
+        """Test 7: Workflow status endpoint correctly reports SUCCEEDED when reserve reached 6/6."""
         with patch("dashboard.app.data_provider.get_drive_inventory") as mock_inv:
-            mock_inv.return_value = {"counts": {"01_READY": 12}, "files": {}}
+            mock_inv.return_value = {"counts": {"01_READY": 6}, "files": {}}
             with patch("dashboard.github_client.GitHubWorkflowDispatcher.get_active_workflow_run") as mock_active:
                 mock_active.return_value = None
                 with patch("dashboard.github_client.GitHubWorkflowDispatcher.get_latest_workflow_run") as mock_latest:
@@ -177,14 +174,28 @@ class TestPhase2ReconciliationAndRefill(unittest.TestCase):
 
     def test_08_api_state_reconciled_counts(self):
         """Test 8: /api/state returns reconciled published_today and scheduled_today."""
+        import uuid
+        job_id = f"job_p2_{uuid.uuid4().hex[:6]}"
+        self.test_ids.append(job_id)
+        self.db.add(UploadRecord(
+            id=f"upl_p2_{uuid.uuid4().hex[:6]}",
+            job_id=job_id,
+            youtube_video_id="vid_p2_real",
+            title="P2 Test Reconciled",
+            description="Test description",
+            status="PUBLISHED",
+            published_at=datetime.utcnow()
+        ))
+        self.db.commit()
+
         res = self.client.get("/api/state")
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertIn("publishing", data)
         pub = data["publishing"]
         self.assertGreaterEqual(pub["published_today"], 1)
-        self.assertEqual(pub["published_today"] + pub["scheduled_today"] + pub["remaining_capacity"], 4)
-        self.assertEqual(pub["daily_limit"], 4)
+        self.assertEqual(pub["daily_limit"], 3)
+        self.assertEqual(pub["remaining_capacity"], max(0, 3 - (pub["published_today"] + pub["scheduled_today"])))
 
     def test_09_duplicate_refill_protection_preserved(self):
         """Test 9: Action manager blocks duplicate refill while active run is in flight."""

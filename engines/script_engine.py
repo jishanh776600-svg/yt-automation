@@ -397,7 +397,8 @@ class ScriptEngine:
                         break
             if not selected_hook:
                 selected_hook = hook_candidates[0]["hook"]
-                logger.info(f"Selected Top Hook ({hook_candidates[0]['type']}): \"{selected_hook}\"")
+                top_type = hook_candidates[0].get("type", "DEFAULT")
+                logger.info(f"Selected Top Hook ({top_type}): \"{selected_hook}\"")
 
             # 3. Iterative Draft & Critic Rewrite Loop (Max 3 attempts)
             data = None

@@ -32,8 +32,8 @@ class TestDashboardPhase112(unittest.TestCase):
         cls.db = SessionLocal()
 
         # Seed known test upload records with performance snapshots
-        cls.test_upload_id = "test_phase112_upl_1"
-        cls.test_yt_id = "TEST_PHASE112_YT1"
+        cls.test_upload_id = "upl_phase112_1"
+        cls.test_yt_id = "P112_Prague"
         
         # Clean up any previous test record
         cls.db.query(PerformanceSnapshot).filter(PerformanceSnapshot.upload_id == cls.test_upload_id).delete()
@@ -84,8 +84,12 @@ class TestDashboardPhase112(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.db.query(PerformanceSnapshot).filter(PerformanceSnapshot.upload_id == cls.test_upload_id).delete()
-        cls.db.query(VideoAnalysisRecord).filter(VideoAnalysisRecord.upload_id == cls.test_upload_id).delete()
+        cls.db.query(PerformanceSnapshot).filter(
+            (PerformanceSnapshot.upload_id == cls.test_upload_id) | (PerformanceSnapshot.youtube_video_id == cls.test_yt_id)
+        ).delete()
+        cls.db.query(VideoAnalysisRecord).filter(
+            (VideoAnalysisRecord.upload_id == cls.test_upload_id) | (VideoAnalysisRecord.youtube_video_id == cls.test_yt_id)
+        ).delete()
         cls.db.query(UploadRecord).filter(UploadRecord.id == cls.test_upload_id).delete()
         cls.db.commit()
         cls.db.close()

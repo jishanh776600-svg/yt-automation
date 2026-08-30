@@ -30,9 +30,29 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 
 
-def init_db():
+def rebind_engine(new_db_path):
+    """Rebinds database engine and SessionLocal to a new database path (e.g. for isolated test suites)."""
+    global engine, SessionLocal
+    try:
+        SessionLocal.remove()
+    except Exception:
+        pass
+    try:
+        engine.dispose()
+    except Exception:
+        pass
+    engine = create_engine(
+        f"sqlite:///{new_db_path}",
+        echo=False,
+        connect_args={"check_same_thread": False, "timeout": 30.0}
+    )
+    SessionLocal.configure(bind=engine)
+
+
+def init_db(target_engine=None):
     """Initializes tables in database and applies idempotent column migrations."""
-    Base.metadata.create_all(bind=engine)
+    eng = target_engine or engine
+    Base.metadata.create_all(bind=eng)
 
     # Safe idempotent SQLite column migrations
     with engine.connect() as conn:

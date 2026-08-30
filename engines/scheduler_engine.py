@@ -3,12 +3,11 @@ Publication Scheduler & Slot Allocation Engine (Phase 18).
 Calculates and assigns deterministic publication slots for YouTube Shorts.
 
 Slot Rules:
-- 4 Release Slots per UTC calendar day:
+- 3 Release Slots per UTC calendar day:
   1. 06:00 UTC (11:30 AM IST)
-  2. 10:00 UTC (03:30 PM IST)
+  2. 11:00 UTC (04:30 PM IST)
   3. 15:00 UTC (08:30 PM IST)
-  4. 20:00 UTC (01:30 AM IST)
-- Strictly maximum 4 publication slots per UTC calendar day.
+- Strictly maximum 3 publication slots per UTC calendar day.
 - Never assign two Shorts to the same slot.
 - Never schedule into a past slot or a slot less than min_lead_minutes in the future.
 - If today's remaining slots are full or passed, rolls over to the next UTC day starting at 06:00 UTC.

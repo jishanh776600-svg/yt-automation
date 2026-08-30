@@ -33,12 +33,11 @@ logger = logging.getLogger(__name__)
 
 PUBLISHING_SLOTS_UTC = [
     (6, 0, "06:00 UTC (11:30 AM IST)"),
-    (10, 0, "10:00 UTC (03:30 PM IST)"),
+    (11, 0, "11:00 UTC (04:30 PM IST)"),
     (15, 0, "15:00 UTC (08:30 PM IST)"),
-    (20, 0, "20:00 UTC (01:30 AM IST)"),
 ]
 
-TARGET_RESERVE_BUFFER = 12
+TARGET_RESERVE_BUFFER = 6
 
 
 
@@ -289,7 +288,7 @@ class SystemDataProvider:
         health_message = f"Vault buffer healthy ({ready_stock}/{target} Shorts)"
         if ready_stock == 0:
             health = "DEPLETED"
-            health_message = "Vault buffer depleted (0/12 Shorts)"
+            health_message = f"Vault buffer depleted (0/{target} Shorts)"
         elif ready_stock < DAILY_SHORTS_LIMIT:
             health = "CRITICAL_LOW"
             health_message = f"Reserve critically low ({ready_stock}/{target} Shorts)"
@@ -635,7 +634,7 @@ class SystemDataProvider:
                 "name": "01 Buffer Producer",
                 "filename": "produce_buffer.yml",
                 "cron": "0 3 * * * (03:00 UTC daily)",
-                "target": "Replenish 01_READY reserve to 12 Shorts",
+                "target": "Replenish 01_READY reserve to 6 Shorts",
                 "concurrency_group": "buffer-producer",
                 "live_status": "STATUS_UNAVAILABLE (Cloud Runner)",
                 "configured": True,
@@ -1201,6 +1200,13 @@ class SystemDataProvider:
                 .subquery()
             )
 
+            import re
+            YOUTUBE_ID_REGEX = re.compile(r'^[A-Za-z0-9_-]{11}$')
+            KNOWN_TEST_PREFIXES = (
+                "test_", "TEST_", "yt_loop_", "test_vid_", "upl_test_",
+                "upl_loop_", "vid_real_", "vid_deleted", "real_yt_", "legacy_vid"
+            )
+
             query = (
                 db.query(UploadRecord, PerformanceSnapshot, VideoAnalysisRecord)
                 .join(subq, UploadRecord.youtube_video_id == subq.c.youtube_video_id)
@@ -1211,7 +1217,14 @@ class SystemDataProvider:
                 )
                 .filter(
                     UploadRecord.youtube_video_id.isnot(None),
-                    ~UploadRecord.youtube_video_id.ilike("dQw4w9WgXcQ%")
+                    UploadRecord.privacy_status != "test_local",
+                    ~UploadRecord.youtube_video_id.ilike("dQw4w9WgXcQ%"),
+                    ~UploadRecord.youtube_video_id.ilike("TEST_%"),
+                    ~UploadRecord.youtube_video_id.ilike("test_%"),
+                    ~UploadRecord.youtube_video_id.ilike("yt_loop_%"),
+                    ~UploadRecord.id.ilike("upl_test_%"),
+                    ~UploadRecord.id.ilike("test_%"),
+                    ~UploadRecord.id.ilike("upl_loop_%")
                 )
                 .group_by(UploadRecord.youtube_video_id)
                 .order_by(
@@ -1227,8 +1240,19 @@ class SystemDataProvider:
             seen_yt_ids = set()
 
             for upload, snap, analysis in rows:
-                yt_id = upload.youtube_video_id
-                if yt_id in seen_yt_ids:
+                yt_id = (upload.youtube_video_id or "").strip()
+                if not yt_id or yt_id in seen_yt_ids:
+                    continue
+                # Validate genuine 11-character YouTube video ID format
+                if not YOUTUBE_ID_REGEX.match(yt_id) or yt_id == "dQw4w9WgXcQ":
+                    continue
+                # Reject known test prefixes
+                if any(yt_id.startswith(p) for p in KNOWN_TEST_PREFIXES):
+                    continue
+                # Reject test titles or test upload IDs
+                if upload.id and any(upload.id.startswith(p) for p in KNOWN_TEST_PREFIXES):
+                    continue
+                if upload.privacy_status == "test_local":
                     continue
                 seen_yt_ids.add(yt_id)
 

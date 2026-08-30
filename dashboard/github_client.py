@@ -307,7 +307,7 @@ class GitHubWorkflowDispatcher:
     def dispatch_produce_buffer(
         self,
         ref: Optional[str] = None,
-        target_buffer: int = 12,
+        target_buffer: int = 6,
         batch_count: int = 0,
         active_voice: Optional[str] = None
     ) -> Dict[str, Any]:

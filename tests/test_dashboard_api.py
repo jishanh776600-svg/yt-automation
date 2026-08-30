@@ -71,17 +71,17 @@ class TestDashboardAPI(unittest.TestCase):
         )
         self.assertIn("next_slot", pub_status)
         self.assertIn("configured_slots", pub_status)
-        self.assertEqual(len(pub_status["configured_slots"]), 4)
+        self.assertEqual(len(pub_status["configured_slots"]), 3)
 
     def test_04_buffer_runway_calculation(self):
-        """Test 4: Verifies buffer status, target reserve (12), and runway mathematics."""
-        # Test calculation with explicit count
-        buf = self.provider.get_buffer_status(ready_stock=4)
-        self.assertEqual(buf["ready_stock"], 4)
+        """Test 4: Verifies buffer status, target reserve (6), and runway mathematics."""
+        # Test calculation with explicit count (3 Shorts = 1 day runway under 3/day)
+        buf = self.provider.get_buffer_status(ready_stock=3)
+        self.assertEqual(buf["ready_stock"], 3)
         self.assertEqual(buf["target_reserve"], TARGET_RESERVE_BUFFER)
         self.assertEqual(buf["runway_days"], 1.0)
         self.assertEqual(buf["runway_hours"], 24.0)
-        self.assertEqual(buf["needed_replenishment"], 8)
+        self.assertEqual(buf["needed_replenishment"], 3)
         self.assertEqual(buf["health"], "REPLENISHING")
 
         # Test calculation with zero stock
@@ -89,10 +89,10 @@ class TestDashboardAPI(unittest.TestCase):
         self.assertEqual(buf_zero["health"], "DEPLETED")
         self.assertEqual(buf_zero["runway_days"], 0.0)
 
-        # Test calculation with healthy stock
-        buf_healthy = self.provider.get_buffer_status(ready_stock=12)
+        # Test calculation with healthy stock (6 Shorts = 2 days runway)
+        buf_healthy = self.provider.get_buffer_status(ready_stock=6)
         self.assertEqual(buf_healthy["health"], "HEALTHY")
-        self.assertEqual(buf_healthy["runway_days"], 3.0)
+        self.assertEqual(buf_healthy["runway_days"], 2.0)
         self.assertEqual(buf_healthy["needed_replenishment"], 0)
 
     def test_05_next_scheduled_slot_derivation(self):

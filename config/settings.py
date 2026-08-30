@@ -30,7 +30,13 @@ FONTS_DIR = ASSETS_DIR / "fonts"
 
 LOCKS_DIR = DATA_DIR / "locks"
 
-DB_PATH = DATABASE_DIR / "pipeline.db"
+TEST_DB_PATH = os.getenv("TEST_DB_PATH")
+if TEST_DB_PATH:
+    DB_PATH = Path(TEST_DB_PATH)
+elif os.getenv("IS_TEST_ENV", "").lower() == "true":
+    DB_PATH = DATABASE_DIR / "test_pipeline.db"
+else:
+    DB_PATH = DATABASE_DIR / "pipeline.db"
 
 # Ensure runtime directories exist
 for d in [DATABASE_DIR, TOPICS_DIR, RESEARCH_DIR, SCRIPTS_DIR, STORYBOARDS_DIR,
