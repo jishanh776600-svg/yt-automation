@@ -66,6 +66,7 @@ jobs:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_API_KEY_SECONDARY: ${{ secrets.GEMINI_API_KEY_SECONDARY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           TOKEN_JSON: ${{ secrets.TOKEN_JSON }}
           CLIENT_SECRET_JSON: ${{ secrets.CLIENT_SECRET_JSON }}
         run: |
@@ -73,6 +74,9 @@ jobs:
           echo "GEMINI_API_KEY=${GEMINI_API_KEY}" >> .env
           if [ -n "${GEMINI_API_KEY_SECONDARY}" ]; then
             echo "GEMINI_API_KEY_SECONDARY=${GEMINI_API_KEY_SECONDARY}" >> .env
+          fi
+          if [ -n "${DEEPSEEK_API_KEY}" ]; then
+            echo "DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}" >> .env
           fi
           echo "TEST_MODE=false" >> .env
           if [ -n "${{ inputs.active_voice }}" ]; then

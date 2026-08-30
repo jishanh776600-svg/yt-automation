@@ -95,10 +95,20 @@ class GeminiRateLimiter:
             self._request_history.clear()
 
 
+class DeepSeekResponse:
+    """Wrapper to maintain exact interface compatibility with google.genai response objects."""
+    def __init__(self, text: str):
+        self.text = text
+
+    def __repr__(self) -> str:
+        snippet = (self.text[:40] + "...") if len(self.text) > 40 else self.text
+        return f"<DeepSeekResponse text={snippet!r}>"
+
+
 class GeminiClient:
     """
-    Wrapper around Google GenAI client providing centralized rate limiting, 429-aware backoff,
-    and automatic failover to secondary provider account on quota exhaustion.
+    Unified AI Client providing centralized rate limiting, 429-aware backoff,
+    and automatic failover across Gemini Primary -> Gemini Secondary -> DeepSeek.
     Remembers provider exhaustion for the session to prevent retry amplification on dead credentials.
     """
     def __init__(
@@ -106,6 +116,8 @@ class GeminiClient:
         api_key: Optional[str] = None,
         secondary_api_key: Optional[str] = None,
         secondary_model: Optional[str] = None,
+        deepseek_api_key: Optional[str] = None,
+        deepseek_model: Optional[str] = None,
         rate_limiter: Optional[GeminiRateLimiter] = None,
         sleeper: Callable[[float], None] = time.sleep
     ):
@@ -113,12 +125,16 @@ class GeminiClient:
             GEMINI_API_KEY,
             GEMINI_API_KEY_SECONDARY,
             GEMINI_MODEL,
-            GEMINI_MODEL_SECONDARY
+            GEMINI_MODEL_SECONDARY,
+            DEEPSEEK_API_KEY,
+            DEEPSEEK_MODEL
         )
         self.api_key = api_key or GEMINI_API_KEY
         self.secondary_api_key = secondary_api_key or GEMINI_API_KEY_SECONDARY
+        self.deepseek_api_key = deepseek_api_key or DEEPSEEK_API_KEY
         self.primary_model = GEMINI_MODEL
         self.secondary_model = secondary_model or GEMINI_MODEL_SECONDARY or GEMINI_MODEL
+        self.deepseek_model = deepseek_model or DEEPSEEK_MODEL or "deepseek-chat"
         self.rate_limiter = rate_limiter or get_shared_rate_limiter()
         self.sleeper = sleeper
         self._provider_lock = threading.Lock()
@@ -129,10 +145,8 @@ class GeminiClient:
         """Marks a provider credential as quota-exhausted for this session."""
         with self._provider_lock:
             self._exhausted_providers.add(provider_name.lower())
-            if provider_name.lower() == "primary":
-                self.active_provider = "secondary"
             logger.warning(
-                f"[GEMINI_PROVIDER] Provider '{provider_name.upper()}' marked EXHAUSTED for active session."
+                f"[AI_PROVIDER] Provider '{provider_name.upper()}' marked EXHAUSTED for active session."
             )
 
     def is_provider_exhausted(self, provider_name: str) -> bool:
@@ -146,20 +160,29 @@ class GeminiClient:
             self._exhausted_providers.clear()
             self.active_provider = "primary"
 
-    def _get_configured_providers(self, requested_model: Optional[str] = None) -> List[Dict[str, str]]:
+    def _get_configured_providers(self, requested_model: Optional[str] = None) -> List[Dict[str, Any]]:
         """Returns ordered list of configured, non-empty provider credentials."""
         providers = []
         if self.api_key:
             providers.append({
                 "name": "primary",
+                "type": "gemini",
                 "api_key": self.api_key,
                 "model": requested_model or self.primary_model
             })
         if self.secondary_api_key and self.secondary_api_key != self.api_key:
             providers.append({
                 "name": "secondary",
+                "type": "gemini",
                 "api_key": self.secondary_api_key,
                 "model": self.secondary_model or requested_model or self.primary_model
+            })
+        if self.deepseek_api_key:
+            providers.append({
+                "name": "deepseek",
+                "type": "deepseek",
+                "api_key": self.deepseek_api_key,
+                "model": self.deepseek_model
             })
         return providers
 
@@ -174,7 +197,7 @@ class GeminiClient:
         provider_name: str = "primary",
         **kwargs
     ) -> Any:
-        """Executes API call for a specific provider account with pacing and bounded backoff."""
+        """Executes API call for a specific Gemini provider account with pacing and bounded backoff."""
         from core.retry import is_retryable_exception
 
         is_test = is_test_environment()
@@ -254,6 +277,134 @@ class GeminiClient:
         logger.error(f"[GEMINI_EXHAUSTED] {err_summary}")
         raise GeminiQuotaExhaustedError(err_summary) from last_exception
 
+    def _execute_deepseek_request(
+        self,
+        api_key: str,
+        model: str,
+        contents: Any,
+        max_retries: int = 3,
+        base_delay: Optional[float] = None,
+        max_delay: float = 60.0,
+        **kwargs
+    ) -> DeepSeekResponse:
+        """Executes API call to DeepSeek OpenAI-compatible chat completion endpoint with pacing and backoff."""
+        import json
+        import urllib.request
+        from urllib.error import HTTPError, URLError
+        from config.settings import DEEPSEEK_BASE_URL
+
+        is_test = is_test_environment()
+        if base_delay is None:
+            base_delay = 0.05 if is_test else 2.0
+
+        endpoint = DEEPSEEK_BASE_URL or "https://api.deepseek.com/chat/completions"
+
+        # Format user prompt
+        if isinstance(contents, str):
+            user_prompt = contents
+        elif isinstance(contents, list):
+            user_prompt = "\n\n".join(str(c) for c in contents)
+        else:
+            user_prompt = str(contents)
+
+        payload_dict = {
+            "model": model,
+            "messages": [
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": 0.7,
+            "stream": False
+        }
+        payload_bytes = json.dumps(payload_dict).encode("utf-8")
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "User-Agent": "AL-AMR-DeepSeek-Client/1.0"
+        }
+
+        last_exception = None
+
+        for attempt in range(1, max_retries + 1):
+            self.rate_limiter.wait_for_slot()
+
+            try:
+                req = urllib.request.Request(endpoint, data=payload_bytes, headers=headers, method="POST")
+                with urllib.request.urlopen(req, timeout=45.0) as resp:
+                    resp_body = resp.read().decode("utf-8")
+                    data = json.loads(resp_body)
+                    choices = data.get("choices", [])
+                    if not choices:
+                        raise ValueError(f"DeepSeek returned empty choices: {resp_body[:200]}")
+                    text_content = choices[0].get("message", {}).get("content", "")
+                    return DeepSeekResponse(text=text_content)
+            except HTTPError as http_err:
+                last_exception = http_err
+                code = http_err.code
+                try:
+                    err_body = http_err.read().decode("utf-8", errors="ignore")
+                except Exception:
+                    err_body = ""
+                err_lower = err_body.lower()
+
+                # Quota / Balance Exhaustion / 429 / 402
+                is_quota_or_balance = (
+                    code == 429 or
+                    code == 402 or
+                    "insufficient balance" in err_lower or
+                    "balance" in err_lower or
+                    "quota" in err_lower or
+                    "rate limit" in err_lower
+                )
+
+                if is_quota_or_balance:
+                    self.mark_provider_exhausted("deepseek")
+                    logger.warning(
+                        f"[DEEPSEEK_EXHAUSTED] DeepSeek API quota/balance exhausted (HTTP {code}): {err_body[:200]}"
+                    )
+                    raise GeminiQuotaExhaustedError(
+                        f"DeepSeek API quota or balance exhausted (HTTP {code})"
+                    ) from http_err
+
+                # Non-retryable 4xx errors (e.g. 400 Bad Request, 401 Invalid Key)
+                if 400 <= code < 500:
+                    logger.error(f"[DEEPSEEK_ERROR] Non-retryable HTTP error from DeepSeek (HTTP {code}): {err_body[:200]}")
+                    raise http_err
+
+                # Transient 5xx server errors
+                if attempt >= max_retries:
+                    break
+
+                raw_delay = base_delay * (2 ** (attempt - 1))
+                jitter = 0.01 if is_test else random.uniform(0.5, 1.5)
+                delay = min(max_delay, raw_delay) + jitter
+                logger.warning(
+                    f"[DEEPSEEK_RETRY] Transient failure from DeepSeek (attempt {attempt}/{max_retries}, HTTP {code}). Retrying in {delay:.2f}s..."
+                )
+                self.sleeper(delay)
+
+            except (URLError, TimeoutError, ConnectionError, OSError) as net_err:
+                last_exception = net_err
+                if attempt >= max_retries:
+                    break
+                raw_delay = base_delay * (2 ** (attempt - 1))
+                jitter = 0.01 if is_test else random.uniform(0.5, 1.5)
+                delay = min(max_delay, raw_delay) + jitter
+                logger.warning(
+                    f"[DEEPSEEK_NET_RETRY] Network connection error to DeepSeek (attempt {attempt}/{max_retries}): {net_err}. Retrying in {delay:.2f}s..."
+                )
+                self.sleeper(delay)
+
+            except Exception as unk_err:
+                logger.error(f"[DEEPSEEK_ERROR] Unhandled error calling DeepSeek: {unk_err}")
+                raise unk_err
+
+        # All retries exhausted on DeepSeek
+        self.mark_provider_exhausted("deepseek")
+        err_msg = f"DeepSeek API retries exhausted after {max_retries} attempts: {last_exception}"
+        logger.error(f"[DEEPSEEK_EXHAUSTED] {err_msg}")
+        raise GeminiQuotaExhaustedError(err_msg) from last_exception
+
     def generate_content(
         self,
         model: str,
@@ -264,46 +415,55 @@ class GeminiClient:
         **kwargs
     ) -> Any:
         """
-        Executes models.generate_content with rate limiting, exponential backoff, and
-        transparent secondary provider failover upon primary quota exhaustion.
+        Executes text generation across configured AI providers:
+        Primary Gemini -> Secondary Gemini -> DeepSeek.
         Skips previously exhausted providers to prevent retry amplification.
         """
-        if not self.api_key and not self.secondary_api_key:
-            raise ValueError("No GEMINI_API_KEY is configured.")
-
         all_providers = self._get_configured_providers(requested_model=model)
         if not all_providers:
-            raise ValueError("No valid Gemini provider credentials available.")
+            raise ValueError("No valid AI provider credentials (GEMINI_API_KEY, DEEPSEEK_API_KEY) configured.")
 
         # Determine eligible providers (unexhausted first)
         available_providers = [p for p in all_providers if not self.is_provider_exhausted(p["name"])]
 
         if not available_providers:
-            err_msg = "All configured Gemini providers exhausted daily API quotas."
-            logger.error(f"[GEMINI_EXHAUSTED] {err_msg}")
+            err_msg = "All configured AI providers (PRIMARY, SECONDARY, DEEPSEEK) exhausted daily API quotas."
+            logger.error(f"[AI_EXHAUSTED] {err_msg}")
             raise GeminiQuotaExhaustedError(err_msg)
 
         last_err = None
 
         for prov in available_providers:
             prov_name = prov["name"]
+            prov_type = prov.get("type", "gemini")
             prov_key = prov["api_key"]
             prov_model = prov["model"]
 
             self.active_provider = prov_name
-            logger.info(f"[GEMINI_REQUEST] Dispatching request to provider '{prov_name.upper()}' (model: '{prov_model}')...")
+            logger.info(f"[AI_REQUEST] Dispatching request to provider '{prov_name.upper()}' (model: '{prov_model}')...")
 
             try:
-                result = self._execute_request(
-                    api_key=prov_key,
-                    model=prov_model,
-                    contents=contents,
-                    max_retries=max_retries,
-                    base_delay=base_delay,
-                    max_delay=max_delay,
-                    provider_name=prov_name,
-                    **kwargs
-                )
+                if prov_type == "deepseek":
+                    result = self._execute_deepseek_request(
+                        api_key=prov_key,
+                        model=prov_model,
+                        contents=contents,
+                        max_retries=max_retries,
+                        base_delay=base_delay,
+                        max_delay=max_delay,
+                        **kwargs
+                    )
+                else:
+                    result = self._execute_request(
+                        api_key=prov_key,
+                        model=prov_model,
+                        contents=contents,
+                        max_retries=max_retries,
+                        base_delay=base_delay,
+                        max_delay=max_delay,
+                        provider_name=prov_name,
+                        **kwargs
+                    )
                 return result
             except GeminiQuotaExhaustedError as quota_err:
                 last_err = quota_err
@@ -312,21 +472,21 @@ class GeminiClient:
                 remaining = [p for p in all_providers if not self.is_provider_exhausted(p["name"])]
                 if remaining:
                     logger.warning(
-                        f"[GEMINI_FAILOVER] Provider '{prov_name.upper()}' quota exhausted. "
+                        f"[AI_FAILOVER] Provider '{prov_name.upper()}' quota/balance exhausted. "
                         f"Failing over to provider '{remaining[0]['name'].upper()}'..."
                     )
                     continue
                 else:
                     logger.error(
-                        "[GEMINI_EXHAUSTED] ALL configured Gemini providers exhausted daily API quotas. Halting production cleanly."
+                        "[AI_EXHAUSTED] ALL configured AI providers exhausted API quotas. Halting production cleanly."
                     )
                     raise GeminiQuotaExhaustedError(
-                        "All configured Gemini providers exhausted daily API quotas."
+                        "All configured AI providers exhausted API quotas."
                     ) from quota_err
 
         if last_err:
             raise last_err
-        raise GeminiQuotaExhaustedError("All configured Gemini providers exhausted daily API quotas.")
+        raise GeminiQuotaExhaustedError("All configured AI providers exhausted API quotas.")
 
 
 _SHARED_LIMITER: Optional[GeminiRateLimiter] = None
@@ -345,17 +505,21 @@ def get_shared_rate_limiter() -> GeminiRateLimiter:
 def get_gemini_client(
     api_key: Optional[str] = None,
     secondary_api_key: Optional[str] = None,
-    secondary_model: Optional[str] = None
+    secondary_model: Optional[str] = None,
+    deepseek_api_key: Optional[str] = None,
+    deepseek_model: Optional[str] = None
 ) -> GeminiClient:
     global _SHARED_CLIENT
     with _INIT_LOCK:
-        if _SHARED_CLIENT is None or api_key or secondary_api_key:
+        if _SHARED_CLIENT is None or api_key or secondary_api_key or deepseek_api_key:
             client = GeminiClient(
                 api_key=api_key,
                 secondary_api_key=secondary_api_key,
-                secondary_model=secondary_model
+                secondary_model=secondary_model,
+                deepseek_api_key=deepseek_api_key,
+                deepseek_model=deepseek_model
             )
-            if not api_key and not secondary_api_key:
+            if not api_key and not secondary_api_key and not deepseek_api_key:
                 _SHARED_CLIENT = client
             return client
         return _SHARED_CLIENT
