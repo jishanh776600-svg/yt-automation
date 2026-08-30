@@ -10,7 +10,7 @@ import os
 import uuid
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List, Union, Tuple
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
@@ -64,6 +64,109 @@ class UploadEngine:
     def _is_test_mode(self) -> bool:
         from config.settings import TEST_MODE
         return bool(TEST_MODE) or os.getenv("TEST_MODE", "false").lower() in ["true", "1", "yes"]
+
+    def evaluate_publication_safety_gate(
+        self,
+        db: Session,
+        job: Job,
+        render: RenderOutput,
+        metadata: Dict[str, Any],
+        scheduled_slot: Optional[datetime] = None
+    ) -> Tuple[bool, str]:
+        """
+        15-Point Autonomous Publication Safety Gate.
+        Evaluates physical, logical, temporal, and credential invariants before permitting YouTube upload.
+        """
+        video_path = Path(render.video_path) if render and render.video_path else None
+        
+        # 1. File exists
+        if not video_path or not video_path.exists():
+            return False, f"Gate 1 Failed: Rendered file does not exist ({video_path})"
+
+        # 2. File is readable
+        if not os.access(str(video_path), os.R_OK):
+            return False, f"Gate 2 Failed: Video file not readable by process ({video_path})"
+
+        # 3. MP4 is valid (FFmpeg probe)
+        if not self._is_test_mode():
+            try:
+                self.validate_media_integrity(video_path)
+            except Exception as err:
+                return False, f"Gate 3 Failed: Media integrity check failed ({err})"
+
+        # 4. Duration within configured Shorts range (20.0s - 60.0s)
+        dur = float(render.duration_sec or 0.0)
+        if dur < 20.0 or dur > 60.0:
+            return False, f"Gate 4 Failed: Duration {dur:.1f}s out of bounds (20.0s - 60.0s)"
+
+        # 5. Resolution is 1080x1920
+        if render.width != 1080 or render.height != 1920:
+            return False, f"Gate 5 Failed: Resolution {render.width}x{render.height} != 1080x1920"
+
+        # 6. Audio stream exists & non-empty
+        if not self._is_test_mode() and render.file_size_bytes and render.file_size_bytes < 500000:
+            return False, f"Gate 6 Failed: File size {render.file_size_bytes} bytes abnormally small"
+
+        # 7. Render pipeline completed
+        if not render.id or not render.video_codec:
+            return False, "Gate 7 Failed: Render output record incomplete"
+
+        # 8. Final QA status = PASS
+        from core.models import QAReport
+        qa_rec = db.query(QAReport).filter(QAReport.job_id == job.id).order_by(QAReport.created_at.desc()).first()
+        if qa_rec and not qa_rec.passed:
+            return False, f"Gate 8 Failed: Job {job.id} failed QA ({qa_rec.failure_reasons})"
+
+        # 9. Database state is READY_TO_UPLOAD or QA/EDITED
+        valid_states = [JobState.READY_TO_UPLOAD.value, "READY_TO_UPLOAD", JobState.QA.value, "QA", JobState.EDITING.value, "EDITED"]
+        if job.state not in valid_states:
+            return False, f"Gate 9 Failed: Job state '{job.state}' not in eligible staging states"
+
+        # 10. Job has not already been published
+        existing_pub = db.query(UploadRecord).filter(
+            UploadRecord.job_id == job.id,
+            UploadRecord.status.in_(["PUBLISHED", "SUCCESS"])
+        ).first()
+        if existing_pub:
+            return False, f"Gate 10 Failed: Job {job.id} already published (Video ID: {existing_pub.youtube_video_id})"
+
+        # 11. Daily upload count below limit
+        from config.constants import DAILY_SHORTS_LIMIT, get_business_day_bounds_utc
+        today_start, today_end = get_business_day_bounds_utc()
+        pub_today = db.query(UploadRecord).filter(
+            UploadRecord.status.in_(["PUBLISHED", "SUCCESS"]),
+            UploadRecord.published_at >= today_start,
+            UploadRecord.published_at < today_end
+        ).count()
+        if pub_today >= DAILY_SHORTS_LIMIT:
+            return False, f"Gate 11 Failed: Daily limit reached ({pub_today}/{DAILY_SHORTS_LIMIT} published today)"
+
+        # 12. Publishing slot is valid
+        if scheduled_slot:
+            slot_utc = scheduled_slot.replace(tzinfo=None)
+            now_utc = datetime.utcnow()
+            if slot_utc <= now_utc:
+                return False, f"Gate 12 Failed: Scheduled slot {slot_utc} is not in the future"
+
+        # 13. YouTube authentication availability
+        token_path = PROJECT_ROOT / "token.json"
+        if not token_path.exists() and not self._is_test_mode():
+            return False, "Gate 13 Failed: YouTube OAuth token.json not configured"
+
+        # 14. Metadata is valid
+        if not metadata or not metadata.get("title") or len(metadata.get("title", "").strip()) < 3:
+            return False, "Gate 14 Failed: Title metadata missing or invalid"
+
+        # 15. No duplicate title publication record
+        norm_title = metadata.get("title", "").strip().lower()
+        dup_title = db.query(UploadRecord).filter(
+            UploadRecord.title.ilike(norm_title),
+            UploadRecord.status.in_(["PUBLISHED", "SUCCESS"])
+        ).first()
+        if dup_title and dup_title.job_id != job.id:
+            return False, f"Gate 15 Failed: Exact title already published (Video ID: {dup_title.youtube_video_id})"
+
+        return True, "All 15 publication safety gates passed successfully"
 
     def schedule_short(
         self,

@@ -659,6 +659,21 @@ class ShortsPipeline:
                 render_output.video_path = str(temp_download_path)
                 db.commit()
 
+            # 15-Point Autonomous Publication Safety Gate
+            gate_passed, gate_reason = self.upload_engine.evaluate_publication_safety_gate(
+                db=db,
+                job=job,
+                render=render_output,
+                metadata=metadata,
+                scheduled_slot=scheduled_slot
+            )
+            if not gate_passed:
+                logger.warning(f"[PUBLICATION_SAFETY_GATE_BLOCKED] Job {job.id} blocked by safety gate: {gate_reason}")
+                console.print(f"[bold red][x] Publication Safety Gate Blocked Upload:[/bold red] {gate_reason}")
+                if current_folder != "02_PROCESSING":
+                    self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="01_READY")
+                return None
+
             if TEST_MODE:
                 desktop_candidate = Path.home() / "Desktop"
                 output_dir = desktop_candidate if desktop_candidate.exists() else (PROJECT_ROOT / "data" / "renders")

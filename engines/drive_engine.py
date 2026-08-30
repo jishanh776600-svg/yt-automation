@@ -292,8 +292,28 @@ class DriveVaultEngine:
         return file_obj
 
     def download_video_from_vault(self, file_id: str, local_dest_path: Path) -> Path:
-        """Downloads a video from Google Drive to local filesystem."""
+        """Downloads a video from Google Drive (or copies from local staging vault) to local filesystem."""
         local_dest_path.parent.mkdir(parents=True, exist_ok=True)
+        import shutil
+
+        if file_id.startswith("local_") or not self.token_path.exists():
+            clean_name = file_id.replace("local_", "")
+            # Search in vault_ready and data/vault
+            candidates = [
+                PROJECT_ROOT / "data" / "vault_ready" / clean_name,
+                PROJECT_ROOT / "data" / "vault" / "01_READY" / clean_name,
+                PROJECT_ROOT / "data" / "vault" / "02_PROCESSING" / clean_name,
+                PROJECT_ROOT / "data" / "vault" / "03_PUBLISHED" / clean_name,
+                PROJECT_ROOT / "data" / "renders" / clean_name
+            ]
+            for c in candidates:
+                if c.exists():
+                    if c != local_dest_path:
+                        shutil.copy2(c, local_dest_path)
+                    logger.info(f"[+] Retrieved local vault file {clean_name} to {local_dest_path}")
+                    return local_dest_path
+            raise FileNotFoundError(f"Local staging file {clean_name} not found in any vault folder.")
+
         drive = self.get_drive_service()
 
         from googleapiclient.http import MediaIoBaseDownload
@@ -312,8 +332,24 @@ class DriveVaultEngine:
 
     def move_file_in_vault(self, file_id: str, from_folder: str, to_folder: str) -> Dict[str, Any]:
         """
-        Moves a file between vault folders by updating parent IDs (no copy/duplicate).
+        Moves a file between vault folders by updating parent IDs in Drive (or moving local staging files).
         """
+        if file_id.startswith("local_") or not self.token_path.exists():
+            clean_name = file_id.replace("local_", "")
+            src_dir = PROJECT_ROOT / "data" / "vault_ready" if from_folder == "01_READY" else (PROJECT_ROOT / "data" / "vault" / from_folder)
+            dst_dir = PROJECT_ROOT / "data" / "vault_ready" if to_folder == "01_READY" else (PROJECT_ROOT / "data" / "vault" / to_folder)
+            dst_dir.mkdir(parents=True, exist_ok=True)
+            src_file = src_dir / clean_name
+            dst_file = dst_dir / clean_name
+            import shutil
+            if src_file.exists() and src_file != dst_file:
+                shutil.move(str(src_file), str(dst_file))
+                src_meta = src_file.with_suffix(".meta.json")
+                if src_meta.exists():
+                    shutil.move(str(src_meta), str(dst_file.with_suffix(".meta.json")))
+            logger.info(f"[+] Moved local staging file '{clean_name}' from '{from_folder}' to '{to_folder}'")
+            return {"id": file_id, "name": clean_name, "parents": [to_folder]}
+
         drive = self.get_drive_service()
         from_id = self.get_folder_id(from_folder, create_if_missing=True)
         to_id = self.get_folder_id(to_folder, create_if_missing=True)
