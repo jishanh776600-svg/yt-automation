@@ -309,6 +309,8 @@ class ScriptEngine:
                 {"type": "Date-Anchor", "hook": f"The documented history of {topic.title} holds a remarkable truth.", "score": 75.0}
             ]
         except Exception as e:
+            if "QuotaExhausted" in type(e).__name__ or "quota" in str(e).lower() or "429" in str(e):
+                raise e
             logger.warning(f"Hook candidate generation notice: {e}")
             return [
                 {"type": "Date-Anchor", "hook": f"In {topic.title}, a remarkable event unfolded.", "score": 75.0}
@@ -422,6 +424,9 @@ class ScriptEngine:
                         current_feedback = eval_res.feedback
 
                 except Exception as gen_err:
+                    if "QuotaExhausted" in type(gen_err).__name__ or "quota" in str(gen_err).lower() or "429" in str(gen_err):
+                        logger.error(f"[GEMINI_EXHAUSTED] Terminal quota exhaustion detected during script generation pass {attempt}: {gen_err}")
+                        raise gen_err
                     logger.warning(f"Pass {attempt} error: {gen_err}")
                     current_feedback = [f"Regenerate cleanly without formatting errors: {str(gen_err)}"]
 

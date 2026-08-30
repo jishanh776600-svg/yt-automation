@@ -420,3 +420,13 @@ class DriveVaultEngine:
         """Returns the Drive file ID of the canonical database if it exists."""
         existing = self.find_file_in_folder("00_SYSTEM", filename)
         return existing["id"] if existing else None
+
+    def set_file_properties(self, file_id: str, properties: Dict[str, str]) -> Dict[str, Any]:
+        """Sets or updates custom key-value properties on a Google Drive file."""
+        drive = self.get_drive_service()
+        req = drive.files().update(
+            fileId=file_id,
+            body={"properties": properties},
+            fields="id, name, properties"
+        )
+        return retry_call(req.execute, max_retries=3, base_delay=1.0, max_delay=5.0)

@@ -61,12 +61,12 @@ jobs:
         run: |
           python -m core.database_sync download
 
-      - name: Claim and Publish Next Ready Short from Google Drive Vault
+      - name: Claim and Schedule Ready Shorts from Google Drive Vault
         run: |
-          python main.py --publish-next
+          python main.py --schedule-ready
 
       - name: Upload & Synchronize Database to Cloud Vault
-        if: success()
+        if: always()
         run: |
           python -m core.database_sync upload
 
