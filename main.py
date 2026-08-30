@@ -743,16 +743,26 @@ class ShortsPipeline:
                 f"Remaining Slots: [bold yellow]{remaining_capacity}/{DAILY_SHORTS_LIMIT}[/bold yellow]"
             )
 
-            # 4. Check 02_PROCESSING for any recovered/in-flight items first
-            scheduled_results = []
+            # 4. Check 02_PROCESSING for any completed or in-flight items
             processing_files = self.drive_engine.list_files_in_folder("02_PROCESSING")
             recovered_candidates = []
             if processing_files:
                 for candidate in processing_files:
                     props = candidate.get("properties", {}) or {}
                     cand_job_id = props.get("job_id")
-                    existing_upl = db.query(UploadRecord).filter(UploadRecord.job_id == cand_job_id).first() if cand_job_id else None
-                    if existing_upl and existing_upl.status == "PUBLISHED":
+                    cand_yt_id = props.get("youtube_video_id")
+                    cand_title = props.get("title")
+
+                    existing_upl = None
+                    if cand_yt_id:
+                        existing_upl = db.query(UploadRecord).filter(UploadRecord.youtube_video_id == cand_yt_id).first()
+                    if not existing_upl and cand_job_id:
+                        existing_upl = db.query(UploadRecord).filter(UploadRecord.job_id == cand_job_id).first()
+                    if not existing_upl and cand_title:
+                        existing_upl = db.query(UploadRecord).filter(UploadRecord.title.ilike(cand_title.strip())).first()
+
+                    if existing_upl and existing_upl.status in ["PUBLISHED", "SUCCESS"]:
+                        logger.info(f"[PROCESSING CLEANUP] File {candidate['id']} ({candidate.get('name')}) is already PUBLISHED. Moving to 03_PUBLISHED.")
                         self.drive_engine.move_file_in_vault(candidate["id"], from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
                     elif existing_upl and existing_upl.status == "SCHEDULED":
                         continue
@@ -773,10 +783,10 @@ class ShortsPipeline:
                 c_title = c_props.get("title") or candidate.get("name", "").replace(".mp4", "")
                 existing_upl = db.query(UploadRecord).filter(
                     (UploadRecord.job_id == c_job_id) |
-                    (UploadRecord.title.ilike(c_title.strip().lower()))
+                    (UploadRecord.title.ilike(c_title.strip()))
                 ).first() if c_job_id else None
 
-                if existing_upl and existing_upl.status == "PUBLISHED":
+                if existing_upl and existing_upl.status in ["PUBLISHED", "SUCCESS"]:
                     logger.warning(f"[PRE-CLAIM DEDUP] File {candidate['id']} already PUBLISHED on YouTube. Moving to 03_PUBLISHED.")
                     self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="03_PUBLISHED")
                 elif existing_upl and existing_upl.status == "SCHEDULED":
@@ -785,7 +795,7 @@ class ShortsPipeline:
                 else:
                     fresh_ready_files.append(candidate)
 
-            all_eligible_candidates = recovered_candidates + fresh_ready_files
+            all_eligible_candidates = fresh_ready_files + recovered_candidates
             if target_file_id:
                 all_eligible_candidates = [f for f in all_eligible_candidates if f["id"] == target_file_id]
 
@@ -808,6 +818,7 @@ class ShortsPipeline:
                 }
 
             console.print(f"[bold green][*] Scheduling {eligible_to_schedule} eligible Short(s) into next publication slots...[/bold green]")
+            scheduled_results = []
 
             for i in range(eligible_to_schedule):
                 cand = all_eligible_candidates[i]
