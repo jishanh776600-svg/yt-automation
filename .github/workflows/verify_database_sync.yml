@@ -43,59 +43,6 @@ jobs:
           echo "${TOKEN_JSON}" > token.json
           echo "${CLIENT_SECRET_JSON}" > client_secret.json
 
-      - name: Single NVIDIA DeepSeek V4 Flash One-Shot Test
-        env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-        run: |
-          python -c "
-          import os, json, urllib.request
-          from urllib.error import HTTPError
-
-          api_key = os.environ.get('DEEPSEEK_API_KEY', '').strip()
-          if not api_key:
-              print('[NVIDIA_FLASH_RESULT] HTTP_STATUS=N/A MODEL=deepseek-ai/deepseek-v4-flash-0731 RECEIVED=NO MATCH=NO ERROR=Secret_Not_Found')
-              exit(0)
-
-          endpoint = 'https://integrate.api.nvidia.com/v1/chat/completions'
-          model = 'deepseek-ai/deepseek-v4-flash-0731'
-
-          payload = json.dumps({
-              'model': model,
-              'messages': [{'role': 'user', 'content': 'Reply with exactly: NVIDIA_OK'}],
-              'temperature': 0,
-              'max_tokens': 10,
-              'stream': False
-          }).encode('utf-8')
-
-          headers = {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': f'Bearer {api_key}',
-              'User-Agent': 'AL-AMR-FlashOneShot/1.0'
-          }
-
-          req = urllib.request.Request(endpoint, data=payload, headers=headers, method='POST')
-
-          try:
-              with urllib.request.urlopen(req, timeout=60.0) as resp:
-                  status_code = resp.status
-                  body = resp.read().decode('utf-8')
-                  data = json.loads(body)
-                  content = data.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
-                  has_match = 'NVIDIA_OK' in content
-                  print(f'[NVIDIA_FLASH_RESULT] HTTP_STATUS={status_code} MODEL={model} RECEIVED=YES MATCH={\"YES\" if has_match else \"NO\"} CONTENT={content}')
-          except HTTPError as e:
-              err_body = e.read().decode('utf-8', errors='ignore')
-              try:
-                  err_json = json.loads(err_body)
-                  detail = err_json.get('detail') or err_json.get('title') or err_body[:100]
-              except Exception:
-                  detail = err_body[:100]
-              print(f'[NVIDIA_FLASH_RESULT] HTTP_STATUS={e.code} MODEL={model} RECEIVED=NO MATCH=NO ERROR={detail}')
-          except Exception as e:
-              print(f'[NVIDIA_FLASH_RESULT] HTTP_STATUS=TIMEOUT MODEL={model} RECEIVED=NO MATCH=NO ERROR={type(e).__name__}')
-          "
-
       - name: Step 1 - Download Canonical DB from Private Drive Vault
         run: |
           python -m core.database_sync download
