@@ -233,11 +233,15 @@ class TopicDiscoveryEngine:
         from core.models import Job, UploadRecord
         excluded_ids = set(exclude_topic_ids or [])
 
-        # Exclude topics that have already reached terminal/active publication or failed/needs_review in current queue
-        job_topic_records = db.query(Job.topic_id, Job.state).all()
-        for j_top_id, j_state in job_topic_records:
-            if j_top_id and j_state in ("PUBLISHED", "READY_TO_UPLOAD", "NEEDS_REVIEW", "FAILED"):
-                excluded_ids.add(j_top_id)
+        # Exclude topics that have already reached terminal/active publication
+        try:
+            published_jobs = db.query(Job).filter(
+                Job.state.in_(["PUBLISHED", "READY_TO_UPLOAD"])
+            ).all()
+            published_topic_ids = {getattr(j, "topic_id", None) for j in published_jobs if getattr(j, "topic_id", None)}
+            excluded_ids.update(published_topic_ids)
+        except Exception:
+            pass
 
         def is_test_topic(t: Topic) -> bool:
             t_id = (t.id or "").lower()
@@ -257,7 +261,7 @@ class TopicDiscoveryEngine:
         # Query eligible unproduced topics
         unproduced = db.query(Topic).filter(
             Topic.id.notin_(excluded_ids),
-            ~Topic.status.in_(["REJECTED", "NEEDS_REVIEW", "FAILED"])
+            ~Topic.status.in_(["REJECTED"])
         ).all()
 
         # Filter unproduced topics through deduplication against published stories (bounded to limit)

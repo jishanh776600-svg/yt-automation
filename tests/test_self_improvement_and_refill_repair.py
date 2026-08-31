@@ -245,11 +245,13 @@ class TestSelfImprovementAndRefillRepair:
 
     def test_08_daily_capacity_bounded_at_three(self, in_memory_db):
         db = in_memory_db
-        today_utc = datetime.utcnow()
+        from config.constants import get_business_day_bounds_utc
+        today_start, today_end = get_business_day_bounds_utc()
+        today_utc = today_start + timedelta(hours=10)
 
-        u1 = UploadRecord(id='up1', job_id='j1', youtube_video_id='VidReal0001', title='T1', description='D1', status='PUBLISHED', published_at=today_utc)
-        u2 = UploadRecord(id='up2', job_id='j2', youtube_video_id='VidReal0002', title='T2', description='D2', status='PUBLISHED', published_at=today_utc)
-        u3 = UploadRecord(id='up3', job_id='j3', youtube_video_id='VidReal0003', title='T3', description='D3', status='SCHEDULED', scheduled_publish_at=today_utc + timedelta(hours=3))
+        u1 = UploadRecord(id='up1', job_id='j1', youtube_video_id='VidReal0001', title='T1', description='D1', status='PUBLISHED', published_at=today_start + timedelta(hours=1))
+        u2 = UploadRecord(id='up2', job_id='j2', youtube_video_id='VidReal0002', title='T2', description='D2', status='PUBLISHED', published_at=today_start + timedelta(hours=2))
+        u3 = UploadRecord(id='up3', job_id='j3', youtube_video_id='VidReal0003', title='T3', description='D3', status='SCHEDULED', scheduled_publish_at=datetime.utcnow() + timedelta(hours=1))
 
         db.add_all([u1, u2, u3])
         db.commit()
