@@ -61,6 +61,13 @@ CURATED_SCRIPTS = {
         "reveal": "During lockdowns, Dutch cafes closed while Belgian tables in the same room stayed open.",
         "loop_twist": "Your nationality literally depends on where your front door opens."
     },
+    "The London Beer Flood of 1814": {
+        "hook": "In October 1814, a fifteen-foot wave of beer destroyed a London neighborhood.",
+        "context": "At the Meux Brewery, a massive wooden fermentation vat suddenly burst open.",
+        "escalation": "Over three hundred thousand gallons of porter surged through the streets like a tidal wave.",
+        "reveal": "The tsunami collapsed building walls, flooded basements, and claimed eight lives.",
+        "loop_twist": "A jury declared the bizarre catastrophe an unavoidable act of God."
+    },
     "The Boston Molasses Flood of 1919": {
         "hook": "A two-million-gallon wave of boiling molasses once destroyed Boston.",
         "context": "In 1919, a massive fifty-foot steel tank suddenly burst in the North End.",
