@@ -47,6 +47,55 @@ CURATED_SCRIPTS = {
         "reveal": "The shot struck an iron kettle, spraying boiling soup across the deck.",
         "loop_twist": "Terrified, the imperial fleet surrendered without a single human casualty."
     },
+    "The Liechtensteiner Army of 1866": {
+        "hook": "An eighty-man army marched off to war and returned with eighty-one soldiers.",
+        "context": "In 1866, Liechtenstein sent eighty men to defend an alpine mountain pass.",
+        "escalation": "They spent weeks guarding the quiet border without seeing any combat.",
+        "reveal": "On the trek home, they befriended an Italian officer who joined their ranks.",
+        "loop_twist": "They suffered negative one casualties in the most wholesome war in history."
+    },
+    "The Kentucky Meat Shower of 1876": {
+        "hook": "In 1876, fresh red meat mysteriously fell from a clear blue sky.",
+        "context": "On a sunny afternoon in Kentucky, Mrs Crouch was making soap outdoors.",
+        "escalation": "Suddenly, large chunks of fresh venison and beef rained onto her farm.",
+        "reveal": "Scientists concluded a flock of startled vultures had regurgitated their meal mid-flight.",
+        "loop_twist": "Two brave locals even tasted the sky meat, calling it bear flesh."
+    },
+    "The Balloon Duel of Paris (1808)": {
+        "hook": "In 1808, two Frenchmen fought history's only hot air balloon duel.",
+        "context": "Two gentlemen loved the same opera singer and demanded an airborne duel.",
+        "escalation": "They ascended two thousand feet above Paris armed with heavy blunderbusses.",
+        "reveal": "One man fired, piercing his rival's balloon and sending it plunging downward.",
+        "loop_twist": "The winner landed safely, but the opera singer refused to marry him."
+    },
+    "The Cadaver Synod of 897": {
+        "hook": "In 897, a dead pope's rotting corpse was put on trial in Rome.",
+        "context": "Pope Stephen ordered the body of Pope Formosus exhumed from his tomb.",
+        "escalation": "They dressed the decaying corpse in papal vestments and assigned a trembling defense lawyer.",
+        "reveal": "Found guilty, the corpse had three fingers chopped off and thrown into the river.",
+        "loop_twist": "Enraged Roman citizens soon rioted and threw Pope Stephen into prison."
+    },
+    "The Battle of Karansebes (1788)": {
+        "hook": "In 1788, an army of one hundred thousand men fought itself in total darkness.",
+        "context": "Austrian cavalry bought schnapps from locals and refused to share with infantry.",
+        "escalation": "A drunken brawl erupted, someone shouted Turks, and panic swept the entire camp.",
+        "reveal": "Artillery officers fired into the chaos, believing the Ottoman enemy had attacked.",
+        "loop_twist": "When actual Turks arrived two days later, they found thousands of dead soldiers."
+    },
+    "The Lake Peigneur Sinkhole (1980)": {
+        "hook": "An entire thirteen-hundred-acre lake disappeared into an underwater salt mine in hours.",
+        "context": "In 1980, an oil rig accidentally drilled into an underground salt cavern in Louisiana.",
+        "escalation": "Water dissolved the salt, creating a catastrophic whirlpool that swallowed eleven barges.",
+        "reveal": "The draining lake reversed the flow of the Gulf of Mexico temporarily.",
+        "loop_twist": "Miraculously, all fifty-five miners and workers escaped without a single loss of life."
+    },
+    "The War of the Stray Dog (1925)": {
+        "hook": "In 1925, Greece and Bulgaria went to war over a runaway dog.",
+        "context": "A Greek soldier chased his stray dog across the Bulgarian border.",
+        "escalation": "Bulgarian sentries shot the soldier, sparking massive military mobilization on both sides.",
+        "reveal": "Greece invaded Bulgarian territory before the League of Nations ordered an immediate ceasefire.",
+        "loop_twist": "Greece was fined forty-five thousand pounds for the runaway canine clash."
+    },
     "The Aroostook War": {
         "hook": "In 1838, America and Britain mobilized fifty thousand troops over stolen trees.",
         "context": "Lumberjacks from Maine and New Brunswick clashed in a disputed timber valley.",

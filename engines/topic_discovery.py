@@ -90,10 +90,46 @@ CURATED_HISTORICAL_SEEDS = [
         "curiosity": 9.7, "visual_potential": 9.1, "historical_interest": 9.4, "storytelling": 9.8, "uniqueness": 9.9
     },
     {
-        "title": "The Great Emu War of 1932",
+        "title": "The Liechtensteiner Army of 1866",
         "category": HistoricalCategory.UNUSUAL_WARS.value,
-        "summary": "In November 1932, the Australian military deployed soldiers armed with machine guns to combat twenty thousand destructive emus, only to withdraw after the birds outmaneuvered them.",
-        "curiosity": 9.8, "visual_potential": 9.2, "historical_interest": 9.5, "storytelling": 9.7, "uniqueness": 9.9
+        "summary": "In 1866, Liechtenstein sent 80 soldiers to guard an alpine border, suffered zero casualties, and returned with 81 men after making an Italian friend along the way.",
+        "curiosity": 9.9, "visual_potential": 8.8, "historical_interest": 9.2, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Kentucky Meat Shower of 1876",
+        "category": HistoricalCategory.DOCUMENTED_DISASTERS.value,
+        "summary": "On March 3, 1876, chunks of fresh red meat fell from a clear sky over a farm in Bath County, Kentucky, puzzling scientists and locals alike.",
+        "curiosity": 9.8, "visual_potential": 9.0, "historical_interest": 9.1, "storytelling": 9.5, "uniqueness": 9.8
+    },
+    {
+        "title": "The Balloon Duel of Paris (1808)",
+        "category": HistoricalCategory.FORGOTTEN_FIGURES.value,
+        "summary": "In May 1808, two French gentlemen fought a duel over Paris half a mile in the sky using blunderbusses from hot air balloons.",
+        "curiosity": 9.9, "visual_potential": 9.5, "historical_interest": 9.3, "storytelling": 9.7, "uniqueness": 9.9
+    },
+    {
+        "title": "The Cadaver Synod of 897",
+        "category": HistoricalCategory.STRANGE_LAWS.value,
+        "summary": "In 897, Pope Stephen VI exhumed the rotting corpse of his predecessor Pope Formosus, dressed it in papal robes, and put it on trial before a Roman court.",
+        "curiosity": 9.9, "visual_potential": 9.2, "historical_interest": 9.6, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Battle of Karansebes (1788)",
+        "category": HistoricalCategory.UNUSUAL_WARS.value,
+        "summary": "In September 1788, the Austrian army mistakenly opened fire on itself in the darkness over barrels of schnapps, suffering thousands of casualties without the enemy present.",
+        "curiosity": 9.8, "visual_potential": 9.1, "historical_interest": 9.4, "storytelling": 9.6, "uniqueness": 9.8
+    },
+    {
+        "title": "The Lake Peigneur Sinkhole (1980)",
+        "category": HistoricalCategory.DOCUMENTED_DISASTERS.value,
+        "summary": "In November 1980, an oil rig accidentally drilled into a salt mine under Lake Peigneur, draining a 1,300-acre lake into an enormous underwater whirlpool.",
+        "curiosity": 9.7, "visual_potential": 9.6, "historical_interest": 9.2, "storytelling": 9.7, "uniqueness": 9.7
+    },
+    {
+        "title": "The War of the Stray Dog (1925)",
+        "category": HistoricalCategory.UNUSUAL_WARS.value,
+        "summary": "In October 1925, an armed border clash erupted between Greece and Bulgaria after a Greek soldier chased his runaway dog across the frontier.",
+        "curiosity": 9.8, "visual_potential": 8.9, "historical_interest": 9.0, "storytelling": 9.6, "uniqueness": 9.8
     }
 ]
 
