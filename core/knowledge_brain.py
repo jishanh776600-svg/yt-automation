@@ -307,6 +307,21 @@ AL AMR autonomously discovers compelling historical events, bizarre historical p
         topic_file.write_text(content.strip(), encoding="utf-8")
         return topic_file
 
+    def build_competitor_note(self) -> Path:
+        comp_file = self.vault_dir / "Topics" / "competitor_intelligence.md"
+        content = """# Competitor Intelligence & Hypothesis Architecture
+
+## Multi-Stage Intelligence Loop
+$$\\text{Competitor Observation} \\longrightarrow \\text{Pattern Extraction} \\longrightarrow \\text{Hypothesis} \\longrightarrow \\text{AL AMR Experiment} \\longrightarrow \\text{Real Telemetry} \\longrightarrow \\text{Learning Engine}$$
+
+## Invariant Rules
+1. **Zero Direct Weight Modification**: Competitor observations generate **Hypotheses**, never direct production weight modifications.
+2. **Internal Validation Authority**: Only verified AL AMR channel performance telemetry ($N \\ge 3$, mature $\\ge 24\\text{h}$) can update production strategy weights.
+3. **Virality & Retention Screening**: External breakout patterns (e.g. contradiction shock, rapid visual cutting) serve as exploratory priors for candidate experiments.
+"""
+        comp_file.write_text(content.strip(), encoding="utf-8")
+        return comp_file
+
     def build_research_note(self) -> Path:
         res_file = self.vault_dir / "Research" / "historical_grounding.md"
         content = """# Historical Research & Fact Grounding
@@ -534,6 +549,7 @@ $$\\text{Gemini Primary} \\longrightarrow \\text{Gemini Secondary} \\longrightar
         files = [
             self.build_index_note(),
             self.build_topic_note(),
+            self.build_competitor_note(),
             self.build_research_note(),
             self.build_script_note(),
             self.build_voice_note(),

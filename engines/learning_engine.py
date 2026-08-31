@@ -175,6 +175,130 @@ class LearningEngine:
 
         return weight, round(relative_lift, 2), confidence, reason
 
+    def get_verified_analytics_universe(
+        self,
+        db: Session,
+        min_age_hours: float = 24.0,
+        min_views: int = 100,
+        now: Optional[datetime] = None
+    ) -> Dict[str, Any]:
+        """
+        CANONICAL ANALYTICS UNIVERSE.
+        Single authoritative source of verified live YouTube Shorts and their mature/maturing cohorts.
+        Guarantees by construction:
+            matured_count + maturing_count <= verified_live_count
+        """
+        if not now:
+            now = datetime.utcnow()
+
+        import re
+        YT_REGEX = re.compile(r'^[A-Za-z0-9_-]{11}$')
+        KNOWN_TEST_PREFIXES = (
+            "test_", "TEST_", "yt_loop_", "test_vid_", "upl_test_",
+            "upl_loop_", "vid_real_", "vid_deleted", "real_yt_", "legacy_vid", "mock_"
+        )
+
+        # 1. Query all PUBLISHED UploadRecords
+        uploads = (
+            db.query(UploadRecord)
+            .filter(
+                UploadRecord.status == "PUBLISHED",
+                UploadRecord.youtube_video_id.isnot(None),
+                UploadRecord.privacy_status != "test_local",
+                ~UploadRecord.youtube_video_id.like("TEST_%"),
+                ~UploadRecord.youtube_video_id.like("test_%")
+            )
+            .order_by(UploadRecord.published_at.desc(), UploadRecord.created_at.desc())
+            .all()
+        )
+
+        # 2. Group / deduplicate strictly by genuine 11-char YouTube ID
+        verified_videos: Dict[str, UploadRecord] = {}
+        for u in uploads:
+            yt_id = (u.youtube_video_id or "").strip()
+            if not yt_id or not YT_REGEX.match(yt_id) or yt_id == "dQw4w9WgXcQ":
+                continue
+            if any(yt_id.startswith(p) for p in KNOWN_TEST_PREFIXES):
+                continue
+            if u.id and any(u.id.startswith(p) for p in KNOWN_TEST_PREFIXES):
+                continue
+            if yt_id not in verified_videos:
+                verified_videos[yt_id] = u
+
+        verified_live_count = len(verified_videos)
+        mature_videos = []
+        maturing_videos = []
+        eligible_data = []
+        all_views = []
+
+        # 3. Categorize each unique video into mature (>=24h and views >= min_views) or maturing
+        for yt_id, upl in verified_videos.items():
+            pub_time = upl.published_at or upl.created_at
+            age_hours = (now - pub_time).total_seconds() / 3600.0 if pub_time else 0.0
+
+            # Find latest valid snapshot for this video
+            snap = (
+                db.query(PerformanceSnapshot)
+                .filter(
+                    (PerformanceSnapshot.youtube_video_id == yt_id) | (PerformanceSnapshot.upload_id == upl.id),
+                    PerformanceSnapshot.validation_status.in_(["VALID_REAL", None])
+                )
+                .order_by(PerformanceSnapshot.snapshot_time.desc())
+                .first()
+            )
+
+            views = snap.views if snap and snap.views is not None else 0
+            if age_hours >= min_age_hours and views >= min_views:
+                features = self.extract_video_features(db, upl)
+                mature_videos.append({
+                    "youtube_video_id": yt_id,
+                    "upload": upl,
+                    "snapshot": snap,
+                    "age_hours": age_hours,
+                    "views": views,
+                    "features": features
+                })
+                eligible_data.append({
+                    "upload": upl,
+                    "snapshot": snap,
+                    "features": features
+                })
+                all_views.append(views)
+            else:
+                maturing_videos.append({
+                    "youtube_video_id": yt_id,
+                    "upload": upl,
+                    "snapshot": snap,
+                    "age_hours": age_hours,
+                    "views": views
+                })
+
+        # 4. Invariant Verification
+        data_integrity_error = None
+        total_cohort = len(mature_videos) + len(maturing_videos)
+        if total_cohort > verified_live_count:
+            data_integrity_error = {
+                "error_type": "DATA_RECONCILIATION_ERROR",
+                "message": "Analytics cohort count exceeds verified YouTube live count.",
+                "expected_maximum": verified_live_count,
+                "observed_count": total_cohort,
+                "difference": total_cohort - verified_live_count,
+                "timestamp": now.isoformat() + "Z"
+            }
+
+        return {
+            "verified_live_count": verified_live_count,
+            "verified_videos": verified_videos,
+            "mature_videos": mature_videos,
+            "maturing_videos": maturing_videos,
+            "mature_count": len(mature_videos),
+            "maturing_count": len(maturing_videos),
+            "total_analytics_cohort": total_cohort,
+            "eligible_data": eligible_data,
+            "all_views": all_views,
+            "data_integrity_error": data_integrity_error
+        }
+
     def run_learning_cycle(
         self,
         db: Session,
@@ -197,49 +321,16 @@ class LearningEngine:
 
         cycle_id = f"lc_{uuid.uuid4().hex[:12]}"
 
-        # Query all uploads excluding mock/test IDs
-        uploads = db.query(UploadRecord).filter(
-            UploadRecord.youtube_video_id.isnot(None),
-            ~UploadRecord.youtube_video_id.like("TEST_%"),
-            ~UploadRecord.youtube_video_id.like("test_%"),
-            UploadRecord.privacy_status != "test_local"
-        ).all()
-
-        eligible_data = []
-        all_views = []
-        immature_count = 0
-        missing_telemetry_count = 0
-
-        for upl in uploads:
-            # Check maturation (24h)
-            pub_time = upl.published_at or upl.created_at
-            if pub_time:
-                age_hours = (now - pub_time).total_seconds() / 3600.0
-                if age_hours < min_age_hours:
-                    immature_count += 1
-                    continue
-            else:
-                immature_count += 1
-                continue
-
-            # Get latest snapshot
-            snap = (
-                db.query(PerformanceSnapshot)
-                .filter(PerformanceSnapshot.upload_id == upl.id)
-                .order_by(PerformanceSnapshot.snapshot_time.desc())
-                .first()
-            )
-            if not snap or (snap.views is None) or (snap.views < min_views):
-                missing_telemetry_count += 1
-                continue
-
-            all_views.append(snap.views)
-            features = self.extract_video_features(db, upl)
-            eligible_data.append({
-                "upload": upl,
-                "snapshot": snap,
-                "features": features
-            })
+        # Query unified verified analytics universe
+        universe = self.get_verified_analytics_universe(
+            db, min_age_hours=min_age_hours, min_views=min_views, now=now
+        )
+        eligible_data = universe["eligible_data"]
+        all_views = universe["all_views"]
+        immature_count = universe["maturing_count"]
+        mature_count = universe["mature_count"]
+        verified_live_count = universe["verified_live_count"]
+        data_integrity_error = universe["data_integrity_error"]
 
         # Calculate current profile version from existing weights
         current_profile_version = self._calculate_profile_version(db)
@@ -250,7 +341,7 @@ class LearningEngine:
             reason_msg = (
                 f"Waiting for maturation: {immature_count} Shorts in 24h window (0 matured videos available with >={min_views} views). Minimum required: {self.min_evidence_threshold}."
                 if immature_count > 0 else
-                f"No verified YouTube telemetry snapshots available for evaluation (immature: {immature_count}, missing: {missing_telemetry_count})."
+                f"No verified YouTube telemetry snapshots available for evaluation (immature: {immature_count}, missing telemetry)."
             )
 
             # Persist explicit LearningEvent record

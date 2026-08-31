@@ -946,6 +946,23 @@
                         </div>
                     </div>
 
+                    <!-- Data Reconciliation Error Banner (If Invariant Broken) -->
+                    {% if state.learning.data_integrity_error %}
+                    <div class="p-4 bg-rose-950/80 border border-rose-700 rounded-lg text-rose-200 text-xs space-y-2">
+                        <div class="flex items-center gap-2 font-bold text-rose-300">
+                            <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            <span>DATA RECONCILIATION ERROR DETECTED</span>
+                        </div>
+                        <p class="font-sans text-[11px] leading-relaxed">{{ state.learning.data_integrity_error.message }}</p>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] pt-1">
+                            <div class="p-2 bg-spaceBlack rounded border border-rose-800/60">Expected Max: <span class="font-bold text-rose-300">{{ state.learning.data_integrity_error.expected_maximum }}</span></div>
+                            <div class="p-2 bg-spaceBlack rounded border border-rose-800/60">Observed: <span class="font-bold text-rose-300">{{ state.learning.data_integrity_error.observed_count }}</span></div>
+                            <div class="p-2 bg-spaceBlack rounded border border-rose-800/60">Discrepancy: <span class="font-bold text-rose-300">+{{ state.learning.data_integrity_error.difference }}</span></div>
+                            <div class="p-2 bg-spaceBlack rounded border border-rose-800/60">Timestamp: <span class="text-slate-400">{{ state.learning.data_integrity_error.timestamp }}</span></div>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <!-- 4-Stat Metric Summary Strip -->
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                         <div class="p-3 bg-spaceWell rounded border border-borderHairline space-y-1">

@@ -214,6 +214,7 @@ class PerformanceSnapshot(Base):
     # Traffic sources & extra metrics (JSON)
     traffic_sources_json = Column(Text, nullable=True)
     raw_analytics_json = Column(Text, nullable=True)
+    validation_status = Column(String(32), default="VALID_REAL", nullable=True)  # VALID_REAL, UNVERIFIED, STALE, DUPLICATE, MOCK, TEST, ORPHANED, UNAVAILABLE
 
     upload = relationship("UploadRecord", back_populates="snapshots")
 

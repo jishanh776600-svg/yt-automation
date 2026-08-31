@@ -219,7 +219,7 @@ class SystemDataProvider:
 
     def get_verified_live_count(self, db: Session) -> int:
         """
-        Calculates authoritative count of verified live published YouTube Shorts.
+        Calculates authoritative count of unique verified live published YouTube Shorts.
         Requires valid 11-char YouTube ID, PUBLISHED status, and excludes test rows.
         """
         import re
@@ -227,15 +227,16 @@ class SystemDataProvider:
         published_uploads = db.query(UploadRecord).filter(
             UploadRecord.status == "PUBLISHED",
             UploadRecord.youtube_video_id.isnot(None),
+            UploadRecord.privacy_status != "test_local",
             ~UploadRecord.youtube_video_id.like("TEST_%"),
-            ~UploadRecord.youtube_video_id.like("test_%"),
-            UploadRecord.privacy_status != "test_local"
+            ~UploadRecord.youtube_video_id.like("test_%")
         ).all()
-        valid = [
-            u for u in published_uploads
-            if u.youtube_video_id and yt_regex.match(u.youtube_video_id) and u.youtube_video_id != "dQw4w9WgXcQ"
-        ]
-        return len(valid)
+        valid_ids = set()
+        for u in published_uploads:
+            yt_id = (u.youtube_video_id or "").strip()
+            if yt_id and yt_regex.match(yt_id) and yt_id != "dQw4w9WgXcQ":
+                valid_ids.add(yt_id)
+        return len(valid_ids)
 
     def get_publishing_status(self, db: Session) -> Dict[str, Any]:
         """Calculates today's published & scheduled count, remaining slots, and next release."""
@@ -388,30 +389,20 @@ class SystemDataProvider:
         recent_events_rows = db.query(LearningEvent).order_by(LearningEvent.timestamp.desc()).limit(10).all()
         learning_applied_count = db.query(LearningEvent).filter(LearningEvent.outcome == "LEARNING_APPLIED").count()
 
-        # 2. Count mature vs immature videos
+        # 2. Query canonical verified analytics universe
         now = datetime.utcnow()
-        uploads = db.query(UploadRecord).filter(
-            UploadRecord.youtube_video_id.isnot(None),
-            ~UploadRecord.youtube_video_id.like("TEST_%"),
-            ~UploadRecord.youtube_video_id.like("test_%"),
-            UploadRecord.privacy_status != "test_local"
-        ).all()
-
-        immature_count = 0
-        mature_count = 0
-        for upl in uploads:
-            pub_time = upl.published_at or upl.created_at
-            if pub_time and (now - pub_time).total_seconds() / 3600.0 >= 24.0:
-                snap = db.query(PerformanceSnapshot).filter(PerformanceSnapshot.upload_id == upl.id).first()
-                if snap and (snap.views or 0) >= 100:
-                    mature_count += 1
-                else:
-                    immature_count += 1
-            else:
-                immature_count += 1
+        universe = learner.get_verified_analytics_universe(db, now=now)
+        mature_count = universe["mature_count"]
+        immature_count = universe["maturing_count"]
+        verified_live_count = universe["verified_live_count"]
+        total_analytics_cohort = universe["total_analytics_cohort"]
+        data_integrity_error = universe["data_integrity_error"]
 
         # 3. Determine active learning status
-        if learning_applied_count > 0:
+        if data_integrity_error:
+            status_text = "Data Reconciliation Error"
+            status_badge_class = "bg-rose-950 text-rose-400 border border-rose-800"
+        elif learning_applied_count > 0:
             status_text = "Learning Active"
             status_badge_class = "bg-emerald-950 text-emerald-400 border border-emerald-800"
         elif immature_count > 0 and mature_count < learner.min_evidence_threshold:
@@ -504,6 +495,9 @@ class SystemDataProvider:
             "applied_events_count": learning_applied_count,
             "immature_videos_count": immature_count,
             "mature_videos_count": mature_count,
+            "total_analytics_cohort": total_analytics_cohort,
+            "verified_live_count": verified_live_count,
+            "data_integrity_error": data_integrity_error,
             "current_profile_version": current_profile_version,
             "what_changed_summary": what_changed_summary,
             "recent_events": recent_events_list,
