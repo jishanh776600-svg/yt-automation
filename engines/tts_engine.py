@@ -25,6 +25,18 @@ KOKORO_VOICES_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/downlo
 
 AVAILABLE_VOICES = [
     {
+        "id": "af_bella",
+        "display_name": "Bella (US Female)",
+        "engine": "Kokoro-82M ONNX / Edge-TTS",
+        "description": "Clear, crisp, and high-energy narration. Best for fast-paced viral hooks and sudden twists.",
+        "style": "Dynamic / Engaging",
+        "gender": "Female",
+        "accent": "American",
+        "kokoro_voice": "af_bella",
+        "edge_voice": "en-US-JennyNeural",
+        "available": True
+    },
+    {
         "id": "am_adam",
         "display_name": "Adam (US Male)",
         "engine": "Kokoro-82M ONNX / Edge-TTS",
@@ -46,18 +58,6 @@ AVAILABLE_VOICES = [
         "accent": "American",
         "kokoro_voice": "am_michael",
         "edge_voice": "en-US-EricNeural",
-        "available": True
-    },
-    {
-        "id": "af_bella",
-        "display_name": "Bella (US Female)",
-        "engine": "Kokoro-82M ONNX / Edge-TTS",
-        "description": "Clear, crisp, and high-energy narration. Best for fast-paced viral hooks and sudden twists.",
-        "style": "Dynamic / Engaging",
-        "gender": "Female",
-        "accent": "American",
-        "kokoro_voice": "af_bella",
-        "edge_voice": "en-US-JennyNeural",
         "available": True
     },
     {
@@ -108,7 +108,7 @@ def resolve_voice_config(voice_id: str) -> dict:
     for v in AVAILABLE_VOICES:
         if v["id"] == voice_id:
             return v
-    # Fallback to default canonical voice (Adam)
+    # Fallback to default canonical voice (Bella)
     return AVAILABLE_VOICES[0]
 
 
@@ -137,7 +137,7 @@ def get_active_voice(db: Optional[Session] = None) -> str:
             if close_session:
                 session.close()
 
-    return KOKORO_VOICE or "am_adam"
+    return KOKORO_VOICE or "af_bella"
 
 
 def set_active_voice(db: Session, voice_id: str) -> bool:

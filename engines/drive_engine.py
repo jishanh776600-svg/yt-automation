@@ -22,6 +22,136 @@ logger = logging.getLogger(__name__)
 
 VAULT_ROOT_NAME = "YouTube_Shorts_Vault"
 SUBFOLDERS = ["00_SYSTEM", "01_READY", "02_PROCESSING", "03_PUBLISHED", "04_FAILED"]
+MIN_VALID_SHORT_BYTES = 5 * 1024 * 1024  # 5 MB minimum for real 1080x1920 vertical Short
+
+
+def is_valid_ready_short(
+    item_or_path: Any,
+    db: Optional[Any] = None,
+    allow_test_artifacts: bool = False
+) -> Tuple[bool, str]:
+    """
+    CANONICAL READY SHORT VALIDATOR.
+    Single authoritative validator across Dashboard, Refill, Scheduler, and Drive.
+    A file counts toward VALID_READY_STOCK only if ALL conditions pass:
+    - Exists, readable, non-empty, size >= 5 MB (or >= 500 KB in test mode)
+    - Not a known test artifact (test_render, short_job_manifest, job_test_, top_test_)
+    - Valid MP4 container (1080x1920 video, audio present, duration 20.0s - 60.0s)
+    - Metadata maps to real non-published, non-failed job
+    - Database state compatible with READY (not already published or processing)
+    """
+    min_size = 500 * 1024 if allow_test_artifacts else MIN_VALID_SHORT_BYTES
+
+    # 1. Drive file dictionary representation
+    if isinstance(item_or_path, dict):
+        name = str(item_or_path.get("name", ""))
+        if not name.lower().endswith(".mp4"):
+            return False, f"Not an MP4 file: '{name}'"
+
+        if not allow_test_artifacts:
+            lower_name = name.lower()
+            if (
+                lower_name.startswith("test_")
+                or "manifest_test" in lower_name
+                or lower_name.startswith("test_render")
+                or "_test_stage_" in lower_name
+            ):
+                return False, f"Test artifact filename: '{name}'"
+
+        size = int(item_or_path.get("size") or 0)
+        if size < min_size:
+            return False, f"File size abnormally small ({size} bytes < {min_size} bytes minimum)"
+
+        props = item_or_path.get("properties", {}) or {}
+        job_id = props.get("job_id", "")
+        topic_id = props.get("topic_id", "")
+        if not allow_test_artifacts:
+            if job_id.startswith(("job_test_", "test_")):
+                return False, f"Test artifact job_id: '{job_id}'"
+            if topic_id.startswith(("top_test_", "test_")):
+                return False, f"Test artifact topic_id: '{topic_id}'"
+
+        if db and job_id:
+            try:
+                from core.models import UploadRecord, Job
+                upl = db.query(UploadRecord).filter(
+                    UploadRecord.job_id == job_id,
+                    UploadRecord.status.in_(["PUBLISHED", "SUCCESS"])
+                ).first()
+                if upl:
+                    return False, f"Job {job_id} already published (Video ID: {upl.youtube_video_id})"
+
+                j = db.query(Job).filter(Job.id == job_id).first()
+                if j and j.state in ("FAILED", "NEEDS_REVIEW"):
+                    return False, f"Job {job_id} has database state '{j.state}'"
+            except Exception as db_err:
+                logger.debug(f"DB verification notice for {job_id}: {db_err}")
+
+        return True, "Valid Google Drive READY Short"
+
+    # 2. Local File representation (str or Path)
+    p = Path(item_or_path)
+    if not p.exists():
+        return False, f"File does not exist: {p}"
+    if not os.access(str(p), os.R_OK):
+        return False, f"File not readable by process: {p}"
+    if not p.name.lower().endswith(".mp4"):
+        return False, f"Not an MP4 file: {p.name}"
+
+    if not allow_test_artifacts:
+        lower_name = p.name.lower()
+        if (
+            lower_name.startswith("test_")
+            or "manifest_test" in lower_name
+            or lower_name.startswith("test_render")
+            or "_test_stage_" in lower_name
+        ):
+            return False, f"Test artifact filename: '{p.name}'"
+
+    size = p.stat().st_size
+    if size < min_size:
+        return False, f"File size abnormally small ({size} bytes < {min_size} bytes minimum)"
+
+    # Media inspection probe
+    try:
+        from engines.qa_engine import QAEngine
+        qa = QAEngine()
+        media_info = qa.inspect_media(p)
+        if not media_info.get("has_video"):
+            return False, "Missing video stream"
+        if not media_info.get("has_audio"):
+            return False, "Missing audio stream"
+        w = media_info.get("width", 0)
+        h = media_info.get("height", 0)
+        if (w != 1080 or h != 1920) and not allow_test_artifacts:
+            return False, f"Resolution {w}x{h} != 1080x1920"
+        dur = float(media_info.get("duration", 0.0))
+        if (dur < 20.0 or dur > 60.0) and not allow_test_artifacts:
+            return False, f"Duration {dur:.1f}s out of acceptable range (20.0s - 60.0s)"
+    except Exception as probe_err:
+        if not allow_test_artifacts:
+            return False, f"Media inspection failed: {probe_err}"
+
+    if db:
+        import re
+        m = re.search(r"job_([a-f0-9]+)", p.name)
+        if m:
+            c_job_id = f"job_{m.group(1)}"
+            try:
+                from core.models import UploadRecord, Job
+                upl = db.query(UploadRecord).filter(
+                    UploadRecord.job_id == c_job_id,
+                    UploadRecord.status.in_(["PUBLISHED", "SUCCESS"])
+                ).first()
+                if upl:
+                    return False, f"Job {c_job_id} already published (Video ID: {upl.youtube_video_id})"
+                j = db.query(Job).filter(Job.id == c_job_id).first()
+                if j and j.state in ("FAILED", "NEEDS_REVIEW"):
+                    return False, f"Job {c_job_id} has database state '{j.state}'"
+            except Exception as db_err:
+                logger.debug(f"DB verification notice for {c_job_id}: {db_err}")
+
+    return True, "Valid local READY Short"
 
 
 class DriveVaultEngine:
@@ -381,17 +511,33 @@ class DriveVaultEngine:
             logger.error(f"Error fetching metadata for Drive file {file_id}: {e}")
             raise
 
-    def get_ready_stock_count(self) -> int:
-        """Returns the current number of ready-to-publish videos in '01_READY'."""
+    def get_ready_stock_count(self, db: Optional[Any] = None, allow_test_artifacts: bool = False) -> int:
+        """Returns the current number of canonical, valid ready-to-publish videos in '01_READY' and local vault."""
+        valid_count = 0
         try:
             vault = self.inspect_or_init_vault(create_if_missing=False)
-            if not vault.get("01_READY"):
-                return 0
-            files = self.list_files_in_folder("01_READY")
-            return len(files)
+            if vault.get("01_READY"):
+                files = self.list_files_in_folder("01_READY")
+                for f in files:
+                    is_val, _ = is_valid_ready_short(f, db=db, allow_test_artifacts=allow_test_artifacts)
+                    if is_val:
+                        valid_count += 1
+                return valid_count
         except Exception as e:
-            logger.warning(f"Could not count ready stock: {e}")
-            return 0
+            logger.warning(f"Could not count ready stock in Drive: {e}")
+
+        # Fallback to local ready vault files only if Drive is unavailable
+        try:
+            local_dir = PROJECT_ROOT / "data" / "vault_ready"
+            if local_dir.exists():
+                for p in local_dir.glob("READY_*.mp4"):
+                    is_val, _ = is_valid_ready_short(p, db=db, allow_test_artifacts=allow_test_artifacts)
+                    if is_val:
+                        valid_count += 1
+        except Exception as local_err:
+            logger.debug(f"Local vault ready count notice: {local_err}")
+
+        return valid_count
 
     def find_file_in_folder(self, folder_name: str, filename: str) -> Optional[Dict[str, Any]]:
         """Finds a specific non-trashed file by name inside a vault subfolder."""

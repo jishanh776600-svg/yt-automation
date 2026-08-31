@@ -340,8 +340,8 @@
                                 <!-- Stage 6: PUBLISHED -->
                                 <div class="pipeline-connector p-2.5 bg-spaceWell rounded border border-purple-900/40 bg-purple-950/10">
                                     <div class="text-[9px] text-purple-400 uppercase tracking-tight font-bold">06. Live</div>
-                                    <div class="text-base font-bold text-purple-300 mt-1">{{ state.inventory.counts['03_PUBLISHED'] or 0 }}</div>
-                                    <span class="inline-block mt-1 text-[8px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-400 border border-purple-800/60">VAULT</span>
+                                    <div class="text-base font-bold text-purple-300 mt-1">{{ state.publishing.total_published or state.database_sync.table_counts.uploads or 0 }}</div>
+                                    <span class="inline-block mt-1 text-[8px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-400 border border-purple-800/60">LIVE</span>
                                 </div>
                             </div>
                         </section>

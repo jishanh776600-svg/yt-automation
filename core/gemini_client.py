@@ -367,10 +367,11 @@ class GeminiClient:
                         f"DeepSeek API quota or balance exhausted (HTTP {code})"
                     ) from http_err
 
-                # Non-retryable 4xx errors (e.g. 400 Bad Request, 401 Invalid Key)
+                # Non-retryable 4xx errors (e.g. 400 Bad Request, 401 Invalid Key, 403 Forbidden)
                 if 400 <= code < 500:
-                    logger.error(f"[DEEPSEEK_ERROR] Non-retryable HTTP error from DeepSeek (HTTP {code}): {err_body[:200]}")
-                    raise http_err
+                    self.mark_provider_exhausted("deepseek")
+                    logger.error(f"[DEEPSEEK_AUTH_FAIL] DeepSeek client error (HTTP {code}). Marking provider exhausted permanently for session: {err_body[:200]}")
+                    raise GeminiQuotaExhaustedError(f"DeepSeek API error (HTTP {code}): {err_body[:200]}") from http_err
 
                 # Transient 5xx server errors
                 if attempt >= max_retries:

@@ -48,8 +48,7 @@ class ActionManager:
         """
         # 1. Authoritative Stock Health Gate (Phase 6)
         try:
-            ready_files = self.drive_engine.list_files_in_folder("01_READY", limit=50)
-            current_stock = len(ready_files)
+            current_stock = self.drive_engine.get_ready_stock_count(db=db)
         except Exception as d_err:
             logger.warning(f"Could not read live Drive stock before refill: {d_err}")
             current_stock = 0

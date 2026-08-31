@@ -159,8 +159,16 @@ class ShortsPipeline:
         StateMachine.transition(db, job, JobState.VOICE_READY, f"Voice synthesized ({audio_duration}s, voice={self.run_voice})")
         console.print(f"[green][+] Narration Generated:[/green] {audio_duration:.1f}s via {voice_asset.source} [cyan]({self.run_voice})[/cyan]")
 
+        # 5.1. TIMELINE CALIBRATION (Defect 7: Prevent Narration Truncation)
+        safety_margin = 0.6  # 600ms breathing room after narration finishes
+        target_video_duration = round(audio_duration + safety_margin, 2)
+        current_shots_dur = sum(s["duration"] for s in shots)
+        diff = target_video_duration - current_shots_dur
+        if shots and abs(diff) > 0.05:
+            shots[-1]["duration"] = max(2.5, round(shots[-1]["duration"] + diff, 2))
+            logger.info(f"[TIMELINE] Calibrated shots timeline: total={sum(s['duration'] for s in shots):.2f}s for narration={audio_duration:.2f}s (safety margin: {safety_margin}s)")
+
         # 5.5. AUTONOMOUS EDITING DIRECTING
-        StateMachine.transition(db, job, JobState.PLANNING_MEDIA, "Directing scene pacing, motion, and sound design")
         editing_plan = self.editing_director.plan_editing(
             db=db,
             job_id=job.id,
@@ -186,7 +194,7 @@ class ShortsPipeline:
         assets_used.append(music_asset)
 
         # Render contextual SFX layer
-        sfx_layer_path = self.renders_dir / f"sfx_{job.id}.wav"
+        sfx_layer_path = RENDERS_DIR / f"sfx_{job.id}.wav"
         all_sfx_cues = []
         if editing_plan and hasattr(editing_plan, "scenes"):
             for sc in editing_plan.scenes:
@@ -203,7 +211,7 @@ class ShortsPipeline:
             voice_path=voice_path,
             music_path=Path(music_asset.local_path),
             output_path=master_audio_path,
-            duration=audio_duration,
+            duration=target_video_duration,
             job_id=job.id,
             sfx_layer_path=rendered_sfx_layer
         )
@@ -668,10 +676,10 @@ class ShortsPipeline:
                 scheduled_slot=scheduled_slot
             )
             if not gate_passed:
-                logger.warning(f"[PUBLICATION_SAFETY_GATE_BLOCKED] Job {job.id} blocked by safety gate: {gate_reason}")
-                console.print(f"[bold red][x] Publication Safety Gate Blocked Upload:[/bold red] {gate_reason}")
-                if current_folder != "02_PROCESSING":
-                    self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="01_READY")
+                logger.warning(f"[PUBLICATION_SAFETY_GATE_BLOCKED] Job {job.id} blocked by safety gate: {gate_reason}. Quarantining to 04_FAILED.")
+                console.print(f"[bold red][x] Publication Safety Gate Blocked Upload:[/bold red] {gate_reason} (Quarantined to 04_FAILED)")
+                self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="04_FAILED")
+                StateMachine.flag_needs_review(db, job, f"Publication safety gate failed: {gate_reason}")
                 return None
 
             if TEST_MODE:
@@ -859,10 +867,17 @@ class ShortsPipeline:
                         recovered_candidates.append(candidate)
 
             # 5. Check 01_READY for fresh unscheduled inventory
+            from engines.drive_engine import is_valid_ready_short
             ready_files = self.drive_engine.list_files_in_folder("01_READY")
             import re
             fresh_ready_files = []
             for candidate in ready_files:
+                is_val, val_reason = is_valid_ready_short(candidate, db=db, allow_test_artifacts=self.upload_engine._is_test_mode())
+                if not is_val:
+                    logger.warning(f"[PRE-CLAIM QUARANTINE] File {candidate['id']} ({candidate.get('name')}) invalid: {val_reason}. Quarantining to 04_FAILED.")
+                    self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="04_FAILED")
+                    continue
+
                 c_props = candidate.get("properties", {}) or {}
                 c_job_id = c_props.get("job_id")
                 if not c_job_id:

@@ -352,17 +352,17 @@ class AudioMixer:
 
         if has_sfx:
             filter_complex = (
-                f"[0:a]aresample={AUDIO_SAMPLE_RATE},aformat=channel_layouts=stereo[v];"
-                f"[1:a]aresample={AUDIO_SAMPLE_RATE},aformat=channel_layouts=stereo[bgm];"
-                f"[2:a]aresample={AUDIO_SAMPLE_RATE},aformat=channel_layouts=stereo[sfx];"
+                f"[0:a]aresample={AUDIO_SAMPLE_RATE},apad=whole_dur={duration},aformat=channel_layouts=stereo[v];"
+                f"[1:a]aresample={AUDIO_SAMPLE_RATE},atrim=0:{duration},aformat=channel_layouts=stereo[bgm];"
+                f"[2:a]aresample={AUDIO_SAMPLE_RATE},atrim=0:{duration},apad=whole_dur={duration},aformat=channel_layouts=stereo[sfx];"
                 f"[v][bgm][sfx]amix=inputs=3:duration=first:dropout_transition=2:normalize=0[mixed];"
                 f"[mixed]loudnorm=I={TARGET_LUFS}:LRA=7:tp=-1.0[outa]"
             )
             cmd_inputs = ["-i", str(voice_path), "-i", str(bgm_only_path), "-i", str(sfx_layer_path)]
         else:
             filter_complex = (
-                f"[0:a]aresample={AUDIO_SAMPLE_RATE},aformat=channel_layouts=stereo[v];"
-                f"[1:a]aformat=channel_layouts=stereo[bgm];"
+                f"[0:a]aresample={AUDIO_SAMPLE_RATE},apad=whole_dur={duration},aformat=channel_layouts=stereo[v];"
+                f"[1:a]atrim=0:{duration},aformat=channel_layouts=stereo[bgm];"
                 f"[v][bgm]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[mixed];"
                 f"[mixed]loudnorm=I={TARGET_LUFS}:LRA=7:tp=-1.0[outa]"
             )

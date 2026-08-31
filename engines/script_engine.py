@@ -109,6 +109,13 @@ CURATED_SCRIPTS = {
         "escalation": "After a furious argument, they tossed two regents and their secretary seventy feet down.",
         "reveal": "All three remarkably survived by landing in a massive pile of horse manure.",
         "loop_twist": "That seventy-foot plunge sparked the catastrophic Thirty Years War."
+    },
+    "The Cataclysmic Explosion of Krakatoa in 1883": {
+        "hook": "In 1883, a volcanic eruption created the loudest sound in history.",
+        "context": "Krakatoa exploded with fifteen thousand times the power of Hiroshima.",
+        "escalation": "Shockwaves circled Earth four times, shattering eardrums forty miles away.",
+        "reveal": "The entire island collapsed into the sea, blacking out the skies.",
+        "loop_twist": "Yet today, an active volcano rises relentlessly from that crater."
     }
 }
 

@@ -120,9 +120,16 @@ class SystemDataProvider:
         }
 
         try:
+            from engines.drive_engine import is_valid_ready_short
             for f in folders:
                 file_list = self.drive_engine.list_files_in_folder(f)
-                inventory["counts"][f] = len(file_list)
+                if f == "01_READY":
+                    valid_ready = [item for item in file_list if is_valid_ready_short(item)[0]]
+                    inventory["counts"][f] = len(valid_ready)
+                    inventory["raw_counts"] = getattr(inventory, "raw_counts", {}) or {}
+                    inventory["raw_counts"][f] = len(file_list)
+                else:
+                    inventory["counts"][f] = len(file_list)
                 inventory["files"][f] = [
                     {
                         "id": item.get("id"),
@@ -259,10 +266,17 @@ class SystemDataProvider:
                 "status": s.status
             })
 
+        all_time_published = db.query(UploadRecord).filter(
+            UploadRecord.status.in_(["PUBLISHED", "SUCCESS"]),
+            UploadRecord.youtube_video_id.isnot(None),
+            ~UploadRecord.youtube_video_id.like("TEST_%")
+        ).count()
+
         return {
             "published_today": published_count_today,
             "scheduled_today": scheduled_count_today,
             "total_booked_today": total_booked_today,
+            "total_published": all_time_published,
             "daily_limit": DAILY_SHORTS_LIMIT,
             "remaining_capacity": remaining_capacity,
             "limit_reached": total_booked_today >= DAILY_SHORTS_LIMIT,

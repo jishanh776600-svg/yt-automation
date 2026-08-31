@@ -140,16 +140,35 @@ class TopicDiscoveryEngine:
         from core.models import Job, UploadRecord
         published_topic_ids = {j.topic_id for j in db.query(Job).filter(Job.state.in_(["PUBLISHED", "READY_TO_UPLOAD"])).all() if j.topic_id}
 
+        def is_test_topic(t: Topic) -> bool:
+            t_id = (t.id or "").lower()
+            t_title = (t.title or "").strip()
+            t_summary = (t.summary or "").strip().lower()
+            t_cat = (t.category or "").strip().lower()
+            if t_id.startswith(("top_test_", "test_top_", "test_topic_", "test_", "top_thr_")) or t_id == "test_topic":
+                return True
+            if t_title in ("The Test Historical Incident", "Test Incident", "Test Topic", "Test Title", "Sample Topic"):
+                return True
+            if "thread topic" in t_title.lower():
+                return True
+            if t_cat == "test" or t_summary in ("test summary", "test", "sample summary"):
+                return True
+            return False
+
         unproduced = db.query(Topic).filter(Topic.id.notin_(published_topic_ids)).all()
         # Filter unproduced topics through deduplication against published stories (bounded to limit)
         valid_unproduced = []
         for t in unproduced:
+            if is_test_topic(t):
+                continue
             if not self.is_duplicate(db, t.title, t.summary, exclude_topic_id=t.id):
                 valid_unproduced.append(t)
                 if len(valid_unproduced) >= limit:
                     break
         if valid_unproduced:
-            random.shuffle(valid_unproduced)
+            from engines.script_engine import CURATED_SCRIPTS
+            # Prioritize verified curated documentary scripts
+            valid_unproduced.sort(key=lambda t: (0 if t.title in CURATED_SCRIPTS else 1, t.created_at))
             return valid_unproduced[:limit]
 
         # 1. Check content strategy from ExperimentManager

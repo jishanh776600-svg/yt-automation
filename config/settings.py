@@ -62,7 +62,7 @@ CLIENT_SECRETS_FILE = os.getenv("CLIENT_SECRETS_FILE", str(PROJECT_ROOT / "clien
 
 # TTS Settings
 TTS_PROVIDER = os.getenv("TTS_PROVIDER", "kokoro")  # kokoro, edge, piper
-KOKORO_VOICE = os.getenv("KOKORO_VOICE", "am_adam")
+KOKORO_VOICE = os.getenv("KOKORO_VOICE", "af_bella")
 KOKORO_MODEL_PATH = DATA_DIR / "kokoro-v1.0.onnx"
 KOKORO_VOICES_PATH = DATA_DIR / "voices-v1.0.bin"
 
