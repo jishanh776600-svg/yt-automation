@@ -102,11 +102,11 @@ class ShortsPipeline:
         db = SessionLocal()
         try:
             authoritative_db_voice = get_active_voice(db)
-            chosen_voice = voice or authoritative_db_voice or os.getenv("KOKORO_VOICE") or "am_adam"
+            chosen_voice = voice or authoritative_db_voice or os.getenv("KOKORO_VOICE") or "af_bella"
             valid_voice_ids = [v["id"] for v in AVAILABLE_VOICES]
             if chosen_voice not in valid_voice_ids:
-                logger.warning(f"Voice '{chosen_voice}' not in AVAILABLE_VOICES. Defaulting to 'am_adam'.")
-                chosen_voice = "am_adam"
+                logger.warning(f"Voice '{chosen_voice}' not in AVAILABLE_VOICES. Defaulting to 'af_bella'.")
+                chosen_voice = "af_bella"
             self.run_voice = chosen_voice
         finally:
             db.close()
@@ -122,6 +122,10 @@ class ShortsPipeline:
         strategy = self.experiment_manager.select_strategy(db, topic)
         self.experiment_manager.create_experiment(db, job_id=job.id, topic_id=topic.id, strategy=strategy)
         logger.info(f"Assigned Strategy for Job {job.id[:8]}: Hook={strategy['hook_archetype']}, Target={strategy['duration_target']}, Mode={strategy['selection_mode']}")
+
+        # Track that future generation has consumed the active learning profile
+        from engines.learning_engine import LearningEngine
+        LearningEngine().mark_profile_consumed(db, job_id=job.id)
 
         # 1. RESEARCH & FACT-CHECKING
         StateMachine.transition(db, job, JobState.RESEARCHED, "Conducting factual historical research")
@@ -566,8 +570,8 @@ class ShortsPipeline:
                             break
                 except Exception as fatal_e:
                     if "QuotaExhausted" in type(fatal_e).__name__ or "quota" in str(fatal_e).lower() or "429" in str(fatal_e):
-                        block_reason = "ALL_GEMINI_PROVIDERS_EXHAUSTED"
-                        logger.error(f"[BUFFER] Fatal Gemini quota exhaustion detected: {fatal_e}. Halting buffer maintenance immediately.")
+                        block_reason = "ALL_AI_PROVIDERS_EXHAUSTED"
+                        logger.error(f"[BUFFER] Fatal AI provider quota exhaustion detected across all fallbacks: {fatal_e}. Halting buffer maintenance immediately.")
                         break
                     raise fatal_e
                 time.sleep(2)

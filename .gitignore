@@ -25,6 +25,7 @@ data/voice/
 data/visuals/
 data/assets/
 data/captions/
+data/vault_ready/
 
 # Temporary test audio and logs
 *.log

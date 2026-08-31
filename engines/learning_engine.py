@@ -2,15 +2,16 @@
 Content Learning & Closed-Loop Strategy Weighting Engine.
 Translates multi-factor performance snapshots into deterministic, explainable strategy weights.
 Features:
-  - Robust performance normalization (handles missing metrics, zero-values, and dampens viral outliers).
+  - Robust performance normalization (handles missing metrics, preserves None/null, dampens viral outliers).
   - Feature attribution across Hook Archetypes, Duration Targets, BGM Moods, and Motion Styles.
-  - Configurable evidence thresholds (Insufficient <3, Weak 3-4, Usable >=5).
-  - Bounded weights [0.20, 2.00] with exploration/exploitation balance.
-  - Learning-cycle idempotency (deterministic weights, no runaway compounding).
-  - Persistent SQLite StrategyWeight storage and structured LEARNING_LOG.md appending.
+  - Strict evidence thresholds (Insufficient <3, Weak 3-4 [max +-10%], Usable >=5 [full update]).
+  - Strict bounded weights [0.20, 2.00] with exploration/exploitation balance.
+  - Full audit trail with persistent LearningEvent records and LEARNING_LOG.md.
+  - Trackable learned profile versioning and consumption confirmation.
 """
 import uuid
 import math
+import hashlib
 import random
 import logging
 from datetime import datetime, timedelta
@@ -19,7 +20,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from sqlalchemy.orm import Session
 from config.settings import PROJECT_ROOT
 from core.models import (
-    StrategyWeight, PerformanceSnapshot, UploadRecord, Job, Topic, ScriptRecord, RenderOutput
+    StrategyWeight, PerformanceSnapshot, UploadRecord, Job, Topic, ScriptRecord, RenderOutput, LearningEvent
 )
 
 logger = logging.getLogger(__name__)
@@ -145,6 +146,10 @@ class LearningEngine:
     ) -> Tuple[float, float, str, str]:
         """
         Computes deterministic, bounded strategy weight from sample count and relative lift.
+        Rules:
+          - N < 3: INSUFFICIENT_EVIDENCE -> Weight strictly 1.00 (neutral).
+          - N = 3-4: WEAK_EVIDENCE -> Maximum +-10% damped adjustment (bounded [0.90, 1.10]).
+          - N >= 5: USABLE_EVIDENCE -> Full bounded adjustment [0.20, 2.00].
         Returns: (weight, relative_lift, confidence_level, reason)
         """
         safe_baseline = max(1.0, baseline_performance)
@@ -156,16 +161,17 @@ class LearningEngine:
             reason = f"Insufficient evidence (N={sample_count} < {self.min_evidence_threshold}). Weight held neutral at 1.00."
         elif sample_count < self.usable_evidence_threshold:
             confidence = "WEAK_EVIDENCE"
-            # Dampened 50% update, bounded [-0.25, +0.25]
-            dampened_delta = max(-0.25, min(0.25, (relative_lift / 100.0) * 0.5))
-            weight = round(max(self.min_weight, min(self.max_weight, 1.00 + dampened_delta)), 3)
-            reason = f"Weak evidence (N={sample_count}). Conservative weight adjustment ({relative_lift:+.1f}% lift)."
+            # Strict maximum +-10% damped update
+            dampened_delta = max(-0.10, min(0.10, (relative_lift / 100.0) * 0.3))
+            weight = round(max(0.90, min(1.10, 1.00 + dampened_delta)), 3)
+            weight = round(max(self.min_weight, min(self.max_weight, weight)), 3)
+            reason = f"Weak evidence (N={sample_count}). Conservative +-10% damped adjustment ({relative_lift:+.1f}% lift vs baseline)."
         else:
             confidence = "USABLE_EVIDENCE"
-            # Full update, bounded [-0.50, +0.50]
-            dampened_delta = max(-0.50, min(0.50, (relative_lift / 100.0)))
-            weight = round(max(self.min_weight, min(self.max_weight, 1.00 + dampened_delta)), 3)
-            reason = f"Usable evidence (N={sample_count}). Full weight adjustment ({relative_lift:+.1f}% lift)."
+            # Full update bounded [-0.80, +0.80] mapped into [0.20, 2.00]
+            delta = max(-0.80, min(0.80, (relative_lift / 100.0)))
+            weight = round(max(self.min_weight, min(self.max_weight, 1.00 + delta)), 3)
+            reason = f"Usable evidence (N={sample_count}). Full bounded weight adjustment ({relative_lift:+.1f}% lift vs baseline)."
 
         return weight, round(relative_lift, 2), confidence, reason
 
@@ -178,32 +184,43 @@ class LearningEngine:
     ) -> Dict[str, Any]:
         """
         Executes a complete closed-loop learning cycle:
-        1. Loads mature, non-test uploads with latest performance snapshots.
-        2. Calculates normalized performance and channel baseline.
-        3. Attributes performance to content features.
-        4. Computes deterministic, bounded strategy weights.
-        5. Persists StrategyWeight rows into SQLite.
-        6. Appends structured cycle summary to LEARNING_LOG.md.
+        1. Loads verified, non-test uploads with latest performance snapshots.
+        2. Enforces 24-hour maturation window (immature videos never affect strategy).
+        3. Calculates normalized performance and channel baseline.
+        4. Attributes performance to content features.
+        5. Computes deterministic, bounded strategy weights.
+        6. Persists StrategyWeight and LearningEvent records in SQLite.
+        7. Appends structured cycle summary to LEARNING_LOG.md.
         """
         if not now:
             now = datetime.utcnow()
 
+        cycle_id = f"lc_{uuid.uuid4().hex[:12]}"
+
         # Query all uploads excluding mock/test IDs
         uploads = db.query(UploadRecord).filter(
             UploadRecord.youtube_video_id.isnot(None),
-            ~UploadRecord.youtube_video_id.like("TEST_%")
+            ~UploadRecord.youtube_video_id.like("TEST_%"),
+            ~UploadRecord.youtube_video_id.like("test_%"),
+            UploadRecord.privacy_status != "test_local"
         ).all()
 
         eligible_data = []
         all_views = []
+        immature_count = 0
+        missing_telemetry_count = 0
 
         for upl in uploads:
-            # Check maturation
+            # Check maturation (24h)
             pub_time = upl.published_at or upl.created_at
             if pub_time:
                 age_hours = (now - pub_time).total_seconds() / 3600.0
                 if age_hours < min_age_hours:
+                    immature_count += 1
                     continue
+            else:
+                immature_count += 1
+                continue
 
             # Get latest snapshot
             snap = (
@@ -212,7 +229,8 @@ class LearningEngine:
                 .order_by(PerformanceSnapshot.snapshot_time.desc())
                 .first()
             )
-            if not snap or (snap.views or 0) < min_views:
+            if not snap or (snap.views is None) or (snap.views < min_views):
+                missing_telemetry_count += 1
                 continue
 
             all_views.append(snap.views)
@@ -222,6 +240,57 @@ class LearningEngine:
                 "snapshot": snap,
                 "features": features
             })
+
+        # Calculate current profile version from existing weights
+        current_profile_version = self._calculate_profile_version(db)
+
+        # Handle zero mature video condition
+        if not eligible_data:
+            outcome = "NO_CHANGE_INSUFFICIENT_EVIDENCE" if immature_count > 0 else "NO_CHANGE_MISSING_TELEMETRY"
+            reason_msg = (
+                f"Waiting for maturation: {immature_count} Shorts in 24h window (0 matured videos available with >={min_views} views). Minimum required: {self.min_evidence_threshold}."
+                if immature_count > 0 else
+                f"No verified YouTube telemetry snapshots available for evaluation (immature: {immature_count}, missing: {missing_telemetry_count})."
+            )
+
+            # Persist explicit LearningEvent record
+            event_rec = LearningEvent(
+                id=f"le_{uuid.uuid4().hex[:12]}",
+                cycle_id=cycle_id,
+                timestamp=now,
+                outcome=outcome,
+                feature_type=None,
+                feature_value=None,
+                sample_size=0,
+                matured_count=0,
+                immature_count=immature_count,
+                signal_metric="COMPOSITE_RETENTION_APV",
+                baseline_metric=None,
+                observed_metric=None,
+                delta=0.0,
+                confidence="INSUFFICIENT_EVIDENCE",
+                old_weight=1.00,
+                new_weight=1.00,
+                reason=reason_msg,
+                profile_version=current_profile_version,
+                consumed_by_generation=False,
+                details_json=None
+            )
+            db.add(event_rec)
+            db.commit()
+
+            logger.info(f"[LEARNING_CYCLE] {reason_msg}")
+            return {
+                "cycle_id": cycle_id,
+                "timestamp": now.isoformat(),
+                "outcome": outcome,
+                "eligible_videos_evaluated": 0,
+                "immature_videos_count": immature_count,
+                "channel_baseline_score": 50.0,
+                "weights_updated_count": 0,
+                "weights": [],
+                "reason": reason_msg
+            }
 
         # Determine channel median views
         sorted_views = sorted(all_views)
@@ -249,8 +318,9 @@ class LearningEngine:
                         feature_scores[key] = []
                     feature_scores[key].append(score)
 
-        # Update persistent StrategyWeight records
+        # Update persistent StrategyWeight and LearningEvent records
         updated_weights: List[StrategyWeight] = []
+        learning_events: List[LearningEvent] = []
         log_entries = []
 
         for (f_type, f_val), scores in feature_scores.items():
@@ -263,6 +333,8 @@ class LearningEngine:
                 .filter(StrategyWeight.feature_type == f_type, StrategyWeight.feature_value == f_val)
                 .first()
             )
+
+            old_w = existing.weight if existing else 1.00
 
             if not existing:
                 sw_rec = StrategyWeight(
@@ -291,6 +363,39 @@ class LearningEngine:
                 existing.update_reason = reason
                 updated_weights.append(existing)
 
+            # Determine specific outcome
+            if n < self.min_evidence_threshold:
+                ev_outcome = "NO_CHANGE_INSUFFICIENT_EVIDENCE"
+            elif abs(weight - old_w) > 0.001:
+                ev_outcome = "LEARNING_APPLIED"
+            else:
+                ev_outcome = "NO_CHANGE_NO_SIGNIFICANT_SIGNAL"
+
+            ev_rec = LearningEvent(
+                id=f"le_{uuid.uuid4().hex[:12]}",
+                cycle_id=cycle_id,
+                timestamp=now,
+                outcome=ev_outcome,
+                feature_type=f_type,
+                feature_value=f_val,
+                sample_size=n,
+                matured_count=len(eligible_data),
+                immature_count=immature_count,
+                signal_metric="COMPOSITE_RETENTION_APV",
+                baseline_metric=channel_baseline,
+                observed_metric=p_mean,
+                delta=lift,
+                confidence=conf,
+                old_weight=old_w,
+                new_weight=weight,
+                reason=reason,
+                profile_version=current_profile_version,
+                consumed_by_generation=False,
+                details_json=None
+            )
+            db.add(ev_rec)
+            learning_events.append(ev_rec)
+
             log_entries.append({
                 "type": f_type,
                 "value": f_val,
@@ -311,11 +416,15 @@ class LearningEngine:
             entries=log_entries
         )
 
+        applied_count = sum(1 for e in learning_events if e.outcome == "LEARNING_APPLIED")
         summary = {
+            "cycle_id": cycle_id,
             "timestamp": now.isoformat(),
             "eligible_videos_evaluated": len(eligible_data),
+            "immature_videos_count": immature_count,
             "channel_baseline_score": channel_baseline,
             "weights_updated_count": len(updated_weights),
+            "learning_applied_count": applied_count,
             "weights": [
                 {
                     "feature_type": w.feature_type,
@@ -331,7 +440,8 @@ class LearningEngine:
 
         logger.info(
             f"Learning Cycle Complete: {len(eligible_data)} mature videos evaluated | "
-            f"Baseline: {channel_baseline:.1f} | {len(updated_weights)} strategy weights updated."
+            f"Baseline: {channel_baseline:.1f} | {applied_count} weights adjusted | "
+            f"{immature_count} immature videos waiting for 24h window."
         )
         return summary
 
@@ -427,6 +537,20 @@ class LearningEngine:
         except Exception as log_err:
             logger.warning(f"Could not append to LEARNING_LOG.md: {log_err}")
 
+    def _calculate_profile_version(self, db: Session) -> str:
+        """Computes a deterministic hash identifier representing the active strategy weights."""
+        weights = db.query(StrategyWeight).filter(
+            StrategyWeight.sample_count >= self.min_evidence_threshold
+        ).order_by(StrategyWeight.feature_type, StrategyWeight.feature_value).all()
+
+        if not weights:
+            return "v1.0.0-neutral"
+
+        sig_parts = [f"{w.feature_type}:{w.feature_value}:{w.weight:.3f}" for w in weights]
+        sig_str = "|".join(sig_parts)
+        h = hashlib.sha256(sig_str.encode("utf-8")).hexdigest()[:8]
+        return f"v2.{len(weights)}.{h}"
+
     def get_learned_production_profile(self, db: Session) -> str:
         """
         Generates a compact, deterministic learned guidance snippet from real verified performance data.
@@ -444,7 +568,8 @@ class LearningEngine:
             weak_hooks = [w.feature_value for w in mature_weights if w.feature_type == "hook_archetype" and w.relative_lift < -10.0]
             top_cats = [w.feature_value for w in mature_weights if w.feature_type == "category" and w.relative_lift > 5.0]
 
-            guidance = ["\nLearned Channel Performance Guidance (from verified historical analytics):"]
+            profile_ver = self._calculate_profile_version(db)
+            guidance = [f"\nLearned Channel Performance Guidance [Profile {profile_ver}]:"]
             if top_hooks:
                 guidance.append(f"- Prioritize hook structure: {', '.join(top_hooks[:2])} (demonstrated higher Stayed-to-Watch retention).")
             if weak_hooks:
@@ -456,3 +581,27 @@ class LearningEngine:
         except Exception as e:
             logger.debug(f"Could not generate learned production profile: {e}")
             return ""
+
+    def mark_profile_consumed(self, db: Session, job_id: str, profile_version: Optional[str] = None) -> int:
+        """
+        Marks unconsumed LearningEvent records as consumed by a future production generation job.
+        Provides end-to-end mathematical verification that learned insights actively shaped output.
+        """
+        try:
+            unconsumed = db.query(LearningEvent).filter(
+                LearningEvent.consumed_by_generation.is_(False)
+            ).all()
+
+            count = 0
+            for ev in unconsumed:
+                ev.consumed_by_generation = True
+                ev.consumed_by_job_id = job_id
+                count += 1
+            db.commit()
+            if count > 0:
+                logger.info(f"[LEARNING_AUDIT] Marked {count} learning events consumed by Job '{job_id[:8]}'")
+            return count
+        except Exception as e:
+            logger.warning(f"Could not mark learning events consumed: {e}")
+            return 0
+

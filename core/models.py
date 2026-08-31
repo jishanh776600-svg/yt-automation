@@ -355,3 +355,49 @@ class SystemConfig(Base):
     key = Column(String(64), primary_key=True)
     value = Column(Text, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class LearningEvent(Base):
+    """
+    Immutable audit trail for closed-loop self-improvement decisions and strategy weight updates.
+    Records exact mathematical deltas, evidence sample sizes, baseline comparisons,
+    and tracks whether future generation has consumed the updated production profile.
+    """
+    __tablename__ = "learning_events"
+
+    id = Column(String(64), primary_key=True)
+    cycle_id = Column(String(64), nullable=False, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    # Outcome: LEARNING_APPLIED, NO_CHANGE_INSUFFICIENT_EVIDENCE, NO_CHANGE_NO_SIGNIFICANT_SIGNAL, NO_CHANGE_MISSING_TELEMETRY
+    outcome = Column(String(64), nullable=False, index=True)
+
+    # Feature attribution
+    feature_type = Column(String(64), nullable=True, index=True)  # hook_archetype, duration_target, category, etc.
+    feature_value = Column(String(128), nullable=True)
+
+    # Evidence & Maturation
+    sample_size = Column(Integer, default=0, nullable=False)
+    matured_count = Column(Integer, default=0, nullable=False)
+    immature_count = Column(Integer, default=0, nullable=False)
+
+    # Metrics & Signals
+    signal_metric = Column(String(64), default="COMPOSITE_RETENTION_APV", nullable=False)
+    baseline_metric = Column(Float, nullable=True)
+    observed_metric = Column(Float, nullable=True)
+    delta = Column(Float, nullable=True)
+
+    # Confidence & Bounded Weights
+    confidence = Column(String(32), default="INSUFFICIENT_EVIDENCE", nullable=False)  # INSUFFICIENT_EVIDENCE, WEAK_EVIDENCE, USABLE_EVIDENCE
+    old_weight = Column(Float, default=1.00, nullable=False)
+    new_weight = Column(Float, default=1.00, nullable=False)
+
+    # Explainability & Traceability
+    reason = Column(Text, nullable=False)
+    profile_version = Column(String(64), nullable=True)
+
+    # Future generation consumption confirmation
+    consumed_by_generation = Column(Boolean, default=False, nullable=False)
+    consumed_by_job_id = Column(String(64), nullable=True, index=True)
+    details_json = Column(Text, nullable=True)
+

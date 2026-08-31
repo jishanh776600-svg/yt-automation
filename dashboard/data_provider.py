@@ -188,6 +188,55 @@ class SystemDataProvider:
             "time_until_display": f"{hours_left}h {mins_left}m (Tomorrow)"
         }
 
+    def get_active_pipeline_count(self, db: Session) -> int:
+        """
+        Calculates authoritative count of currently active in-flight production jobs only.
+        Excludes:
+          - Completed/published jobs (JobState.PUBLISHED, JobState.SCHEDULED)
+          - Quarantined / needs review jobs (JobState.NEEDS_REVIEW)
+          - Permanently failed jobs (JobState.FAILED)
+          - Queued backlog / idle jobs (JobState.QUEUED)
+          - Stale/abandoned jobs older than STALE_JOB_TIMEOUT_SEC
+        """
+        from config.constants import STALE_JOB_TIMEOUT_SEC
+        active_states = [
+            JobState.RESEARCHING.value,
+            JobState.FACT_CHECKING.value,
+            JobState.SCRIPTING.value,
+            JobState.VISUAL_PLANNING.value,
+            JobState.VISUALS_SEARCHING.value,
+            JobState.VOICE_GENERATING.value,
+            JobState.AUDIO_READY.value,
+            JobState.EDITING.value,
+            JobState.QA.value,
+            JobState.UPLOADING.value
+        ]
+        cutoff = datetime.utcnow() - timedelta(seconds=STALE_JOB_TIMEOUT_SEC)
+        return db.query(Job).filter(
+            Job.state.in_(active_states),
+            Job.updated_at >= cutoff
+        ).count()
+
+    def get_verified_live_count(self, db: Session) -> int:
+        """
+        Calculates authoritative count of verified live published YouTube Shorts.
+        Requires valid 11-char YouTube ID, PUBLISHED status, and excludes test rows.
+        """
+        import re
+        yt_regex = re.compile(r'^[A-Za-z0-9_-]{11}$')
+        published_uploads = db.query(UploadRecord).filter(
+            UploadRecord.status == "PUBLISHED",
+            UploadRecord.youtube_video_id.isnot(None),
+            ~UploadRecord.youtube_video_id.like("TEST_%"),
+            ~UploadRecord.youtube_video_id.like("test_%"),
+            UploadRecord.privacy_status != "test_local"
+        ).all()
+        valid = [
+            u for u in published_uploads
+            if u.youtube_video_id and yt_regex.match(u.youtube_video_id) and u.youtube_video_id != "dQw4w9WgXcQ"
+        ]
+        return len(valid)
+
     def get_publishing_status(self, db: Session) -> Dict[str, Any]:
         """Calculates today's published & scheduled count, remaining slots, and next release."""
         # 0. Auto-reconcile any real scheduled uploads whose publishAt has elapsed
@@ -247,11 +296,14 @@ class SystemDataProvider:
         # Calculate next unoccupied slot via scheduler engine
         scheduler = PublicationScheduler()
         next_unoccupied = scheduler.calculate_next_available_slot(db)
+        diff_total_sec = max(0, int((next_unoccupied - datetime.utcnow()).total_seconds()))
+        h_left = diff_total_sec // 3600
+        m_left = (diff_total_sec % 3600) // 60
         next_slot_info = {
             "slot_label": f"{next_unoccupied.strftime('%b %d, %Y')} at {next_unoccupied.strftime('%H:%M')} UTC",
             "slot_iso": next_unoccupied.isoformat() + "Z",
             "is_today": today_start <= next_unoccupied < today_end,
-            "time_until_display": f"{int((next_unoccupied - datetime.utcnow()).total_seconds() // 3600)}h {int(((next_unoccupied - datetime.utcnow()).total_seconds() % 3600) // 60)}m"
+            "time_until_display": f"{h_left}h {m_left}m"
         }
 
         scheduled_list = []
@@ -266,17 +318,15 @@ class SystemDataProvider:
                 "status": s.status
             })
 
-        all_time_published = db.query(UploadRecord).filter(
-            UploadRecord.status.in_(["PUBLISHED", "SUCCESS"]),
-            UploadRecord.youtube_video_id.isnot(None),
-            ~UploadRecord.youtube_video_id.like("TEST_%")
-        ).count()
+        verified_live_count = self.get_verified_live_count(db)
+        active_pipeline_count = self.get_active_pipeline_count(db)
 
         return {
             "published_today": published_count_today,
             "scheduled_today": scheduled_count_today,
             "total_booked_today": total_booked_today,
-            "total_published": all_time_published,
+            "total_published": verified_live_count,
+            "active_pipeline_count": active_pipeline_count,
             "daily_limit": DAILY_SHORTS_LIMIT,
             "remaining_capacity": remaining_capacity,
             "limit_reached": total_booked_today >= DAILY_SHORTS_LIMIT,
@@ -323,19 +373,99 @@ class SystemDataProvider:
         }
 
     def get_learning_status(self, db: Session) -> Dict[str, Any]:
-        """Reads real continuous learning feedback loop and pattern intelligence."""
-        patterns = db.query(ContentPattern).order_by(
-            ContentPattern.composite_effectiveness_score.desc()
+        """
+        Reads real continuous learning feedback loop, LearningEvents, and pattern intelligence.
+        Strictly zero synthetic metrics or false claims of improvement.
+        """
+        from core.models import LearningEvent
+        from engines.learning_engine import LearningEngine
+
+        learner = LearningEngine()
+        current_profile_version = learner._calculate_profile_version(db)
+
+        # 1. Fetch real learning events from audit trail
+        latest_event = db.query(LearningEvent).order_by(LearningEvent.timestamp.desc()).first()
+        recent_events_rows = db.query(LearningEvent).order_by(LearningEvent.timestamp.desc()).limit(10).all()
+        learning_applied_count = db.query(LearningEvent).filter(LearningEvent.outcome == "LEARNING_APPLIED").count()
+
+        # 2. Count mature vs immature videos
+        now = datetime.utcnow()
+        uploads = db.query(UploadRecord).filter(
+            UploadRecord.youtube_video_id.isnot(None),
+            ~UploadRecord.youtube_video_id.like("TEST_%"),
+            ~UploadRecord.youtube_video_id.like("test_%"),
+            UploadRecord.privacy_status != "test_local"
         ).all()
 
+        immature_count = 0
+        mature_count = 0
+        for upl in uploads:
+            pub_time = upl.published_at or upl.created_at
+            if pub_time and (now - pub_time).total_seconds() / 3600.0 >= 24.0:
+                snap = db.query(PerformanceSnapshot).filter(PerformanceSnapshot.upload_id == upl.id).first()
+                if snap and (snap.views or 0) >= 100:
+                    mature_count += 1
+                else:
+                    immature_count += 1
+            else:
+                immature_count += 1
+
+        # 3. Determine active learning status
+        if learning_applied_count > 0:
+            status_text = "Learning Active"
+            status_badge_class = "bg-emerald-950 text-emerald-400 border border-emerald-800"
+        elif immature_count > 0 and mature_count < learner.min_evidence_threshold:
+            status_text = "Waiting for Data"
+            status_badge_class = "bg-sky-950 text-sky-400 border border-sky-800"
+        elif mature_count < learner.min_evidence_threshold:
+            status_text = "Insufficient Evidence"
+            status_badge_class = "bg-amber-950 text-amber-400 border border-amber-800"
+        else:
+            status_text = "No Significant Signal"
+            status_badge_class = "bg-slate-900 text-slate-400 border border-slate-700"
+
+        # Format latest event details
+        latest_event_data = None
+        if latest_event:
+            latest_event_data = {
+                "id": latest_event.id,
+                "timestamp": latest_event.timestamp.isoformat() + "Z",
+                "timestamp_display": latest_event.timestamp.strftime("%b %d, %Y %H:%M UTC"),
+                "outcome": latest_event.outcome,
+                "feature_type": latest_event.feature_type or "General Channel Strategy",
+                "feature_value": latest_event.feature_value or "Baseline",
+                "sample_size": latest_event.sample_size,
+                "confidence": latest_event.confidence,
+                "baseline_metric": latest_event.baseline_metric,
+                "observed_metric": latest_event.observed_metric,
+                "delta": latest_event.delta,
+                "delta_display": f"{latest_event.delta:+.1f}%" if latest_event.delta is not None else "0.0%",
+                "old_weight": round(latest_event.old_weight, 2),
+                "new_weight": round(latest_event.new_weight, 2),
+                "reason": latest_event.reason,
+                "profile_version": latest_event.profile_version or current_profile_version,
+                "consumed_by_generation": "APPLIED" if latest_event.consumed_by_generation else "PENDING",
+                "consumed_by_job_id": latest_event.consumed_by_job_id
+            }
+
+        recent_events_list = []
+        for ev in recent_events_rows:
+            recent_events_list.append({
+                "id": ev.id,
+                "timestamp": ev.timestamp.strftime("%b %d %H:%M UTC"),
+                "outcome": ev.outcome,
+                "feature": f"{ev.feature_type}: {ev.feature_value}" if ev.feature_type else "Channel Baseline",
+                "samples": ev.sample_size,
+                "confidence": ev.confidence,
+                "weight_change": f"{ev.old_weight:.2f} → {ev.new_weight:.2f}",
+                "consumed": "APPLIED" if ev.consumed_by_generation else "PENDING",
+                "reason": ev.reason
+            })
+
+        # Group strategy weights
         weights = db.query(StrategyWeight).order_by(
             StrategyWeight.feature_type, StrategyWeight.feature_value
         ).all()
-
-        total_mature_snapshots = db.query(PerformanceSnapshot).count()
-        total_experiments = db.query(ExperimentRecord).count()
-
-        # Group weights by feature type
         grouped_weights: Dict[str, List[Dict[str, Any]]] = {}
         for w in weights:
             if w.feature_type not in grouped_weights:
@@ -349,39 +479,33 @@ class SystemDataProvider:
                 "updated_at": w.last_updated.isoformat() + "Z" if (hasattr(w, "last_updated") and w.last_updated) else None
             })
 
-        pattern_list = [
-            {
-                "pattern_type": p.pattern_type,
-                "pattern_key": p.pattern_key,
-                "sample_size": p.sample_size,
-                "avg_apv": round(p.avg_percentage_viewed, 2) if p.avg_percentage_viewed is not None else None,
-                "avg_engagement": round(p.avg_engagement_rate, 2) if p.avg_engagement_rate is not None else None,
-                "score": round(p.composite_effectiveness_score, 2) if p.composite_effectiveness_score is not None else None,
-                "confidence": p.confidence
-            }
-            for p in patterns
-        ]
-
-        # Calculate channel baseline score if video analyses or mature snapshots exist
-        baseline_score = None
-        analyses_scores = [a.performance_score for a in db.query(VideoAnalysisRecord).all() if a.performance_score is not None]
-        if analyses_scores:
-            baseline_score = round(sum(analyses_scores) / len(analyses_scores), 2)
-        elif total_mature_snapshots > 0:
-            apvs = [s.average_view_percentage for s in db.query(PerformanceSnapshot).all() if s.average_view_percentage is not None]
-            if apvs:
-                baseline_score = round(sum(apvs) / len(apvs), 2)
+        # Explanatory "What Changed?" summary
+        if latest_event and latest_event.outcome == "LEARNING_APPLIED":
+            what_changed_summary = (
+                f"Strategy weight for {latest_event.feature_type} '{latest_event.feature_value}' "
+                f"adjusted from {latest_event.old_weight:.2f} to {latest_event.new_weight:.2f} "
+                f"({latest_event.delta:+.1f}% lift vs channel baseline across {latest_event.sample_size} matured Shorts). "
+                f"Status: {latest_event_data['consumed_by_generation']} to future generation."
+            )
+        elif immature_count > 0:
+            what_changed_summary = f"No strategy weight updates applied. {immature_count} published Shorts are currently maturing in the 24-hour telemetry window (minimum sample size: 3)."
+        else:
+            what_changed_summary = "No strategy weight updates applied. Waiting for verified YouTube performance snapshots to accumulate required sample size (N >= 3)."
 
         return {
-            "has_mature_data": total_mature_snapshots > 0,
-            "total_mature_snapshots": total_mature_snapshots,
-            "total_experiments": total_experiments,
-            "channel_baseline_score": baseline_score if baseline_score is not None else "UNAVAILABLE (Accumulating 24h Telemetry)",
-            "patterns": pattern_list,
+            "learning_status": status_text,
+            "status_badge_class": status_badge_class,
+            "latest_event": latest_event_data,
+            "applied_events_count": learning_applied_count,
+            "immature_videos_count": immature_count,
+            "mature_videos_count": mature_count,
+            "current_profile_version": current_profile_version,
+            "what_changed_summary": what_changed_summary,
+            "recent_events": recent_events_list,
             "strategy_weights": grouped_weights,
-            "voice_configured": KOKORO_VOICE,
-            "mode": "PROVEN_PATTERN (60%) / CONTROLLED_VARIATION (30%) / EXPLORATION (10%)"
+            "voice_configured": KOKORO_VOICE
         }
+
 
     def get_scheduled_queue(self, db: Session, limit: int = 20) -> Dict[str, Any]:
         """

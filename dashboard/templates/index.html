@@ -133,7 +133,7 @@
                 <button onclick="switchWorkspace('pipeline')" id="nav-pipeline" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-r transition text-left">
                     <svg class="w-4 h-4 text-inherit flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                     <span class="truncate">Pipeline</span>
-                    <span class="ml-auto px-1.5 py-0.5 bg-spaceBlack text-[10px] text-slate-300 rounded border border-borderHairline font-mono">{{ state.database_sync.table_counts.jobs or 0 }}</span>
+                    <span class="ml-auto px-1.5 py-0.5 bg-spaceBlack text-[10px] text-slate-300 rounded border border-borderHairline font-mono">{{ state.publishing.active_pipeline_count or 0 }} Active</span>
                 </button>
 
                 <button onclick="switchWorkspace('buffer')" id="nav-buffer" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-r transition text-left">
@@ -916,14 +916,166 @@
             </div>
 
             <!-- =============================================================== -->
-            <!-- WORKSPACE 7: ANALYTICS (Published Performance Intelligence)      -->
+            <!-- WORKSPACE 7: ANALYTICS (Self-Improvement & Performance Intelligence) -->
             <!-- =============================================================== -->
             <div id="workspace-analytics" class="workspace-section hidden space-y-6">
+
+                <!-- 1. DEDICATED SELF-IMPROVEMENT & CLOSED-LOOP INTELLIGENCE -->
+                <section class="bg-spaceDark rounded-xl border border-borderSubtle p-5 space-y-5 font-mono">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-borderHairline">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded bg-amber-950/60 border border-amber-800/60 flex items-center justify-center text-brandGold font-bold text-sm flex-shrink-0">
+                                🧠
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider">Closed-Loop Self-Improvement Engine</h2>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold {{ state.learning.status_badge_class }}">
+                                        {{ state.learning.learning_status }}
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-slate-400 font-sans mt-0.5">Statistical learning from verified YouTube retention telemetry into bounded strategy weights.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-slate-500 text-[10px]">ACTIVE PROFILE:</span>
+                            <span class="px-2 py-1 bg-spaceWell rounded border border-borderHairline text-brandGold font-bold text-[11px]">
+                                {{ state.learning.current_profile_version }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 4-Stat Metric Summary Strip -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                        <div class="p-3 bg-spaceWell rounded border border-borderHairline space-y-1">
+                            <div class="text-[9px] text-slate-500 uppercase">MATURE SAMPLE (24h+)</div>
+                            <div class="text-base font-bold text-slate-100">{{ state.learning.mature_videos_count or 0 }} Shorts</div>
+                            <div class="text-[10px] text-slate-400">Min required: 3</div>
+                        </div>
+
+                        <div class="p-3 bg-spaceWell rounded border border-borderHairline space-y-1">
+                            <div class="text-[9px] text-slate-500 uppercase">MATURING IN 24H WINDOW</div>
+                            <div class="text-base font-bold text-sky-400">{{ state.learning.immature_videos_count or 0 }} Shorts</div>
+                            <div class="text-[10px] text-slate-400">Telemetry accumulating</div>
+                        </div>
+
+                        <div class="p-3 bg-spaceWell rounded border border-borderHairline space-y-1">
+                            <div class="text-[9px] text-slate-500 uppercase">LEARNING EVENTS APPLIED</div>
+                            <div class="text-base font-bold text-emerald-400">{{ state.learning.applied_events_count or 0 }} Events</div>
+                            <div class="text-[10px] text-slate-400">Bounded [0.20, 2.00]</div>
+                        </div>
+
+                        <div class="p-3 bg-spaceWell rounded border border-borderHairline space-y-1">
+                            <div class="text-[9px] text-slate-500 uppercase">FUTURE GENERATION</div>
+                            <div class="text-base font-bold text-purple-400">
+                                {% if state.learning.latest_event %}
+                                {{ state.learning.latest_event.consumed_by_generation }}
+                                {% else %}
+                                STANDBY
+                                {% endif %}
+                            </div>
+                            <div class="text-[10px] text-slate-400">Injected into ScriptEngine</div>
+                        </div>
+                    </div>
+
+                    <!-- "What Changed?" Human-Readable Summary -->
+                    <div class="p-3.5 bg-spaceBlack rounded-lg border border-borderHairline space-y-1 text-xs">
+                        <div class="flex items-center gap-2 text-brandGold font-bold text-[11px] uppercase">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>What Changed? (Audit Explanation)</span>
+                        </div>
+                        <p class="text-slate-300 font-sans text-xs leading-relaxed">
+                            {{ state.learning.what_changed_summary }}
+                        </p>
+                    </div>
+
+                    <!-- Latest Learning Event Detail Card (If exists) -->
+                    {% if state.learning.latest_event %}
+                    <div class="p-4 bg-spaceWell rounded-lg border border-borderHairline space-y-3">
+                        <div class="flex items-center justify-between text-xs pb-2 border-b border-borderHairline">
+                            <span class="font-bold text-slate-200 uppercase">Latest Learning Event Detail</span>
+                            <span class="text-slate-500 text-[10px]">{{ state.learning.latest_event.timestamp_display }}</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                            <div>
+                                <div class="text-[9px] text-slate-500 uppercase">STRATEGY ATTRIBUTE</div>
+                                <div class="font-bold text-brandGold mt-0.5">{{ state.learning.latest_event.feature_type }}: {{ state.learning.latest_event.feature_value }}</div>
+                            </div>
+                            <div>
+                                <div class="text-[9px] text-slate-500 uppercase">WEIGHT BEFORE → AFTER</div>
+                                <div class="font-bold text-slate-100 mt-0.5">{{ state.learning.latest_event.old_weight }} → <span class="text-emerald-400">{{ state.learning.latest_event.new_weight }}</span></div>
+                            </div>
+                            <div>
+                                <div class="text-[9px] text-slate-500 uppercase">RELATIVE LIFT / DELTA</div>
+                                <div class="font-bold text-sky-400 mt-0.5">{{ state.learning.latest_event.delta_display }} (Confidence: {{ state.learning.latest_event.confidence }})</div>
+                            </div>
+                            <div>
+                                <div class="text-[9px] text-slate-500 uppercase">FUTURE CONSUMPTION</div>
+                                <div class="font-bold text-purple-400 mt-0.5">{{ state.learning.latest_event.consumed_by_generation }}</div>
+                            </div>
+                        </div>
+                        <div class="text-[11px] text-slate-400 font-sans pt-1">
+                            <span class="font-mono text-slate-500 font-bold">Reason:</span> {{ state.learning.latest_event.reason }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Recent Learning History Audit Table -->
+                    <div class="space-y-2 pt-2">
+                        <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Recent Learning Event Audit Trail</div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left">
+                                <thead class="text-[10px] uppercase text-slate-400 bg-spaceBlack border-b border-borderHairline">
+                                    <tr>
+                                        <th class="px-3 py-2">Timestamp (UTC)</th>
+                                        <th class="px-3 py-2">Outcome</th>
+                                        <th class="px-3 py-2">Feature / Strategy</th>
+                                        <th class="px-3 py-2 text-center">Samples</th>
+                                        <th class="px-3 py-2">Confidence</th>
+                                        <th class="px-3 py-2 text-right">Weight Change</th>
+                                        <th class="px-3 py-2">Consumption</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-borderHairline">
+                                    {% for row in state.learning.recent_events %}
+                                    <tr class="hover:bg-surfaceElevated/50 transition text-[11px]">
+                                        <td class="px-3 py-2 text-slate-400">{{ row.timestamp }}</td>
+                                        <td class="px-3 py-2 font-bold 
+                                            {% if row.outcome == 'LEARNING_APPLIED' %}text-emerald-400
+                                            {% elif row.outcome == 'NO_CHANGE_INSUFFICIENT_EVIDENCE' %}text-amber-400
+                                            {% else %}text-slate-400{% endif %}">
+                                            {{ row.outcome }}
+                                        </td>
+                                        <td class="px-3 py-2 font-sans font-medium text-slate-200">{{ row.feature }}</td>
+                                        <td class="px-3 py-2 text-center text-slate-300">{{ row.samples }}</td>
+                                        <td class="px-3 py-2 text-slate-400 text-[10px]">{{ row.confidence }}</td>
+                                        <td class="px-3 py-2 text-right font-bold text-brandGold">{{ row.weight_change }}</td>
+                                        <td class="px-3 py-2">
+                                            <span class="px-1.5 py-0.2 rounded text-[9px] font-bold 
+                                                {% if row.consumed == 'APPLIED' %}bg-purple-950 text-purple-400 border border-purple-800
+                                                {% else %}bg-slate-900 text-slate-400 border border-slate-700{% endif %}">
+                                                {{ row.consumed }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="7" class="px-3 py-4 text-center text-slate-500 italic">No historical learning events recorded yet.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. PUBLISHED VIDEO PERFORMANCE INTELLIGENCE LEADERBOARD -->
                 <section class="bg-spaceDark rounded-xl border border-borderSubtle p-4 space-y-4">
                     <div class="flex items-center justify-between pb-3 border-b border-borderSubtle">
                         <div class="flex items-center gap-2">
                             <span class="w-2 h-2 rounded-full bg-brandGold"></span>
-                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">Analytics Intelligence</h2>
+                            <h2 class="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">Published Video Performance Intelligence</h2>
                         </div>
                         <span class="text-xs font-mono text-slate-400">YouTube Performance Snapshots</span>
                     </div>
@@ -972,6 +1124,7 @@
                     </div>
                 </section>
             </div>
+
 
             <!-- =============================================================== -->
             <!-- WORKSPACE 8: CONTROLS (Operator Manual Actions & Self-Healing)  -->
