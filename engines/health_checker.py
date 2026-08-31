@@ -253,15 +253,15 @@ class HealthChecker:
     # 5. External APIs Readiness Check
     # -------------------------------------------------------------------------
     def check_external_apis(self, offline: bool = False) -> Dict[str, Any]:
-        from config.settings import GEMINI_API_KEY, PEXELS_API_KEY
+        from config.settings import GEMINI_API_KEY, GROQ_API_KEY, DEEPSEEK_API_KEY, PEXELS_API_KEY, AI_PROVIDER_AVAILABLE
         warnings = []
 
-        # Gemini
-        if not GEMINI_API_KEY:
+        # AI Provider (Gemini / Groq / DeepSeek)
+        if not AI_PROVIDER_AVAILABLE:
             return {
                 "status": CheckStatus.FAIL,
                 "critical": True,
-                "message": "GEMINI_API_KEY is not configured"
+                "message": "No AI Provider (GEMINI_API_KEY, GROQ_API_KEY, DEEPSEEK_API_KEY) is configured"
             }
 
         # Pexels (optional: falls back to Pollinations AI)

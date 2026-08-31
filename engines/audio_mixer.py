@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
-from config.settings import MUSIC_DIR, SFX_DIR, VOICE_DIR, RENDERS_DIR, FFMPEG_EXE, GEMINI_API_KEY
+from config.settings import MUSIC_DIR, SFX_DIR, VOICE_DIR, RENDERS_DIR, FFMPEG_EXE, GEMINI_API_KEY, AI_PROVIDER_AVAILABLE
 from config.constants import (
     AUDIO_SAMPLE_RATE, TARGET_LUFS, BGM_MIX_VOLUME_DB,
     BGM_FADE_IN_SEC, BGM_FADE_OUT_SEC, LicenseType
@@ -117,7 +117,7 @@ class AudioMixer:
         and classifies into ONE of the 4 approved BGM tracks.
         Returns: (track_key, detected_mood, detected_intensity, reason) or None.
         """
-        if not GEMINI_API_KEY:
+        if not AI_PROVIDER_AVAILABLE:
             return None
 
         prompt = (

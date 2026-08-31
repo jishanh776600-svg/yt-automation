@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from sqlalchemy.orm import Session
 
 from config.constants import MIN_WORD_COUNT, MAX_WORD_COUNT, OPTIMAL_WORD_COUNT
-from config.settings import GEMINI_API_KEY
+from config.settings import GEMINI_API_KEY, AI_PROVIDER_AVAILABLE
 from core.models import Topic, ScriptRecord
 
 logger = logging.getLogger(__name__)
@@ -276,7 +276,7 @@ class ScriptEngine:
         """Generates 3 distinct hook candidates (Date-Anchor, In-Medias-Res, Unexpected Consequence)."""
         res_summary = research_data.get("summary", topic.summary) if research_data else topic.summary
 
-        if not GEMINI_API_KEY:
+        if not AI_PROVIDER_AVAILABLE:
             # Fallback curated candidates
             return [
                 {"type": "Date-Anchor", "hook": f"In {topic.title}, an extraordinary event occurred.", "score": 75.0},
@@ -397,7 +397,7 @@ class ScriptEngine:
             logger.info(f"Using verified curated script for '{topic.title}'")
             data = CURATED_SCRIPTS[topic.title]
             eval_res = self.critic.evaluate(data, research_data)
-        elif GEMINI_API_KEY:
+        elif AI_PROVIDER_AVAILABLE:
             # 2. Multi-Candidate Hook Selection
             hook_candidates = self.generate_hook_candidates(topic, research_data)
             
@@ -440,7 +440,7 @@ class ScriptEngine:
 
                 except Exception as gen_err:
                     if "QuotaExhausted" in type(gen_err).__name__ or "quota" in str(gen_err).lower() or "429" in str(gen_err):
-                        logger.error(f"[GEMINI_EXHAUSTED] Terminal quota exhaustion detected during script generation pass {attempt}: {gen_err}")
+                        logger.error(f"[AI_EXHAUSTED] Terminal quota exhaustion detected during script generation pass {attempt}: {gen_err}")
                         raise gen_err
                     logger.warning(f"Pass {attempt} error: {gen_err}")
                     current_feedback = [f"Regenerate cleanly without formatting errors: {str(gen_err)}"]
@@ -459,7 +459,7 @@ class ScriptEngine:
             if topic.title in CURATED_SCRIPTS:
                 data = CURATED_SCRIPTS[topic.title]
             else:
-                raise RuntimeError(f"Cannot generate script without GEMINI_API_KEY or curated record for '{topic.title}'")
+                raise RuntimeError(f"Cannot generate script without active AI provider (GEMINI_API_KEY, GROQ_API_KEY, DEEPSEEK_API_KEY) or curated record for '{topic.title}'")
 
         full_text = f"{data['hook']} {data['context']} {data['escalation']} {data['reveal']} {data['loop_twist']}"
         words = full_text.split()

@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Optional
 import wikipediaapi
 from sqlalchemy.orm import Session
 from config.constants import HistoricalCategory
-from config.settings import GEMINI_API_KEY
+from config.settings import GEMINI_API_KEY, AI_PROVIDER_AVAILABLE
 from core.models import Topic
 
 logger = logging.getLogger(__name__)
@@ -193,8 +193,8 @@ class TopicDiscoveryEngine:
 
         discovered = []
 
-        # 2. If Gemini API Key is available, generate fresh unique historical stories online with strategy conditioning
-        if GEMINI_API_KEY:
+        # 2. If AI Provider is available, generate fresh unique historical stories online with strategy conditioning
+        if AI_PROVIDER_AVAILABLE:
             try:
                 from core.gemini_client import get_gemini_client
                 gemini_client = get_gemini_client()

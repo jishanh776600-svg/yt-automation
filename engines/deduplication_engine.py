@@ -13,7 +13,7 @@ import logging
 from typing import Dict, List, Any, Optional, Tuple, Set
 from dataclasses import dataclass, field
 from sqlalchemy.orm import Session
-from config.settings import GEMINI_API_KEY
+from config.settings import GEMINI_API_KEY, AI_PROVIDER_AVAILABLE
 from core.models import Topic, ScriptRecord, UploadRecord, Job
 
 logger = logging.getLogger(__name__)
@@ -397,7 +397,7 @@ class StoryDeduplicationEngine:
         Layer 3: Semantic NLI Evaluation with Structured Classification.
         Fail-Closed Safety: If has_entity_pair_collision=True and LLM is unavailable, candidate is REJECTED.
         """
-        if not GEMINI_API_KEY:
+        if not AI_PROVIDER_AVAILABLE:
             if has_entity_pair_collision:
                 pair_str = f"Year: {colliding_pair[0]}, Location: {colliding_pair[1]}" if colliding_pair else "Year+City"
                 return DeduplicationResult(

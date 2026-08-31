@@ -10,7 +10,7 @@ import json
 import logging
 from typing import Dict, List, Any, Optional, Tuple, Set
 from dataclasses import dataclass, field
-from config.settings import GEMINI_API_KEY
+from config.settings import GEMINI_API_KEY, AI_PROVIDER_AVAILABLE
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +184,7 @@ class FactVerifier:
         supported = []
         styling = []
 
-        if not GEMINI_API_KEY:
+        if not AI_PROVIDER_AVAILABLE:
             sentences = [s.strip() for s in re.split(r"[.!?]", script_text) if len(s.strip()) > 10]
             for s in sentences:
                 supported.append(s)

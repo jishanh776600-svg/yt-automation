@@ -10,7 +10,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field, asdict
 from sqlalchemy.orm import Session
-from config.settings import GEMINI_API_KEY, GEMINI_MODEL
+from config.settings import GEMINI_API_KEY, GEMINI_MODEL, AI_PROVIDER_AVAILABLE
 from core.models import Topic, ScriptRecord, AssetRecord
 from engines.sfx_manager import SFX_CATALOG
 
@@ -125,9 +125,9 @@ class EditingDirector:
             script.full_text or ""
         )
 
-        # 1. Attempt AI-driven director planning if Gemini is available
+        # 1. Attempt AI-driven director planning if AI provider is available
         plan = None
-        if GEMINI_API_KEY:
+        if AI_PROVIDER_AVAILABLE:
             plan = self._generate_ai_editing_plan(job_id, topic, script, shots, profile, asset_map)
 
         # 2. Fall back cleanly to deterministic rules if AI is unavailable or fails validation

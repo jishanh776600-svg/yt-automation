@@ -8,7 +8,7 @@ import json
 import logging
 from typing import List, Dict, Any
 from core.models import ScriptRecord
-from config.settings import GEMINI_API_KEY
+from config.settings import GEMINI_API_KEY, AI_PROVIDER_AVAILABLE
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +30,9 @@ class StoryboardEngine:
             {"name": "loop_twist", "text": script.loop_twist}
         ]
 
-        # 1. Use Gemini 3.6 Flash to generate 5 story-specific search queries and AI prompts
+        # 1. Use configured AI Provider to generate 5 story-specific search queries and AI prompts
         queries = []
-        if GEMINI_API_KEY:
+        if AI_PROVIDER_AVAILABLE:
             try:
                 from core.gemini_client import get_gemini_client
                 gemini_client = get_gemini_client()

@@ -105,10 +105,20 @@ class DeepSeekResponse:
         return f"<DeepSeekResponse text={snippet!r}>"
 
 
+class GroqResponse:
+    """Wrapper to maintain exact interface compatibility with google.genai response objects."""
+    def __init__(self, text: str):
+        self.text = text
+
+    def __repr__(self) -> str:
+        snippet = (self.text[:40] + "...") if len(self.text) > 40 else self.text
+        return f"<GroqResponse text={snippet!r}>"
+
+
 class GeminiClient:
     """
     Unified AI Client providing centralized rate limiting, 429-aware backoff,
-    and automatic failover across Gemini Primary -> Gemini Secondary -> DeepSeek.
+    and automatic failover across Gemini Primary -> Gemini Secondary -> Groq -> DeepSeek.
     Remembers provider exhaustion for the session to prevent retry amplification on dead credentials.
     """
     def __init__(
@@ -116,6 +126,8 @@ class GeminiClient:
         api_key: Optional[str] = None,
         secondary_api_key: Optional[str] = None,
         secondary_model: Optional[str] = None,
+        groq_api_key: Optional[str] = None,
+        groq_model: Optional[str] = None,
         deepseek_api_key: Optional[str] = None,
         deepseek_model: Optional[str] = None,
         rate_limiter: Optional[GeminiRateLimiter] = None,
@@ -126,14 +138,18 @@ class GeminiClient:
             GEMINI_API_KEY_SECONDARY,
             GEMINI_MODEL,
             GEMINI_MODEL_SECONDARY,
+            GROQ_API_KEY,
+            GROQ_MODEL,
             DEEPSEEK_API_KEY,
             DEEPSEEK_MODEL
         )
-        self.api_key = api_key or GEMINI_API_KEY
-        self.secondary_api_key = secondary_api_key or GEMINI_API_KEY_SECONDARY
-        self.deepseek_api_key = deepseek_api_key or DEEPSEEK_API_KEY
+        self.api_key = api_key if api_key is not None else GEMINI_API_KEY
+        self.secondary_api_key = secondary_api_key if secondary_api_key is not None else GEMINI_API_KEY_SECONDARY
+        self.groq_api_key = groq_api_key if groq_api_key is not None else GROQ_API_KEY
+        self.deepseek_api_key = deepseek_api_key if deepseek_api_key is not None else DEEPSEEK_API_KEY
         self.primary_model = GEMINI_MODEL
         self.secondary_model = secondary_model or GEMINI_MODEL_SECONDARY or GEMINI_MODEL
+        self.groq_model = groq_model or GROQ_MODEL or "llama-3.3-70b-versatile"
         self.deepseek_model = deepseek_model or DEEPSEEK_MODEL or "deepseek-ai/deepseek-v4-flash-0731"
         self.rate_limiter = rate_limiter or get_shared_rate_limiter()
         self.sleeper = sleeper
@@ -161,7 +177,7 @@ class GeminiClient:
             self.active_provider = "primary"
 
     def _get_configured_providers(self, requested_model: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Returns ordered list of configured, non-empty provider credentials."""
+        """Returns ordered list of configured, non-empty provider credentials: Primary -> Secondary -> Groq -> DeepSeek."""
         providers = []
         if self.api_key:
             providers.append({
@@ -176,6 +192,13 @@ class GeminiClient:
                 "type": "gemini",
                 "api_key": self.secondary_api_key,
                 "model": self.secondary_model or requested_model or self.primary_model
+            })
+        if self.groq_api_key:
+            providers.append({
+                "name": "groq",
+                "type": "groq",
+                "api_key": self.groq_api_key,
+                "model": self.groq_model
             })
         if self.deepseek_api_key:
             providers.append({
@@ -407,6 +430,142 @@ class GeminiClient:
         logger.error(f"[DEEPSEEK_EXHAUSTED] {err_msg}")
         raise GeminiQuotaExhaustedError(err_msg) from last_exception
 
+    def _execute_groq_request(
+        self,
+        api_key: str,
+        model: str,
+        contents: Any,
+        max_retries: int = 3,
+        base_delay: Optional[float] = None,
+        max_delay: float = 60.0,
+        **kwargs
+    ) -> GroqResponse:
+        """Executes API call to Groq OpenAI-compatible chat completion endpoint with pacing and fail-fast backoff."""
+        import json
+        import urllib.request
+        from urllib.error import HTTPError, URLError
+        from config.settings import GROQ_BASE_URL
+
+        is_test = is_test_environment()
+        if base_delay is None:
+            base_delay = 0.05 if is_test else 2.0
+
+        endpoint = GROQ_BASE_URL or "https://api.groq.com/openai/v1/chat/completions"
+
+        # Format user prompt
+        if isinstance(contents, str):
+            user_prompt = contents
+        elif isinstance(contents, list):
+            user_prompt = "\n\n".join(str(c) for c in contents)
+        else:
+            user_prompt = str(contents)
+
+        payload_dict: Dict[str, Any] = {
+            "model": model,
+            "messages": [
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": 0.7,
+            "stream": False
+        }
+
+        # Structured JSON mode support when requested by engine
+        if kwargs.get("response_mime_type") == "application/json" or kwargs.get("response_format") == "json":
+            payload_dict["response_format"] = {"type": "json_object"}
+
+        payload_bytes = json.dumps(payload_dict).encode("utf-8")
+
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "User-Agent": "AL-AMR-Groq-Client/1.0"
+        }
+
+        last_exception = None
+
+        for attempt in range(1, max_retries + 1):
+            self.rate_limiter.wait_for_slot()
+
+            try:
+                req = urllib.request.Request(endpoint, data=payload_bytes, headers=headers, method="POST")
+                with urllib.request.urlopen(req, timeout=45.0) as resp:
+                    resp_body = resp.read().decode("utf-8")
+                    data = json.loads(resp_body)
+                    choices = data.get("choices", [])
+                    if not choices:
+                        raise ValueError(f"Groq returned empty choices: {resp_body[:200]}")
+                    text_content = choices[0].get("message", {}).get("content", "")
+                    return GroqResponse(text=text_content)
+            except HTTPError as http_err:
+                last_exception = http_err
+                code = http_err.code
+                try:
+                    err_body = http_err.read().decode("utf-8", errors="ignore")
+                except Exception:
+                    err_body = ""
+                err_lower = err_body.lower()
+
+                # Quota / Rate-limit / 429
+                is_quota_or_rate_limit = (
+                    code == 429 or
+                    "rate limit" in err_lower or
+                    "quota" in err_lower or
+                    "tokens per minute" in err_lower or
+                    "requests per minute" in err_lower
+                )
+
+                if is_quota_or_rate_limit:
+                    self.mark_provider_exhausted("groq")
+                    logger.warning(
+                        f"[GROQ_EXHAUSTED] Groq API quota/rate limit exhausted (HTTP {code}). Marking provider exhausted."
+                    )
+                    raise GeminiQuotaExhaustedError(
+                        f"Groq API quota or rate limit exhausted (HTTP {code})"
+                    ) from http_err
+
+                # Non-retryable 4xx client errors (e.g. 401 Unauthorized, 403 Forbidden)
+                if 400 <= code < 500:
+                    self.mark_provider_exhausted("groq")
+                    logger.error(
+                        f"[GROQ_AUTH_FAIL] Groq client error (HTTP {code}). Marking provider exhausted permanently for session: {err_body[:200]}"
+                    )
+                    raise GeminiQuotaExhaustedError(f"Groq client authentication error (HTTP {code})") from http_err
+
+                # Transient 5xx server errors
+                if attempt >= max_retries:
+                    break
+
+                raw_delay = base_delay * (2 ** (attempt - 1))
+                jitter = 0.01 if is_test else random.uniform(0.5, 1.5)
+                delay = min(max_delay, raw_delay) + jitter
+                logger.warning(
+                    f"[GROQ_RETRY] Transient failure from Groq (attempt {attempt}/{max_retries}, HTTP {code}). Retrying in {delay:.2f}s..."
+                )
+                self.sleeper(delay)
+
+            except (URLError, TimeoutError, ConnectionError, OSError) as net_err:
+                last_exception = net_err
+                if attempt >= max_retries:
+                    break
+                raw_delay = base_delay * (2 ** (attempt - 1))
+                jitter = 0.01 if is_test else random.uniform(0.5, 1.5)
+                delay = min(max_delay, raw_delay) + jitter
+                logger.warning(
+                    f"[GROQ_NET_RETRY] Network connection error to Groq (attempt {attempt}/{max_retries}): {net_err}. Retrying in {delay:.2f}s..."
+                )
+                self.sleeper(delay)
+
+            except Exception as unk_err:
+                logger.error(f"[GROQ_ERROR] Unhandled error calling Groq: {unk_err}")
+                raise unk_err
+
+        # All retries exhausted on Groq
+        self.mark_provider_exhausted("groq")
+        err_msg = f"Groq API retries exhausted after {max_retries} attempts: {last_exception}"
+        logger.error(f"[GROQ_EXHAUSTED] {err_msg}")
+        raise GeminiQuotaExhaustedError(err_msg) from last_exception
+
     def generate_content(
         self,
         model: str,
@@ -418,18 +577,18 @@ class GeminiClient:
     ) -> Any:
         """
         Executes text generation across configured AI providers:
-        Primary Gemini -> Secondary Gemini -> DeepSeek.
+        Primary Gemini -> Secondary Gemini -> Groq -> DeepSeek.
         Skips previously exhausted providers to prevent retry amplification.
         """
         all_providers = self._get_configured_providers(requested_model=model)
         if not all_providers:
-            raise ValueError("No valid AI provider credentials (GEMINI_API_KEY, DEEPSEEK_API_KEY) configured.")
+            raise ValueError("No valid AI provider credentials (GEMINI_API_KEY, GROQ_API_KEY, DEEPSEEK_API_KEY) configured.")
 
         # Determine eligible providers (unexhausted first)
         available_providers = [p for p in all_providers if not self.is_provider_exhausted(p["name"])]
 
         if not available_providers:
-            err_msg = "All configured AI providers (PRIMARY, SECONDARY, DEEPSEEK) exhausted daily API quotas."
+            err_msg = "All configured AI providers (PRIMARY, SECONDARY, GROQ, DEEPSEEK) exhausted daily API quotas."
             logger.error(f"[AI_EXHAUSTED] {err_msg}")
             raise GeminiQuotaExhaustedError(err_msg)
 
@@ -445,7 +604,17 @@ class GeminiClient:
             logger.info(f"[AI_REQUEST] Dispatching request to provider '{prov_name.upper()}' (model: '{prov_model}')...")
 
             try:
-                if prov_type == "deepseek":
+                if prov_type == "groq":
+                    result = self._execute_groq_request(
+                        api_key=prov_key,
+                        model=prov_model,
+                        contents=contents,
+                        max_retries=max_retries,
+                        base_delay=base_delay,
+                        max_delay=max_delay,
+                        **kwargs
+                    )
+                elif prov_type == "deepseek":
                     result = self._execute_deepseek_request(
                         api_key=prov_key,
                         model=prov_model,
@@ -481,15 +650,15 @@ class GeminiClient:
                     continue
                 else:
                     logger.error(
-                        "[AI_EXHAUSTED] All configured Gemini providers exhausted daily API quotas. Halting production cleanly."
+                        "[AI_EXHAUSTED] All configured AI providers exhausted daily API quotas. Halting production cleanly."
                     )
                     raise GeminiQuotaExhaustedError(
-                        "All configured Gemini providers exhausted daily API quotas."
+                        "All configured AI providers exhausted daily API quotas."
                     ) from quota_err
 
         if last_err:
             raise last_err
-        raise GeminiQuotaExhaustedError("All configured Gemini providers exhausted daily API quotas.")
+        raise GeminiQuotaExhaustedError("All configured AI providers exhausted daily API quotas.")
 
 
 _SHARED_LIMITER: Optional[GeminiRateLimiter] = None
@@ -509,20 +678,24 @@ def get_gemini_client(
     api_key: Optional[str] = None,
     secondary_api_key: Optional[str] = None,
     secondary_model: Optional[str] = None,
+    groq_api_key: Optional[str] = None,
+    groq_model: Optional[str] = None,
     deepseek_api_key: Optional[str] = None,
     deepseek_model: Optional[str] = None
 ) -> GeminiClient:
     global _SHARED_CLIENT
     with _INIT_LOCK:
-        if _SHARED_CLIENT is None or api_key or secondary_api_key or deepseek_api_key:
+        if _SHARED_CLIENT is None or api_key or secondary_api_key or groq_api_key or deepseek_api_key:
             client = GeminiClient(
                 api_key=api_key,
                 secondary_api_key=secondary_api_key,
                 secondary_model=secondary_model,
+                groq_api_key=groq_api_key,
+                groq_model=groq_model,
                 deepseek_api_key=deepseek_api_key,
                 deepseek_model=deepseek_model
             )
-            if not api_key and not secondary_api_key and not deepseek_api_key:
+            if not api_key and not secondary_api_key and not groq_api_key and not deepseek_api_key:
                 _SHARED_CLIENT = client
             return client
         return _SHARED_CLIENT
