@@ -20,11 +20,93 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple, Set
 from PIL import Image
 from sqlalchemy.orm import Session
+import json
 from config.settings import PEXELS_API_KEY, ASSETS_CACHE_DIR, ASSETS_DIR
-from config.constants import VIDEO_WIDTH, VIDEO_HEIGHT, LicenseType
+from config.constants import (
+    VIDEO_WIDTH, VIDEO_HEIGHT, LicenseType, VisualSourceType, HistoricalEventRelation
+)
 from core.models import AssetRecord
 
 logger = logging.getLogger(__name__)
+
+
+def classify_visual_provenance(
+    query: str,
+    prompt: str,
+    source: str,
+    is_video: bool = False,
+    extra_metadata: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Deterministically evaluates visual authenticity, source classification,
+    event relevance, and anachronism defense markers.
+    """
+    q_lower = (query or "").lower()
+    p_lower = (prompt or "").lower()
+
+    # 1. Source Classification
+    if source == "pollinations_ai":
+        source_type = VisualSourceType.GENERATED_RECONSTRUCTION.value
+        historical_confidence = "PLAUSIBLE_RECONSTRUCTION"
+        is_generated = True
+    elif source == "procedural_canvas":
+        source_type = VisualSourceType.ABSTRACT_ATMOSPHERIC.value
+        historical_confidence = "LOW"
+        is_generated = False
+    elif any(k in q_lower for k in ["engraving", "woodcut", "etching", "lithograph"]):
+        source_type = VisualSourceType.HISTORICAL_ENGRAVING.value
+        historical_confidence = "HIGH"
+        is_generated = False
+    elif any(k in q_lower for k in ["painting", "oil canvas", "fresco"]):
+        source_type = VisualSourceType.HISTORICAL_PAINTING.value
+        historical_confidence = "HIGH"
+        is_generated = False
+    elif any(k in q_lower for k in ["illustration", "drawing", "sketch"]):
+        source_type = VisualSourceType.HISTORICAL_ILLUSTRATION.value
+        historical_confidence = "MEDIUM"
+        is_generated = False
+    elif any(k in q_lower for k in ["map", "cartograph", "atlas"]):
+        source_type = VisualSourceType.HISTORICAL_MAP.value
+        historical_confidence = "HIGH"
+        is_generated = False
+    elif any(k in q_lower for k in ["document", "manuscript", "newspaper", "archive", "logbook"]):
+        source_type = VisualSourceType.HISTORICAL_DOCUMENT.value
+        historical_confidence = "HIGH"
+        is_generated = False
+    elif is_video:
+        source_type = VisualSourceType.MODERN_CONTEXTUAL_STOCK.value
+        historical_confidence = "MEDIUM" if any(k in q_lower for k in ["vintage", "historic", "19th century", "ancient", "old"]) else "LOW"
+        is_generated = False
+    else:
+        source_type = VisualSourceType.MODERN_CONTEXTUAL_STOCK.value
+        historical_confidence = "MEDIUM" if any(k in q_lower for k in ["vintage", "historic", "19th century", "ancient", "old"]) else "LOW"
+        is_generated = False
+
+    # 2. Event Relevance
+    if any(k in q_lower for k in ["1814", "1919", "1866", "1908", "1932", "1872", "flood", "disaster", "battle", "emperor"]):
+        event_relevance = HistoricalEventRelation.EVENT_RELATED_HISTORICAL_CONTEXT.value
+    elif any(k in q_lower for k in ["vintage", "archival", "historic", "century"]):
+        event_relevance = HistoricalEventRelation.ERA_CONTEXT.value
+    else:
+        event_relevance = HistoricalEventRelation.GENERIC_MODERN_CONTEXT.value
+
+    # 3. Anachronism Detection
+    anachronisms = []
+    modern_markers = ["smartphone", "neon", "modern car", "skyscraper", "laptop", "airplane", "asphalt highway", "digital watch"]
+    for marker in modern_markers:
+        if marker in q_lower or marker in p_lower:
+            anachronisms.append(marker)
+
+    return {
+        "source_type": source_type,
+        "historical_confidence": historical_confidence,
+        "event_relevance": event_relevance,
+        "is_generated_reconstruction": is_generated,
+        "anachronisms_detected": anachronisms,
+        "has_anachronism_risk": len(anachronisms) > 0,
+        "provenance_notes": f"Acquired via {source} for query '{query}'"
+    }
+
 
 
 def parse_rate_limit_headers(headers: Any) -> Dict[str, Optional[int]]:
@@ -404,6 +486,7 @@ class AssetFetcher:
 
                     if raw_video_path.stat().st_size > 10000:
                         exclude_set.add(dl_url)
+                        prov = classify_visual_provenance(query, prompt, "pexels_video", is_video=True)
                         asset_rec = AssetRecord(
                             id=asset_id,
                             asset_type="video",
@@ -415,7 +498,8 @@ class AssetFetcher:
                             local_path=str(raw_video_path),
                             width=video_meta.get("width"),
                             height=video_meta.get("height"),
-                            duration_sec=video_meta.get("duration", shot_duration)
+                            duration_sec=video_meta.get("duration", shot_duration),
+                            metadata_json=json.dumps(prov)
                         )
                         db.add(asset_rec)
                         db.commit()
@@ -437,6 +521,7 @@ class AssetFetcher:
                     f.write(img_data)
                 self.crop_to_vertical_9_16(raw_img_path, cropped_img_path)
                 exclude_set.add(photo_url)
+                prov = classify_visual_provenance(query, prompt, "pexels", is_video=False)
                 asset_rec = AssetRecord(
                     id=asset_id,
                     asset_type="image",
@@ -448,7 +533,8 @@ class AssetFetcher:
                     local_path=str(cropped_img_path),
                     width=VIDEO_WIDTH,
                     height=VIDEO_HEIGHT,
-                    duration_sec=shot_duration
+                    duration_sec=shot_duration,
+                    metadata_json=json.dumps(prov)
                 )
                 db.add(asset_rec)
                 db.commit()
@@ -463,6 +549,7 @@ class AssetFetcher:
         logger.info(f"[ASSET_FETCH] Falling back to AI visual for shot: '{prompt[:40]}...'")
         if self.generate_ai_image(prompt, raw_img_path):
             self.crop_to_vertical_9_16(raw_img_path, cropped_img_path)
+            prov = classify_visual_provenance(query, prompt, "pollinations_ai", is_video=False)
             asset_rec = AssetRecord(
                 id=asset_id,
                 asset_type="image",
@@ -474,7 +561,8 @@ class AssetFetcher:
                 local_path=str(cropped_img_path),
                 width=VIDEO_WIDTH,
                 height=VIDEO_HEIGHT,
-                duration_sec=shot_duration
+                duration_sec=shot_duration,
+                metadata_json=json.dumps(prov)
             )
             db.add(asset_rec)
             db.commit()
@@ -486,6 +574,7 @@ class AssetFetcher:
         # ----------------------------------------------------
         im = Image.new("RGB", (VIDEO_WIDTH, VIDEO_HEIGHT), color=(20, 24, 32))
         im.save(cropped_img_path, "JPEG", quality=95)
+        prov = classify_visual_provenance(query, prompt, "procedural_canvas", is_video=False)
         asset_rec = AssetRecord(
             id=asset_id,
             asset_type="image",
@@ -497,7 +586,8 @@ class AssetFetcher:
             local_path=str(cropped_img_path),
             width=VIDEO_WIDTH,
             height=VIDEO_HEIGHT,
-            duration_sec=shot_duration
+            duration_sec=shot_duration,
+            metadata_json=json.dumps(prov)
         )
         db.add(asset_rec)
         db.commit()
