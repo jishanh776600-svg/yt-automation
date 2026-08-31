@@ -462,12 +462,17 @@ class SystemDataProvider:
                 "reason": ev.reason
             })
 
-        # Group strategy weights
+        # Group strategy weights (deduplicated by feature_type, feature_value)
         weights = db.query(StrategyWeight).order_by(
-            StrategyWeight.feature_type, StrategyWeight.feature_value
+            StrategyWeight.last_updated.desc()
         ).all()
         grouped_weights: Dict[str, List[Dict[str, Any]]] = {}
+        seen_features = set()
         for w in weights:
+            key = (w.feature_type, w.feature_value)
+            if key in seen_features:
+                continue
+            seen_features.add(key)
             if w.feature_type not in grouped_weights:
                 grouped_weights[w.feature_type] = []
             grouped_weights[w.feature_type].append({

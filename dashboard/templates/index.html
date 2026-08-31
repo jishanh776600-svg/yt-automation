@@ -455,18 +455,18 @@
                             <!-- Metric 1: Videos Today -->
                             <div class="p-3 bg-spaceDark rounded-lg border border-borderHairline space-y-1.5">
                                 <div class="text-[10px] text-slate-500 uppercase tracking-wide">DAILY UPLOAD CAP</div>
-                                <div class="text-lg font-bold text-slate-100">{{ state.publishing.published_today or 0 }} <span class="text-xs text-slate-500">/ 3 Target</span></div>
+                                <div class="text-lg font-bold text-slate-100">{{ state.publishing.total_booked_today or 0 }} <span class="text-xs text-slate-500">/ 3 Target</span></div>
                                 <div class="w-full bg-spaceWell h-1.5 rounded-full overflow-hidden border border-borderHairline">
-                                    <div class="bg-brandGold h-full" style="width: {{ (((state.publishing.published_today or 0) / 3) * 100)|int }}%"></div>
+                                    <div class="bg-brandGold h-full" style="width: {{ (((state.publishing.total_booked_today or 0) / 3) * 100)|int }}%"></div>
                                 </div>
-                                <div class="text-[10px] text-slate-400 truncate">Ceiling: 3 Shorts/day max</div>
+                                <div class="text-[10px] text-slate-400 truncate">Booked: {{ state.publishing.published_today or 0 }} pub + {{ state.publishing.scheduled_today or 0 }} sched</div>
                             </div>
 
                             <!-- Metric 2: Next Release Slot -->
                             <div class="p-3 bg-spaceDark rounded-lg border border-borderHairline space-y-1.5">
                                 <div class="text-[10px] text-slate-500 uppercase tracking-wide">NEXT SCHEDULE SLOT</div>
-                                <div class="text-lg font-bold text-brandGold truncate">{{ state.publishing.next_slot_time_display }}</div>
-                                <div class="text-[10px] text-slate-400 truncate">In {{ state.publishing.time_until_display }}</div>
+                                <div class="text-lg font-bold text-brandGold truncate">{{ state.publishing.next_slot.slot_label }}</div>
+                                <div class="text-[10px] text-slate-400 truncate">In {{ state.publishing.next_slot.time_until_display }}</div>
                             </div>
 
                             <!-- Metric 3: Buffer Stock (Full width) -->

@@ -328,11 +328,15 @@ class LearningEngine:
             p_mean = round(sum(scores) / n, 2)
             weight, lift, conf, reason = self.compute_strategy_weight(n, p_mean, channel_baseline)
 
-            existing = (
+            matching = (
                 db.query(StrategyWeight)
                 .filter(StrategyWeight.feature_type == f_type, StrategyWeight.feature_value == f_val)
-                .first()
+                .all()
             )
+            existing = matching[0] if matching else None
+            if len(matching) > 1:
+                for surplus in matching[1:]:
+                    db.delete(surplus)
 
             old_w = existing.weight if existing else 1.00
 
