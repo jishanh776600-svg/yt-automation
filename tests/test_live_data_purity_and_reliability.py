@@ -14,6 +14,7 @@ from engines.topic_discovery import TopicDiscoveryEngine
 from dashboard.data_provider import SystemDataProvider
 from core.recovery_manager import RecoveryManager
 from core.gemini_client import GeminiClient
+from config.constants import get_business_day_bounds_utc
 
 
 @pytest.fixture
@@ -115,7 +116,7 @@ class TestLiveDataPurityAndReliability:
     # -------------------------------------------------------------------------
     def test_04_scheduled_is_not_published_until_authoritative_reconciliation(self, in_memory_db):
         db = in_memory_db
-        now = datetime.utcnow()
+        today_start, _ = get_business_day_bounds_utc()
         upload = UploadRecord(
             id='upl_sched_1',
             job_id='job_sched_1',
@@ -124,7 +125,7 @@ class TestLiveDataPurityAndReliability:
             description='Story description',
             status='SCHEDULED',
             privacy_status='private',
-            scheduled_publish_at=now + timedelta(hours=2)
+            scheduled_publish_at=today_start + timedelta(hours=20)
         )
         job = Job(id='job_sched_1', state=JobState.SCHEDULED.value)
         db.add_all([upload, job])

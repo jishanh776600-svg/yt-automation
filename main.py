@@ -535,15 +535,15 @@ class ShortsPipeline:
             console.print(f"[bold yellow][!] Production lock active: {e}[/bold yellow]")
             return 0, {"outcome": "BLOCKED", "block_reason": "LOCK_HELD", "produced_count": 0}
 
-        initial_stock = self.drive_engine.get_ready_stock_count()
-        initial_needed = max(0, clamped_target - initial_stock)
-        produced_count = 0
-        total_attempts = 0
-        consecutive_failures = 0
-        block_reason = None
-        attempted_topic_ids: Set[str] = set()
-
         try:
+            initial_stock = self.drive_engine.get_ready_stock_count()
+            initial_needed = max(0, clamped_target - initial_stock)
+            produced_count = 0
+            total_attempts = 0
+            consecutive_failures = 0
+            block_reason = None
+            attempted_topic_ids: Set[str] = set()
+
             while total_attempts < MAX_PRODUCTION_ATTEMPTS_CEILING:
                 current_stock = self.drive_engine.get_ready_stock_count()
                 needed = max(0, clamped_target - current_stock)
