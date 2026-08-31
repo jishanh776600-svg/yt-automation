@@ -82,7 +82,9 @@ def is_valid_ready_short(
                     return False, f"Job {job_id} already published (Video ID: {upl.youtube_video_id})"
 
                 j = db.query(Job).filter(Job.id == job_id).first()
-                if j and j.state in ("FAILED", "NEEDS_REVIEW"):
+                if not j:
+                    return False, f"Orphaned asset: No database record found for job '{job_id}'"
+                if j.state in ("FAILED", "NEEDS_REVIEW", "PUBLISHED"):
                     return False, f"Job {job_id} has database state '{j.state}'"
             except Exception as db_err:
                 logger.debug(f"DB verification notice for {job_id}: {db_err}")
@@ -146,7 +148,9 @@ def is_valid_ready_short(
                 if upl:
                     return False, f"Job {c_job_id} already published (Video ID: {upl.youtube_video_id})"
                 j = db.query(Job).filter(Job.id == c_job_id).first()
-                if j and j.state in ("FAILED", "NEEDS_REVIEW"):
+                if not j:
+                    return False, f"Orphaned asset: No database record found for job '{c_job_id}'"
+                if j.state in ("FAILED", "NEEDS_REVIEW", "PUBLISHED"):
                     return False, f"Job {c_job_id} has database state '{j.state}'"
             except Exception as db_err:
                 logger.debug(f"DB verification notice for {c_job_id}: {db_err}")
