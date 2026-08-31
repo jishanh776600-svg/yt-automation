@@ -26,8 +26,11 @@ jobs:
           groq_key = os.getenv("GROQ_API_KEY", "")
           openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
 
-          print(f"CHECK: GROQ_API_KEY detected: {\"YES\" if bool(groq_key) else \"NO\"}")
-          print(f"CHECK: OPENROUTER_API_KEY detected: {\"YES\" if bool(openrouter_key) else \"NO\"}")
+          groq_detected = "YES" if bool(groq_key) else "NO"
+          openrouter_detected = "YES" if bool(openrouter_key) else "NO"
+
+          print(f"CHECK: GROQ_API_KEY detected: {groq_detected}")
+          print(f"CHECK: OPENROUTER_API_KEY detected: {openrouter_detected}")
 
           if not groq_key:
               print("GROQ_CALL: FAIL (Key not present)")
