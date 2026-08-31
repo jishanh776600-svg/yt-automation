@@ -217,7 +217,7 @@ class TopicDiscoveryEngine:
             summary=summary.strip(),
             category=category.strip(),
             score=56.0,
-            status="APPROVED"
+            status="COMPETITOR_HYPOTHESIS"
         )
         db.add(topic)
         db.commit()

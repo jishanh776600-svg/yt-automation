@@ -276,7 +276,8 @@ class DriveVaultEngine:
             "01_READY": None,
             "02_PROCESSING": None,
             "03_PUBLISHED": None,
-            "04_FAILED": None
+            "04_FAILED": None,
+            "05_KNOWLEDGE": None
         }
 
         root_folder = self.find_folder(VAULT_ROOT_NAME)
@@ -343,7 +344,10 @@ class DriveVaultEngine:
             return files[:limit]
 
         drive = self.get_drive_service()
-        folder_id = self.get_folder_id(folder_name, create_if_missing=False)
+        try:
+            folder_id = self.get_folder_id(folder_name, create_if_missing=False)
+        except FileNotFoundError:
+            return []
 
         query = f"'{folder_id}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'"
         try:

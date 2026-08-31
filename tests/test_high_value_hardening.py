@@ -185,7 +185,7 @@ class TestHighValueHardening:
         )
         assert topic is not None
         assert topic.title == 'The Liechtenstein Army Miracle of 1866'
-        assert topic.status == 'APPROVED'
+        assert topic.status == 'COMPETITOR_HYPOTHESIS'
 
         # Duplicate injection is rejected by semantic gate
         dup_topic = engine.inject_competitor_hypothesis(

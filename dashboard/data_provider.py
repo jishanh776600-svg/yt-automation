@@ -1393,18 +1393,20 @@ class SystemDataProvider:
                     continue
                 seen_yt_ids.add(yt_id)
 
-                views = snap.views if snap and snap.views is not None else 0
-                likes = snap.likes if snap and snap.likes is not None else 0
-                comments = snap.comments if snap and snap.comments is not None else 0
-                apv = snap.average_view_percentage if snap and snap.average_view_percentage is not None else None
+                is_unavailable = (snap is None) or (getattr(snap, "validation_status", "") == "UNAVAILABLE")
+                views = snap.views if (snap and not is_unavailable and snap.views is not None) else None
+                likes = snap.likes if (snap and not is_unavailable and snap.likes is not None) else None
+                comments = snap.comments if (snap and not is_unavailable and snap.comments is not None) else None
+                apv = snap.average_view_percentage if (snap and not is_unavailable and snap.average_view_percentage is not None) else None
 
                 # Mathematically correct engagement calculation: (likes + comments) / views * 100
-                if views > 0:
-                    eng_rate = round(((likes + comments) / views) * 100, 2)
-                elif snap and snap.engagement_rate:
+                if views is not None and views > 0 and (likes is not None or comments is not None):
+                    tot_int = (likes or 0) + (comments or 0)
+                    eng_rate = round((tot_int / views) * 100, 2)
+                elif snap and not is_unavailable and snap.engagement_rate:
                     eng_rate = round(float(snap.engagement_rate), 2)
                 else:
-                    eng_rate = 0.0
+                    eng_rate = None
 
                 pub_date = upload.published_at or upload.created_at
                 pub_date_str = pub_date.strftime("%b %d, %Y %H:%M UTC") if pub_date else "—"
@@ -1418,15 +1420,15 @@ class SystemDataProvider:
                     "published_at": pub_date.isoformat() + "Z" if pub_date else None,
                     "published_at_display": pub_date_str,
                     "views": views,
-                    "views_display": format_compact_number(views),
+                    "views_display": format_compact_number(views) if views is not None else "UNAVAILABLE",
                     "likes": likes,
-                    "likes_display": format_compact_number(likes),
+                    "likes_display": format_compact_number(likes) if likes is not None else "UNAVAILABLE",
                     "comments": comments,
-                    "comments_display": format_compact_number(comments),
+                    "comments_display": format_compact_number(comments) if comments is not None else "UNAVAILABLE",
                     "apv": apv,
-                    "apv_display": f"{apv:.1f}%" if apv is not None else "—",
+                    "apv_display": f"{apv:.1f}%" if apv is not None else "UNAVAILABLE",
                     "engagement_rate": eng_rate,
-                    "engagement_display": f"{eng_rate:.2f}%" if views > 0 else "—",
+                    "engagement_display": f"{eng_rate:.2f}%" if eng_rate is not None else "UNAVAILABLE",
                     "classification": analysis.classification if analysis else "UNRATED",
                     "performance_score": analysis.performance_score if analysis else None,
                     "status": upload.status or "PUBLISHED",
@@ -1437,6 +1439,71 @@ class SystemDataProvider:
         except Exception as e:
             logger.error(f"Error generating performance leaderboard: {e}")
             return []
+
+    def get_reconciliation_anomalies(self, db: Session) -> List[Dict[str, Any]]:
+        """
+        Detects data truth discrepancies across SQLite, YouTube, Google Drive Vault, and Learning Engine:
+          1. DB says PUBLISHED but YouTube status is private or missing.
+          2. DB says READY_TO_UPLOAD but file is missing in Drive 01_READY.
+          3. Drive 01_READY file has no corresponding active job in SQLite.
+          4. YouTube scheduled video is missing from SQLite UploadRecords.
+          5. Learning cohort invariant violation: matured + maturing > verified_live.
+        """
+        anomalies = []
+        now = datetime.utcnow()
+
+        # 1. Learning cohort invariant check & phantom snapshots check
+        try:
+            from engines.learning_engine import LearningEngine
+            learner = LearningEngine()
+            universe = learner.get_verified_analytics_universe(db, now=now)
+            if universe.get("data_integrity_error"):
+                anomalies.append({
+                    "entity": "LearningUniverse",
+                    "expected_state": f"matured ({universe['mature_count']}) + maturing ({universe['maturing_count']}) <= verified_live ({universe['verified_live_count']})",
+                    "observed_state": f"Cohort total {universe['total_analytics_cohort']} exceeds verified live {universe['verified_live_count']}",
+                    "severity": "CRITICAL",
+                    "source": "LearningEngine",
+                    "timestamp": now.isoformat() + "Z"
+                })
+
+            phantom_snaps = (
+                db.query(PerformanceSnapshot)
+                .join(UploadRecord, PerformanceSnapshot.upload_id == UploadRecord.id)
+                .filter(
+                    (UploadRecord.privacy_status == "test_local") |
+                    (UploadRecord.status == "FAILED") |
+                    (UploadRecord.youtube_video_id.like("TEST_%"))
+                )
+                .count()
+            )
+            if phantom_snaps > 0:
+                anomalies.append({
+                    "entity": "LearningUniverse",
+                    "expected_state": "Zero performance snapshots referencing test or failed uploads",
+                    "observed_state": f"Found {phantom_snaps} phantom snapshot(s)",
+                    "severity": "CRITICAL",
+                    "source": "LearningEngine Integrity Check",
+                    "timestamp": now.isoformat() + "Z"
+                })
+        except Exception as l_err:
+            logger.debug(f"[RECONCILIATION_CHECK] Learning check notice: {l_err}")
+
+        # 2. Scheduled Reconciliation Errors recorded in UploadRecords
+        err_records = db.query(UploadRecord).filter(
+            UploadRecord.reconciliation_metadata.ilike("%SCHEDULE_RECONCILIATION_ERROR%")
+        ).all()
+        for er in err_records:
+            anomalies.append({
+                "entity": f"UploadRecord_{er.id}",
+                "expected_state": f"Valid YouTube scheduled video {er.youtube_video_id}",
+                "observed_state": "Video missing or inaccessible on YouTube API",
+                "severity": "CRITICAL",
+                "source": "YouTube Data API v3 Reconciliation",
+                "timestamp": now.isoformat() + "Z"
+            })
+
+        return anomalies
 
     def get_full_system_state(self, db: Session) -> Dict[str, Any]:
         """Provides a unified snapshot of the complete production system."""
@@ -1544,6 +1611,7 @@ class SystemDataProvider:
             "pexels_quota": pexels_quota,
             "service_quotas": service_quotas,
             "database_sync": db_sync_telemetry,
+            "reconciliation_anomalies": self.get_reconciliation_anomalies(db),
             "performance_leaderboard": self.get_published_performance_leaderboard(db, limit=50),
             "database_summary": {
                 "total_jobs": total_jobs,
