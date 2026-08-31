@@ -40,6 +40,20 @@ FORBIDDEN_CLICHES = [
 
 # High-Retention Curated Seed Scripts (Pre-verified for seed topics)
 CURATED_SCRIPTS = {
+    "The Kettle War of 1784": {
+        "hook": "In 1784, a European war ended with a single shattered soup kettle.",
+        "context": "The Holy Roman Empire sent armed warships to challenge the Dutch Republic at sea.",
+        "escalation": "A Dutch flagship fired a single warning cannon shot across the harbor.",
+        "reveal": "The cannonball struck an iron soup kettle on deck, spraying boiling soup everywhere.",
+        "loop_twist": "Terrified by the single shot, the imperial fleet surrendered without a single casualty."
+    },
+    "The Aroostook War": {
+        "hook": "In 1838, America and Britain mobilized fifty thousand soldiers over stolen pine trees.",
+        "context": "Lumberjacks from Maine and New Brunswick clashed in the disputed Aroostook timber valley.",
+        "escalation": "Both sides deployed armed militias, built frontier forts, and prepared for full-scale war.",
+        "reveal": "General Winfield Scott negotiated a truce before a single shot was ever fired.",
+        "loop_twist": "The only recorded casualties of the entire war were two men mauled by bears."
+    },
     "The 38-Minute Anglo-Zanzibar War (1896)": {
         "hook": "The shortest war in human history lasted less than forty minutes.",
         "context": "In 1896, a rebel sultan seized power in Zanzibar against British demands.",
@@ -453,10 +467,18 @@ class ScriptEngine:
         target_hook_archetype = strategy.get("hook_archetype") if strategy else None
         target_duration = strategy.get("duration_target") if strategy else None
 
-        # 1. Check curated seed library first for exact approved scripts
-        if topic.title in CURATED_SCRIPTS:
-            logger.info(f"Using verified curated script for '{topic.title}'")
-            data = CURATED_SCRIPTS[topic.title]
+        # 1. Check curated seed library first for exact or normalized approved scripts
+        curated_match = None
+        norm_title = re.sub(r"[^\w\s]", "", topic.title.lower()).strip()
+        for k in CURATED_SCRIPTS:
+            norm_k = re.sub(r"[^\w\s]", "", k.lower()).strip()
+            if norm_k in norm_title or norm_title in norm_k or k.lower() in topic.title.lower():
+                curated_match = k
+                break
+
+        if curated_match:
+            logger.info(f"Using verified curated script for '{topic.title}' (matched: '{curated_match}')")
+            data = CURATED_SCRIPTS[curated_match]
             eval_res = self.critic.evaluate(data, research_data)
         elif AI_PROVIDER_AVAILABLE:
             # 2. Multi-Candidate Hook Selection
