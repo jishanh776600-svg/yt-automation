@@ -1,0 +1,56 @@
+﻿name: AI Provider Connectivity Test
+on: workflow_dispatch
+
+jobs:
+  test_connectivity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Live Provider Connectivity Test
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          python -c '
+          import os
+          import sys
+          from core.gemini_client import GeminiClient
+
+          groq_key = os.getenv("GROQ_API_KEY", "")
+          openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
+
+          print(f"CHECK: GROQ_API_KEY detected: {\"YES\" if bool(groq_key) else \"NO\"}")
+          print(f"CHECK: OPENROUTER_API_KEY detected: {\"YES\" if bool(openrouter_key) else \"NO\"}")
+
+          if not groq_key:
+              print("GROQ_CALL: FAIL (Key not present)")
+              print("GROQ_PARSING: FAIL")
+          else:
+              client = GeminiClient(api_key="", secondary_api_key="", groq_api_key=groq_key)
+              try:
+                  resp = client._execute_groq_request(
+                      api_key=groq_key,
+                      model=client.groq_model,
+                      contents="Reply with exactly: GROQ_OK"
+                  )
+                  print("GROQ_CALL: PASS")
+                  if hasattr(resp, "text") and resp.text:
+                      print("GROQ_PARSING: PASS")
+                      clean_text = resp.text.strip()
+                      print(f"GROQ_RESPONSE: {clean_text}")
+                  else:
+                      print("GROQ_PARSING: FAIL (empty response)")
+              except Exception as exc:
+                  print(f"GROQ_CALL: FAIL ({exc})")
+                  print("GROQ_PARSING: FAIL")
+
+          print("OPENROUTER_CALL: NOT_IMPLEMENTED")
+          print("OPENROUTER_PARSING: NOT_IMPLEMENTED")
+          '
