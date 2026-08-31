@@ -227,11 +227,17 @@ class TopicDiscoveryEngine:
         )
         return topic
 
-    def discover_topics(self, db: Session, limit: int = 5) -> List[Topic]:
+    def discover_topics(self, db: Session, limit: int = 5, exclude_topic_ids: Optional[Any] = None) -> List[Topic]:
         """Discovers new candidate topics or returns unproduced approved topics."""
         # 1. First check if we have approved topics in DB that have not been published or produced yet
         from core.models import Job, UploadRecord
-        published_topic_ids = {j.topic_id for j in db.query(Job).filter(Job.state.in_(["PUBLISHED", "READY_TO_UPLOAD"])).all() if j.topic_id}
+        excluded_ids = set(exclude_topic_ids or [])
+
+        # Exclude topics that have already reached terminal/active publication or failed/needs_review in current queue
+        job_topic_records = db.query(Job.topic_id, Job.state).all()
+        for j_top_id, j_state in job_topic_records:
+            if j_top_id and j_state in ("PUBLISHED", "READY_TO_UPLOAD", "NEEDS_REVIEW", "FAILED"):
+                excluded_ids.add(j_top_id)
 
         def is_test_topic(t: Topic) -> bool:
             t_id = (t.id or "").lower()
@@ -248,10 +254,17 @@ class TopicDiscoveryEngine:
                 return True
             return False
 
-        unproduced = db.query(Topic).filter(Topic.id.notin_(published_topic_ids)).all()
+        # Query eligible unproduced topics
+        unproduced = db.query(Topic).filter(
+            Topic.id.notin_(excluded_ids),
+            ~Topic.status.in_(["REJECTED", "NEEDS_REVIEW", "FAILED"])
+        ).all()
+
         # Filter unproduced topics through deduplication against published stories (bounded to limit)
         valid_unproduced = []
         for t in unproduced:
+            if t.id in excluded_ids:
+                continue
             if is_test_topic(t):
                 continue
             if not self.is_duplicate(db, t.title, t.summary, exclude_topic_id=t.id):

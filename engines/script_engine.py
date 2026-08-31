@@ -354,33 +354,60 @@ class ScriptEngine:
         if research_data:
             claims = [c.get("claim", "") for c in research_data.get("verified_claims", []) if c.get("claim")]
             if claims:
-                verified_facts_text = "Verified Historical Facts:\n- " + "\n- ".join(claims[:5])
+                verified_facts_text = "VERIFIED RESEARCH FACTS (USE ONLY THESE CLAIMS):\n- " + "\n- ".join(claims[:5])
             elif research_data.get("summary"):
-                verified_facts_text = f"Verified Historical Context: {research_data.get('summary')}"
+                verified_facts_text = f"VERIFIED RESEARCH CONTEXT (USE ONLY THIS):\n{research_data.get('summary')}"
 
         feedback_instruction = ""
         if revision_feedback:
-            feedback_instruction = "\nCRITICAL REVISION INSTRUCTIONS FROM CRITIC:\n" + "\n".join([f"- FIX: {fb}" for fb in revision_feedback])
+            formatted_fb = []
+            for fb in revision_feedback:
+                if "outside calibrated" in fb.lower() or "word count" in fb.lower():
+                    formatted_fb.append(f"- WORD COUNT CORRECTION: {fb}. Target exactly 50-55 words across all 5 stages combined. Do not introduce new claims.")
+                elif "unsupported claim" in fb.lower():
+                    formatted_fb.append(f"- FACTUAL CORRECTION: {fb}. Remove or rewrite this claim strictly using provided research.")
+                else:
+                    formatted_fb.append(f"- REVISE: {fb}")
+            feedback_instruction = (
+                "\n=======================================================\n"
+                "CRITICAL TARGETED REVISION INSTRUCTIONS (PREVIOUS PASS REJECTED BY QUALITY GATE):\n"
+                + "\n".join(formatted_fb)
+                + "\n=======================================================\n"
+            )
 
         prompt = (
             f"You are a master historical documentary scriptwriter for YouTube Shorts.\n"
             f"Topic: '{topic.title}'\n"
-            f"Selected Opening Hook (0-2s): \"{selected_hook}\"\n"
-            f"{verified_facts_text}\n"
+            f"Selected Opening Hook (0-2s): \"{selected_hook}\"\n\n"
+            f"{verified_facts_text}\n\n"
             f"{learned_guidance}\n"
-            f"\nStrict Narrative & Retention Architecture:\n"
-            f"1. Structure (5 distinct stages):\n"
-            f"   - hook: Immediate curiosity/tension gap (0-2s). No slow introductions, no generic 'Did you know'.\n"
-            f"   - context: Clear, rapid historical grounding with forward momentum.\n"
-            f"   - escalation: Rising stakes, intensifying conflict or bizarre progression.\n"
+            f"\nPRODUCTION CONTRACT & SPECIFICATION:\n"
+            f"1. TARGET DURATION: 21–25 seconds spoken narration.\n"
+            f"2. WORD COUNT SPECIFICATION (CRITICAL):\n"
+            f"   - HARD MINIMUM: 45 words\n"
+            f"   - HARD MAXIMUM: 68 words\n"
+            f"   - PREFERRED TARGET: 50–55 words total across all 5 stages combined.\n"
+            f"3. 5-STAGE NARRATIVE STRUCTURE:\n"
+            f"   - hook: (0-2s) Immediate curiosity/tension gap. No generic intros ('Did you know', 'Today we're looking at').\n"
+            f"   - context: Clear, rapid historical setting and grounding with forward momentum.\n"
+            f"   - escalation: Rising stakes, intensifying conflict or bizarre progression. Every claim MUST be supported by supplied research.\n"
             f"   - reveal: The definitive, surprising historical payoff/climax.\n"
-            f"   - loop_twist: COMPLETE FINAL RESOLUTION. A grammatically complete, memorable closing statement that provides total closure without trailing off or cutting mid-sentence.\n"
-            f"2. Total length: EXACTLY 50 to 58 words across all 5 sections combined (around 10-12 words per section). Pacing requirement: Total word count MUST be between 48 and 62 words.\n"
-            f"3. Style: Spoken natural American English. Punchy, rhythmic, conversational sentences (6-12 words/sentence). Zero filler.\n"
-            f"4. Factual Grounding: Ground all details strictly in the verified facts. Do NOT hallucinate or exaggerate beyond facts.\n"
-            f"5. NO AI Clichés: NEVER use 'will shock you', 'unbelievable true story', 'events spiraled', 'shocked historians', 'changed history forever'.\n"
+            f"   - loop_twist: Complete final resolution and loop-compatible ending statement. No filler conclusions.\n"
+            f"4. STRICT FACTUAL RULES (CRITICAL QUALITY GATE):\n"
+            f"   - Use ONLY information explicitly supported by the supplied research.\n"
+            f"   - NEVER invent dates (e.g. do not guess specific calendar days if not in research).\n"
+            f"   - NEVER invent names, casualty counts, quotations, motives, or precise locations.\n"
+            f"   - NEVER convert historical uncertainty into certainty.\n"
+            f"   - Do NOT introduce dramatic claims absent from the research evidence.\n"
+            f"5. STYLE & CADENCE:\n"
+            f"   - Natural spoken American English. Short, punchy sentences (6-12 words/sentence). Strong momentum. Zero filler.\n"
+            f"   - NO AI CLICHÉS: NEVER use 'will shock you', 'unbelievable true story', 'events spiraled', 'shocked historians', 'changed history forever'.\n"
+            f"6. SELF-CHECK BEFORE RETURNING JSON:\n"
+            f"   - Verify total word count is 45-68 words (aim for 50-55 words).\n"
+            f"   - Verify all 5 narrative keys exist.\n"
+            f"   - Verify all facts are 100% grounded in supplied research.\n"
             f"{feedback_instruction}\n"
-            f"\nOutput strictly valid JSON with keys: hook, context, escalation, reveal, loop_twist"
+            f"Output strictly valid JSON with keys: hook, context, escalation, reveal, loop_twist"
         )
 
         from config.settings import GEMINI_MODEL

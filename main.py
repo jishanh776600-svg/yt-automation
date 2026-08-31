@@ -328,7 +328,7 @@ class ShortsPipeline:
 
         return render_output, metadata
 
-    def produce_single_to_vault(self, topic: Optional[Topic] = None) -> Optional[Job]:
+    def produce_single_to_vault(self, topic: Optional[Topic] = None, exclude_topic_ids: Optional[Any] = None) -> Optional[Job]:
         """
         PRODUCER MODE: Generates a single Short, verifies QA, attaches metadata properties,
         and deposits the final MP4 into Google Drive vault 'YouTube_Shorts_Vault/01_READY'.
@@ -346,13 +346,20 @@ class ShortsPipeline:
             # 1. TOPIC SELECTION
             if not topic:
                 StateMachine.transition(db, job, JobState.RESEARCHING, "Discovering high-retention topics")
-                topics = self.topic_engine.discover_topics(db, limit=1)
+                topics = self.topic_engine.discover_topics(db, limit=1, exclude_topic_ids=exclude_topic_ids)
                 if not topics:
                     StateMachine.flag_needs_review(db, job, "No new unique topics found.")
                     return None
                 topic = topics[0]
             else:
                 StateMachine.transition(db, job, JobState.RESEARCHING, f"Selected topic: {topic.title}")
+
+            # Quarantine candidate in in-memory attempted set for failure isolation
+            if exclude_topic_ids is not None and topic and hasattr(topic, "id"):
+                if isinstance(exclude_topic_ids, set):
+                    exclude_topic_ids.add(topic.id)
+                elif isinstance(exclude_topic_ids, list):
+                    exclude_topic_ids.append(topic.id)
 
             # 2. RENDER & QA
             render_output, metadata = self._render_and_qa_job(db, job, topic, force=True)
@@ -443,12 +450,13 @@ class ShortsPipeline:
             total_attempts = 0
             consecutive_failures = 0
             block_reason = None
+            attempted_topic_ids: Set[str] = set()
 
             while success_count < effective_count and total_attempts < MAX_PRODUCTION_ATTEMPTS_CEILING:
                 total_attempts += 1
                 console.print(f"\n[bold cyan]>>> Generating Batch Item {success_count + 1}/{effective_count} (Attempt {total_attempts}/{MAX_PRODUCTION_ATTEMPTS_CEILING}) <<<[/bold cyan]")
                 try:
-                    job = self.produce_single_to_vault()
+                    job = self.produce_single_to_vault(exclude_topic_ids=attempted_topic_ids)
                     if job:
                         success_count += 1
                         consecutive_failures = 0
@@ -533,6 +541,7 @@ class ShortsPipeline:
         total_attempts = 0
         consecutive_failures = 0
         block_reason = None
+        attempted_topic_ids: Set[str] = set()
 
         try:
             while total_attempts < MAX_PRODUCTION_ATTEMPTS_CEILING:
@@ -558,7 +567,7 @@ class ShortsPipeline:
                 total_attempts += 1
                 console.print(f"\n[bold yellow][*] Reserve Deficit: {needed} Shorts remaining (Current: {current_stock}/{clamped_target}). Producing next Short (Attempt {total_attempts})...[/bold yellow]")
                 try:
-                    job = self.produce_single_to_vault()
+                    job = self.produce_single_to_vault(exclude_topic_ids=attempted_topic_ids)
                     if job:
                         produced_count += 1
                         consecutive_failures = 0
