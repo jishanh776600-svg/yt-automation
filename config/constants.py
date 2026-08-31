@@ -148,7 +148,8 @@ TARGET_DURATION_SEC = 23.0
 # Audio Standards
 AUDIO_SAMPLE_RATE = 44100
 TARGET_LUFS = -14.0
-BGM_MIX_VOLUME_DB = -13.0  # Target BGM mixing level relative to voice
+TARGET_BGM_LUFS = -30.0  # Standardized Stage B BGM bed target loudness (16 dB below narration master)
+BGM_MIX_VOLUME_DB = -13.0  # Fallback relative BGM mixing level
 MUSIC_DUCK_DB = -24.0
 SFX_LEVEL_DB = -18.0
 BGM_FADE_IN_SEC = 0.8

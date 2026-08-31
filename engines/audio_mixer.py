@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from config.settings import MUSIC_DIR, SFX_DIR, VOICE_DIR, RENDERS_DIR, FFMPEG_EXE, GEMINI_API_KEY, AI_PROVIDER_AVAILABLE
 from config.constants import (
-    AUDIO_SAMPLE_RATE, TARGET_LUFS, BGM_MIX_VOLUME_DB,
+    AUDIO_SAMPLE_RATE, TARGET_LUFS, TARGET_BGM_LUFS, BGM_MIX_VOLUME_DB,
     BGM_FADE_IN_SEC, BGM_FADE_OUT_SEC, LicenseType
 )
 from core.models import AssetRecord
@@ -295,18 +295,22 @@ class AudioMixer:
         source_music_path: Path,
         output_bgm_only_path: Path,
         duration: float,
-        bgm_volume_db: float = BGM_MIX_VOLUME_DB
+        bgm_volume_db: float = BGM_MIX_VOLUME_DB,
+        target_bgm_lufs: float = TARGET_BGM_LUFS
     ) -> Path:
         """
         Stage B: Produces standalone, listenable BGM-only audio file
-        with exact looping, trimming, volume scaling (-13 dB), and fade in/out.
+        with exact looping, trimming, standardized bed loudness normalization (-30.0 LUFS),
+        and smooth fade in/out. Guarantees consistent BGM-to-narration balance regardless
+        of intrinsic source track mastering loudness.
         """
         output_bgm_only_path.parent.mkdir(parents=True, exist_ok=True)
         fade_out_start = max(0.5, duration - BGM_FADE_OUT_SEC)
 
+        # Primary: Normalize BGM bed to standardized target LUFS (-30.0 LUFS) with true peak ceiling
         filter_b = (
             f"aloop=loop=-1:size=2e+09,atrim=0:{duration},"
-            f"volume={bgm_volume_db}dB,"
+            f"loudnorm=I={target_bgm_lufs}:LRA=11:tp=-3.0,"
             f"afade=t=in:ss=0:d={BGM_FADE_IN_SEC},"
             f"afade=t=out:st={fade_out_start:.2f}:d={BGM_FADE_OUT_SEC},"
             f"aformat=channel_layouts=stereo:sample_rates={AUDIO_SAMPLE_RATE}"
@@ -319,7 +323,25 @@ class AudioMixer:
             "-c:a", "pcm_s16le",
             str(output_bgm_only_path)
         ]
-        subprocess.run(cmd_b, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        res = subprocess.run(cmd_b, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if res.returncode != 0 or not output_bgm_only_path.exists() or output_bgm_only_path.stat().st_size < 1000:
+            logger.warning(f"Loudnorm Stage B fallback for {source_music_path.name}")
+            filter_fallback = (
+                f"aloop=loop=-1:size=2e+09,atrim=0:{duration},"
+                f"volume={bgm_volume_db}dB,"
+                f"afade=t=in:ss=0:d={BGM_FADE_IN_SEC},"
+                f"afade=t=out:st={fade_out_start:.2f}:d={BGM_FADE_OUT_SEC},"
+                f"aformat=channel_layouts=stereo:sample_rates={AUDIO_SAMPLE_RATE}"
+            )
+            cmd_fallback = [
+                FFMPEG_EXE, "-y",
+                "-i", str(source_music_path),
+                "-af", filter_fallback,
+                "-c:a", "pcm_s16le",
+                str(output_bgm_only_path)
+            ]
+            subprocess.run(cmd_fallback, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
         return output_bgm_only_path
 
     def mix_audio(
@@ -330,7 +352,8 @@ class AudioMixer:
         duration: float,
         bgm_volume_db: float = BGM_MIX_VOLUME_DB,
         job_id: str = "",
-        sfx_layer_path: Optional[Path] = None
+        sfx_layer_path: Optional[Path] = None,
+        target_bgm_lufs: float = TARGET_BGM_LUFS
     ) -> Tuple[Path, Path]:
         """
         Produces Stage B (BGM-only) and Stage C (Master mixed audio normalized to -14.0 LUFS)
@@ -345,7 +368,8 @@ class AudioMixer:
             source_music_path=music_path,
             output_bgm_only_path=bgm_only_path,
             duration=duration,
-            bgm_volume_db=bgm_volume_db
+            bgm_volume_db=bgm_volume_db,
+            target_bgm_lufs=target_bgm_lufs
         )
 
         has_sfx = bool(sfx_layer_path and sfx_layer_path.exists() and sfx_layer_path.stat().st_size > 1000)
