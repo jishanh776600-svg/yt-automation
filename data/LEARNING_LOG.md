@@ -2908,3 +2908,24 @@
 | `duration_target` | **SWEET_SPOT** | 8 | `+0.0%` | `USABLE_EVIDENCE` | **1.00** | Usable evidence (N=8). Full bounded weight adjustment (+0.0% lift vs baseline). |
 | `hook_archetype` | **CONTRADICTION_SHOCK** | 5 | `+23.9%` | `USABLE_EVIDENCE` | **1.24** | Usable evidence (N=5). Full bounded weight adjustment (+23.9% lift vs baseline). |
 | `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-39.9%` | `WEAK_EVIDENCE` | **0.90** | Weak evidence (N=3). Conservative +-10% damped adjustment (-39.9% lift vs baseline). |
+
+## Learning Cycle — 2026-08-31 12:00:00 UTC
+
+- **Mature Videos Evaluated**: 1
+- **Channel Performance Baseline**: 39.25/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+
+## Learning Cycle — 2026-08-31 12:00:00 UTC
+
+- **Mature Videos Evaluated**: 8
+- **Channel Performance Baseline**: 38.94/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `category` | **Unusual Wars** | 5 | `+23.9%` | `USABLE_EVIDENCE` | **1.24** | Usable evidence (N=5). Full bounded weight adjustment (+23.9% lift vs baseline). |
+| `category` | **American History** | 3 | `-39.9%` | `WEAK_EVIDENCE` | **0.90** | Weak evidence (N=3). Conservative +-10% damped adjustment (-39.9% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 8 | `+0.0%` | `USABLE_EVIDENCE` | **1.00** | Usable evidence (N=8). Full bounded weight adjustment (+0.0% lift vs baseline). |
+| `hook_archetype` | **CONTRADICTION_SHOCK** | 5 | `+23.9%` | `USABLE_EVIDENCE` | **1.24** | Usable evidence (N=5). Full bounded weight adjustment (+23.9% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-39.9%` | `WEAK_EVIDENCE` | **0.90** | Weak evidence (N=3). Conservative +-10% damped adjustment (-39.9% lift vs baseline). |
