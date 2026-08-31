@@ -24,7 +24,8 @@ jobs:
         run: |
           python -c '
           import os
-          import sys
+          import json
+          import urllib.request
           from core.gemini_client import GeminiClient
 
           groq_key = os.getenv("GROQ_API_KEY", "")
@@ -36,27 +37,37 @@ jobs:
           print(f"CHECK: GROQ_API_KEY detected: {groq_detected}")
           print(f"CHECK: OPENROUTER_API_KEY detected: {openrouter_detected}")
 
-          if not groq_key:
-              print("GROQ_CALL: FAIL (Key not present)")
-              print("GROQ_PARSING: FAIL")
-          else:
-              client = GeminiClient(api_key="", secondary_api_key="", groq_api_key=groq_key)
-              try:
-                  resp = client._execute_groq_request(
-                      api_key=groq_key,
-                      model=client.groq_model,
-                      contents="Reply with exactly: GROQ_OK"
-                  )
+          # Check available Groq models
+          req = urllib.request.Request(
+              "https://api.groq.com/openai/v1/models",
+              headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
+          )
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  models_data = json.loads(resp.read().decode())
+                  model_ids = [m["id"] for m in models_data.get("data", [])]
+                  print("AVAILABLE_GROQ_MODELS:", sorted(model_ids))
+                  # Pick first active chat model e.g. llama3-70b-8192 or llama-3.1-70b-versatile
+                  active_model = None
+                  for m in ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "llama-3.1-8b-instant", "llama3-70b-8192", "mixtral-8x7b-32768"]:
+                      if m in model_ids:
+                          active_model = m
+                          break
+                  if not active_model and model_ids:
+                      active_model = model_ids[0]
+                  print(f"SELECTED_MODEL: {active_model}")
+
+                  client = GeminiClient(api_key="", secondary_api_key="", groq_api_key=groq_key, groq_model=active_model)
+                  res = client._execute_groq_request(api_key=groq_key, model=active_model, contents="Reply with exactly: GROQ_OK")
                   print("GROQ_CALL: PASS")
-                  if hasattr(resp, "text") and resp.text:
+                  if hasattr(res, "text") and res.text:
                       print("GROQ_PARSING: PASS")
-                      clean_text = resp.text.strip()
-                      print(f"GROQ_RESPONSE: {clean_text}")
+                      print("GROQ_RESPONSE:", res.text.strip())
                   else:
-                      print("GROQ_PARSING: FAIL (empty response)")
-              except Exception as exc:
-                  print(f"GROQ_CALL: FAIL ({exc})")
-                  print("GROQ_PARSING: FAIL")
+                      print("GROQ_PARSING: FAIL")
+          except Exception as e:
+              print(f"GROQ_CALL: FAIL ({e})")
+              print("GROQ_PARSING: FAIL")
 
           print("OPENROUTER_CALL: NOT_IMPLEMENTED")
           print("OPENROUTER_PARSING: NOT_IMPLEMENTED")
