@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from config.constants import (
     JobState,
+    FailureType,
     MAX_JOB_RETRIES,
     MAX_UPLOAD_RETRIES,
     STALE_JOB_TIMEOUT_SEC,
@@ -29,6 +30,49 @@ from engines.drive_engine import DriveVaultEngine
 from engines.upload_engine import UploadEngine
 
 logger = logging.getLogger(__name__)
+
+
+def classify_error_to_failure_type(error: Any) -> FailureType:
+    """
+    Classifies any operational error, exception, or log message into one of 16 FailureType categories.
+    Prevents infrastructure/API outages from penalizing content strategy in the Learning Engine.
+    """
+    err_str = str(error).lower()
+    
+    if "quota" in err_str or "429" in err_str or "rate limit" in err_str:
+        return FailureType.QUOTA_FAILURE
+    if "provider" in err_str or "gemini" in err_str or "groq" in err_str or "openrouter" in err_str:
+        return FailureType.PROVIDER_FAILURE
+    if "oauth" in err_str or "auth" in err_str or "token" in err_str or "401" in err_str or "403" in err_str:
+        return FailureType.OAUTH_FAILURE
+    if "drive" in err_str or "vault" in err_str:
+        return FailureType.DRIVE_FAILURE
+    if "youtube" in err_str:
+        return FailureType.YOUTUBE_FAILURE
+    if "upload" in err_str or "resumable" in err_str:
+        return FailureType.UPLOAD_FAILURE
+    if "qa" in err_str or "critic" in err_str or "score" in err_str:
+        return FailureType.QA_FAILURE
+    if "render" in err_str or "ffmpeg" in err_str or "filter" in err_str:
+        return FailureType.RENDER_FAILURE
+    if "caption" in err_str or "subtitle" in err_str or "srt" in err_str:
+        return FailureType.CAPTION_FAILURE
+    if "tts" in err_str or "kokoro" in err_str or "voice" in err_str:
+        return FailureType.TTS_FAILURE
+    if "audio" in err_str or "mixer" in err_str or "lufs" in err_str:
+        return FailureType.AUDIO_FAILURE
+    if "visual" in err_str or "pexels" in err_str or "b-roll" in err_str:
+        return FailureType.VISUAL_FAILURE
+    if "script" in err_str or "hook" in err_str or "word count" in err_str:
+        return FailureType.SCRIPT_FAILURE
+    if "fact" in err_str or "hallucinat" in err_str or "claim" in err_str:
+        return FailureType.FACT_VERIFICATION_FAILURE
+    if "research" in err_str or "wiki" in err_str or "topic" in err_str:
+        return FailureType.RESEARCH_FAILURE
+    if "reconciliation" in err_str or "sync" in err_str or "phantom" in err_str or "checksum" in err_str or "database" in err_str:
+        return FailureType.RECONCILIATION_FAILURE
+
+    return FailureType.PROVIDER_FAILURE
 
 
 class RecoveryManager:

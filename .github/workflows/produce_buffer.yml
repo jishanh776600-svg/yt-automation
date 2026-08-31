@@ -112,11 +112,6 @@ jobs:
             python main.py --maintain-buffer "$TARGET" $VOICE_FLAG
           fi
 
-      - name: Claim and Schedule Ready Shorts from Google Drive Vault
-        if: always()
-        run: |
-          python main.py --schedule-ready
-
       - name: Upload & Synchronize Database to Cloud Vault
         if: always()
         run: |
