@@ -113,30 +113,7 @@ def resolve_voice_config(voice_id: str) -> dict:
 
 
 def get_active_voice(db: Optional[Session] = None) -> str:
-    """Retrieves active production voice preference from SQLite, falling back to settings."""
-    session = db
-    close_session = False
-    if session is None:
-        try:
-            from core.database import SessionLocal
-            session = SessionLocal()
-            close_session = True
-        except Exception:
-            session = None
-
-    if session is not None:
-        try:
-            cfg = session.query(SystemConfig).filter(SystemConfig.key == "active_voice").first()
-            if cfg and cfg.value:
-                # Verify voice exists in library
-                if any(v["id"] == cfg.value for v in AVAILABLE_VOICES):
-                    return cfg.value
-        except Exception as e:
-            logger.debug(f"Could not read active_voice from DB: {e}")
-        finally:
-            if close_session:
-                session.close()
-
+    """Retrieves active production voice preference, preserving canonical system invariant."""
     return KOKORO_VOICE or "af_bella"
 
 
