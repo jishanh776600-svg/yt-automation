@@ -1564,7 +1564,10 @@ class SystemDataProvider:
         # Data Freshness & Source Truth Metadata
         token_path = PROJECT_ROOT / "token.json"
         has_token = token_path.exists()
-        
+        from engines.metrics_collector import MetricsCollector
+        collector = MetricsCollector()
+        oauth_info = collector.get_oauth_scope_status()
+
         data_freshness = {
             "verified_live": {
                 "source": "YouTube Data API v3" if has_token else "SQLite Reconciliation Cache",
@@ -1578,11 +1581,29 @@ class SystemDataProvider:
                 "as_of": datetime.utcnow().isoformat() + "Z",
                 "confidence": "HIGH"
             },
+            "public_telemetry": {
+                "source": "YouTube Data API v3 (Views, Likes, Comments)",
+                "status": "LIVE_API" if has_token else "CACHED_DB",
+                "as_of": datetime.utcnow().isoformat() + "Z",
+                "confidence": "HIGH"
+            },
+            "private_analytics": {
+                "source": "YouTube Analytics API (AVD, APV, Retention)",
+                "status": "LIVE_API" if oauth_info.get("youtube_analytics") else "UNAVAILABLE",
+                "as_of": datetime.utcnow().isoformat() + "Z",
+                "confidence": "HIGH" if oauth_info.get("youtube_analytics") else "DEGRADED"
+            },
             "telemetry_metrics": {
-                "source": "YouTube Analytics API",
+                "source": "YouTube Data API v3 & Analytics API",
                 "status": "LIVE_API" if has_token else "UNAVAILABLE",
                 "as_of": datetime.utcnow().isoformat() + "Z",
                 "confidence": "HIGH" if has_token else "DEGRADED"
+            },
+            "oauth_status": {
+                "status": oauth_info.get("status"),
+                "reauthorization_required": oauth_info.get("reauthorization_required"),
+                "reauthorization_command": oauth_info.get("command"),
+                "scopes": oauth_info.get("scopes", [])
             },
             "drive_vault": {
                 "source": "Google Drive API v3",

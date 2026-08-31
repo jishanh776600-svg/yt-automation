@@ -61,6 +61,57 @@ class MetricsCollector:
             logger.warning(f"Could not initialize YouTube API clients: {e}")
             return None, None
 
+    def get_oauth_scope_status(self) -> Dict[str, Any]:
+        """
+        Audits active OAuth scopes stored in token.json and reports explicit authorization status.
+        """
+        if not self.token_path.exists():
+            return {
+                "status": "TOKEN_MISSING",
+                "scopes": [],
+                "youtube_upload": False,
+                "youtube_management": False,
+                "drive": False,
+                "youtube_analytics": False,
+                "reauthorization_required": True,
+                "command": "python auth_youtube.py"
+            }
+
+        try:
+            data = json.loads(self.token_path.read_text(encoding="utf-8"))
+            scopes = data.get("scopes", [])
+
+            has_upload = any("youtube.upload" in s or s == "https://www.googleapis.com/auth/youtube" for s in scopes)
+            has_yt = any(s == "https://www.googleapis.com/auth/youtube" for s in scopes)
+            has_drive = any("drive" in s for s in scopes)
+            has_analytics = any("yt-analytics" in s or "youtube.readonly" in s for s in scopes)
+
+            reauth_needed = not has_analytics
+            status = "FULL_ANALYTICS_ACTIVE" if has_analytics else "REAUTHORIZATION_REQUIRED"
+
+            return {
+                "status": status,
+                "scopes": scopes,
+                "youtube_upload": has_upload,
+                "youtube_management": has_yt,
+                "drive": has_drive,
+                "youtube_analytics": has_analytics,
+                "reauthorization_required": reauth_needed,
+                "command": "python auth_youtube.py"
+            }
+        except Exception as e:
+            logger.warning(f"Error auditing token scopes: {e}")
+            return {
+                "status": "ERROR",
+                "scopes": [],
+                "youtube_upload": False,
+                "youtube_management": False,
+                "drive": False,
+                "youtube_analytics": False,
+                "reauthorization_required": True,
+                "command": "python auth_youtube.py"
+            }
+
     def is_eligible_for_harvesting(
         self,
         db: Session,

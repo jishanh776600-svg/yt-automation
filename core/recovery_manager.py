@@ -47,10 +47,10 @@ def classify_error_to_failure_type(error: Any) -> FailureType:
         return FailureType.OAUTH_FAILURE
     if "drive" in err_str or "vault" in err_str:
         return FailureType.DRIVE_FAILURE
-    if "youtube" in err_str:
-        return FailureType.YOUTUBE_FAILURE
     if "upload" in err_str or "resumable" in err_str:
         return FailureType.UPLOAD_FAILURE
+    if "youtube" in err_str:
+        return FailureType.YOUTUBE_FAILURE
     if "qa" in err_str or "critic" in err_str or "score" in err_str:
         return FailureType.QA_FAILURE
     if "render" in err_str or "ffmpeg" in err_str or "filter" in err_str:
