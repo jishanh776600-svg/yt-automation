@@ -13,10 +13,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          pip install python-dotenv
-
       - name: Run Live Provider Connectivity Test
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -24,38 +20,27 @@ jobs:
         run: |
           python -c '
           import os
-          from core.gemini_client import GeminiClient
+          import json
+          import urllib.request
+          from urllib.error import HTTPError
 
           groq_key = os.getenv("GROQ_API_KEY", "")
           openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
 
-          groq_detected = "YES" if bool(groq_key) else "NO"
-          openrouter_detected = "YES" if bool(openrouter_key) else "NO"
+          print(f"CHECK: GROQ_API_KEY detected: {\"YES\" if bool(groq_key) else \"NO\"}")
+          print(f"CHECK: OPENROUTER_API_KEY detected: {\"YES\" if bool(openrouter_key) else \"NO\"}")
 
-          print(f"CHECK: GROQ_API_KEY detected: {groq_detected}")
-          print(f"CHECK: OPENROUTER_API_KEY detected: {openrouter_detected}")
-
-          candidate_models = ["llama-3.1-8b-instant", "llama3-70b-8192", "mixtral-8x7b-32768"]
-          success = False
-
-          for model_name in candidate_models:
-              try:
-                  client = GeminiClient(api_key="", secondary_api_key="", groq_api_key=groq_key, groq_model=model_name)
-                  res = client._execute_groq_request(api_key=groq_key, model=model_name, contents="Reply with exactly: GROQ_OK")
-                  print(f"GROQ_MODEL_SUCCESS: {model_name}")
-                  print("GROQ_CALL: PASS")
-                  if hasattr(res, "text") and res.text:
-                      print("GROQ_PARSING: PASS")
-                      print("GROQ_RESPONSE:", res.text.strip())
-                      success = True
-                      break
-              except Exception as e:
-                  print(f"MODEL {model_name} FAILED: {e}")
-
-          if not success:
-              print("GROQ_CALL: FAIL")
-              print("GROQ_PARSING: FAIL")
-
-          print("OPENROUTER_CALL: NOT_IMPLEMENTED")
-          print("OPENROUTER_PARSING: NOT_IMPLEMENTED")
+          headers = {
+              "Authorization": f"Bearer {groq_key}",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          }
+          req = urllib.request.Request("https://api.groq.com/openai/v1/models", headers=headers)
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  data = json.loads(resp.read().decode())
+                  ids = [m["id"] for m in data.get("data", [])]
+                  print("LIVE_GROQ_MODELS:", sorted(ids))
+          except HTTPError as e:
+              err_body = e.read().decode("utf-8", errors="ignore")
+              print(f"MODELS_ENDPOINT_ERROR: {e.code} - {err_body}")
           '
