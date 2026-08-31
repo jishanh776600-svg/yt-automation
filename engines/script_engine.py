@@ -368,7 +368,7 @@ class ScriptEngine:
             f"   - escalation: Rising stakes, intensifying conflict or bizarre progression.\n"
             f"   - reveal: The definitive, surprising historical payoff/climax.\n"
             f"   - loop_twist: COMPLETE FINAL RESOLUTION. A grammatically complete, memorable closing statement that provides total closure without trailing off or cutting mid-sentence.\n"
-            f"2. Total length: EXACTLY 50 to 56 words. Target spoken duration: ~22-24 seconds.\n"
+            f"2. Total length: EXACTLY 50 to 58 words across all 5 sections combined (around 10-12 words per section). Pacing requirement: Total word count MUST be between 48 and 62 words.\n"
             f"3. Style: Spoken natural American English. Punchy, rhythmic, conversational sentences (6-12 words/sentence). Zero filler.\n"
             f"4. Factual Grounding: Ground all details strictly in the verified facts. Do NOT hallucinate or exaggerate beyond facts.\n"
             f"5. NO AI Clichés: NEVER use 'will shock you', 'unbelievable true story', 'events spiraled', 'shocked historians', 'changed history forever'.\n"
@@ -381,8 +381,28 @@ class ScriptEngine:
             model=GEMINI_MODEL,
             contents=prompt
         )
-        raw_text = response.text.strip().replace("```json", "").replace("```", "").strip()
-        data = json.loads(raw_text)
+        import re
+        raw_text = response.text.strip()
+        data = None
+        try:
+            data = json.loads(raw_text)
+        except Exception:
+            m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw_text, re.DOTALL)
+            if m:
+                try:
+                    data = json.loads(m.group(1).strip())
+                except Exception:
+                    pass
+            if not data:
+                m = re.search(r"(\{.*\})", raw_text, re.DOTALL)
+                if m:
+                    try:
+                        data = json.loads(m.group(1).strip())
+                    except Exception:
+                        pass
+            if not data:
+                cleaned = raw_text.replace("```json", "").replace("```", "").strip()
+                data = json.loads(cleaned)
         return data
 
     def generate_script(
