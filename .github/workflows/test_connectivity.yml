@@ -13,34 +13,13 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install dependencies
+        run: |
+          pip install python-dotenv
+
       - name: Run Live Provider Connectivity Test
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          python -c '
-          import os
-          import json
-          import urllib.request
-          from urllib.error import HTTPError
-
-          groq_key = os.getenv("GROQ_API_KEY", "")
-          openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
-
-          print(f"CHECK: GROQ_API_KEY detected: {\"YES\" if bool(groq_key) else \"NO\"}")
-          print(f"CHECK: OPENROUTER_API_KEY detected: {\"YES\" if bool(openrouter_key) else \"NO\"}")
-
-          headers = {
-              "Authorization": f"Bearer {groq_key}",
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-          }
-          req = urllib.request.Request("https://api.groq.com/openai/v1/models", headers=headers)
-          try:
-              with urllib.request.urlopen(req) as resp:
-                  data = json.loads(resp.read().decode())
-                  ids = [m["id"] for m in data.get("data", [])]
-                  print("LIVE_GROQ_MODELS:", sorted(ids))
-          except HTTPError as e:
-              err_body = e.read().decode("utf-8", errors="ignore")
-              print(f"MODELS_ENDPOINT_ERROR: {e.code} - {err_body}")
-          '
+          python test_live_connectivity.py
