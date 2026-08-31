@@ -88,6 +88,12 @@ CURATED_HISTORICAL_SEEDS = [
         "category": HistoricalCategory.FORGOTTEN_FIGURES.value,
         "summary": "An ocean liner nurse who survived three separate maritime disasters: the collision of the Olympic, the sinking of the Titanic, and the disaster of the Britannic.",
         "curiosity": 9.7, "visual_potential": 9.1, "historical_interest": 9.4, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Great Emu War of 1932",
+        "category": HistoricalCategory.UNUSUAL_WARS.value,
+        "summary": "In November 1932, the Australian military deployed soldiers armed with machine guns to combat twenty thousand destructive emus, only to withdraw after the birds outmaneuvered them.",
+        "curiosity": 9.8, "visual_potential": 9.2, "historical_interest": 9.5, "storytelling": 9.7, "uniqueness": 9.9
     }
 ]
 

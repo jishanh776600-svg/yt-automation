@@ -286,7 +286,7 @@ class StoryDeduplicationEngine:
         shared_stems = candidate_fp.action_stems.intersection(existing_fp.action_stems)
 
         # 2. Location + Thematic Anchor Match (e.g. London + Parliament/Stink, Boston + Molasses, Erfurt + Latrine/Privy/Collapse)
-        if shared_locations:
+        if shared_locations and not (candidate_fp.years and existing_fp.years and not shared_years):
             candidate_anchors = candidate_fp.action_stems.intersection(THEMATIC_EVENT_ANCHORS)
             existing_anchors = existing_fp.action_stems.intersection(THEMATIC_EVENT_ANCHORS)
             shared_anchors = candidate_anchors.intersection(existing_anchors)

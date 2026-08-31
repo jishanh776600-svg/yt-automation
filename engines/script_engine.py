@@ -116,6 +116,13 @@ CURATED_SCRIPTS = {
         "escalation": "Shockwaves circled Earth four times, shattering eardrums forty miles away.",
         "reveal": "The entire island collapsed into the sea, blacking out the skies.",
         "loop_twist": "Yet today, an active volcano rises relentlessly from that crater."
+    },
+    "The Great Emu War of 1932": {
+        "hook": "In 1932, Australia declared war on wild birds.",
+        "context": "Soldiers arrived with machine guns against twenty thousand destructive emus.",
+        "escalation": "Yet the birds scattered into split-second ambushes, dodging every heavy volley.",
+        "reveal": "After weeks of humiliating chaos, the army withdrew in defeat.",
+        "loop_twist": "The soldiers retreated, completely outmaneuvered by flightless birds."
     }
 }
 
