@@ -426,6 +426,91 @@ class AssetFetcher:
             )
         return None
 
+    def search_wikimedia_commons(
+        self,
+        db: Session,
+        query: str,
+        exclude_urls: Optional[Set[str]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Queries Wikimedia Commons API for authentic Public Domain / CC-BY historical material.
+        Filters out non-commercial and incompatible licenses.
+        """
+        url = "https://commons.wikimedia.org/w/api.php"
+        headers = {"User-Agent": "AL_AMR_History_Automation/1.0 (Educational Historical Shorts)"}
+        params = {
+            "action": "query",
+            "generator": "search",
+            "gsrsearch": query,
+            "gsrnamespace": "6",  # File namespace
+            "gsrlimit": 10,
+            "prop": "imageinfo",
+            "iiprop": "url|size|extmetadata",
+            "format": "json"
+        }
+        exclude = exclude_urls or set()
+
+        try:
+            from core.retry import retry_call
+            resp = retry_call(
+                lambda: requests.get(url, headers=headers, params=params, timeout=10),
+                max_retries=2,
+                base_delay=1.0
+            )
+            if resp and resp.status_code == 200:
+                data = resp.json()
+                pages = data.get("query", {}).get("pages", {})
+                candidates = []
+                used_urls = set([r[0] for r in db.query(AssetRecord.source_url).all() if r[0]])
+                used_urls.update(exclude)
+
+                for page_id, p_data in pages.items():
+                    infos = p_data.get("imageinfo", [])
+                    if not infos:
+                        continue
+                    info = infos[0]
+                    img_url = info.get("url")
+                    width = info.get("width") or 0
+                    height = info.get("height") or 0
+                    ext_meta = info.get("extmetadata", {})
+
+                    if not img_url or img_url in used_urls or width < 400 or height < 400:
+                        continue
+
+                    lic_short = ext_meta.get("LicenseShortName", {}).get("value", "Public Domain")
+                    artist = ext_meta.get("Artist", {}).get("value", "Historical Archive")
+                    desc = ext_meta.get("ImageDescription", {}).get("value", "")
+
+                    if "<" in artist:
+                        import re
+                        artist = re.sub(r"<[^>]+>", "", artist).strip()
+
+                    # Filter out restricted licenses (NC, ND)
+                    if any(r in lic_short.upper() for r in ["-NC", "-ND", "NON-COMMERCIAL", "RESTRICTED"]):
+                        continue
+
+                    score = width * height
+                    candidates.append({
+                        "download_url": img_url,
+                        "title": p_data.get("title", ""),
+                        "artist": artist[:100],
+                        "license": lic_short,
+                        "description": desc[:200],
+                        "width": width,
+                        "height": height,
+                        "score": score
+                    })
+
+                if candidates:
+                    candidates.sort(key=lambda c: c["score"], reverse=True)
+                    selected = candidates[0]
+                    logger.info(f"[WIKIMEDIA_HISTORICAL] Found archival asset '{selected['title']}' ({selected['license']}) for query '{query}'")
+                    return selected
+        except Exception as e:
+            logger.warning(f"Wikimedia search notice for '{query}': {e}")
+
+        return None
+
     def generate_ai_image(self, prompt: str, output_path: Path) -> bool:
         """
         Generates free, commercially usable AI historical image via Pollinations.ai (Free $0 / Open).
@@ -456,7 +541,11 @@ class AssetFetcher:
     ) -> AssetRecord:
         """
         Acquires a unique visual asset for a shot:
-          Pexels 1080p Video -> Pexels 720p Video -> Pexels Photo -> Pollinations AI Image.
+          Tier 1/2: Wikimedia Commons Archival/Historical First (if archival query)
+          Tier 3: Pexels 1080p Video -> Pexels 720p Video
+          Tier 4: Pexels Photo
+          Tier 5: Pollinations AI Generative Reconstruction
+          Tier 6: Procedural Neutral Canvas
         """
         asset_id = f"ast_{uuid.uuid4().hex[:12]}"
         query = shot_data["search_query"]
@@ -468,6 +557,49 @@ class AssetFetcher:
         cropped_img_path = self.cache_dir / f"{asset_id}_1080x1920.jpg"
 
         exclude_set = used_urls_in_job if used_urls_in_job is not None else set()
+        q_lower = query.lower()
+
+        # ----------------------------------------------------
+        # 0. TIER 1 & 2: Archival First (Wikimedia Commons)
+        # ----------------------------------------------------
+        is_explicit_archival = any(k in q_lower for k in [
+            "engraving", "painting", "map", "document", "archival", "illustration",
+            "1814", "1919", "1866", "1908", "1932", "1872", "vintage photograph", "antique"
+        ])
+        if is_explicit_archival:
+            wiki_meta = self.search_wikimedia_commons(db, query, exclude_urls=exclude_set)
+            if wiki_meta and wiki_meta.get("download_url"):
+                wiki_url = wiki_meta["download_url"]
+                try:
+                    logger.info(f"[ASSET_FETCH] Downloading Wikimedia Archival Asset for shot: '{query}'")
+                    img_resp = requests.get(wiki_url, timeout=15, headers={"User-Agent": "AL_AMR_History/1.0"})
+                    if img_resp.status_code == 200 and len(img_resp.content) > 5000:
+                        with open(raw_img_path, "wb") as f:
+                            f.write(img_resp.content)
+                        self.crop_to_vertical_9_16(raw_img_path, cropped_img_path)
+                        exclude_set.add(wiki_url)
+                        prov = classify_visual_provenance(query, prompt, "wikimedia_commons", is_video=False)
+                        asset_rec = AssetRecord(
+                            id=asset_id,
+                            asset_type="image",
+                            source="wikimedia_commons",
+                            source_url=wiki_url,
+                            license=wiki_meta.get("license", LicenseType.PUBLIC_DOMAIN_CC0.value),
+                            commercial_use=True,
+                            attribution_required=bool(wiki_meta.get("artist")),
+                            attribution_text=wiki_meta.get("artist"),
+                            local_path=str(cropped_img_path),
+                            width=VIDEO_WIDTH,
+                            height=VIDEO_HEIGHT,
+                            duration_sec=shot_duration,
+                            metadata_json=json.dumps(prov)
+                        )
+                        db.add(asset_rec)
+                        db.commit()
+                        logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied with Wikimedia Archival ({asset_id})")
+                        return asset_rec
+                except Exception as w_err:
+                    logger.warning(f"Failed downloading Wikimedia asset {wiki_url}: {w_err}")
 
         # ----------------------------------------------------
         # 1. PRIMARY: Pexels Video Search (1080p / 720p)
@@ -593,3 +725,81 @@ class AssetFetcher:
         db.commit()
         logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied with procedural canvas ({asset_id})")
         return asset_rec
+
+
+def generate_provenance_manifest(
+    job_id: str,
+    assets_used: List[AssetRecord],
+    output_path: Path
+) -> Dict[str, Any]:
+    """
+    Generates a structured, machine-readable provenance manifest for all media assets
+    utilized in the final production of a Short.
+    """
+    from datetime import datetime
+    import hashlib
+    manifest_entries = []
+    historical_count = 0
+    stock_count = 0
+    generated_count = 0
+
+    for ast in assets_used:
+        meta = {}
+        if getattr(ast, "metadata_json", None):
+            try:
+                meta = json.loads(ast.metadata_json)
+            except Exception:
+                meta = {}
+
+        source_type = meta.get("source_type", VisualSourceType.UNKNOWN.value)
+        if "HISTORICAL" in source_type or "ARCHIVAL" in source_type:
+            historical_count += 1
+        elif "GENERATED" in source_type:
+            generated_count += 1
+        else:
+            stock_count += 1
+
+        file_sha256 = None
+        if ast.local_path and Path(ast.local_path).exists():
+            try:
+                with open(ast.local_path, "rb") as f:
+                    file_sha256 = hashlib.sha256(f.read()).hexdigest()
+            except Exception:
+                pass
+
+        manifest_entries.append({
+            "asset_id": ast.id,
+            "asset_type": ast.asset_type,
+            "source": ast.source,
+            "source_url": ast.source_url,
+            "license": ast.license,
+            "commercial_use": ast.commercial_use,
+            "attribution_required": ast.attribution_required,
+            "attribution_text": ast.attribution_text,
+            "source_type": source_type,
+            "historical_confidence": meta.get("historical_confidence", "UNKNOWN"),
+            "event_relation": meta.get("event_relevance", "UNKNOWN"),
+            "is_generated_reconstruction": meta.get("is_generated_reconstruction", False),
+            "sha256": file_sha256
+        })
+
+    manifest = {
+        "job_id": job_id,
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "total_assets_used": len(assets_used),
+        "historical_source_count": historical_count,
+        "modern_stock_count": stock_count,
+        "generated_reconstruction_count": generated_count,
+        "manifest_entries": manifest_entries
+    }
+
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2)
+        logger.info(f"[PROVENANCE_MANIFEST] Generated manifest for Job {job_id[:8]} at {output_path.name}")
+    except Exception as e:
+        logger.warning(f"Failed to write provenance manifest: {e}")
+
+    return manifest
+
