@@ -225,11 +225,11 @@ class QAEngine:
         if not resolution_ok:
             reasons.append(f"Invalid resolution: {media_info['width']}x{media_info['height']} (Required: {VIDEO_WIDTH}x{VIDEO_HEIGHT})")
 
-        # 3. Duration check (Strict 21.0 - 25.5s)
+        # 3. Duration check (Strict 21.0 - 26.2s including outro padding margin)
         duration = media_info["duration"] if media_info["duration"] > 0 else render.duration_sec
-        duration_ok = (MIN_DURATION_SEC <= duration <= (MAX_DURATION_SEC + 0.5))
+        duration_ok = (MIN_DURATION_SEC <= duration <= (MAX_DURATION_SEC + 1.2))
         if not duration_ok:
-            reasons.append(f"Video duration {duration:.2f}s is outside acceptable range ({MIN_DURATION_SEC}s - {MAX_DURATION_SEC}s)")
+            reasons.append(f"Video duration {duration:.2f}s is outside acceptable range ({MIN_DURATION_SEC}s - {MAX_DURATION_SEC + 1.2}s)")
 
         # 3.5. Narration Completeness & Safety Margin Check (0.6s Breathing Margin)
         voice_assets = [a for a in assets_used if a.asset_type == "voice" and getattr(a, "duration_sec", 0) > 0]

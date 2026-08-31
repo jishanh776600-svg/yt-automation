@@ -1,11 +1,12 @@
 {
-  "action": "PRODUCE_BATCH",
-  "outcome": "BLOCKED",
-  "block_reason": "ALL_AI_PROVIDERS_EXHAUSTED",
-  "requested_count": 1,
-  "produced_count": 0,
-  "initial_stock": 3,
-  "final_stock": 3,
+  "action": "MAINTAIN_BUFFER",
+  "outcome": "SUCCEEDED",
+  "block_reason": null,
+  "requested_deficit": 1,
+  "produced_count": 1,
+  "initial_stock": 5,
+  "final_stock": 6,
+  "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-08-31T17:09:45.914797Z"
+  "timestamp": "2026-08-31T17:25:54.024401Z"
 }

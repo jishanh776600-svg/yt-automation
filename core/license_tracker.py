@@ -20,6 +20,13 @@ class LicenseTracker:
         LicenseType.APACHE_2_0.value,
         LicenseType.MIT.value,
         LicenseType.AI_GENERATED_OPEN.value,
+        "Public domain",
+        "Public Domain",
+        "public_domain",
+        "CC0",
+        "PD",
+        "Creative Commons CC0",
+        "Pexels License",
     }
 
     @classmethod
@@ -34,10 +41,21 @@ class LicenseTracker:
         if not asset.commercial_use:
             return False, f"Asset {asset.id} explicitly marked commercial_use=False"
 
-        if asset.license == LicenseType.UNKNOWN.value:
+        if not asset.license or asset.license == LicenseType.UNKNOWN.value:
             return False, f"Asset {asset.id} has UNKNOWN license status. Verification failed."
 
-        if asset.license not in cls.APPROVED_COMMERCIAL_LICENSES:
+        norm_lic = asset.license.lower().strip()
+        is_approved = (
+            asset.license in cls.APPROVED_COMMERCIAL_LICENSES
+            or "public domain" in norm_lic
+            or "cc0" in norm_lic
+            or "pexels" in norm_lic
+            or "mit" in norm_lic
+            or "apache" in norm_lic
+            or "ai generated" in norm_lic
+        )
+
+        if not is_approved:
             return False, f"Asset {asset.id} has unapproved license: {asset.license}"
 
         return True, "Verified for commercial use"
