@@ -131,7 +131,8 @@ class TestAdversarialFailuresPhase1013(unittest.TestCase):
         engine._is_test_mode = MagicMock(return_value=False)
 
         mock_youtube = MagicMock()
-        # Upload fails
+        # Upload fails with network timeout during resumable chunk upload
+        mock_youtube.videos.return_value.insert.return_value.next_chunk.side_effect = TimeoutError("HTTP Read Timeout")
         mock_youtube.videos.return_value.insert.return_value.execute.side_effect = TimeoutError("HTTP Read Timeout")
 
         # Search returns an old published video: title contains "The Great Stink of London (1858)" and different JOB_ID

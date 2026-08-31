@@ -55,7 +55,7 @@ def init_db(target_engine=None):
     Base.metadata.create_all(bind=eng)
 
     # Safe idempotent SQLite column migrations
-    with engine.connect() as conn:
+    with eng.connect() as conn:
         try:
             # 1. scripts table
             script_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(scripts)")).fetchall()]
@@ -122,6 +122,11 @@ def init_db(target_engine=None):
             for col, col_type in pu_new_cols.items():
                 if col not in pu_cols:
                     conn.execute(text(f"ALTER TABLE provider_usage ADD COLUMN {col} {col_type}"))
+
+            # 7. performance_snapshots table
+            perf_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(performance_snapshots)")).fetchall()]
+            if "validation_status" not in perf_cols:
+                conn.execute(text("ALTER TABLE performance_snapshots ADD COLUMN validation_status VARCHAR(32) DEFAULT 'VALID_REAL'"))
 
             conn.commit()
         except Exception:

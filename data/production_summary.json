@@ -1,0 +1,11 @@
+{
+  "action": "PRODUCE_BATCH",
+  "outcome": "BLOCKED",
+  "block_reason": "ALL_AI_PROVIDERS_EXHAUSTED",
+  "requested_count": 1,
+  "produced_count": 0,
+  "initial_stock": 0,
+  "final_stock": 0,
+  "voice": "af_bella",
+  "timestamp": "2026-08-31T11:50:53.677110Z"
+}

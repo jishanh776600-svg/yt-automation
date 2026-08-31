@@ -188,14 +188,16 @@ class TestPhase2ReconciliationAndRefill(unittest.TestCase):
         ))
         self.db.commit()
 
-        res = self.client.get("/api/state")
-        self.assertEqual(res.status_code, 200)
-        data = res.json()
-        self.assertIn("publishing", data)
-        pub = data["publishing"]
-        self.assertGreaterEqual(pub["published_today"], 1)
-        self.assertEqual(pub["daily_limit"], 3)
-        self.assertEqual(pub["remaining_capacity"], max(0, 3 - (pub["published_today"] + pub["scheduled_today"])))
+        with patch.object(SystemDataProvider, "get_drive_inventory", return_value={"status": "LIVE_API", "counts": {"01_READY": 0, "02_PROCESSING": 0, "03_PUBLISHED": 0}}), \
+             patch.object(SystemDataProvider, "get_automation_health", return_value={"verdict": "HEALTHY", "passed_checks_count": 8, "warnings": [], "critical_failures": []}):
+            res = self.client.get("/api/state")
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertIn("publishing", data)
+            pub = data["publishing"]
+            self.assertGreaterEqual(pub["published_today"], 1)
+            self.assertEqual(pub["daily_limit"], 3)
+            self.assertEqual(pub["remaining_capacity"], max(0, 3 - (pub["published_today"] + pub["scheduled_today"])))
 
     def test_09_duplicate_refill_protection_preserved(self):
         """Test 9: Action manager blocks duplicate refill while active run is in flight."""
