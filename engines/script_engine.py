@@ -42,17 +42,17 @@ FORBIDDEN_CLICHES = [
 CURATED_SCRIPTS = {
     "The Kettle War of 1784": {
         "hook": "In 1784, a European war ended with a single shattered soup kettle.",
-        "context": "The Holy Roman Empire sent armed warships to challenge the Dutch Republic at sea.",
-        "escalation": "A Dutch flagship fired a single warning cannon shot across the harbor.",
-        "reveal": "The cannonball struck an iron soup kettle on deck, spraying boiling soup everywhere.",
-        "loop_twist": "Terrified by the single shot, the imperial fleet surrendered without a single casualty."
+        "context": "The Holy Roman Empire sent warships to challenge the Dutch Republic at sea.",
+        "escalation": "A Dutch flagship fired one warning cannon shot across the harbor.",
+        "reveal": "The shot struck an iron kettle, spraying boiling soup across the deck.",
+        "loop_twist": "Terrified, the imperial fleet surrendered without a single human casualty."
     },
     "The Aroostook War": {
-        "hook": "In 1838, America and Britain mobilized fifty thousand soldiers over stolen pine trees.",
-        "context": "Lumberjacks from Maine and New Brunswick clashed in the disputed Aroostook timber valley.",
-        "escalation": "Both sides deployed armed militias, built frontier forts, and prepared for full-scale war.",
-        "reveal": "General Winfield Scott negotiated a truce before a single shot was ever fired.",
-        "loop_twist": "The only recorded casualties of the entire war were two men mauled by bears."
+        "hook": "In 1838, America and Britain mobilized fifty thousand troops over stolen trees.",
+        "context": "Lumberjacks from Maine and New Brunswick clashed in a disputed timber valley.",
+        "escalation": "Both sides deployed armed militias and prepared for full-scale war.",
+        "reveal": "General Winfield Scott negotiated a truce before any shots were fired.",
+        "loop_twist": "The only casualties of the entire war were two men mauled by bears."
     },
     "The 38-Minute Anglo-Zanzibar War (1896)": {
         "hook": "The shortest war in human history lasted less than forty minutes.",
