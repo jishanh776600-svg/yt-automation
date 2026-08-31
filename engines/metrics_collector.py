@@ -210,9 +210,10 @@ class MetricsCollector:
                 logger.warning(f"Error fetching Data API stats for {upload.youtube_video_id}: {e}")
 
             # 2. Fetch Analytics API metrics (APV, AVD, Subs, Watch Time) if client is active
-            if yt_analytics and upload.published_at:
+            if yt_analytics and (upload.published_at or upload.created_at):
                 try:
-                    start_date = upload.published_at.strftime("%Y-%m-%d")
+                    pub_dt = upload.published_at or upload.created_at
+                    start_date = pub_dt.strftime("%Y-%m-%d")
                     end_date = now.strftime("%Y-%m-%d")
                     metrics_query = (
                         "views,estimatedMinutesWatched,averageViewDuration,"
