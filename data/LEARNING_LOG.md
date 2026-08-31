@@ -2229,3 +2229,19 @@
 | `duration_target` | **SWEET_SPOT** | 3 | `+3.1%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative weight adjustment (+3.1% lift). |
 | `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `+3.1%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative weight adjustment (+3.1% lift). |
 | `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `+3.1%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative weight adjustment (+3.1% lift). |
+
+## Learning Cycle — 2026-08-31 09:04:51 UTC
+
+- **Mature Videos Evaluated**: 58
+- **Channel Performance Baseline**: 22.49/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 3 | `-20.4%` | `WEAK_EVIDENCE` | **0.90** | Weak evidence (N=3). Conservative weight adjustment (-20.4% lift). |
+| `category` | ****Unusual Wars**** | 1 | `-26.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-15.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Unusual Wars** | 2 | `-22.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 3 | `-14.9%` | `WEAK_EVIDENCE` | **0.93** | Weak evidence (N=3). Conservative weight adjustment (-14.9% lift). |
+| `duration_target` | **SWEET_SPOT** | 3 | `-20.4%` | `WEAK_EVIDENCE` | **0.90** | Weak evidence (N=3). Conservative weight adjustment (-20.4% lift). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `-20.4%` | `WEAK_EVIDENCE` | **0.90** | Weak evidence (N=3). Conservative weight adjustment (-20.4% lift). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `-20.4%` | `WEAK_EVIDENCE` | **0.90** | Weak evidence (N=3). Conservative weight adjustment (-20.4% lift). |
