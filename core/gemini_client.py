@@ -115,10 +115,20 @@ class GroqResponse:
         return f"<GroqResponse text={snippet!r}>"
 
 
+class OpenRouterResponse:
+    """Wrapper to maintain exact interface compatibility with google.genai response objects."""
+    def __init__(self, text: str):
+        self.text = text
+
+    def __repr__(self) -> str:
+        snippet = (self.text[:40] + "...") if len(self.text) > 40 else self.text
+        return f"<OpenRouterResponse text={snippet!r}>"
+
+
 class GeminiClient:
     """
     Unified AI Client providing centralized rate limiting, 429-aware backoff,
-    and automatic failover across Gemini Primary -> Gemini Secondary -> Groq -> DeepSeek.
+    and automatic failover across Gemini Primary -> Gemini Secondary -> Groq -> OpenRouter.
     Remembers provider exhaustion for the session to prevent retry amplification on dead credentials.
     """
     def __init__(
@@ -128,6 +138,8 @@ class GeminiClient:
         secondary_model: Optional[str] = None,
         groq_api_key: Optional[str] = None,
         groq_model: Optional[str] = None,
+        openrouter_api_key: Optional[str] = None,
+        openrouter_model: Optional[str] = None,
         deepseek_api_key: Optional[str] = None,
         deepseek_model: Optional[str] = None,
         rate_limiter: Optional[GeminiRateLimiter] = None,
@@ -140,17 +152,17 @@ class GeminiClient:
             GEMINI_MODEL_SECONDARY,
             GROQ_API_KEY,
             GROQ_MODEL,
-            DEEPSEEK_API_KEY,
-            DEEPSEEK_MODEL
+            OPENROUTER_API_KEY,
+            OPENROUTER_MODEL
         )
         self.api_key = api_key if api_key is not None else GEMINI_API_KEY
         self.secondary_api_key = secondary_api_key if secondary_api_key is not None else GEMINI_API_KEY_SECONDARY
         self.groq_api_key = groq_api_key if groq_api_key is not None else GROQ_API_KEY
-        self.deepseek_api_key = deepseek_api_key if deepseek_api_key is not None else DEEPSEEK_API_KEY
+        self.openrouter_api_key = openrouter_api_key if openrouter_api_key is not None else OPENROUTER_API_KEY
         self.primary_model = GEMINI_MODEL
         self.secondary_model = secondary_model or GEMINI_MODEL_SECONDARY or GEMINI_MODEL
         self.groq_model = groq_model or GROQ_MODEL or "groq/compound-mini"
-        self.deepseek_model = deepseek_model or DEEPSEEK_MODEL or "deepseek-ai/deepseek-v4-flash-0731"
+        self.openrouter_model = openrouter_model or OPENROUTER_MODEL or "meta-llama/llama-3.3-70b-instruct:free"
         self.rate_limiter = rate_limiter or get_shared_rate_limiter()
         self.sleeper = sleeper
         self._provider_lock = threading.Lock()
@@ -177,7 +189,7 @@ class GeminiClient:
             self.active_provider = "primary"
 
     def _get_configured_providers(self, requested_model: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Returns ordered list of configured, non-empty provider credentials: Primary -> Secondary -> Groq -> DeepSeek."""
+        """Returns ordered list of configured, non-empty provider credentials: Primary -> Secondary -> Groq -> OpenRouter."""
         providers = []
         if self.api_key:
             providers.append({
@@ -200,12 +212,12 @@ class GeminiClient:
                 "api_key": self.groq_api_key,
                 "model": self.groq_model
             })
-        if self.deepseek_api_key:
+        if self.openrouter_api_key:
             providers.append({
-                "name": "deepseek",
-                "type": "deepseek",
-                "api_key": self.deepseek_api_key,
-                "model": self.deepseek_model
+                "name": "openrouter",
+                "type": "openrouter",
+                "api_key": self.openrouter_api_key,
+                "model": self.openrouter_model
             })
         return providers
 
@@ -566,6 +578,148 @@ class GeminiClient:
         logger.error(f"[GROQ_EXHAUSTED] {err_msg}")
         raise GeminiQuotaExhaustedError(err_msg) from last_exception
 
+    def _execute_openrouter_request(
+        self,
+        api_key: str,
+        model: str,
+        contents: Any,
+        max_retries: int = 3,
+        base_delay: Optional[float] = None,
+        max_delay: float = 60.0,
+        **kwargs
+    ) -> OpenRouterResponse:
+        """
+        Executes a single chat completion request against OpenRouter REST API using standard-library urllib.
+        Fails fast on 401/403 (invalid key) and 429 (rate/credit limit), marking provider exhausted.
+        """
+        import json
+        import urllib.request
+        from urllib.error import HTTPError, URLError
+
+        from config.settings import OPENROUTER_BASE_URL, TEST_MODE
+
+        url = OPENROUTER_BASE_URL or "https://openrouter.ai/api/v1/chat/completions"
+        effective_model = self.openrouter_model or model or "meta-llama/llama-3.3-70b-instruct:free"
+
+        prompt_text = ""
+        if isinstance(contents, str):
+            prompt_text = contents
+        elif isinstance(contents, list):
+            prompt_text = "\n".join([str(c) for c in contents])
+        else:
+            prompt_text = str(contents)
+
+        payload_dict = {
+            "model": effective_model,
+            "messages": [
+                {"role": "user", "content": prompt_text}
+            ],
+            "temperature": 0.7
+        }
+
+        # Check if caller requested structured JSON
+        if kwargs.get("response_mime_type") == "application/json" or "json" in prompt_text.lower()[:100]:
+            payload_dict["response_format"] = {"type": "json_object"}
+
+        payload_bytes = json.dumps(payload_dict).encode("utf-8")
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": "https://github.com/jishanh776600-svg/yt-automation",
+            "X-Title": "AL AMR Autonomous Pipeline",
+            "User-Agent": "AL-AMR-OpenRouter-Client/1.0"
+        }
+
+        is_test = TEST_MODE or "pytest" in sys.modules
+        base_delay = 0.05 if is_test else (base_delay if base_delay is not None else 2.0)
+        last_exception = None
+
+        for attempt in range(1, max_retries + 1):
+            req = urllib.request.Request(url, data=payload_bytes, headers=headers, method="POST")
+            try:
+                self.rate_limiter.wait_for_slot()
+                timeout = 10.0 if is_test else 45.0
+                with urllib.request.urlopen(req, timeout=timeout) as response:
+                    raw_body = response.read().decode("utf-8")
+                    data = json.loads(raw_body)
+                    choices = data.get("choices", [])
+                    if not choices:
+                        raise GeminiQuotaExhaustedError(f"OpenRouter response missing choices: {raw_body}")
+                    content = choices[0].get("message", {}).get("content", "")
+                    return OpenRouterResponse(text=content)
+
+            except HTTPError as http_err:
+                last_exception = http_err
+                code = http_err.code
+                err_body = http_err.read().decode("utf-8", errors="ignore")
+
+                # HTTP 401 / 403: Authentication or forbidden failure - fail fast immediately
+                if code in (401, 403):
+                    self.mark_provider_exhausted("openrouter")
+                    logger.error(
+                        f"[OPENROUTER_AUTH_FAIL] OpenRouter client authentication error (HTTP {code}). "
+                        f"Marking provider exhausted permanently for session: {err_body}"
+                    )
+                    raise GeminiQuotaExhaustedError(
+                        f"OpenRouter client authentication error (HTTP {code})"
+                    ) from http_err
+
+                # HTTP 429: Rate limit or quota exhausted - fail fast and rotate immediately
+                if code == 429:
+                    self.mark_provider_exhausted("openrouter")
+                    logger.warning(
+                        f"[OPENROUTER_QUOTA_FAIL] OpenRouter rate/quota limit reached (HTTP 429). "
+                        f"Marking provider exhausted permanently for session: {err_body}"
+                    )
+                    raise GeminiQuotaExhaustedError(
+                        "OpenRouter daily quota or rate limit exhausted (HTTP 429)"
+                    ) from http_err
+
+                # HTTP 400 / 404: Invalid model or payload error
+                if code in (400, 404):
+                    self.mark_provider_exhausted("openrouter")
+                    logger.error(
+                        f"[OPENROUTER_REQ_FAIL] OpenRouter request error (HTTP {code}). "
+                        f"Marking provider exhausted: {err_body}"
+                    )
+                    raise GeminiQuotaExhaustedError(
+                        f"OpenRouter request error (HTTP {code}): {err_body}"
+                    ) from http_err
+
+                if attempt >= max_retries:
+                    break
+
+                raw_delay = base_delay * (2 ** (attempt - 1))
+                jitter = 0.01 if is_test else random.uniform(0.5, 1.5)
+                delay = min(max_delay, raw_delay) + jitter
+                logger.warning(
+                    f"[OPENROUTER_RETRY] Transient failure from OpenRouter (attempt {attempt}/{max_retries}, HTTP {code}). Retrying in {delay:.2f}s..."
+                )
+                self.sleeper(delay)
+
+            except (URLError, TimeoutError, ConnectionError, OSError) as net_err:
+                last_exception = net_err
+                if attempt >= max_retries:
+                    break
+                raw_delay = base_delay * (2 ** (attempt - 1))
+                jitter = 0.01 if is_test else random.uniform(0.5, 1.5)
+                delay = min(max_delay, raw_delay) + jitter
+                logger.warning(
+                    f"[OPENROUTER_NET_RETRY] Network connection error to OpenRouter (attempt {attempt}/{max_retries}): {net_err}. Retrying in {delay:.2f}s..."
+                )
+                self.sleeper(delay)
+
+            except Exception as unk_err:
+                logger.error(f"[OPENROUTER_ERROR] Unhandled error calling OpenRouter: {unk_err}")
+                raise unk_err
+
+        # All retries exhausted on OpenRouter
+        self.mark_provider_exhausted("openrouter")
+        err_msg = f"OpenRouter API retries exhausted after {max_retries} attempts: {last_exception}"
+        logger.error(f"[OPENROUTER_EXHAUSTED] {err_msg}")
+        raise GeminiQuotaExhaustedError(err_msg) from last_exception
+
     def generate_content(
         self,
         model: str,
@@ -577,18 +731,18 @@ class GeminiClient:
     ) -> Any:
         """
         Executes text generation across configured AI providers:
-        Primary Gemini -> Secondary Gemini -> Groq -> DeepSeek.
+        Primary Gemini -> Secondary Gemini -> Groq -> OpenRouter.
         Skips previously exhausted providers to prevent retry amplification.
         """
         all_providers = self._get_configured_providers(requested_model=model)
         if not all_providers:
-            raise ValueError("No valid AI provider credentials (GEMINI_API_KEY, GROQ_API_KEY, DEEPSEEK_API_KEY) configured.")
+            raise ValueError("No valid AI provider credentials (GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY) configured.")
 
         # Determine eligible providers (unexhausted first)
         available_providers = [p for p in all_providers if not self.is_provider_exhausted(p["name"])]
 
         if not available_providers:
-            err_msg = "All configured AI providers (PRIMARY, SECONDARY, GROQ, DEEPSEEK) exhausted daily API quotas."
+            err_msg = "All configured AI providers (PRIMARY, SECONDARY, GROQ, OPENROUTER) exhausted daily API quotas."
             logger.error(f"[AI_EXHAUSTED] {err_msg}")
             raise GeminiQuotaExhaustedError(err_msg)
 
@@ -606,6 +760,16 @@ class GeminiClient:
             try:
                 if prov_type == "groq":
                     result = self._execute_groq_request(
+                        api_key=prov_key,
+                        model=prov_model,
+                        contents=contents,
+                        max_retries=max_retries,
+                        base_delay=base_delay,
+                        max_delay=max_delay,
+                        **kwargs
+                    )
+                elif prov_type == "openrouter":
+                    result = self._execute_openrouter_request(
                         api_key=prov_key,
                         model=prov_model,
                         contents=contents,
@@ -680,22 +844,26 @@ def get_gemini_client(
     secondary_model: Optional[str] = None,
     groq_api_key: Optional[str] = None,
     groq_model: Optional[str] = None,
+    openrouter_api_key: Optional[str] = None,
+    openrouter_model: Optional[str] = None,
     deepseek_api_key: Optional[str] = None,
     deepseek_model: Optional[str] = None
 ) -> GeminiClient:
     global _SHARED_CLIENT
     with _INIT_LOCK:
-        if _SHARED_CLIENT is None or api_key or secondary_api_key or groq_api_key or deepseek_api_key:
+        if _SHARED_CLIENT is None or api_key or secondary_api_key or groq_api_key or openrouter_api_key or deepseek_api_key:
             client = GeminiClient(
                 api_key=api_key,
                 secondary_api_key=secondary_api_key,
                 secondary_model=secondary_model,
                 groq_api_key=groq_api_key,
                 groq_model=groq_model,
+                openrouter_api_key=openrouter_api_key,
+                openrouter_model=openrouter_model,
                 deepseek_api_key=deepseek_api_key,
                 deepseek_model=deepseek_model
             )
-            if not api_key and not secondary_api_key and not groq_api_key and not deepseek_api_key:
+            if not api_key and not secondary_api_key and not groq_api_key and not openrouter_api_key and not deepseek_api_key:
                 _SHARED_CLIENT = client
             return client
         return _SHARED_CLIENT

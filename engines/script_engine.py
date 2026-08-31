@@ -335,9 +335,10 @@ class ScriptEngine:
         topic: Topic,
         selected_hook: str,
         research_data: Optional[Dict[str, Any]],
-        revision_feedback: Optional[List[str]] = None
+        revision_feedback: Optional[List[str]] = None,
+        learned_guidance: str = ""
     ) -> Dict[str, str]:
-        """Executes a single draft/revision pass with Gemini GenAI."""
+        """Executes a single draft/revision pass with configured AI Provider."""
         from core.gemini_client import get_gemini_client
         gemini_client = get_gemini_client()
 
@@ -359,11 +360,17 @@ class ScriptEngine:
             f"Topic: '{topic.title}'\n"
             f"Selected Opening Hook (0-2s): \"{selected_hook}\"\n"
             f"{verified_facts_text}\n"
-            f"\nStrict Constraints:\n"
-            f"1. Total length: EXACTLY 52 to 57 words (No more, no less). Target duration: ~23 seconds.\n"
-            f"2. Style: Spoken natural American English. Short, rhythmic, conversational sentences (6-12 words/sentence).\n"
-            f"3. Narrative Flow: 5 parts -> hook, context, escalation, reveal, loop_twist.\n"
-            f"4. Factual Grounding: Ground all details strictly in the verified facts. Do NOT hallucinate dates, numbers, or people.\n"
+            f"{learned_guidance}\n"
+            f"\nStrict Narrative & Retention Architecture:\n"
+            f"1. Structure (5 distinct stages):\n"
+            f"   - hook: Immediate curiosity/tension gap (0-2s). No slow introductions, no generic 'Did you know'.\n"
+            f"   - context: Clear, rapid historical grounding with forward momentum.\n"
+            f"   - escalation: Rising stakes, intensifying conflict or bizarre progression.\n"
+            f"   - reveal: The definitive, surprising historical payoff/climax.\n"
+            f"   - loop_twist: COMPLETE FINAL RESOLUTION. A grammatically complete, memorable closing statement that provides total closure without trailing off or cutting mid-sentence.\n"
+            f"2. Total length: EXACTLY 50 to 56 words. Target spoken duration: ~22-24 seconds.\n"
+            f"3. Style: Spoken natural American English. Punchy, rhythmic, conversational sentences (6-12 words/sentence). Zero filler.\n"
+            f"4. Factual Grounding: Ground all details strictly in the verified facts. Do NOT hallucinate or exaggerate beyond facts.\n"
             f"5. NO AI Clichés: NEVER use 'will shock you', 'unbelievable true story', 'events spiraled', 'shocked historians', 'changed history forever'.\n"
             f"{feedback_instruction}\n"
             f"\nOutput strictly valid JSON with keys: hook, context, escalation, reveal, loop_twist"
@@ -420,6 +427,14 @@ class ScriptEngine:
             max_attempts = 3
             current_feedback = None
 
+            # Get learned production guidance from closed-loop analytics
+            learned_guidance = ""
+            try:
+                from engines.learning_engine import LearningEngine
+                learned_guidance = LearningEngine().get_learned_production_profile(db)
+            except Exception as learn_err:
+                logger.debug(f"Learning guidance query notice: {learn_err}")
+
             for attempt in range(1, max_attempts + 1):
                 logger.info(f"Script Generation Pass {attempt}/{max_attempts} for '{topic.title}'...")
                 try:
@@ -427,7 +442,8 @@ class ScriptEngine:
                         topic=topic,
                         selected_hook=selected_hook,
                         research_data=research_data,
-                        revision_feedback=current_feedback
+                        revision_feedback=current_feedback,
+                        learned_guidance=learned_guidance
                     )
                     eval_res = self.critic.evaluate(data, research_data)
                     logger.info(f"Pass {attempt} Critic Score: {eval_res.score}/100 (Passed: {eval_res.passed})")

@@ -333,14 +333,14 @@
                                 <!-- Stage 5: VAULT BUFFER -->
                                 <div class="pipeline-connector p-2.5 bg-spaceWell rounded border border-emerald-900/40 bg-emerald-950/10">
                                     <div class="text-[9px] text-emerald-400 uppercase tracking-tight font-bold">05. Vault</div>
-                                    <div class="text-base font-bold text-emerald-300 mt-1">{{ state.inventory.counts['01_READY'] or 0 }} <span class="text-[10px] text-slate-500">/ 6</span></div>
+                                    <div class="text-base font-bold text-emerald-300 mt-1">{{ state.buffer.ready_stock or 0 }} <span class="text-[10px] text-slate-500">/ 6</span></div>
                                     <span class="inline-block mt-1 text-[8px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60">RESERVE</span>
                                 </div>
 
                                 <!-- Stage 6: PUBLISHED -->
                                 <div class="pipeline-connector p-2.5 bg-spaceWell rounded border border-purple-900/40 bg-purple-950/10">
                                     <div class="text-[9px] text-purple-400 uppercase tracking-tight font-bold">06. Live</div>
-                                    <div class="text-base font-bold text-purple-300 mt-1">{{ state.publishing.total_published or state.database_sync.table_counts.uploads or 0 }}</div>
+                                    <div class="text-base font-bold text-purple-300 mt-1">{{ state.publishing.total_published or 0 }}</div>
                                     <span class="inline-block mt-1 text-[8px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-400 border border-purple-800/60">LIVE</span>
                                 </div>
                             </div>

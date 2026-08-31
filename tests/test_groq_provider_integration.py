@@ -28,6 +28,7 @@ from core.gemini_client import (
     GeminiQuotaExhaustedError,
     GeminiRateLimiter,
     GroqResponse,
+    OpenRouterResponse,
     DeepSeekResponse
 )
 from config.settings import AI_PROVIDER_AVAILABLE
@@ -62,22 +63,22 @@ class TestGroqProviderIntegration(unittest.TestCase):
         self.assertNotIn("groq", names)
 
     def test_03_gemini_remains_first_priority(self):
-        """TEST 3: Gemini remains first priority over Groq and DeepSeek."""
+        """TEST 3: Gemini remains first priority over Groq and OpenRouter."""
         client = GeminiClient(
             api_key="gemini_primary",
             secondary_api_key="gemini_secondary",
             groq_api_key="groq_key",
-            deepseek_api_key="deepseek_key",
+            openrouter_api_key="openrouter_key",
             sleeper=MagicMock()
         )
         providers = client._get_configured_providers()
         names = [p["name"] for p in providers]
-        self.assertEqual(names, ["primary", "secondary", "groq", "deepseek"])
+        self.assertEqual(names, ["primary", "secondary", "groq", "openrouter"])
 
         calls = []
         client._execute_request = lambda *a, **k: calls.append("gemini") or MagicMock(text="Gemini answer")
         client._execute_groq_request = lambda *a, **k: calls.append("groq") or GroqResponse("Groq answer")
-        client._execute_deepseek_request = lambda *a, **k: calls.append("deepseek") or DeepSeekResponse("DeepSeek answer")
+        client._execute_openrouter_request = lambda *a, **k: calls.append("openrouter") or OpenRouterResponse("OpenRouter answer")
 
         resp = client.generate_content("gemini-3.6-flash", "test prompt")
         self.assertEqual(calls, ["gemini"])
@@ -167,21 +168,21 @@ class TestGroqProviderIntegration(unittest.TestCase):
     def test_09_groq_malformed_response_does_not_crash_pipeline(self):
         """TEST 9: Groq malformed response allows fallback to next provider."""
         client = GeminiClient(
-            api_key="", secondary_api_key="", groq_api_key="groq_key", deepseek_api_key="deepseek_key",
+            api_key="", secondary_api_key="", groq_api_key="groq_key", openrouter_api_key="openrouter_key",
             sleeper=MagicMock()
         )
         def fail_groq(*a, **k):
             client.mark_provider_exhausted("groq")
             raise GeminiQuotaExhaustedError("Malformed choices from Groq")
 
-        def succeed_deepseek(*a, **k):
-            return DeepSeekResponse("DeepSeek rescue output")
+        def succeed_openrouter(*a, **k):
+            return OpenRouterResponse("OpenRouter rescue output")
 
         client._execute_groq_request = fail_groq
-        client._execute_deepseek_request = succeed_deepseek
+        client._execute_openrouter_request = succeed_openrouter
 
         resp = client.generate_content("llama-3.3-70b-versatile", "prompt")
-        self.assertEqual(resp.text, "DeepSeek rescue output")
+        self.assertEqual(resp.text, "OpenRouter rescue output")
         self.assertTrue(client.is_provider_exhausted("groq"))
 
     def test_10_structured_json_request_handling(self):
@@ -215,17 +216,17 @@ class TestGroqProviderIntegration(unittest.TestCase):
             self.assertEqual(parsed["hook"], "Great hook")
 
     def test_11_existing_fallback_intact_when_groq_unavailable(self):
-        """TEST 11: When Groq is unavailable, fallback chain reaches DeepSeek cleanly."""
+        """TEST 11: When Groq is unavailable, fallback chain reaches OpenRouter cleanly."""
         client = GeminiClient(
             api_key="gemini_key",
-            deepseek_api_key="deepseek_key",
+            openrouter_api_key="openrouter_key",
             sleeper=MagicMock()
         )
         client._execute_request = MagicMock(side_effect=GeminiQuotaExhaustedError("Gemini quota 429"))
-        client._execute_deepseek_request = MagicMock(return_value=DeepSeekResponse("DeepSeek answer"))
+        client._execute_openrouter_request = MagicMock(return_value=OpenRouterResponse("OpenRouter answer"))
 
         resp = client.generate_content("model", "test")
-        self.assertEqual(resp.text, "DeepSeek answer")
+        self.assertEqual(resp.text, "OpenRouter answer")
 
     def test_12_api_credentials_never_appear_in_logs(self):
         """TEST 12: Sensitive Groq API keys never appear in log records."""

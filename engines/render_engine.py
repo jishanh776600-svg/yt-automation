@@ -279,7 +279,7 @@ class RenderEngine:
             "-bufsize", "25000k",
             "-c:a", "aac",
             "-b:a", "256k",
-            "-shortest",
+            "-t", str(sum([s["duration"] for s in shots_data])),
             str(final_video_path)
         ]
 

@@ -187,9 +187,9 @@ class MetricsCollector:
         shares = 0
         subs_gained = 0
         subs_lost = 0
-        avd = 0.0
-        apv = 0.0
-        est_minutes = 0.0
+        avd = None
+        apv = None
+        est_minutes = None
         traffic_sources = {}
         raw_data = {}
 
@@ -230,17 +230,17 @@ class MetricsCollector:
                     if rows and len(rows) > 0:
                         row = rows[0]
                         # Map Analytics API columns
-                        est_minutes = float(row[1]) if len(row) > 1 and row[1] is not None else 0.0
-                        avd = float(row[2]) if len(row) > 2 and row[2] is not None else 0.0
-                        apv = float(row[3]) if len(row) > 3 and row[3] is not None else 0.0
+                        est_minutes = float(row[1]) if len(row) > 1 and row[1] is not None else None
+                        avd = float(row[2]) if len(row) > 2 and row[2] is not None else None
+                        apv = float(row[3]) if len(row) > 3 and row[3] is not None else None
                         subs_gained = int(row[4]) if len(row) > 4 and row[4] is not None else 0
                         subs_lost = int(row[5]) if len(row) > 5 and row[5] is not None else 0
                         shares = int(row[8]) if len(row) > 8 and row[8] is not None else 0
                         raw_data["analytics"] = analytics_res
                     else:
-                        logger.info(f"Analytics API returned 0 rows for video {upload.youtube_video_id}. Relying on Data API stats.")
+                        logger.info(f"Analytics API returned 0 rows for video {upload.youtube_video_id}. (Metrics marked UNAVAILABLE).")
                 except Exception as e:
-                    logger.warning(f"Analytics API query failed for {upload.youtube_video_id}: {e}. Falling back to Data API.")
+                    logger.warning(f"Analytics API query notice for {upload.youtube_video_id}: {e}. (Metrics marked UNAVAILABLE).")
 
         # Compute engagement rate
         total_interactions = likes + comments + shares
@@ -266,7 +266,8 @@ class MetricsCollector:
         )
         db.add(snapshot)
         db.commit()
-        logger.info(f"[+] Recorded Snapshot for '{upload.title}' ({upload.youtube_video_id}): {views} views | {apv:.1f}% APV | {engagement_rate:.2f}% engagement")
+        apv_display = f"{apv:.1f}%" if apv is not None else "UNAVAILABLE"
+        logger.info(f"[+] Recorded Snapshot for '{upload.title}' ({upload.youtube_video_id}): {views} views | {apv_display} APV | {engagement_rate:.2f}% engagement")
 
         # Link snapshot to ExperimentRecord if one exists
         try:

@@ -140,6 +140,9 @@ def get_active_voice(db: Optional[Session] = None) -> str:
     return KOKORO_VOICE or "af_bella"
 
 
+get_authoritative_voice = get_active_voice
+
+
 def set_active_voice(db: Session, voice_id: str) -> bool:
     """Sets and persists active production voice preference in SQLite."""
     if not any(v["id"] == voice_id for v in AVAILABLE_VOICES):

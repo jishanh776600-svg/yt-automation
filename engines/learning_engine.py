@@ -426,3 +426,33 @@ class LearningEngine:
 
         except Exception as log_err:
             logger.warning(f"Could not append to LEARNING_LOG.md: {log_err}")
+
+    def get_learned_production_profile(self, db: Session) -> str:
+        """
+        Generates a compact, deterministic learned guidance snippet from real verified performance data.
+        Returns a concise instruction block for LLM prompts without bloating context.
+        """
+        try:
+            mature_weights = db.query(StrategyWeight).filter(
+                StrategyWeight.sample_count >= self.min_evidence_threshold
+            ).order_by(StrategyWeight.weight.desc()).all()
+
+            if not mature_weights:
+                return ""
+
+            top_hooks = [w.feature_value for w in mature_weights if w.feature_type == "hook_archetype" and w.relative_lift > 5.0]
+            weak_hooks = [w.feature_value for w in mature_weights if w.feature_type == "hook_archetype" and w.relative_lift < -10.0]
+            top_cats = [w.feature_value for w in mature_weights if w.feature_type == "category" and w.relative_lift > 5.0]
+
+            guidance = ["\nLearned Channel Performance Guidance (from verified historical analytics):"]
+            if top_hooks:
+                guidance.append(f"- Prioritize hook structure: {', '.join(top_hooks[:2])} (demonstrated higher Stayed-to-Watch retention).")
+            if weak_hooks:
+                guidance.append(f"- Avoid weak opening patterns: {', '.join(weak_hooks[:2])} (demonstrated below-average retention).")
+            if top_cats:
+                guidance.append(f"- Emphasize narrative tension characteristic of top categories: {', '.join(top_cats[:2])}.")
+
+            return "\n".join(guidance) if len(guidance) > 1 else ""
+        except Exception as e:
+            logger.debug(f"Could not generate learned production profile: {e}")
+            return ""

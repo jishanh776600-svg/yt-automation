@@ -231,11 +231,11 @@ class QAEngine:
         if not duration_ok:
             reasons.append(f"Video duration {duration:.2f}s is outside acceptable range ({MIN_DURATION_SEC}s - {MAX_DURATION_SEC}s)")
 
-        # 3.5. Narration Completeness & Safety Margin Check (Defect 7 Fix)
+        # 3.5. Narration Completeness & Safety Margin Check (0.6s Breathing Margin)
         voice_assets = [a for a in assets_used if a.asset_type == "voice" and getattr(a, "duration_sec", 0) > 0]
         if voice_assets:
             voice_dur = voice_assets[0].duration_sec
-            safety_margin = 0.3
+            safety_margin = 0.6
             if voice_dur > (duration - safety_margin):
                 reasons.append(
                     f"Narration truncation risk: voice duration ({voice_dur:.2f}s) exceeds safe video threshold ({duration - safety_margin:.2f}s of {duration:.2f}s). Final sentence cut off!"

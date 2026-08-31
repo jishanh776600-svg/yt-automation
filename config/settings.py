@@ -51,17 +51,18 @@ GEMINI_API_KEY_SECONDARY = os.getenv("GEMINI_API_KEY_SECONDARY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_MODEL_SECONDARY = os.getenv("GEMINI_MODEL_SECONDARY", "")
 GEMINI_FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "")
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-ai/deepseek-v4-flash-0731")
-DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://integrate.api.nvidia.com/v1/chat/completions")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "groq/compound-mini")
 GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1/chat/completions")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
+OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1/chat/completions")
+DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/chat/completions")
 
 AI_PROVIDER_AVAILABLE = bool(
     GEMINI_API_KEY
     or GROQ_API_KEY
-    or DEEPSEEK_API_KEY
+    or OPENROUTER_API_KEY
 )
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
 YOUTUBE_CLIENT_ID = os.getenv("YOUTUBE_CLIENT_ID", "")
@@ -71,7 +72,7 @@ CLIENT_SECRETS_FILE = os.getenv("CLIENT_SECRETS_FILE", str(PROJECT_ROOT / "clien
 
 # TTS Settings
 TTS_PROVIDER = os.getenv("TTS_PROVIDER", "kokoro")  # kokoro, edge, piper
-KOKORO_VOICE = os.getenv("KOKORO_VOICE", "af_bella")
+KOKORO_VOICE = "af_bella"
 KOKORO_MODEL_PATH = DATA_DIR / "kokoro-v1.0.onnx"
 KOKORO_VOICES_PATH = DATA_DIR / "voices-v1.0.bin"
 
