@@ -460,8 +460,8 @@ class ShortsPipeline:
                             break
                 except Exception as fatal_e:
                     if "QuotaExhausted" in type(fatal_e).__name__ or "quota" in str(fatal_e).lower() or "429" in str(fatal_e):
-                        block_reason = "ALL_GEMINI_PROVIDERS_EXHAUSTED"
-                        logger.error(f"[BATCH] Fatal Gemini quota exhaustion detected: {fatal_e}. Halting batch production immediately.")
+                        block_reason = "ALL_AI_PROVIDERS_EXHAUSTED"
+                        logger.error(f"[BATCH] Fatal AI provider quota exhaustion detected across all fallbacks: {fatal_e}. Halting batch production immediately.")
                         break
                     raise fatal_e
                 time.sleep(2)
