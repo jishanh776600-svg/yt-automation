@@ -13,6 +13,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install dependencies
+        run: |
+          pip install python-dotenv
+
       - name: Run Live Provider Connectivity Test
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
