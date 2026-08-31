@@ -168,6 +168,76 @@ class UploadEngine:
 
         return True, "All 15 publication safety gates passed successfully"
 
+    def recover_orphaned_upload(
+        self,
+        youtube,
+        job: Job,
+        metadata: Dict[str, Any],
+        scheduled_publish_at: Optional[datetime] = None
+    ) -> Tuple[Optional[str], str]:
+        """
+        Deterministic YouTube Orphan Recovery Check.
+        Searches channel for existing videos matching:
+          - Embedded Job ID tag [JOB_ID: {job.id}] in description (Definitive 100% confidence).
+          - Exact normalized title match with scheduled status verification.
+        Returns: (recovered_video_id, recovery_reason) or (None, reason)
+        If candidate matches are ambiguous: surfaces ORPHAN_RECOVERY_AMBIGUOUS without guessing.
+        """
+        title = metadata.get("title", "").strip()
+        norm_title = title.lower()
+        if not title:
+            return None, "NO_TITLE_PROVIDED"
+
+        try:
+            search_res = youtube.search().list(
+                part="snippet",
+                forMine=True,
+                q=title[:50],
+                type="video",
+                maxResults=10
+            ).execute()
+
+            candidates = []
+            job_tag = f"[JOB_ID: {job.id}]"
+
+            for item in search_res.get("items", []):
+                item_id = item.get("id", {}).get("videoId")
+                if not item_id:
+                    continue
+                item_title = item.get("snippet", {}).get("title", "").strip().lower()
+                item_desc = item.get("snippet", {}).get("description", "")
+
+                has_job_tag = (job_tag in item_desc) or (job.id in item_desc)
+                has_exact_title = (item_title == norm_title)
+
+                if has_job_tag:
+                    return item_id, f"HIGH_CONFIDENCE_JOB_TAG:{item_id}"
+                elif has_exact_title:
+                    candidates.append((item_id, item))
+
+            if len(candidates) == 1:
+                cand_id, cand_item = candidates[0]
+                v_res = youtube.videos().list(part="status,snippet", id=cand_id).execute()
+                v_items = v_res.get("items", [])
+                if v_items:
+                    v_stat = v_items[0].get("status", {})
+                    v_priv = v_stat.get("privacyStatus")
+                    if v_priv in ("private", "public"):
+                        return cand_id, f"HIGH_CONFIDENCE_EXACT_TITLE:{cand_id}"
+                return cand_id, f"EXACT_TITLE_MATCH:{cand_id}"
+            elif len(candidates) > 1:
+                logger.warning(
+                    f"[ORPHAN_RECOVERY] Found {len(candidates)} ambiguous video candidates matching title '{title}'. "
+                    f"Refusing to guess without unique job ID tag."
+                )
+                return None, "ORPHAN_RECOVERY_AMBIGUOUS"
+
+            return None, "NO_ORPHAN_FOUND"
+
+        except Exception as e:
+            logger.warning(f"[ORPHAN_RECOVERY] Pre-upload orphan search error: {e}")
+            return None, f"ORPHAN_CHECK_ERROR:{e}"
+
     def schedule_short(
         self,
         db: Session,
@@ -236,6 +306,12 @@ class UploadEngine:
             from googleapiclient.discovery import build
             from googleapiclient.http import MediaFileUpload
             from google.oauth2.credentials import Credentials
+            import time
+            import random
+            from googleapiclient.errors import HttpError
+            import socket
+            import http.client
+            import ssl
 
             token_path = PROJECT_ROOT / "token.json"
             if not token_path.exists():
@@ -245,42 +321,34 @@ class UploadEngine:
             youtube = build("youtube", "v3", credentials=creds)
 
             # Crash-Safe Pre-Upload Check: Search channel to prevent double uploads if prior run crashed post-upload
-            try:
-                search_res = youtube.search().list(
-                    part="snippet",
-                    forMine=True,
-                    q=metadata["title"][:50],
-                    type="video",
-                    maxResults=5
-                ).execute()
-                for item in search_res.get("items", []):
-                    item_title = item.get("snippet", {}).get("title", "").strip().lower()
-                    item_desc = item.get("snippet", {}).get("description", "")
-                    is_exact_title = (item_title == norm_title)
-                    is_job_match = (f"[JOB_ID: {job.id}]" in item_desc) or (job.id in item_desc)
-                    if is_job_match or is_exact_title:
-                        existing_yt_id = item.get("id", {}).get("videoId")
-                        if existing_yt_id:
-                            logger.warning(f"[CRASH_RECOVERY] Found existing YouTube video {existing_yt_id} matching '{metadata['title']}' from previous interrupted session. Reconciling without re-upload.")
-                            record = UploadRecord(
-                                id=upload_id,
-                                job_id=job.id,
-                                youtube_video_id=existing_yt_id,
-                                title=metadata["title"],
-                                description=metadata["description"],
-                                tags=",".join(metadata.get("tags", [])),
-                                privacy_status="private",
-                                scheduled_publish_at=publish_at_utc,
-                                published_at=None,
-                                status="SCHEDULED",
-                                reconciliation_metadata=f"Recovered post-crash from YouTube channel (ID: {existing_yt_id})"
-                            )
-                            db.add(record)
-                            job.state = JobState.SCHEDULED.value
-                            db.commit()
-                            return record
-            except Exception as search_err:
-                logger.warning(f"[CRASH_RECOVERY] Pre-upload channel search check skipped: {search_err}")
+            orphan_id, orphan_reason = self.recover_orphaned_upload(
+                youtube=youtube,
+                job=job,
+                metadata=metadata,
+                scheduled_publish_at=publish_at_utc
+            )
+            if orphan_id:
+                logger.warning(
+                    f"[CRASH_RECOVERY] Found existing YouTube video {orphan_id} ({orphan_reason}). "
+                    f"Reconciling without re-upload."
+                )
+                record = UploadRecord(
+                    id=upload_id,
+                    job_id=job.id,
+                    youtube_video_id=orphan_id,
+                    title=metadata["title"],
+                    description=metadata["description"],
+                    tags=",".join(metadata.get("tags", [])),
+                    privacy_status="private",
+                    scheduled_publish_at=publish_at_utc,
+                    published_at=None,
+                    status="SCHEDULED",
+                    reconciliation_metadata=f"Recovered post-crash from YouTube channel ({orphan_reason})"
+                )
+                db.add(record)
+                job.state = JobState.SCHEDULED.value
+                db.commit()
+                return record
 
             # Embed Job ID in description for unambiguous identity reconciliation
             job_tag = f"\n\n[JOB_ID: {job.id}]"
@@ -303,12 +371,60 @@ class UploadEngine:
                 }
             }
 
-            logger.info(f"[YOUTUBE_API] Uploading video '{metadata['title']}' with scheduled publishAt={publish_at_str}...")
-            media = MediaFileUpload(str(video_path), mimetype="video/mp4", resumable=True)
+            logger.info(f"[YOUTUBE_API] Uploading video '{metadata['title']}' (5MB chunks) with scheduled publishAt={publish_at_str}...")
+            media = MediaFileUpload(
+                str(video_path),
+                mimetype="video/mp4",
+                chunksize=5 * 1024 * 1024,
+                resumable=True
+            )
             request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
-            response = request.execute()
 
-            yt_id = response.get("id")
+            response = None
+            max_chunk_attempts = 5
+            retry_net_errors = (
+                socket.error,
+                http.client.RemoteDisconnected,
+                http.client.IncompleteRead,
+                ssl.SSLError,
+                OSError
+            )
+
+            while response is None:
+                chunk_error = None
+                for attempt in range(1, max_chunk_attempts + 1):
+                    try:
+                        status, response = request.next_chunk()
+                        if status:
+                            logger.info(f"[YOUTUBE_UPLOAD] Upload progress: {int(status.progress() * 100)}%")
+                        chunk_error = None
+                        break
+                    except HttpError as http_err:
+                        status_code = http_err.resp.status if hasattr(http_err, "resp") else 0
+                        if status_code in (500, 502, 503, 504, 429):
+                            chunk_error = http_err
+                            backoff_sec = min(60.0, (2 ** attempt) + random.uniform(0.1, 1.0))
+                            logger.warning(
+                                f"[YOUTUBE_UPLOAD] Transient HTTP {status_code} on chunk (Attempt {attempt}/{max_chunk_attempts}). "
+                                f"Retrying in {backoff_sec:.1f}s..."
+                            )
+                            time.sleep(backoff_sec)
+                        else:
+                            logger.error(f"[YOUTUBE_UPLOAD] Permanent HTTP {status_code} during upload: {http_err}")
+                            raise http_err
+                    except retry_net_errors as net_err:
+                        chunk_error = net_err
+                        backoff_sec = min(60.0, (2 ** attempt) + random.uniform(0.1, 1.0))
+                        logger.warning(
+                            f"[YOUTUBE_UPLOAD] Network error on chunk ({net_err}) (Attempt {attempt}/{max_chunk_attempts}). "
+                            f"Retrying in {backoff_sec:.1f}s..."
+                        )
+                        time.sleep(backoff_sec)
+                if chunk_error is not None:
+                    logger.error(f"[YOUTUBE_UPLOAD] Chunk upload failed after {max_chunk_attempts} retry attempts.")
+                    raise chunk_error
+
+            yt_id = response.get("id") if response else None
             if not yt_id:
                 raise ValueError("YouTube API response did not contain a valid video ID.")
 

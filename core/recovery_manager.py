@@ -21,7 +21,7 @@ from config.constants import (
     STALE_JOB_TIMEOUT_SEC,
     STALE_PROCESSING_TIMEOUT_SEC
 )
-from core.models import Job, JobLog, UploadRecord, RenderOutput
+from core.models import Job, JobLog, UploadRecord, RenderOutput, ScriptRecord
 from core.state_machine import StateMachine
 from core.lock import ProcessLock
 from engines.drive_engine import DriveVaultEngine
@@ -82,24 +82,59 @@ class RecoveryManager:
             prev_state = job.state
             age_sec = (datetime.utcnow() - (job.updated_at or datetime.utcnow())).total_seconds()
 
+            # 1. Special handling for stale UPLOADING jobs: Perform orphan check first
+            if prev_state == JobState.UPLOADING.value:
+                existing_upl = db.query(UploadRecord).filter(
+                    UploadRecord.job_id == job.id,
+                    UploadRecord.status.in_(["SCHEDULED", "PUBLISHED", "SUCCESS"])
+                ).first()
+                if existing_upl and existing_upl.youtube_video_id:
+                    job.state = JobState.SCHEDULED.value if existing_upl.status == "SCHEDULED" else JobState.PUBLISHED.value
+                    job.updated_at = datetime.utcnow()
+                    job.error_message = None
+                    recovered.append({
+                        "job_id": job.id,
+                        "previous_state": prev_state,
+                        "new_state": job.state,
+                        "action": "RECONCILE_EXISTING_UPLOAD",
+                        "youtube_video_id": existing_upl.youtube_video_id
+                    })
+                    continue
+
+            # 2. Stage-aware asset preservation
             if (job.retry_count or 0) < MAX_JOB_RETRIES:
                 job.retry_count = (job.retry_count or 0) + 1
-                job.state = JobState.QUEUED.value
-                job.error_message = f"[AUTO_RECOVERED] Stale in state {prev_state} for {age_sec:.0f}s. Reset to QUEUED."
+                
+                # Check for existing completed render output
+                render = db.query(RenderOutput).filter(RenderOutput.job_id == job.id).order_by(RenderOutput.created_at.desc()).first()
+                script = db.query(ScriptRecord).filter(ScriptRecord.topic_id == job.topic_id).first() if job.topic_id else None
+
+                if render and render.video_path and Path(render.video_path).exists():
+                    target_state = JobState.QA.value if prev_state == JobState.QA.value else JobState.READY_TO_UPLOAD.value
+                    job.state = target_state
+                    action_name = "RESUME_FROM_RENDER"
+                elif script and script.full_text:
+                    job.state = JobState.SCRIPT_READY.value
+                    action_name = "RESUME_FROM_SCRIPT"
+                else:
+                    job.state = JobState.QUEUED.value
+                    action_name = "RETRY_RESET"
+
+                job.error_message = f"[AUTO_RECOVERED] Stale in state {prev_state} for {age_sec:.0f}s. Resumed to {job.state}."
                 job.updated_at = datetime.utcnow()
 
                 StateMachine.record_recovery_event(
                     db=db,
                     job_id=job.id,
-                    action="STALE_JOB_RECOVERED",
-                    message=f"Job stale in {prev_state} for {age_sec:.0f}s. Retrying (Attempt {job.retry_count}/{MAX_JOB_RETRIES}).",
-                    details={"previous_state": prev_state, "age_seconds": age_sec, "retry_count": job.retry_count}
+                    action=f"STALE_JOB_{action_name}",
+                    message=f"Job stale in {prev_state} for {age_sec:.0f}s. Resumed to {job.state} (Attempt {job.retry_count}/{MAX_JOB_RETRIES}).",
+                    details={"previous_state": prev_state, "age_seconds": age_sec, "retry_count": job.retry_count, "resumed_state": job.state}
                 )
                 recovered.append({
                     "job_id": job.id,
                     "previous_state": prev_state,
-                    "new_state": "QUEUED",
-                    "action": "RETRY_RESET",
+                    "new_state": job.state,
+                    "action": action_name,
                     "retry_count": job.retry_count
                 })
             else:

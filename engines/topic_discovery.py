@@ -140,6 +140,93 @@ class TopicDiscoveryEngine:
             return True
         return False
 
+    def evaluate_competitor_outlier(
+        self,
+        competitor_views: Optional[int],
+        channel_median_views: Optional[float],
+        outlier_threshold: float = 3.0
+    ) -> Dict[str, Any]:
+        """
+        Calculates Outlier Velocity Ratio for competitor topics:
+            OutlierRatio = CompetitorShortViews / CompetitorChannelMedianViews
+        Data Truth Safeguards:
+          - If channel median or views are missing/None/<=0, returns UNAVAILABLE (never substitutes 0 or 1).
+          - Identifies candidate breakout hypotheses without modifying production strategy weights.
+        """
+        if competitor_views is None or channel_median_views is None or channel_median_views <= 0:
+            return {
+                "status": "UNAVAILABLE",
+                "outlier_ratio": None,
+                "is_outlier": False,
+                "classification": "UNAVAILABLE_DATA",
+                "reason": "Competitor views or channel median views unavailable. Zero/1.0 not substituted."
+            }
+
+        ratio = float(competitor_views) / float(channel_median_views)
+        is_outlier = ratio >= outlier_threshold
+        classification = "COMPETITOR_OUTLIER_HYPOTHESIS" if is_outlier else "STANDARD_PERFORMANCE"
+
+        return {
+            "status": "VALID",
+            "outlier_ratio": round(ratio, 2),
+            "is_outlier": is_outlier,
+            "classification": classification,
+            "reason": f"Outlier velocity ratio {ratio:.2f}x vs competitor channel median ({channel_median_views:.0f} views)"
+        }
+
+    def inject_competitor_hypothesis(
+        self,
+        db: Session,
+        title: str,
+        summary: str,
+        category: str,
+        competitor_views: Optional[int] = None,
+        channel_median_views: Optional[float] = None,
+        outlier_threshold: float = 3.0
+    ) -> Optional[Topic]:
+        """
+        Converts verified competitor breakout topics into internal candidate hypotheses.
+        MANDATORY INVARIANT: Competitor hypotheses NEVER directly modify AL AMR strategy weights.
+        All hypotheses must pass through AL AMR research, fact-checking, production, and internal telemetry.
+        """
+        analysis = self.evaluate_competitor_outlier(
+            competitor_views=competitor_views,
+            channel_median_views=channel_median_views,
+            outlier_threshold=outlier_threshold
+        )
+
+        if not analysis.get("is_outlier"):
+            logger.info(f"Competitor topic '{title}' not qualified as outlier hypothesis: {analysis.get('reason')}")
+            return None
+
+        # Check exact title match in Topic table first
+        existing_topic = db.query(Topic).filter(Topic.title.ilike(title.strip())).first()
+        if existing_topic:
+            logger.info(f"Competitor outlier '{title}' skipped: exact title already exists in Topic database.")
+            return None
+
+        # Enforce semantic deduplication against existing library
+        if self.is_duplicate(db, title, summary):
+            logger.info(f"Competitor outlier '{title}' skipped: duplicate of existing AL AMR topic.")
+            return None
+
+        topic_id = f"top_{uuid.uuid4().hex[:12]}"
+        topic = Topic(
+            id=topic_id,
+            title=title.strip(),
+            summary=summary.strip(),
+            category=category.strip(),
+            score=56.0,
+            status="APPROVED"
+        )
+        db.add(topic)
+        db.commit()
+        logger.info(
+            f"[COMPETITOR_PRIOR] Ingested candidate hypothesis '{title}' "
+            f"(Outlier Ratio: {analysis['outlier_ratio']}x). Ready for internal research."
+        )
+        return topic
+
     def discover_topics(self, db: Session, limit: int = 5) -> List[Topic]:
         """Discovers new candidate topics or returns unproduced approved topics."""
         # 1. First check if we have approved topics in DB that have not been published or produced yet

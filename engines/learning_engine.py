@@ -540,15 +540,41 @@ class LearningEngine:
         )
         return summary
 
+    def compute_ucb1_score(
+        self,
+        weight: float,
+        sample_count: int,
+        total_samples: int,
+        exploration_c: float = 1.414
+    ) -> float:
+        """
+        Calculates deterministic Upper Confidence Bound (UCB1) score for a feature arm:
+            UCB_i = mu_i + c * sqrt(ln(N) / n_i)
+        Where:
+            mu_i = Bounded strategy weight (empirically derived from matured APV/retention lift)
+            N    = Total observations across all arms in this feature group
+            n_i  = Observations for this specific arm
+            c    = Exploration coefficient (default: sqrt(2) approx 1.414)
+        Cold-start: If n_i == 0, returns a priority cold-start score (999.0).
+        """
+        if sample_count <= 0:
+            return 999.0  # Cold-start priority: ensure untested arms are explored
+        
+        safe_total = max(1, total_samples)
+        exploration_bonus = exploration_c * math.sqrt(math.log(safe_total) / sample_count)
+        return round(weight + exploration_bonus, 4)
+
     def get_strategy_recommendation(
         self,
         db: Session,
-        explore_prob: float = 0.20,
-        deterministic: bool = False
+        mode: str = "UCB1",  # "UCB1", "EXPLOITATION", "EXPLORATION"
+        exploration_c: float = 1.414,
+        deterministic: bool = True
     ) -> Dict[str, Any]:
         """
-        Exposes structured strategy recommendations balancing exploitation of proven winners
-        and exploration of under-tested features.
+        Exposes structured strategy recommendations using deterministic Upper Confidence Bound (UCB1)
+        multi-armed bandit selection or pure exploitation of proven winners.
+        Preserves all evidence safeguards and bounded weights [0.20, 2.00].
         """
         all_weights = db.query(StrategyWeight).all()
         by_type: Dict[str, List[StrategyWeight]] = {}
@@ -559,6 +585,7 @@ class LearningEngine:
 
         recommendations = {}
         reasoning = {}
+        ucb1_scores = {}
 
         feature_defaults = {
             "hook_archetype": "DATE_TIME_ANCHOR",
@@ -572,35 +599,50 @@ class LearningEngine:
             candidates = by_type.get(f_type, [])
             if not candidates:
                 recommendations[f_type] = default_val
-                reasoning[f_type] = "Default (no historical strategy weights recorded yet)."
+                reasoning[f_type] = "Default baseline (no historical strategy weights recorded yet)."
+                ucb1_scores[f_type] = {default_val: 1.00}
                 continue
 
-            # Sort by weight descending
-            sorted_candidates = sorted(candidates, key=lambda x: x.weight, reverse=True)
-            best = sorted_candidates[0]
+            total_group_samples = sum(c.sample_count for c in candidates)
+            arm_scores = []
 
-            if deterministic or random.random() > explore_prob or len(sorted_candidates) == 1:
-                # Exploitation
-                recommendations[f_type] = best.feature_value
+            for c in candidates:
+                score = self.compute_ucb1_score(
+                    weight=c.weight,
+                    sample_count=c.sample_count,
+                    total_samples=total_group_samples,
+                    exploration_c=exploration_c
+                )
+                arm_scores.append((score, c))
+
+            # Sort by score descending (with deterministic tie-breaker on feature_value)
+            arm_scores.sort(key=lambda x: (x[0], x[1].weight, x[1].feature_value), reverse=True)
+            ucb1_scores[f_type] = {c.feature_value: s for s, c in arm_scores}
+
+            if mode == "EXPLOITATION":
+                # Pure exploitation: pick highest empirical weight
+                best_by_weight = max(candidates, key=lambda x: (x.weight, x.sample_count))
+                recommendations[f_type] = best_by_weight.feature_value
                 reasoning[f_type] = (
-                    f"Exploitation: Highest weight {best.weight:.2f} "
-                    f"({best.relative_lift:+.1f}% lift, N={best.sample_count}, {best.confidence_level})"
+                    f"Pure Exploitation: Highest weight {best_by_weight.weight:.2f} "
+                    f"({best_by_weight.relative_lift:+.1f}% lift, N={best_by_weight.sample_count}, {best_by_weight.confidence_level})"
                 )
             else:
-                # Exploration: Weighted random choice among all candidates
-                weights_list = [max(0.1, c.weight) for c in sorted_candidates]
-                chosen = random.choices(sorted_candidates, weights=weights_list, k=1)[0]
-                recommendations[f_type] = chosen.feature_value
+                # UCB1 Selection: Balances exploitation of high-weight arms and exploration of under-tested arms
+                best_ucb_score, best_arm = arm_scores[0]
+                recommendations[f_type] = best_arm.feature_value
                 reasoning[f_type] = (
-                    f"Exploration ({explore_prob*100:.0f}% chance): Selected '{chosen.feature_value}' "
-                    f"(Weight: {chosen.weight:.2f}, N={chosen.sample_count})"
+                    f"UCB1 Selected '{best_arm.feature_value}' (UCB Score: {best_ucb_score:.3f}, "
+                    f"Base Weight: {best_arm.weight:.2f}, N={best_arm.sample_count}/{total_group_samples})"
                 )
 
         return {
             "recommendations": recommendations,
             "reasoning": reasoning,
-            "timestamp": datetime.utcnow().isoformat(),
-            "exploration_probability": explore_prob
+            "ucb1_scores": ucb1_scores,
+            "mode": mode,
+            "exploration_coefficient": exploration_c,
+            "timestamp": datetime.utcnow().isoformat()
         }
 
     def _append_learning_cycle_log(self, now: datetime, videos_count: int, baseline: float, entries: List[Dict[str, Any]]):

@@ -1494,9 +1494,40 @@ class SystemDataProvider:
         except Exception as sync_err:
             db_sync_telemetry = {"error": str(sync_err)}
 
+        # Data Freshness & Source Truth Metadata
+        token_path = PROJECT_ROOT / "token.json"
+        has_token = token_path.exists()
+        
+        data_freshness = {
+            "verified_live": {
+                "source": "YouTube Data API v3" if has_token else "SQLite Reconciliation Cache",
+                "status": "LIVE_API" if has_token else "RECONCILED_LOCAL",
+                "as_of": datetime.utcnow().isoformat() + "Z",
+                "confidence": "HIGH"
+            },
+            "scheduled_publishing": {
+                "source": "YouTube Data API v3" if has_token else "SQLite Scheduled Records",
+                "status": "LIVE_API" if has_token else "CACHED_DB",
+                "as_of": datetime.utcnow().isoformat() + "Z",
+                "confidence": "HIGH"
+            },
+            "telemetry_metrics": {
+                "source": "YouTube Analytics API",
+                "status": "LIVE_API" if has_token else "UNAVAILABLE",
+                "as_of": datetime.utcnow().isoformat() + "Z",
+                "confidence": "HIGH" if has_token else "DEGRADED"
+            },
+            "drive_vault": {
+                "source": "Google Drive API v3",
+                "status": "LIVE_API" if has_token else "CACHED_LOCAL",
+                "as_of": datetime.utcnow().isoformat() + "Z"
+            }
+        }
+
         return {
             "data_mode": "LIVE_PRODUCTION_DATA",
             "timestamp": datetime.utcnow().isoformat() + "Z",
+            "data_freshness": data_freshness,
             "health": health,
             "locks": locks,
             "inventory": inventory,
