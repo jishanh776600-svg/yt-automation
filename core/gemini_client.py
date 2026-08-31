@@ -149,7 +149,7 @@ class GeminiClient:
         self.deepseek_api_key = deepseek_api_key if deepseek_api_key is not None else DEEPSEEK_API_KEY
         self.primary_model = GEMINI_MODEL
         self.secondary_model = secondary_model or GEMINI_MODEL_SECONDARY or GEMINI_MODEL
-        self.groq_model = groq_model or GROQ_MODEL or "llama-3.3-70b-versatile"
+        self.groq_model = groq_model or GROQ_MODEL or "groq/compound-mini"
         self.deepseek_model = deepseek_model or DEEPSEEK_MODEL or "deepseek-ai/deepseek-v4-flash-0731"
         self.rate_limiter = rate_limiter or get_shared_rate_limiter()
         self.sleeper = sleeper
