@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        if ((window.innerWidth <= 768 || /Mobi|Android|iPhone|iPad|Phone/i.test(navigator.userAgent)) && !window.location.search.includes('desktop=true')) {
+            window.location.replace('/mobile' + (window.location.search ? window.location.search : ''));
+        }
+    </script>
     <meta name="theme-color" content="#050608">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <!-- AL AMR Autonomous Media System Operations Console -->
