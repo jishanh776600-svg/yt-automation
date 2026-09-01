@@ -97,7 +97,8 @@ class TestDashboardPhase112(unittest.TestCase):
     def setUp(self):
         from dashboard.auth import session_store, SESSION_COOKIE_NAME
         self.session_id, self.csrf_token = session_store.create_session("admin", duration_hours=1)
-        self.client.cookies.set(SESSION_COOKIE_NAME, self.session_id)
+        self.client = TestClient(app)
+        self.client.cookies = {SESSION_COOKIE_NAME: self.session_id}
 
     def tearDown(self):
         from dashboard.auth import session_store

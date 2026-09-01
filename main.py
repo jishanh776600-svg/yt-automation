@@ -887,8 +887,11 @@ class ShortsPipeline:
             for candidate in ready_files:
                 is_val, val_reason = is_valid_ready_short(candidate, db=db, allow_test_artifacts=self.upload_engine._is_test_mode())
                 if not is_val:
-                    logger.warning(f"[PRE-CLAIM QUARANTINE] File {candidate['id']} ({candidate.get('name')}) invalid: {val_reason}. Quarantining to 04_FAILED.")
-                    self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="04_FAILED")
+                    if "Test artifact" in val_reason or "abnormally small" in val_reason or "Not an MP4" in val_reason:
+                        logger.warning(f"[PRE-CLAIM QUARANTINE] File {candidate['id']} ({candidate.get('name')}) invalid: {val_reason}. Quarantining to 04_FAILED.")
+                        self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="04_FAILED")
+                    else:
+                        logger.warning(f"[PRE-CLAIM SKIP] File {candidate['id']} ({candidate.get('name')}) skipped from immediate batch: {val_reason}")
                     continue
 
                 c_props = candidate.get("properties", {}) or {}

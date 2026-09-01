@@ -23,13 +23,13 @@ from config.settings import PROJECT_ROOT
 class TestMobilePWAPhase7(unittest.TestCase):
 
     def setUp(self):
-        self.client = TestClient(app)
         # Create an authenticated session fixture
         self.session_id, self.csrf_token = session_store.create_session(
             username="admin",
             duration_hours=1
         )
         self.auth_cookies = {SESSION_COOKIE_NAME: self.session_id}
+        self.client = TestClient(app, cookies={SESSION_COOKIE_NAME: self.session_id})
 
     def tearDown(self):
         session_store.invalidate_session(self.session_id)
@@ -71,7 +71,8 @@ class TestMobilePWAPhase7(unittest.TestCase):
 
     def test_04_mobile_view_requires_authentication(self):
         """Test that unauthenticated GET /mobile redirects to /login."""
-        res = self.client.get("/mobile", follow_redirects=False)
+        anon_client = TestClient(app)
+        res = anon_client.get("/mobile", follow_redirects=False)
         self.assertEqual(res.status_code, 303)
         self.assertIn("/login", res.headers.get("location", ""))
 
@@ -116,7 +117,8 @@ class TestMobilePWAPhase7(unittest.TestCase):
     def test_08_auth_csrf_enforcement_on_actions(self):
         """Test that mobile emergency action endpoints strictly reject missing CSRF and unauthenticated requests."""
         # 1. Unauthenticated request -> 401
-        res1 = self.client.post("/api/actions/publish-next", json={})
+        anon_client = TestClient(app)
+        res1 = anon_client.post("/api/actions/publish-next", json={})
         self.assertEqual(res1.status_code, 401)
 
         # 2. Authenticated but missing CSRF -> 403

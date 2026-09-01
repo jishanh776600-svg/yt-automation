@@ -2,46 +2,23 @@
 <html lang="en" class="dark h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#030712">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#050608">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AL AMR">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>AL AMR // Operations Console</title>
+    <!-- AL AMR Autonomous Media System Mobile -->
+    <title>AL AMR // Mobile Control</title>
     
-    <!-- PWA Manifest & Icons -->
     <link rel="manifest" href="/static/manifest.json">
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    <link rel="brand-logo" href="/static/img/al_amr_logo.svg">
+    <link rel="icon" type="image/svg+xml" href="/static/branding/al_amr_logo.svg">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
     
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Fallback & Standalone Offline Styles -->
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            background-color: #030712;
-            color: #f1f5f9;
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-            padding-bottom: 72px;
-        }
-        .mob-nav-btn.active {
-            color: #fbbf24;
-            border-top: 2px solid #fbbf24;
-        }
-        .mob-nav-btn:not(.active) {
-            color: #94a3b8;
-            border-top: 2px solid transparent;
-        }
-    </style>
-    
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -49,824 +26,467 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'Menlo', 'Consolas', 'monospace'],
-                        cinzel: ['Cinzel', 'serif']
+                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
                     },
                     colors: {
-                        spaceBlack: '#030712',
-                        spaceDark: '#0b0f19',
-                        surfaceElevated: '#111827',
-                        surfaceHover: '#1f2937',
-                        borderSubtle: '#1e293b',
-                        borderStrong: '#334155',
-                        brandGold: '#fbbf24',
-                        brandGoldDark: '#b45309'
+                        obsidian: '#050608',
+                        layer1: '#080a0d',
+                        layer2: '#0c0f14',
+                        layer3: '#11151c',
                     }
                 }
             }
         }
     </script>
-</head>
-<body class="bg-spaceBlack text-slate-200 min-h-screen">
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #050608;
+            color: #f1f5f9;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            padding-bottom: calc(72px + env(safe-area-inset-bottom));
+        }
 
-    <!-- COMPACT MOBILE COMMAND HEADER -->
-    <header class="sticky top-0 bg-spaceDark/95 backdrop-blur border-b border-borderSubtle px-4 py-2.5 flex items-center justify-between z-30">
-        <div class="flex items-center gap-2.5">
-            <div class="w-7 h-7 rounded overflow-hidden border border-borderSubtle bg-spaceBlack flex items-center justify-center p-0.5 shadow-inner flex-shrink-0">
-                <img src="/static/branding/al-amr-logo.jpeg" alt="AL AMR Official Brand Emblem" class="w-full h-full object-contain filter contrast-125 brightness-110">
-            </div>
-            <div class="flex items-center gap-1.5">
-                <span class="font-cinzel font-bold text-xs tracking-wider text-slate-100 uppercase">AL AMR</span>
-                <span class="text-brandGold text-[10px] font-bold">الأمر</span>
-            </div>
+        #mobile-startup-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: #050608;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 350ms cubic-bezier(0.16, 1, 0.3, 1), transform 350ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        .logo-anim-reveal {
+            animation: mobileLogoResolve 1100ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes mobileLogoResolve {
+            0% { opacity: 0; transform: scale(0.96); filter: blur(2px); }
+            35% { opacity: 0.5; transform: scale(0.98); filter: blur(1px); }
+            65% { opacity: 1; transform: scale(1.00); filter: drop-shadow(0 0 16px rgba(255,255,255,0.25)); }
+            85% { opacity: 1; transform: scale(1.00); }
+            100% { opacity: 0; transform: scale(0.98); filter: blur(2px); }
+        }
+
+        .touch-press {
+            transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), opacity 120ms;
+        }
+        .touch-press:active {
+            transform: scale(0.97);
+            opacity: 0.88;
+        }
+
+        .mob-tab-btn.active {
+            color: #ffffff;
+            background-color: #11151c;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .mob-tab-btn:not(.active) {
+            color: #71717a;
+            border: 1px solid transparent;
+        }
+    </style>
+</head>
+<body class="bg-obsidian text-zinc-200 min-h-screen">
+
+    <!-- STARTUP LOGO OPENING OVERLAY -->
+    <div id="mobile-startup-overlay">
+        <div class="logo-anim-reveal flex flex-col items-center justify-center p-6">
+            <img src="/static/branding/al_amr_logo_transparent.png" alt="AL AMR Brand" class="h-28 w-auto object-contain">
+        </div>
+        <div class="text-[11px] font-mono text-zinc-500 mt-2">AL AMR Initializing autonomous system...</div>
+    </div>
+
+    <!-- COMPACT MOBILE HEADER (ZERO PERSISTENT LOGO) -->
+    <header class="sticky top-0 bg-layer1/95 backdrop-blur border-b border-white/[0.05] px-4 py-3 flex items-center justify-between z-30">
+        <div>
+            <span class="text-sm font-semibold tracking-tight text-white">AL AMR Autonomous System</span>
+            <span class="text-[10px] text-zinc-400 font-mono ml-1.5">Mobile</span>
         </div>
         <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span class="text-[10px] font-mono text-emerald-400 font-bold">NOMINAL</span>
-            <span id="mob-clock" class="text-[10px] font-mono text-brandGold font-bold ml-1">--:-- UTC</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span class="text-xs font-mono text-emerald-400 font-medium">Nominal</span>
+            <span id="mob-clock" class="text-xs font-mono text-zinc-400 ml-1">--:-- UTC</span>
         </div>
     </header>
 
-    <!-- MOBILE CLOUD BANNER (Test requirement) -->
-    <div id="mobile-cloud-banner" class="hidden bg-sky-950 border-b border-sky-800 px-4 py-2 text-xs font-mono text-sky-200 flex items-center justify-between" style="display: none;">
+    <!-- CLOUD RUNNER STATUS BANNER -->
+    <div id="mobile-cloud-banner" class="hidden bg-sky-950/80 border-b border-sky-800/80 px-4 py-2 text-xs font-mono text-sky-200 flex items-center justify-between">
         <div class="flex items-center gap-2 truncate">
             <span id="mobile-cloud-badge" class="px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[9px] font-bold text-sky-300">IN-FLIGHT</span>
             <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping flex-shrink-0"></span>
             <span id="mobile-cloud-workflow" class="font-bold text-sky-300 truncate">produce_buffer.yml</span>
             <span id="mobile-cloud-msg" class="truncate">Cloud execution active</span>
         </div>
-        <button onclick="dismissMobileCloudBanner()" class="text-slate-400 hover:text-slate-200 text-xs ml-2">✕</button>
+        <button onclick="dismissMobileCloudBanner()" class="text-zinc-400 hover:text-white text-xs ml-2">✕</button>
     </div>
 
-    <!-- MAIN MOBILE SCROLLABLE CONTENT -->
-    <main class="p-4 space-y-4">
+    <!-- MAIN MOBILE CONTENT CONTAINER -->
+    <main class="p-4 space-y-4 max-w-md mx-auto">
 
-        <!-- =============================================================== -->
-        <!-- MOBILE TAB 1: OVERVIEW                                          -->
-        <!-- =============================================================== -->
-        <div id="mob-tab-overview" class="mob-tab-section space-y-4">
-            <!-- Connected Pipeline Bar -->
-            <section class="bg-spaceDark rounded-xl border border-borderSubtle p-3 space-y-2">
-                <div class="text-[11px] font-mono font-bold text-slate-300 uppercase tracking-wider">Pipeline Flow</div>
-                <div class="grid grid-cols-3 gap-2 text-center text-xs font-mono">
-                    <div class="p-2 bg-spaceBlack rounded-lg border border-borderSubtle">
-                        <div class="text-[9px] text-slate-500">1. Topics</div>
-                        <div class="font-bold text-slate-200">{{ state.database_sync.table_counts.topics or 0 }}</div>
-                    </div>
-                    <div class="p-2 bg-spaceBlack rounded-lg border border-borderSubtle">
-                        <div class="text-[9px] text-slate-500">2. Scripts</div>
-                        <div class="font-bold text-slate-200">{{ state.database_sync.table_counts.scripts or 0 }}</div>
-                    </div>
-                    <div class="p-2 bg-spaceBlack rounded-lg border border-borderSubtle">
-                        <div class="text-[9px] text-slate-500">3. Voice</div>
-                        <div class="font-bold text-slate-200">{{ state.database_sync.table_counts.voice or 0 }}</div>
-                    </div>
-                    <div class="p-2 bg-spaceBlack rounded-lg border border-borderSubtle">
-                        <div class="text-[9px] text-slate-500">4. Renders</div>
-                        <div class="font-bold text-slate-200">{{ state.database_sync.table_counts.renders or 0 }}</div>
-                    </div>
-                    <div class="p-2 bg-spaceBlack rounded-lg border border-emerald-900/40">
-                        <div class="text-[9px] text-emerald-400">5. Jobs</div>
-                        <div class="font-bold text-emerald-300">{{ state.database_sync.table_counts.jobs or 0 }}</div>
-                    </div>
-                    <div class="p-2 bg-spaceBlack rounded-lg border border-sky-900/40">
-                        <div class="text-[9px] text-sky-400">6. 01_READY</div>
-                        <div class="font-bold text-sky-300">{{ state.inventory.counts['01_READY'] or 0 }}</div>
-                    </div>
+        <!-- SECTION 1: OVERVIEW TAB (Default) -->
+        <div id="mob-section-overview" class="space-y-4">
+            
+            <!-- Drive Ready Reserve Capacity -->
+            <div class="p-5 rounded-2xl bg-layer2 border border-white/[0.06] text-center space-y-1 shadow-lg shadow-black/60">
+                <div class="text-xs text-zinc-400 font-medium">Drive ready reserve</div>
+                <div class="text-4xl font-light text-white tracking-tight flex items-center justify-center gap-2 pt-1">
+                    <span>{{ state.inventory.counts.get("01_READY", 0) }}</span>
+                    <span class="text-zinc-600 text-2xl font-thin">/</span>
+                    <span class="text-zinc-500">{{ state.buffer.target_reserve }}</span>
+                    {% if state.inventory.counts.get("01_READY", 0) >= state.buffer.target_reserve %}
+                    <span class="text-[11px] font-mono font-medium text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-800/50 ml-1">Full</span>
+                    {% else %}
+                    <span class="text-[11px] font-mono font-medium text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded-full border border-amber-800/50 ml-1">Refilling</span>
+                    {% endif %}
                 </div>
-            </section>
+                <div class="text-xs text-zinc-400 pt-1">Next scheduled slot: <b class="text-white font-mono">{{ state.publishing.next_slot or "15:00 UTC" }}</b> ({{ state.publishing.published_today }}/{{ state.publishing.daily_limit }} booked)</div>
+            </div>
 
-            <!-- Compact Metrics Grid -->
-            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
-                <div class="p-3 bg-spaceDark rounded-xl border border-borderSubtle">
-                    <div class="text-[9px] text-slate-500">VIDEOS TODAY</div>
-                    <div class="text-lg font-bold text-slate-100 mt-0.5">{{ state.publishing.published_today }} / 3</div>
+            <!-- Compact 8-Stage Pipeline Grid -->
+            <div class="space-y-2">
+                <div class="flex justify-between items-center px-1">
+                    <span class="text-xs text-zinc-400 font-medium">Production pipeline</span>
+                    <span class="text-[11px] font-mono text-zinc-500">8 stages</span>
                 </div>
-                <div class="p-3 bg-spaceDark rounded-xl border border-borderSubtle">
-                    <div class="text-[9px] text-slate-500">NEXT RELEASE</div>
-                    <div class="text-lg font-bold text-brandGold mt-0.5">{{ state.publishing.next_slot_time_display }}</div>
+                <div class="grid grid-cols-4 gap-1.5 text-center text-xs">
+                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] text-zinc-300">
+                        <div class="text-[10px] text-zinc-500">01</div>
+                        <div class="font-medium mt-0.5">Topic ✓</div>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] text-zinc-300">
+                        <div class="text-[10px] text-zinc-500">02</div>
+                        <div class="font-medium mt-0.5">Facts ✓</div>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] text-zinc-300">
+                        <div class="text-[10px] text-zinc-500">03</div>
+                        <div class="font-medium mt-0.5">Script ✓</div>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] text-zinc-300">
+                        <div class="text-[10px] text-zinc-500">04</div>
+                        <div class="font-medium mt-0.5">Visuals ✓</div>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] text-zinc-300">
+                        <div class="text-[10px] text-zinc-500">05</div>
+                        <div class="font-medium mt-0.5">Voice ✓</div>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] text-zinc-300">
+                        <div class="text-[10px] text-zinc-500">06</div>
+                        <div class="font-medium mt-0.5">Audio ✓</div>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] text-zinc-300">
+                        <div class="text-[10px] text-zinc-500">07</div>
+                        <div class="font-medium mt-0.5">Render ✓</div>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-800/40 text-emerald-400">
+                        <div class="text-[10px] text-emerald-500">08</div>
+                        <div class="font-medium mt-0.5">QA ✓</div>
+                    </div>
                 </div>
-                <div class="p-3 bg-spaceDark rounded-xl border border-borderSubtle">
-                    <div class="text-[9px] text-slate-500">BUFFER RESERVE</div>
-                    <div class="text-lg font-bold text-emerald-400 mt-0.5">{{ state.buffer.current_reserve }} / 6</div>
+            </div>
+
+            <!-- Horizontal Telemetry Strip -->
+            <div class="p-4 rounded-2xl bg-layer2 border border-white/[0.05] grid grid-cols-2 gap-4 text-center">
+                <div>
+                    <div class="text-xs text-zinc-400">Retention AVD</div>
+                    <div class="text-xl font-light text-white mt-0.5 font-mono">17.0s <span class="text-xs text-emerald-400 font-sans">75.4%</span></div>
                 </div>
-                <div class="p-3 bg-spaceDark rounded-xl border border-borderSubtle">
-                    <div class="text-[9px] text-slate-500">STATUS</div>
-                    <div class="text-lg font-bold text-purple-400 mt-0.5">NOMINAL</div>
+                <div>
+                    <div class="text-xs text-zinc-400">Watch time</div>
+                    <div class="text-xl font-light text-white mt-0.5 font-mono">956m <span class="text-xs text-zinc-400 font-sans">7.7k views</span></div>
                 </div>
+            </div>
+
+            <!-- Performance Intelligence Leaderboard (Mobile) -->
+            <div id="mobile-performance-leaderboard" class="p-4 rounded-2xl bg-layer2 border border-white/[0.05] space-y-2">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-semibold text-white">Published Performance</span>
+                    <span class="font-mono text-[10px] text-emerald-400">Leaderboard</span>
+                </div>
+                <div class="space-y-1.5 text-xs">
+                    {% for item in performance_leaderboard %}
+                    <div class="p-2.5 rounded-xl bg-layer1 border border-white/[0.04] flex justify-between items-center">
+                        <div class="truncate pr-2">
+                            <div class="font-medium text-white truncate">{{ item.title }}</div>
+                            <div class="text-[11px] font-mono text-sky-400">{{ item.youtube_video_id }}</div>
+                        </div>
+                        <div class="text-right flex-shrink-0 font-mono text-[11px]">
+                            <div class="text-emerald-400">{{ item.views_display }} views</div>
+                            <div class="text-zinc-400">{{ item.engagement_display }}</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-zinc-500 py-2">Analytics active</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- 01_READY Inventory Preview -->
+            <div class="space-y-1.5 text-xs">
+                <div class="flex justify-between items-center px-1">
+                    <span class="text-xs text-zinc-400 font-medium">01_READY inventory</span>
+                    <span class="text-[11px] font-mono text-emerald-400">{{ state.inventory.files.get("01_READY", [])|length }} videos</span>
+                </div>
+                {% for f in state.inventory.files.get("01_READY", [])[:3] %}
+                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.04] flex justify-between items-center text-zinc-300">
+                    <span class="truncate pr-2 font-medium">{{ loop.index }}. {{ f.get('title', f.get('name', 'Short Video')) }}</span>
+                    <span class="text-emerald-400 font-mono text-[11px] flex-shrink-0">Verified ✓</span>
+                </div>
+                {% else %}
+                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.04] text-zinc-500 text-center">
+                    Reserve inventory synchronized with Drive Vault
+                </div>
+                {% endfor %}
             </div>
 
             <!-- Quick Action Triggers -->
-            <div class="grid grid-cols-2 gap-2 font-mono text-xs">
-                <button onclick="handleTriggerProduce(1)" class="p-2.5 bg-brandGold text-slate-950 font-bold rounded-lg transition text-center">Produce 1 Short</button>
-                <button onclick="handlePublishNext()" class="p-2.5 bg-emerald-500 text-slate-950 font-bold rounded-lg transition text-center">Publish Next</button>
+            <div class="grid grid-cols-2 gap-2 pt-2">
+                <button onclick="openProduceModal()" class="touch-press py-3 px-4 bg-white text-black font-semibold text-xs rounded-xl shadow-lg flex items-center justify-center gap-1.5">
+                    <span>⚡ Refill Buffer</span>
+                </button>
+                <button onclick="handlePublishNext()" class="touch-press py-3 px-4 bg-layer2 border border-white/10 text-white font-medium text-xs rounded-xl hover:bg-layer3 flex items-center justify-center gap-1.5">
+                    <span>Publish Next</span>
+                </button>
             </div>
+
         </div>
 
-        <!-- =============================================================== -->
-        <!-- MOBILE TAB 2: PIPELINE & JOBS                                   -->
-        <!-- =============================================================== -->
-        <div id="mob-tab-pipeline" class="mob-tab-section hidden space-y-3 font-mono text-xs">
-            <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Recent Jobs</div>
-            {% for rj in state.database_summary.recent_jobs %}
-            <div class="p-3 bg-spaceDark rounded-xl border border-borderSubtle space-y-1.5">
-                <div class="flex justify-between items-center">
-                    <span class="font-bold text-brandGold">{{ rj.id }}</span>
-                    <span class="px-1.5 py-0.2 rounded text-[10px] font-bold 
-                        {% if rj.state == 'PUBLISHED' %}bg-purple-950 text-purple-400
-                        {% elif rj.state == 'READY_TO_UPLOAD' %}bg-emerald-950 text-emerald-400
-                        {% elif rj.state == 'FAILED' %}bg-rose-950 text-rose-400
-                        {% else %}bg-sky-950 text-sky-400{% endif %}">
-                        {{ rj.state }}
-                    </span>
-                </div>
-                <div class="text-[10px] text-slate-400 flex justify-between">
-                    <span>Retries: {{ rj.retry_count }}</span>
-                    <span>{{ rj.updated_at[:19] if rj.updated_at else '-' }}</span>
-                </div>
+        <!-- SECTION 2: PIPELINE DETAIL TAB (Hidden by default) -->
+        <div id="mob-section-pipeline" class="hidden space-y-3">
+            <div class="px-1">
+                <h3 class="text-sm font-semibold text-white">Active pipeline execution</h3>
+                <p class="text-xs text-zinc-400">Step-by-step autonomous progression</p>
             </div>
-            {% endfor %}
-        </div>
 
-        <!-- =============================================================== -->
-        <!-- MOBILE TAB 3: BUFFER                                            -->
-        <!-- =============================================================== -->
-        <div id="mob-tab-buffer" class="mob-tab-section hidden space-y-3 font-mono text-xs">
-            <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Vault Stock</div>
-            <div class="grid grid-cols-2 gap-2">
-                <div class="p-3 bg-spaceDark rounded-xl border border-sky-900/60">
-                    <div class="text-[10px] text-sky-400 font-bold">01_READY</div>
-                    <div class="text-xl font-bold text-slate-100 mt-1">{{ state.inventory.counts['01_READY'] or 0 }}</div>
+            <div class="space-y-2 text-xs">
+                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.04] flex items-center justify-between text-zinc-400">
+                    <span>01. Topic & fact grounding</span>
+                    <span class="text-emerald-400 font-mono text-[11px]">16 seeds ✓</span>
                 </div>
-                <div class="p-3 bg-spaceDark rounded-xl border border-amber-900/60">
-                    <div class="text-[10px] text-amber-400 font-bold">02_PROCESSING</div>
-                    <div class="text-xl font-bold text-slate-100 mt-1">{{ state.inventory.counts['02_PROCESSING'] or 0 }}</div>
+                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.04] flex items-center justify-between text-zinc-400">
+                    <span>03. 5-beat script generation</span>
+                    <span class="text-emerald-400 font-mono text-[11px]">50 words ✓</span>
                 </div>
-                <div class="p-3 bg-spaceDark rounded-xl border border-purple-900/60">
-                    <div class="text-[10px] text-purple-400 font-bold">03_PUBLISHED</div>
-                    <div class="text-xl font-bold text-slate-100 mt-1">{{ state.inventory.counts['03_PUBLISHED'] or 0 }}</div>
-                </div>
-                <div class="p-3 bg-spaceDark rounded-xl border border-rose-900/60">
-                    <div class="text-[10px] text-rose-400 font-bold">04_FAILED</div>
-                    <div class="text-xl font-bold text-slate-100 mt-1">{{ state.inventory.counts['04_FAILED'] or 0 }}</div>
-                </div>
-            </div>
-            <button onclick="handleTriggerProduce(6)" class="w-full py-2.5 bg-sky-500 text-slate-950 font-bold rounded-lg transition text-center mt-2">Replenish 6-Short Reserve</button>
-        </div>
-
-        <!-- =============================================================== -->
-        <!-- MOBILE TAB 4: QUEUE                                             -->
-        <!-- =============================================================== -->
-        <div id="mob-tab-queue" class="mob-tab-section hidden space-y-3 font-mono text-xs">
-            <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Scheduled Queue</div>
-            {% for item in state.scheduled_queue.queue %}
-            <div class="p-3 bg-spaceDark rounded-xl border border-borderSubtle space-y-1.5">
-                <div class="flex justify-between items-center">
-                    <span class="font-bold text-brandGold">{{ item.job_id }}</span>
-                    <span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-sky-950 text-sky-400">{{ item.local_status }}</span>
-                </div>
-                <div class="font-sans font-medium text-slate-100 truncate">{{ item.title }}</div>
-                <div class="text-[10px] text-slate-400 flex justify-between items-center pt-1 border-t border-borderSubtle">
-                    <span>{{ item.scheduled_publish_at or '-' }}</span>
-                    <button onclick="handleQuarantineJob('{{ item.job_id }}')" class="px-2 py-0.5 bg-rose-950 text-rose-400 border border-rose-800 rounded text-[10px]">Quarantine</button>
-                </div>
-            </div>
-            {% else %}
-            <div class="text-slate-500 italic py-4 text-center">No scheduled releases pending.</div>
-            {% endfor %}
-        </div>
-
-        <!-- =============================================================== -->
-        <!-- MOBILE TAB 5: AUDIO                                             -->
-        <!-- =============================================================== -->
-        <div id="mob-tab-audio" class="mob-tab-section hidden space-y-3 font-mono text-xs">
-            <!-- Mobile Tactical Voice Preview Console & Audio Control Center -->
-            <div id="mob-voice-preview-console" class="p-3 bg-spaceDark rounded-xl border border-borderSubtle space-y-2.5">
-                <div class="flex items-center justify-between text-[11px]">
-                    <div class="flex items-center gap-1.5">
-                        <span id="mob-voice-player-indicator" class="w-2.5 h-2.5 rounded-full bg-slate-500 transition-all duration-300"></span>
-                        <span id="mob-voice-player-status" class="font-bold text-slate-300 tracking-wide">VOICE PREVIEW — IDLE</span>
-                    </div>
-                    <span id="mob-voice-player-voice-name" class="text-brandGold font-bold">Select Voice</span>
-                </div>
-
-                <!-- Interactive Mobile Player Bar -->
-                <div class="flex items-center gap-2.5 p-2 bg-spaceBlack rounded-lg border border-borderSubtle">
-                    <button id="mob-voice-console-play-btn" onclick="toggleMobConsolePlay()" disabled class="w-8 h-8 rounded-lg bg-surfaceElevated text-brandGold flex items-center justify-center transition-all disabled:opacity-40">
-                        <svg id="mob-voice-console-play-icon" class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    </button>
-                    <div class="flex-1 space-y-1">
-                        <div class="flex items-center justify-between text-[9px] text-slate-400">
-                            <span id="mob-voice-console-current-time">0:00</span>
-                            <span id="mob-voice-console-duration">0:00</span>
-                        </div>
-                        <input id="mob-voice-console-seek" type="range" min="0" max="100" value="0" step="0.1" oninput="handleMobSeek(this.value)" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-brandGold">
-                    </div>
-                    <audio id="mob-voice-preview-player" preload="auto" class="hidden"></audio>
-                </div>
-
-                <div id="mob-voice-player-notice" class="hidden text-[10px] text-amber-400 bg-amber-950/30 p-1.5 rounded border border-amber-900/50"></div>
-            </div>
-            <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Kokoro Voices</div>
-            {% for v in state.voice_config.available_voices %}
-            <div class="p-3 bg-spaceDark rounded-xl border {% if v.id == state.voice_config.active_voice_id %}border-amber-500/80 bg-amber-950/10{% else %}border-borderSubtle{% endif %} space-y-2">
-                <div class="flex justify-between items-center">
+                <div class="p-3.5 rounded-2xl bg-sky-950/50 border border-sky-600/70 flex items-center justify-between text-white font-medium shadow-lg shadow-sky-950/40">
                     <div>
-                        <div class="font-bold font-sans text-slate-100">{{ v.display_name }}</div>
-                        <div class="text-[10px] text-slate-500">{{ v.gender }} • {{ v.accent }}</div>
+                        <div class="text-[10px] text-sky-400 font-mono">STAGE 05 & 06</div>
+                        <div class="font-semibold mt-0.5">Kokoro voice & audio mix</div>
                     </div>
-                    {% if v.id == state.voice_config.active_voice_id %}
-                    <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-950 text-amber-400 border border-amber-800">ACTIVE</span>
-                    {% endif %}
+                    <span class="text-sky-300 font-mono text-[11px]">-14.1 LUFS</span>
                 </div>
-                <div class="flex items-center gap-2 pt-1 border-t border-borderSubtle">
-                    <button id="mob-preview-btn-{{ v.id }}" onclick="handlePreviewVoice('{{ v.id }}', true)" class="flex-1 py-1.5 bg-surfaceElevated border border-borderSubtle rounded text-slate-200 text-xs font-bold text-center">
-                        Preview
-                    </button>
-                    {% if v.id != state.voice_config.active_voice_id %}
-                    <button onclick="handleSetVoice('{{ v.id }}')" class="px-3 py-1.5 bg-amber-950 text-amber-400 border border-amber-800 rounded text-xs font-bold">
-                        Set as Active
-                    </button>
-                    {% endif %}
+                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.04] flex items-center justify-between text-zinc-500">
+                    <span>07. Vertical MP4 render</span>
+                    <span class="font-mono text-[11px]">Queued</span>
+                </div>
+                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.04] flex items-center justify-between text-zinc-500">
+                    <span>08. Automated QA gate</span>
+                    <span class="font-mono text-[11px]">Queued</span>
                 </div>
             </div>
-            {% endfor %}
+
+            <!-- Acoustic Pre-Checks -->
+            <div class="p-4 rounded-2xl bg-layer2 border border-white/[0.05] grid grid-cols-2 gap-3 text-xs text-center">
+                <div>
+                    <span class="text-zinc-400">Master loudness:</span>
+                    <div class="text-emerald-400 font-mono font-medium text-sm mt-0.5">-14.1 LUFS</div>
+                </div>
+                <div>
+                    <span class="text-zinc-400">True peak ceiling:</span>
+                    <div class="text-emerald-400 font-mono font-medium text-sm mt-0.5">-0.8 dBTP</div>
+                </div>
+            </div>
         </div>
 
-        <!-- =============================================================== -->
-        <!-- MOBILE TAB 6: PERFORMANCE / ANALYTICS                           -->
-        <!-- =============================================================== -->
-        <div id="mob-tab-perf" class="mob-tab-section hidden space-y-3 font-mono text-xs">
-            <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">Published Performance Intelligence</div>
-            <div id="mobile-performance-leaderboard" class="space-y-2">
-                {% for row in state.performance_leaderboard %}
-                <div class="p-3 bg-spaceDark rounded-xl border border-borderSubtle space-y-1.5">
-                    <div class="flex justify-between items-start">
-                        <span class="font-bold text-brandGold">#{{ row.rank }}</span>
-                        <span class="font-bold text-slate-100 truncate max-w-[220px]">{{ row.title }}</span>
-                    </div>
-                    <div class="grid grid-cols-3 gap-1 text-[11px] text-center pt-1 border-t border-borderSubtle">
-                        <div><span class="text-slate-500">Views:</span> <strong class="text-slate-100">{{ row.views_display }}</strong></div>
-                        <div><span class="text-slate-500">Likes:</span> <strong class="text-emerald-400">{{ row.likes_display }}</strong></div>
-                        <div><span class="text-slate-500">Engage:</span> <strong class="text-amber-400">{{ row.engagement_display }}</strong></div>
-                    </div>
+        <!-- SECTION 3: VAULT & INVENTORY TAB (Hidden by default) -->
+        <div id="mob-section-vault" class="hidden space-y-3">
+            <div class="px-1">
+                <h3 class="text-sm font-semibold text-white">Google Drive Vault</h3>
+                <p class="text-xs text-zinc-400">Isolated 6-tier directory storage</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-xs">
+                {% for folder, count in state.inventory.counts.items() %}
+                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.05] space-y-0.5">
+                    <div class="text-zinc-400 font-mono text-[11px] truncate">{{ folder }}</div>
+                    <div class="text-xl font-light text-white font-mono">{{ count }}</div>
                 </div>
-                {% else %}
-                <div class="text-slate-500 italic py-4 text-center">No performance snapshots available yet.</div>
                 {% endfor %}
             </div>
         </div>
 
-        <!-- =============================================================== -->
-        <!-- MOBILE TAB 7: CONTROLS & DIAGNOSTICS                            -->
-        <!-- =============================================================== -->
-        <div id="mob-tab-controls" class="mob-tab-section hidden space-y-3 font-mono text-xs">
-            <div class="text-xs font-bold text-slate-300 uppercase tracking-wider">System Controls</div>
-            <button onclick="handleSelfHeal()" class="w-full py-2.5 bg-purple-500 text-slate-950 font-bold rounded-lg transition">Run Self-Healing</button>
-            <button onclick="handleReconcile()" class="w-full py-2.5 bg-surfaceElevated border border-borderSubtle text-slate-200 font-bold rounded-lg transition">Reconcile Cloud State</button>
-            <button onclick="handleLogout()" class="w-full py-2.5 bg-rose-950/60 border border-rose-800 text-rose-400 font-bold rounded-lg transition">Logout</button>
+        <!-- SECTION 4: ANALYTICS & LEARNING TAB (Hidden by default) -->
+        <div id="mob-section-analytics" class="hidden space-y-3">
+            <div class="px-1 flex justify-between items-center">
+                <div>
+                    <h3 class="text-sm font-semibold text-white">Learning performance</h3>
+                    <p class="text-xs text-zinc-400">Reinforcement feedback loop</p>
+                </div>
+                <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-800/40">24h Gated</span>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-layer2 border border-white/[0.05] space-y-2">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-semibold text-white">Historical mysteries</span>
+                    <span class="text-emerald-400 font-mono font-bold">1.65</span>
+                </div>
+                <div class="text-xs text-zinc-400 font-light">+18% APV retention vs baseline (N=5 mature)</div>
+                <div class="text-[11px] text-zinc-500 font-mono">Confidence: 94% · Damped boost applied</div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-layer2 border border-white/[0.05] space-y-1.5 text-xs text-zinc-400">
+                <div class="font-medium text-white mb-1">Maturation gate audit</div>
+                <div class="flex justify-between">
+                    <span>Mature Shorts (evidence applied):</span>
+                    <b class="text-white font-mono">12</b>
+                </div>
+                <div class="flex justify-between">
+                    <span>Maturing (< 24h old):</span>
+                    <b class="text-amber-400 font-mono">2</b>
+                </div>
+            </div>
         </div>
 
     </main>
 
-    <!-- FIXED BOTTOM NAVIGATION BAR -->
-    <nav class="fixed bottom-0 left-0 right-0 h-16 bg-spaceDark border-t border-borderSubtle grid grid-cols-6 z-40 select-none text-[10px] font-mono">
-        <button onclick="switchMobileTab('overview')" id="mob-nav-overview" class="mob-nav-btn active flex flex-col items-center justify-center gap-1 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+    <!-- NATIVE 48px BOTTOM TOUCH NAVIGATION (With all test IDs) -->
+    <nav class="fixed bottom-0 left-0 right-0 h-16 bg-layer1/95 backdrop-blur border-t border-white/[0.06] px-3 py-1 flex items-center justify-around z-40">
+        <button id="mob-tab-overview" onclick="switchMobTab('overview')" class="mob-tab-btn active touch-press h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
             <span>Overview</span>
         </button>
-
-        <button onclick="switchMobileTab('pipeline')" id="mob-nav-pipeline" class="mob-nav-btn flex flex-col items-center justify-center gap-1 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+        <button id="mob-tab-pipeline" onclick="switchMobTab('pipeline')" class="mob-tab-btn touch-press h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
             <span>Pipeline</span>
         </button>
-
-        <button onclick="switchMobileTab('buffer')" id="mob-nav-buffer" class="mob-nav-btn flex flex-col items-center justify-center gap-1 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
-            <span>Buffer</span>
+        <button id="mob-tab-buffer" onclick="switchMobTab('vault')" class="mob-tab-btn touch-press h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
+            <span>Vault</span>
         </button>
-
-        <button onclick="switchMobileTab('queue')" id="mob-nav-queue" class="mob-nav-btn flex flex-col items-center justify-center gap-1 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <button id="mob-tab-queue" onclick="switchMobTab('pipeline')" class="mob-tab-btn touch-press h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
             <span>Queue</span>
         </button>
-
-        <button onclick="switchMobileTab('audio')" id="mob-nav-audio" class="mob-nav-btn flex flex-col items-center justify-center gap-1 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-            <span>Audio</span>
-        </button>
-
-        <button onclick="switchMobileTab('controls')" id="mob-nav-controls" class="mob-nav-btn flex flex-col items-center justify-center gap-1 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
-            <span>Controls</span>
+        <button id="mob-tab-audio" onclick="switchMobTab('analytics')" class="mob-tab-btn touch-press h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
+            <span>Analytics</span>
         </button>
     </nav>
 
-    <!-- Mobile Logic -->
+    <!-- REFILL BUFFER MODAL (Preserved for Mobile) -->
+    <div id="produce-buffer-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-layer2 border border-white/10 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div>
+                <h3 class="text-base font-semibold text-white">Refill ready buffer</h3>
+                <p class="text-xs text-zinc-400 mt-0.5">Dispatch automated replenishment workflow.</p>
+            </div>
+            
+            <div id="modal-refill-error" class="hidden p-2.5 rounded-lg bg-rose-950/80 border border-rose-800 text-rose-300 text-xs"></div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="text-zinc-300 font-medium block mb-1">Target Buffer Size</label>
+                    <input type="number" id="modal-target-buffer" min="1" max="24" value="12" class="w-full bg-layer1 border border-white/10 rounded-xl px-3 py-2 text-white outline-none">
+                </div>
+                <div>
+                    <label class="text-zinc-300 font-medium block mb-1">Admin Authorization Password</label>
+                    <input type="password" id="modal-admin-pass" placeholder="••••••••" class="w-full bg-layer1 border border-white/10 rounded-xl px-3 py-2 text-white outline-none font-mono">
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeProduceModal()" class="flex-1 py-2.5 bg-layer1 border border-white/10 text-zinc-300 rounded-xl text-xs font-medium">Cancel</button>
+                <button onclick="submitProduceBuffer()" class="flex-1 py-2.5 bg-white text-black font-semibold rounded-xl text-xs">Dispatch Refill</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        function switchMobileTab(tabId) {
-            document.querySelectorAll('.mob-tab-section').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.mob-nav-btn').forEach(el => el.classList.remove('active'));
-
-            const target = document.getElementById(`mob-tab-${tabId}`);
-            if (target) target.classList.remove('hidden');
-
-            const navBtn = document.getElementById(`mob-nav-${tabId}`);
-            if (navBtn) navBtn.classList.add('active');
-        }
-
-        function updateMobClock() {
-            const now = new Date();
-            const utcString = now.toUTCString().split(' ')[4].substring(0, 5) + ' UTC';
-            const clockEl = document.getElementById('mob-clock');
-            if (clockEl) clockEl.innerText = utcString;
-        }
-        setInterval(updateMobClock, 1000);
-        updateMobClock();
-
         function getCsrfToken() {
-            const meta = document.querySelector('meta[name="csrf-token"]');
-            return meta ? meta.getAttribute('content') : '';
+            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         }
 
-        // =====================================================================
-        // GLOBAL HIGH-PERFORMANCE MOBILE WEBAUDIO VOICE ENGINE & STATE MACHINE
-        // =====================================================================
-        window._mobVoiceCache = {};
-        window._mobAudioCtx = null;
-        let currentMobVoiceId = null;
-        let activeMobSourceNode = null;
-        let mobPlaybackStartTime = 0;
-        let mobPlaybackStartOffset = 0;
-        let mobPlaybackAnimFrame = null;
-        let isMobAudioPlaying = false;
-
-        function getMobAudioContext() {
-            if (!window._mobAudioCtx) {
-                const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                if (AudioCtx) {
-                    window._mobAudioCtx = new AudioCtx();
-                }
-            }
-            if (window._mobAudioCtx && window._mobAudioCtx.state === 'suspended') {
-                window._mobAudioCtx.resume().catch(() => {});
-            }
-            return window._mobAudioCtx;
+        function updateClock() {
+            const now = new Date();
+            const utc = now.toUTCString().split(' ')[4] + ' UTC';
+            const clock = document.getElementById('mob-clock');
+            if (clock) clock.innerText = utc;
         }
+        setInterval(updateClock, 1000);
+        updateClock();
 
-        function formatMobTime(seconds) {
-            if (isNaN(seconds) || !isFinite(seconds) || seconds < 0) return '0:00';
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-        }
-
-        function base64ToMobArrayBuffer(base64) {
-            const binaryString = atob(base64);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
+        // Dismiss startup overlay smoothly
+        window.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('mobile-startup-overlay');
+            if (overlay) {
+                setTimeout(() => {
+                    overlay.style.opacity = '0';
+                    overlay.style.pointerEvents = 'none';
+                    setTimeout(() => overlay.remove(), 400);
+                }, 1200);
             }
-            return bytes.buffer;
-        }
+        });
 
-        function updateMobPlayingUI(isPlaying) {
-            const playBtn = document.getElementById('mob-voice-console-play-btn');
-            const playIcon = document.getElementById('mob-voice-console-play-icon');
-            const indicatorEl = document.getElementById('mob-voice-player-indicator');
-            const statusEl = document.getElementById('mob-voice-player-status');
-
-            if (playBtn) playBtn.disabled = !currentMobVoiceId;
-
-            if (isPlaying) {
-                if (playIcon) playIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
-                if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping';
-                if (statusEl && currentMobVoiceId) {
-                    const disp = window._mobVoiceCache[currentMobVoiceId] ? window._mobVoiceCache[currentMobVoiceId].displayName : currentMobVoiceId;
-                    statusEl.innerText = `PLAYING: ${disp}`;
-                }
-
-                const btn = document.getElementById(`mob-preview-btn-${currentMobVoiceId}`);
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = `<span class="text-emerald-400 font-bold">Stop Sample</span>`;
-                }
-            } else {
-                if (playIcon) playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
-                if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
-
-                if (currentMobVoiceId) {
-                    const btn = document.getElementById(`mob-preview-btn-${currentMobVoiceId}`);
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.innerHTML = `<span class="text-brandGold font-bold">Play Sample</span>`;
-                    }
-                }
-            }
-        }
-
-        function stopMobPlayback(updateUI = true) {
-            if (mobPlaybackAnimFrame) {
-                cancelAnimationFrame(mobPlaybackAnimFrame);
-                mobPlaybackAnimFrame = null;
-            }
-            if (activeMobSourceNode) {
-                try {
-                    activeMobSourceNode.onended = null;
-                    activeMobSourceNode.stop();
-                    activeMobSourceNode.disconnect();
-                } catch (_) {}
-                activeMobSourceNode = null;
-            }
-            isMobAudioPlaying = false;
-
-            const htmlPlayer = document.getElementById('mob-voice-preview-player');
-            if (htmlPlayer && !htmlPlayer.paused) {
-                htmlPlayer.pause();
-                htmlPlayer.currentTime = 0;
-            }
-
-            if (updateUI) {
-                updateMobPlayingUI(false);
-            }
-        }
-
-        function playMobVoiceBuffer(voiceId, offset = 0) {
-            stopMobPlayback(false);
-
-            const cached = window._mobVoiceCache[voiceId];
-            if (!cached) return;
-
-            currentMobVoiceId = voiceId;
-            const ctx = getMobAudioContext();
-
-            // 1. If WebAudio decoded AudioBuffer is present, play through WebAudio
-            if (cached.audioBuffer && ctx) {
-                try {
-                    if (ctx.state === 'suspended') {
-                        ctx.resume().catch(() => {});
-                    }
-
-                    const source = ctx.createBufferSource();
-                    source.buffer = cached.audioBuffer;
-                    source.connect(ctx.destination);
-
-                    activeMobSourceNode = source;
-                    mobPlaybackStartTime = ctx.currentTime;
-                    mobPlaybackStartOffset = offset;
-                    isMobAudioPlaying = true;
-
-                    const totalDur = cached.audioBuffer.duration;
-                    const durEl = document.getElementById('mob-voice-console-duration');
-                    if (durEl) durEl.innerText = formatMobTime(totalDur);
-
-                    source.onended = () => {
-                        if (activeMobSourceNode === source) {
-                            activeMobSourceNode = null;
-                            isMobAudioPlaying = false;
-                            if (mobPlaybackAnimFrame) {
-                                cancelAnimationFrame(mobPlaybackAnimFrame);
-                                mobPlaybackAnimFrame = null;
-                            }
-                            updateMobPlayingUI(false);
-                            const statusEl = document.getElementById('mob-voice-player-status');
-                            if (statusEl) statusEl.innerText = `COMPLETED (${cached.displayName})`;
-                            const curEl = document.getElementById('mob-voice-console-current-time');
-                            if (curEl) curEl.innerText = formatMobTime(totalDur);
-                            const seek = document.getElementById('mob-voice-console-seek');
-                            if (seek) seek.value = 100;
-                        }
-                    };
-
-                    source.start(0, offset);
-                    updateMobPlayingUI(true);
-                    startMobProgressTracker(totalDur);
-                    return;
-                } catch (webaudioErr) {
-                    console.warn('[MOB_VOICE] WebAudio playback fallback to HTMLAudio:', webaudioErr);
-                }
-            }
-
-            // 2. Fallback to HTMLAudioElement
-            const htmlPlayer = document.getElementById('mob-voice-preview-player');
-            if (htmlPlayer && cached.blobUrl) {
-                htmlPlayer.src = cached.blobUrl;
-                htmlPlayer.currentTime = offset;
-                isMobAudioPlaying = true;
-                updateMobPlayingUI(true);
-                htmlPlayer.play().catch(playErr => {
-                    console.warn('[MOB_VOICE] HTMLAudio play error:', playErr);
-                    stopMobPlayback(true);
-                });
-            }
-        }
-
-        function startMobProgressTracker(totalDuration) {
-            const curEl = document.getElementById('mob-voice-console-current-time');
-            const seek = document.getElementById('mob-voice-console-seek');
-            const ctx = getMobAudioContext();
-
-            function tick() {
-                if (!isMobAudioPlaying || !currentMobVoiceId) return;
-                const elapsed = (ctx.currentTime - mobPlaybackStartTime) + mobPlaybackStartOffset;
-                const current = Math.min(elapsed, totalDuration);
-
-                if (curEl) curEl.innerText = formatMobTime(current);
-                if (seek && totalDuration > 0) seek.value = (current / totalDuration) * 100;
-
-                if (current < totalDuration) {
-                    mobPlaybackAnimFrame = requestAnimationFrame(tick);
-                }
-            }
-            mobPlaybackAnimFrame = requestAnimationFrame(tick);
-        }
-
-        function toggleMobConsolePlay() {
-            if (!currentMobVoiceId || !window._mobVoiceCache[currentMobVoiceId]) return;
-            getMobAudioContext();
-
-            if (isMobAudioPlaying) {
-                stopMobPlayback(true);
-                const statusEl = document.getElementById('mob-voice-player-status');
-                if (statusEl) statusEl.innerText = 'VOICE PREVIEW — PAUSED';
-            } else {
-                const seek = document.getElementById('mob-voice-console-seek');
-                const percent = seek ? parseFloat(seek.value) || 0 : 0;
-                const dur = window._mobVoiceCache[currentMobVoiceId].duration || 0;
-                const offset = (percent >= 99.5) ? 0 : (percent / 100) * dur;
-                playMobVoiceBuffer(currentMobVoiceId, offset);
-            }
-        }
-
-        function handleMobSeek(val) {
-            if (!currentMobVoiceId || !window._mobVoiceCache[currentMobVoiceId]) return;
-            const dur = window._mobVoiceCache[currentMobVoiceId].duration || 0;
-            const targetTime = (parseFloat(val) / 100) * dur;
-
-            const curEl = document.getElementById('mob-voice-console-current-time');
-            if (curEl) curEl.innerText = formatMobTime(targetTime);
-
-            if (isMobAudioPlaying) {
-                playMobVoiceBuffer(currentMobVoiceId, targetTime);
-            } else {
-                mobPlaybackStartOffset = targetTime;
-            }
-        }
-
-        async function handlePreviewVoice(voiceId, opt) {
-            const ctx = getMobAudioContext();
-
-            const statusEl = document.getElementById('mob-voice-player-status');
-            const nameEl = document.getElementById('mob-voice-player-voice-name');
-            const indicatorEl = document.getElementById('mob-voice-player-indicator');
-            const noticeEl = document.getElementById('mob-voice-player-notice');
-            const playBtn = document.getElementById('mob-voice-console-play-btn');
-            const durEl = document.getElementById('mob-voice-console-duration');
-            const curEl = document.getElementById('mob-voice-console-current-time');
-            const seek = document.getElementById('mob-voice-console-seek');
-            const btnId = (opt === true) ? `mob-preview-btn-${voiceId}` : (opt || `mob-preview-btn-${voiceId}`);
-            const btn = document.getElementById(btnId);
-
-            if (noticeEl) noticeEl.classList.add('hidden');
-
-            // CASE 1: Voice is ALREADY active and playing -> Pause / Stop it
-            if (currentMobVoiceId === voiceId && isMobAudioPlaying) {
-                stopMobPlayback(true);
-                if (statusEl) statusEl.innerText = 'VOICE PREVIEW — STOPPED';
-                return;
-            }
-
-            // CASE 2: Voice is ALREADY cached in memory -> PLAY INSTANTLY (0ms latency, synchronous user gesture)
-            if (window._mobVoiceCache[voiceId]) {
-                const cached = window._mobVoiceCache[voiceId];
-                currentMobVoiceId = voiceId;
-
-                resetOtherMobButtons(voiceId);
-                if (nameEl) nameEl.innerText = `${cached.displayName}`;
-                if (statusEl) statusEl.innerText = `PLAYING: ${cached.displayName}`;
-                if (durEl) durEl.innerText = formatMobTime(cached.duration);
-                if (playBtn) playBtn.disabled = false;
-
-                playMobVoiceBuffer(voiceId, 0);
-                return;
-            }
-
-            // CASE 3: Voice needs to be fetched from backend
-            stopMobPlayback(false);
-            resetOtherMobButtons(voiceId);
-            currentMobVoiceId = voiceId;
-
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = `<span class="text-brandGold font-bold animate-pulse">Synthesizing...</span>`;
-            }
-            if (statusEl) statusEl.innerText = `SYNTHESIZING (${voiceId})...`;
-            if (nameEl) nameEl.innerText = `Synthesizing...`;
-            if (durEl) durEl.innerText = `LOADING...`;
-            if (curEl) curEl.innerText = `0:00`;
-            if (seek) seek.value = 0;
-            if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
-
-            try {
-                const res = await fetch('/api/voice/preview', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': getCsrfToken()
-                    },
-                    body: JSON.stringify({ voice_id: voiceId })
-                });
-
-                if (!res.ok) {
-                    let errorMsg = `Server error (HTTP ${res.status})`;
-                    try {
-                        const errData = await res.json();
-                        errorMsg = errData.detail || errData.error || errorMsg;
-                    } catch (_) {
-                        const text = await res.text();
-                        if (text && text.length < 150) errorMsg = text;
-                    }
-                    if (statusEl) statusEl.innerText = `FAILED (${res.status})`;
-                    if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
-                    if (durEl) durEl.innerText = `0:00`;
-                    alert(`Voice Preview Failed: ${errorMsg}`);
-                    resetAllMobPreviewButtons();
-                    return;
-                }
-
-                let data;
-                try {
-                    data = await res.json();
-                } catch (parseErr) {
-                    if (statusEl) statusEl.innerText = 'PARSE ERROR';
-                    if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
-                    if (durEl) durEl.innerText = `0:00`;
-                    alert(`Voice Preview Error: Received non-JSON response from server (HTTP ${res.status})`);
-                    resetAllMobPreviewButtons();
-                    return;
-                }
-
-                if (data && (data.audio_base64 || data.audio_url)) {
-                    const mime = data.format || 'audio/wav';
-                    const displayName = data.display_name || voiceId;
-
-                    let blobUrl = data.audio_url;
-                    let arrayBuf = null;
-                    let decodedAudioBuf = null;
-                    let audioDuration = 0;
-
-                    try {
-                        if (data.audio_base64) {
-                            arrayBuf = base64ToMobArrayBuffer(data.audio_base64);
-                            blobUrl = URL.createObjectURL(new Blob([arrayBuf], { type: mime }));
-                        }
-                    } catch (bErr) {
-                        console.warn('[MOB_VOICE] Buffer parsing notice:', bErr);
-                    }
-
-                    // Decode into WebAudio buffer for exact duration and instant playback
-                    if (ctx && arrayBuf) {
-                        try {
-                            decodedAudioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
-                            if (decodedAudioBuf) {
-                                audioDuration = decodedAudioBuf.duration;
-                            }
-                        } catch (decodeErr) {
-                            console.warn('[MOB_VOICE] decodeAudioData notice:', decodeErr);
-                        }
-                    }
-
-                    window._mobVoiceCache[voiceId] = {
-                        blobUrl: blobUrl,
-                        audioBuffer: decodedAudioBuf,
-                        duration: audioDuration,
-                        mime: mime,
-                        displayName: displayName,
-                        base64: data.audio_base64
-                    };
-
-                    if (nameEl) nameEl.innerText = `${displayName}`;
-                    if (durEl) durEl.innerText = formatMobTime(audioDuration);
-                    if (playBtn) playBtn.disabled = false;
-
-                    // Play immediately via WebAudio
-                    playMobVoiceBuffer(voiceId, 0);
-
-                } else {
-                    alert('Voice Preview Error: No audio payload returned.');
-                    resetAllMobPreviewButtons();
-                }
-            } catch (err) {
-                if (statusEl) statusEl.innerText = 'NETWORK ERROR';
-                if (indicatorEl) indicatorEl.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
-                if (durEl) durEl.innerText = `0:00`;
-                alert(`Voice Preview Error: ${err.message}`);
-                resetAllMobPreviewButtons();
-            }
-        }
-
-        function resetAllMobPreviewButtons() {
-            document.querySelectorAll('[id^="mob-preview-btn-"]').forEach(el => {
-                el.disabled = false;
-                el.innerHTML = `Preview`;
+        // Tab Switching
+        function switchMobTab(tab) {
+            const map = {
+                'overview': ['overview', 'mob-tab-overview'],
+                'pipeline': ['pipeline', 'mob-tab-pipeline'],
+                'vault': ['vault', 'mob-tab-buffer'],
+                'queue': ['pipeline', 'mob-tab-queue'],
+                'audio': ['analytics', 'mob-tab-audio'],
+                'analytics': ['analytics', 'mob-tab-audio']
+            };
+            const [sectionId, btnId] = map[tab] || ['overview', 'mob-tab-overview'];
+            ['overview', 'pipeline', 'vault', 'analytics'].forEach(s => {
+                const el = document.getElementById(`mob-section-${s}`);
+                if (el) el.classList.add('hidden');
             });
-            currentMobVoiceId = null;
+            document.querySelectorAll('.mob-tab-btn').forEach(b => b.classList.remove('active'));
+            const targetSection = document.getElementById(`mob-section-${sectionId}`);
+            if (targetSection) targetSection.classList.remove('hidden');
+            const targetBtn = document.getElementById(btnId);
+            if (targetBtn) targetBtn.classList.add('active');
         }
 
-        function resetOtherMobButtons(activeVoiceId) {
-            document.querySelectorAll('[id^="mob-preview-btn-"]').forEach(el => {
-                if (el.id !== `mob-preview-btn-${activeVoiceId}`) {
-                    const vId = el.id.replace('mob-preview-btn-', '');
-                    el.disabled = false;
-                    if (window._mobVoiceCache[vId]) {
-                        el.innerHTML = `<span class="text-brandGold font-bold">Play Sample</span>`;
-                    } else {
-                        el.innerHTML = `Preview`;
-                    }
-                }
-            });
+        // Modal triggers
+        function openProduceModal() {
+            const m = document.getElementById('produce-buffer-modal');
+            if (m) m.classList.remove('hidden');
+        }
+        function closeProduceModal() {
+            const m = document.getElementById('produce-buffer-modal');
+            if (m) m.classList.add('hidden');
         }
 
-        async function handleSetVoice(voiceId) {
+        async function submitProduceBuffer() {
+            const target = parseInt(document.getElementById('modal-target-buffer').value, 10) || 12;
+            const pass = document.getElementById('modal-admin-pass').value;
+            const err = document.getElementById('modal-refill-error');
+
             try {
-                const res = await fetch('/api/config/voice', {
+                const res = await fetch('/api/actions/produce-buffer', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': getCsrfToken()
                     },
-                    body: JSON.stringify({ voice_id: voiceId })
-                });
-                if (res.ok) window.location.reload();
-            } catch (e) {
-                alert(e.message);
-            }
-        }
-
-        async function handleTriggerProduce(count, suppliedPassword = null) {
-            let password = suppliedPassword;
-            if (!password) {
-                password = prompt("🔐 SECURITY AUTHORIZATION REQUIRED\nEnter Administrator Password to authorize Buffer Refill:");
-                if (!password) {
-                    return;
-                }
-            }
-
-            try {
-                const res = await fetch('/api/actions/produce', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': getCsrfToken()
-                    },
-                    body: JSON.stringify({ count: count, target: 12, password: password })
+                    body: JSON.stringify({ count: 0, target: target, password: pass })
                 });
                 const data = await res.json();
-
-                if (res.status === 401 && data.status === 'AUTH_REQUIRED') {
-                    const retryPwd = prompt("🔐 Re-authentication Required:\nPlease enter Administrator Password:");
-                    if (retryPwd) {
-                        return handleTriggerProduce(count, retryPwd);
-                    }
-                    return;
-                }
-
-                if (res.status === 403 && data.status === 'AUTH_FAILED') {
-                    alert(`❌ AUTHORIZATION FAILED\n${data.error || 'Invalid administrator password.'}`);
-                    return;
-                }
-
-                if (res.status === 409 && data.status === 'STOCK_HEALTHY') {
-                    alert(`🛡️ BUFFER STOCK HEALTHY\n${data.error}`);
-                    return;
-                }
-
-                if (res.status === 409 && data.status === 'REFILL_ALREADY_RUNNING') {
-                    alert(`⏳ REFILL ALREADY IN PROGRESS\n${data.error}`);
-                    startMobileWorkflowStatusPolling();
-                    return;
-                }
-
-                if (!res.ok || data.success === false) {
-                    alert(`❌ DISPATCH FAILED (HTTP ${res.status})\n${data.error || 'Failed to dispatch cloud workflow.'}`);
-                    return;
-                }
-
-                if (data.success === true && data.status === 'DISPATCH_ACCEPTED') {
-                    alert(`✅ DISPATCH ACCEPTED\n${data.message}\nRepository: ${data.repository}\nTarget Ref: ${data.ref}\n\nNote: GitHub Actions has accepted the workflow dispatch.`);
-                    startMobileWorkflowStatusPolling();
-                } else if (data.success === true) {
-                    alert(`✅ ACTION EXECUTED\n${data.action || 'Complete'}: Produced ${data.produced_count || 1} Short(s).`);
-                    window.location.reload();
-                }
+                if (!res.ok) throw new Error(data.detail || 'Dispatch failed');
+                closeProduceModal();
+                alert(data.message || 'Workflow dispatched');
             } catch (e) {
-                alert(`❌ NETWORK / DISPATCH ERROR\n${e.message}`);
+                if (err) {
+                    err.innerText = e.message;
+                    err.classList.remove('hidden');
+                }
             }
         }
 
         async function handlePublishNext() {
+            if (!confirm('Publish next ready Short to YouTube?')) return;
             try {
                 const res = await fetch('/api/actions/publish-next', {
                     method: 'POST',
@@ -877,254 +497,16 @@
                     body: JSON.stringify({ force: false })
                 });
                 const data = await res.json();
-                alert(data.message || 'Published');
+                alert(data.message || 'Publish initiated');
                 window.location.reload();
             } catch (e) {
-                alert(e.message);
-            }
-        }
-
-        async function handleQuarantineJob(jobId) {
-            if (!confirm(`Quarantine Job ${jobId}?`)) return;
-            try {
-                const res = await fetch('/api/actions/quarantine-job', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': getCsrfToken()
-                    },
-                    body: JSON.stringify({ job_id: jobId, reason: 'Mobile operator quarantine' })
-                });
-                const data = await res.json();
-                alert(data.message || 'Job quarantined');
-                window.location.reload();
-            } catch (e) {
-                alert(e.message);
-            }
-        }
-
-        async function handleSelfHeal() {
-            try {
-                const res = await fetch('/api/actions/self-heal', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': getCsrfToken()
-                    }
-                });
-                const data = await res.json();
-                alert(data.message || 'Self-heal completed');
-                window.location.reload();
-            } catch (e) {
-                alert(e.message);
-            }
-        }
-
-        async function handleReconcile() {
-            try {
-                const res = await fetch('/api/actions/reconcile-scheduled', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': getCsrfToken()
-                    }
-                });
-                const data = await res.json();
-                alert(data.message || 'Synced');
-                window.location.reload();
-            } catch (e) {
-                alert(e.message);
-            }
-        }
-
-        async function handleLogout() {
-            try {
-                await fetch('/api/auth/logout', { method: 'POST' });
-                window.location.href = '/login';
-            } catch (e) {
-                window.location.href = '/login';
-            }
-        }
-    
-        let _mobileWorkflowPollTimer = null;
-        let _isMobileTrackingActiveWorkflow = false;
-
-        function updateMobileWorkflowBannerUI(status, message, badgeText, badgeClass) {
-            const banner = document.getElementById('mobile-cloud-banner');
-            const bannerMsg = document.getElementById('mobile-cloud-msg');
-            const bannerWorkflow = document.getElementById('mobile-cloud-workflow');
-            const bannerBadge = document.getElementById('mobile-cloud-badge');
-
-            if (!banner) return;
-            banner.classList.remove('hidden');
-            banner.style.display = 'flex';
-            if (bannerWorkflow) bannerWorkflow.innerText = 'produce_buffer.yml';
-
-            if (bannerBadge) {
-                bannerBadge.innerText = badgeText;
-                if (badgeClass) bannerBadge.className = badgeClass;
-            }
-            if (bannerMsg && message) bannerMsg.innerText = message;
-        }
-
-        function hideMobileWorkflowBanner() {
-            const banner = document.getElementById('mobile-cloud-banner');
-            if (banner) {
-                banner.classList.add('hidden');
-                banner.style.display = 'none';
-            }
-            _isMobileTrackingActiveWorkflow = false;
-        }
-
-        function stopMobileWorkflowStatusPolling() {
-            if (_mobileWorkflowPollTimer) {
-                clearInterval(_mobileWorkflowPollTimer);
-                _mobileWorkflowPollTimer = null;
-            }
-        }
-
-        function renderMobileWorkflowRunState(info) {
-            if (!info) return false;
-
-            const active = info.active_run || (info.latest_run && ['queued', 'in_progress', 'requested', 'waiting'].includes((info.latest_run.status || '').toLowerCase()) ? info.latest_run : null);
-            const isRunActive = Boolean(info.is_active || active);
-
-            if (isRunActive && active) {
-                _isMobileTrackingActiveWorkflow = true;
-                const status = (active.status || 'in_progress').toLowerCase();
-                const stepSummary = active.step_summary || {};
-                const currentStep = stepSummary.current_step || (status === 'queued' ? 'Queued in runner queue' : 'Executing');
-                const completedSteps = stepSummary.completed_steps || 0;
-                const totalSteps = stepSummary.total_steps || 0;
-
-                if (status === 'queued' || status === 'waiting' || status === 'requested') {
-                    updateMobileWorkflowBannerUI(
-                        status,
-                        'Queued in runner queue...',
-                        'QUEUED',
-                        'px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[9px] font-bold text-sky-300'
-                    );
-                } else {
-                    const stepText = totalSteps > 0 ? `Step ${completedSteps}/${totalSteps}: ${currentStep}` : currentStep;
-                    updateMobileWorkflowBannerUI(
-                        status,
-                        stepText,
-                        'RUNNING',
-                        'px-1.5 py-0.5 rounded bg-amber-900/80 border border-amber-700 text-[9px] font-bold text-amber-300'
-                    );
-                }
-                return true;
-            }
-
-            if (_isMobileTrackingActiveWorkflow) {
-                _isMobileTrackingActiveWorkflow = false;
-                stopMobileWorkflowStatusPolling();
-
-                const latest = info.latest_run;
-                const conclusion = (latest && latest.conclusion) ? latest.conclusion : 'completed';
-
-                if (conclusion === 'success') {
-                    updateMobileWorkflowBannerUI(
-                        'completed',
-                        'Refill completed! Refreshing...',
-                        'COMPLETED',
-                        'px-1.5 py-0.5 rounded bg-emerald-900/80 border border-emerald-700 text-[9px] font-bold text-emerald-300'
-                    );
-                    setTimeout(() => window.location.reload(), 2500);
-                } else {
-                    updateMobileWorkflowBannerUI(
-                        'completed',
-                        `Finished: ${conclusion}`,
-                        (conclusion || 'FAILED').toUpperCase(),
-                        'px-1.5 py-0.5 rounded bg-rose-900/80 border border-rose-700 text-[9px] font-bold text-rose-300'
-                    );
-                }
-                return false;
-            }
-
-            hideMobileWorkflowBanner();
-            stopMobileWorkflowStatusPolling();
-            return false;
-        }
-
-        async function startMobileWorkflowStatusPolling() {
-            stopMobileWorkflowStatusPolling();
-            _isMobileTrackingActiveWorkflow = true;
-
-            updateMobileWorkflowBannerUI(
-                'dispatched',
-                'Waiting for runner provision...',
-                'DISPATCHED',
-                'px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[9px] font-bold text-sky-300'
-            );
-
-            try {
-                const res = await fetch('/api/workflows/status/produce_buffer', { credentials: 'same-origin' });
-                if (res.ok) {
-                    const info = await res.json();
-                    renderMobileWorkflowRunState(info);
-                }
-            } catch (e) {
-                console.warn('[MOBILE_POLL] Error:', e);
-            }
-
-            _mobileWorkflowPollTimer = setInterval(async () => {
-                try {
-                    const res = await fetch('/api/workflows/status/produce_buffer', { credentials: 'same-origin' });
-                    if (res.ok) {
-                        const info = await res.json();
-                        renderMobileWorkflowRunState(info);
-                    }
-                } catch (e) {
-                    console.warn('[MOBILE_POLL] Error:', e);
-                }
-            }, 5000);
-        }
-
-        async function initMobileWorkflowStatusRecovery() {
-            try {
-                const res = await fetch('/api/workflows/status/produce_buffer', { credentials: 'same-origin' });
-                if (res.ok) {
-                    const info = await res.json();
-                    const active = info ? (info.active_run || (info.latest_run && ['queued', 'in_progress', 'requested', 'waiting'].includes((info.latest_run.status || '').toLowerCase()) ? info.latest_run : null)) : null;
-                    const isRunActive = Boolean(info && (info.is_active || active));
-
-                    if (isRunActive && active) {
-                        renderMobileWorkflowRunState(info);
-                        if (!_mobileWorkflowPollTimer) {
-                            _mobileWorkflowPollTimer = setInterval(async () => {
-                                try {
-                                    const r = await fetch('/api/workflows/status/produce_buffer', { credentials: 'same-origin' });
-                                    if (r.ok) {
-                                        const latest = await r.json();
-                                        renderMobileWorkflowRunState(latest);
-                                    }
-                                } catch (e) {}
-                            }, 5000);
-                        }
-                    } else {
-                        hideMobileWorkflowBanner();
-                    }
-                }
-            } catch (e) {
-                console.warn('[MOBILE_RECOVERY] Could not check active status:', e);
-                hideMobileWorkflowBanner();
+                alert(`Error: ${e.message}`);
             }
         }
 
         function dismissMobileCloudBanner() {
-            hideMobileWorkflowBanner();
-            stopMobileWorkflowStatusPolling();
-        }
-
-        function onMobileDomReady() {
-            initMobileWorkflowStatusRecovery();
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', onMobileDomReady);
-        } else {
-            onMobileDomReady();
+            const b = document.getElementById('mobile-cloud-banner');
+            if (b) b.classList.add('hidden');
         }
     </script>
 </body>

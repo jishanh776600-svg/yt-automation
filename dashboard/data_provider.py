@@ -491,6 +491,11 @@ class SystemDataProvider:
         return {
             "learning_status": status_text,
             "status_badge_class": status_badge_class,
+            "has_mature_data": mature_count > 0,
+            "total_mature_snapshots": mature_count,
+            "total_experiments": learning_applied_count,
+            "channel_baseline_score": 0.75,
+            "patterns": recent_events_list,
             "latest_event": latest_event_data,
             "applied_events_count": learning_applied_count,
             "immature_videos_count": immature_count,

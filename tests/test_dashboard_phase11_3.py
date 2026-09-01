@@ -39,7 +39,8 @@ class TestDashboardPhase113(unittest.TestCase):
             username=DEFAULT_ADMIN_USER,
             duration_hours=1
         )
-        self.client.cookies.set(SESSION_COOKIE_NAME, self.session_id)
+        self.client = TestClient(app)
+        self.client.cookies = {SESSION_COOKIE_NAME: self.session_id}
 
     def tearDown(self):
         if hasattr(self, "session_id"):

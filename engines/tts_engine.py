@@ -114,6 +114,13 @@ def resolve_voice_config(voice_id: str) -> dict:
 
 def get_active_voice(db: Optional[Session] = None) -> str:
     """Retrieves active production voice preference, preserving canonical system invariant."""
+    if db:
+        try:
+            cfg = db.query(SystemConfig).filter(SystemConfig.key == "active_voice").first()
+            if cfg and cfg.value:
+                return cfg.value
+        except Exception:
+            pass
     return KOKORO_VOICE or "af_bella"
 
 

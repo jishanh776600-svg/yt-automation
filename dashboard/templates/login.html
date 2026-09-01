@@ -3,56 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- AL AMR Autonomous Media System -->
     <title>AL AMR // Operations Access</title>
-    <link rel="brand-logo" href="/static/img/al_amr_logo.svg">
+    <link rel="icon" type="image/svg+xml" href="/static/branding/al_amr_logo.svg">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'sans-serif'],
                         mono: ['"JetBrains Mono"', 'monospace'],
-                        cinzel: ['"Cinzel"', 'serif'],
                     },
                     colors: {
-                        obsidian: '#090D16',
-                        panel: '#0F1626',
-                        borderSubtle: '#1E293B',
+                        obsidian: '#050608',
+                        layer1: '#080a0d',
+                        layer2: '#0c0f14',
+                        layer3: '#11151c',
                     }
                 }
             }
         }
     </script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #050608;
+            color: #f1f5f9;
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
 </head>
-<body class="bg-obsidian text-slate-100 min-h-screen font-sans flex items-center justify-center p-4 selection:bg-amber-500 selection:text-slate-950">
+<body class="bg-obsidian text-zinc-100 min-h-screen font-sans flex items-center justify-center p-4 selection:bg-sky-500 selection:text-black">
 
-    <div class="max-w-md w-full space-y-6">
+    <div class="max-w-sm w-full space-y-6">
 
-        <!-- Logo & AL AMR Branding -->
+        <!-- Isolated Transparent Brand Logo & Title -->
         <div class="text-center space-y-3">
-            <div class="inline-flex items-center justify-center p-2 rounded-2xl bg-panel border border-borderSubtle shadow-2xl shadow-black/80">
-                <img src="/static/branding/al-amr-logo.jpeg" alt="AL AMR Official Brand Emblem" class="h-28 object-contain rounded-xl filter contrast-125 brightness-110">
+            <div class="inline-flex items-center justify-center p-3 rounded-2xl bg-layer1 border border-white/[0.06] shadow-2xl shadow-black">
+                <img src="/static/branding/al_amr_logo_transparent.png" alt="AL AMR Official Brand Emblem" class="h-24 w-auto object-contain filter drop-shadow(0 0 12px rgba(255,255,255,0.18))">
             </div>
             <div>
-                <h1 class="font-cinzel text-lg font-bold text-slate-100 tracking-widest uppercase">AL AMR <span class="text-brandGold font-normal font-sans text-sm ml-1">الأمر</span></h1>
-                <p class="text-[10px] text-slate-400 font-mono tracking-widest uppercase mt-0.5">Autonomous Media Operations & Production Control</p>
+                <h1 class="text-base font-semibold text-white tracking-tight">AL AMR Autonomous Media System</h1>
+                <p class="text-xs text-zinc-400 font-normal mt-0.5">Operator Authentication</p>
             </div>
         </div>
 
         <!-- Login Card -->
-        <div class="bg-panel border border-borderSubtle p-6 sm:p-8 rounded-2xl shadow-2xl space-y-5 relative overflow-hidden">
-            <div class="absolute top-0 left-0 right-0 h-0.5 bg-brandGold"></div>
-
+        <div class="bg-layer2 border border-white/[0.06] p-6 sm:p-7 rounded-2xl shadow-2xl shadow-black/80 space-y-5 relative overflow-hidden">
             <div class="space-y-1">
-                <h2 class="text-base font-bold text-slate-100 font-mono uppercase tracking-wide">Operator Access</h2>
-                <p class="text-xs text-slate-400">Authenticate with administrator credentials to manage autonomous operations.</p>
+                <h2 class="text-sm font-medium text-white">Operator access</h2>
+                <p class="text-xs text-zinc-400">Authenticate session with administrator credentials.</p>
             </div>
 
             <!-- Error Banner -->
-            <div id="error-banner" class="p-3 bg-rose-950/80 border border-rose-800 rounded-xl text-rose-300 text-xs font-mono hidden items-center space-x-2">
+            <div id="error-banner" class="p-3 bg-rose-950/70 border border-rose-800/80 rounded-xl text-rose-300 text-xs font-mono hidden items-center space-x-2">
                 <span>✕</span>
                 <span id="error-text">Invalid credentials. Please verify and retry.</span>
             </div>
@@ -60,27 +70,27 @@
             <!-- Form -->
             <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
                 <div class="space-y-1.5">
-                    <label class="text-xs font-mono uppercase text-slate-400 font-semibold" for="username">Username</label>
+                    <label class="text-xs text-zinc-300 font-medium" for="username">Username</label>
                     <input type="text" id="username" name="username" required autocomplete="username"
-                        class="w-full px-3.5 py-2.5 bg-obsidian border border-borderSubtle focus:border-amber-500 rounded-xl text-slate-100 text-sm font-mono outline-none transition"
+                        class="w-full px-3.5 py-2.5 bg-layer1 border border-white/10 focus:border-sky-500/60 rounded-xl text-white text-sm outline-none transition"
                         placeholder="Operator username">
                 </div>
 
                 <div class="space-y-1.5">
-                    <label class="text-xs font-mono uppercase text-slate-400 font-semibold" for="password">Password</label>
+                    <label class="text-xs text-zinc-300 font-medium" for="password">Password</label>
                     <input type="password" id="password" name="password" required autocomplete="current-password"
-                        class="w-full px-3.5 py-2.5 bg-obsidian border border-borderSubtle focus:border-amber-500 rounded-xl text-slate-100 text-sm font-mono outline-none transition"
+                        class="w-full px-3.5 py-2.5 bg-layer1 border border-white/10 focus:border-sky-500/60 rounded-xl text-white text-sm font-mono outline-none transition"
                         placeholder="••••••••••••">
                 </div>
 
                 <button type="submit" id="submit-btn"
-                    class="w-full py-3 bg-amber-600 hover:bg-amber-500 text-slate-950 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition shadow-lg shadow-amber-600/30 flex items-center justify-center space-x-2">
+                    class="w-full py-2.5 bg-white hover:bg-zinc-200 text-black rounded-xl text-xs font-semibold tracking-wide transition shadow-lg shadow-white/5 flex items-center justify-center space-x-2">
                     <span id="btn-text">Authenticate Session</span>
-                    <span id="btn-spinner" class="hidden animate-spin">↻</span>
+                    <span id="btn-spinner" class="hidden animate-spin font-mono">↻</span>
                 </button>
             </form>
 
-            <div class="pt-2 text-center text-[11px] font-mono text-slate-500">
+            <div class="pt-2 text-center text-[11px] font-mono text-zinc-500">
                 <span>🔒 Protected by PBKDF2-HMAC-SHA256 & Rate-Limiting</span>
             </div>
         </div>
@@ -88,6 +98,10 @@
     </div>
 
     <script>
+        function getCsrfToken() {
+            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        }
+
         async function handleLogin(e) {
             e.preventDefault();
             const usernameInput = document.getElementById('username');
@@ -99,9 +113,10 @@
             const btnSpinner = document.getElementById('btn-spinner');
 
             errorBanner.classList.add('hidden');
-            btnText.innerText = 'Authenticating...';
-            btnSpinner.classList.remove('hidden');
+            errorBanner.classList.remove('flex');
             submitBtn.disabled = true;
+            btnSpinner.classList.remove('hidden');
+            btnText.innerText = 'Verifying...';
 
             try {
                 const res = await fetch('/api/auth/login', {
@@ -115,24 +130,19 @@
 
                 const data = await res.json();
 
-                if (res.ok && data.success) {
-                    btnText.innerText = 'Access Granted';
-                    window.location.href = '/';
-                } else {
-                    errorText.innerText = data.detail || data.error || 'Authentication failed. Please verify credentials.';
-                    errorBanner.classList.remove('hidden');
-                    errorBanner.classList.add('flex');
-                    btnText.innerText = 'Authenticate Session';
-                    btnSpinner.classList.add('hidden');
-                    submitBtn.disabled = false;
+                if (!res.ok) {
+                    throw new Error(data.detail || 'Authentication failed');
                 }
+
+                btnText.innerText = 'Redirecting...';
+                window.location.href = '/';
             } catch (err) {
-                errorText.innerText = 'Network error connecting to authentication service.';
                 errorBanner.classList.remove('hidden');
                 errorBanner.classList.add('flex');
-                btnText.innerText = 'Authenticate Session';
-                btnSpinner.classList.add('hidden');
+                errorText.innerText = err.message || 'Authentication failed. Please verify credentials.';
                 submitBtn.disabled = false;
+                btnSpinner.classList.add('hidden');
+                btnText.innerText = 'Authenticate Session';
             }
         }
     </script>

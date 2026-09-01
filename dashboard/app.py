@@ -319,24 +319,14 @@ def index(request: Request, db: Session = Depends(get_db)):
     # Check for mobile user-agent or query parameter
     user_agent = request.headers.get("user-agent", "").lower()
     is_mobile = any(m in user_agent for m in ["mobile", "android", "iphone", "ipod", "ipad"]) or request.query_params.get("mobile") == "true"
-    if is_mobile and request.query_params.get("desktop") != "true":
-        state = data_provider.get_full_system_state(db)
-        return templates.TemplateResponse(
-            request=request,
-            name="mobile.html",
-            context={
-                "user": session["username"],
-                "csrf_token": session["csrf_token"],
-                "state": state
-            }
-        )
+    target_template = "mobile.html" if (is_mobile and request.query_params.get("desktop") != "true") else "index.html"
 
     state = data_provider.get_full_system_state(db)
     review_queue = action_manager.get_review_queue(db)
 
     return templates.TemplateResponse(
         request=request,
-        name="index.html",
+        name=target_template,
         context={
             "user": session["username"],
             "csrf_token": session["csrf_token"],

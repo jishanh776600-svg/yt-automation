@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <defs>
+    <linearGradient id="obsidianGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#a1a1aa" stop-opacity="0.8"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#obsidianGrad)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="250" cy="250" r="180" stroke-opacity="0.2" stroke-width="4"/>
+    <path d="M250 90 L390 350 L110 350 Z" stroke-width="14"/>
+    <circle cx="250" cy="230" r="40" fill="url(#obsidianGrad)" fill-opacity="0.9"/>
+    <path d="M190 350 L250 250 L310 350" stroke-width="10"/>
+  </g>
+  <text x="250" y="420" font-family="'Plus Jakarta Sans', sans-serif" font-size="28" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="6">AL AMR</text>
+  <text x="250" y="455" font-family="'Plus Jakarta Sans', sans-serif" font-size="20" font-weight="500" fill="#a1a1aa" text-anchor="middle">الأمر</text>
+</svg>

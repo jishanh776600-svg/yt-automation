@@ -43,11 +43,10 @@ class TestDashboardPhase5(unittest.TestCase):
         cls.db.close()
 
     def setUp(self):
-        login_res = self.client.post("/api/auth/login", json={
-            "username": DEFAULT_ADMIN_USER,
-            "password": DEFAULT_ADMIN_PASSWORD
-        })
-        self.csrf_token = login_res.json().get("csrf_token", "")
+        from dashboard.auth import session_store, SESSION_COOKIE_NAME
+        self.session_id, self.csrf_token = session_store.create_session(DEFAULT_ADMIN_USER, duration_hours=1)
+        self.client = TestClient(app)
+        self.client.cookies = {SESSION_COOKIE_NAME: self.session_id}
         self.test_job_ids = []
 
     def tearDown(self):

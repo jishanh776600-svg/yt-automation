@@ -41,14 +41,10 @@ class TestDashboardScheduledQueue(unittest.TestCase):
         cls.db.close()
 
     def setUp(self):
-        from dashboard.auth import DEFAULT_ADMIN_USER, DEFAULT_ADMIN_PASSWORD
-        login_res = self.client.post("/api/auth/login", json={
-            "username": DEFAULT_ADMIN_USER,
-            "password": DEFAULT_ADMIN_PASSWORD
-        })
-        self.csrf_token = login_res.json().get("csrf_token", "")
-
-        # Unique IDs for test items
+        from dashboard.auth import session_store, SESSION_COOKIE_NAME, DEFAULT_ADMIN_USER
+        self.session_id, self.csrf_token = session_store.create_session(DEFAULT_ADMIN_USER, duration_hours=1)
+        self.client = TestClient(app)
+        self.client.cookies = {SESSION_COOKIE_NAME: self.session_id}
         self.test_ids = []
 
     def tearDown(self):
@@ -125,7 +121,7 @@ class TestDashboardScheduledQueue(unittest.TestCase):
 
     def test_03_next_scheduled_video_calculation(self):
         """Test 3: Verifies that next_scheduled_video spotlight accurately targets the earliest future Short."""
-        near_future = datetime.utcnow() + timedelta(hours=1, minutes=30)
+        near_future = datetime.utcnow() + timedelta(minutes=10)
         far_future = datetime.utcnow() + timedelta(days=2)
 
         self._create_test_upload(f"job_next_far_{uuid.uuid4().hex[:8]}", "Far Future Event", scheduled_at=far_future)
