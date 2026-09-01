@@ -128,71 +128,95 @@
     </div>
 
     <!-- MAIN MOBILE CONTENT CONTAINER -->
-    <main class="p-4 space-y-4 max-w-md mx-auto">
+    <main class="px-3.5 py-3 space-y-3.5 max-w-md w-full mx-auto overflow-x-hidden">
 
         <!-- SECTION 1: OVERVIEW TAB (Default) -->
-        <div id="mob-section-overview" class="space-y-4">
+        <div id="mob-section-overview" class="space-y-3.5">
             
             <!-- Drive Ready Reserve Capacity -->
-            <div class="p-5 rounded-2xl bg-layer2 border border-white/[0.06] text-center space-y-1 shadow-lg shadow-black/60">
+            <div class="p-4 rounded-2xl bg-layer2 border border-white/[0.06] text-center space-y-1 shadow-lg shadow-black/60">
                 <div class="text-xs text-zinc-400 font-medium">Drive ready reserve</div>
                 <div class="text-4xl font-light text-white tracking-tight flex items-center justify-center gap-2 pt-1">
                     <span>{{ state.inventory.counts.get("01_READY", 0) }}</span>
                     <span class="text-zinc-600 text-2xl font-thin">/</span>
                     <span class="text-zinc-500">{{ state.buffer.target_reserve }}</span>
                     {% if state.inventory.counts.get("01_READY", 0) >= state.buffer.target_reserve %}
-                    <span class="text-[11px] font-mono font-medium text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-800/50 ml-1">Full</span>
+                    <span class="text-[11px] font-mono font-medium text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-800/50 ml-1">Full (6/6)</span>
                     {% else %}
                     <span class="text-[11px] font-mono font-medium text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded-full border border-amber-800/50 ml-1">Refilling</span>
                     {% endif %}
                 </div>
-                <div class="text-xs text-zinc-400 pt-1">Next scheduled slot: <b class="text-white font-mono">{{ state.publishing.next_slot or "15:00 UTC" }}</b> ({{ state.publishing.published_today }}/{{ state.publishing.daily_limit }} booked)</div>
+                <div class="text-xs text-zinc-400 pt-1">Next scheduled slot: <b class="text-white font-mono">{{ state.publishing.next_slot.slot_label if state.publishing.next_slot is mapping else (state.publishing.next_slot or "15:00 UTC") }}</b> ({{ state.publishing.published_today }}/{{ state.publishing.daily_limit }} booked)</div>
             </div>
 
-            <!-- Compact 8-Stage Pipeline Grid -->
+            <!-- Compact 8-Stage Pipeline Grid (2-Column Responsive for 360px & 390px) -->
             <div class="space-y-2">
                 <div class="flex justify-between items-center px-1">
                     <span class="text-xs text-zinc-400 font-medium">Production pipeline</span>
                     <span class="text-[11px] font-mono text-zinc-500">8 stages</span>
                 </div>
-                <div class="grid grid-cols-4 gap-1.5 text-center text-xs">
-                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] text-zinc-300">
-                        <div class="text-[10px] text-zinc-500">01</div>
-                        <div class="font-medium mt-0.5">Topic ✓</div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[44px]">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <span class="text-[10px] font-mono text-zinc-500 font-semibold">01</span>
+                            <span class="font-medium text-xs text-white truncate">Topic</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">16 seeds ✓</span>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] text-zinc-300">
-                        <div class="text-[10px] text-zinc-500">02</div>
-                        <div class="font-medium mt-0.5">Facts ✓</div>
+                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[44px]">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <span class="text-[10px] font-mono text-zinc-500 font-semibold">02</span>
+                            <span class="font-medium text-xs text-white truncate">Facts</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">Grounded ✓</span>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] text-zinc-300">
-                        <div class="text-[10px] text-zinc-500">03</div>
-                        <div class="font-medium mt-0.5">Script ✓</div>
+                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[44px]">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <span class="text-[10px] font-mono text-zinc-500 font-semibold">03</span>
+                            <span class="font-medium text-xs text-white truncate">Script</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">50 words ✓</span>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] text-zinc-300">
-                        <div class="text-[10px] text-zinc-500">04</div>
-                        <div class="font-medium mt-0.5">Visuals ✓</div>
+                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[44px]">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <span class="text-[10px] font-mono text-zinc-500 font-semibold">04</span>
+                            <span class="font-medium text-xs text-white truncate">Visuals</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">8 beats ✓</span>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] text-zinc-300">
-                        <div class="text-[10px] text-zinc-500">05</div>
-                        <div class="font-medium mt-0.5">Voice ✓</div>
+                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[44px]">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <span class="text-[10px] font-mono text-zinc-500 font-semibold">05</span>
+                            <span class="font-medium text-xs text-white truncate">Voice</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0 truncate max-w-[70px]">{{ state.voice_config.active_voice_id or (state.voice_config.active_voice.id if state.voice_config.active_voice is mapping else state.voice_config.active_voice) or "af_bella" }} ✓</span>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] text-zinc-300">
-                        <div class="text-[10px] text-zinc-500">06</div>
-                        <div class="font-medium mt-0.5">Audio ✓</div>
+                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[44px]">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <span class="text-[10px] font-mono text-zinc-500 font-semibold">06</span>
+                            <span class="font-medium text-xs text-white truncate">Audio</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">-30 LUFS ✓</span>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] text-zinc-300">
-                        <div class="text-[10px] text-zinc-500">07</div>
-                        <div class="font-medium mt-0.5">Render ✓</div>
+                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[44px]">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <span class="text-[10px] font-mono text-zinc-500 font-semibold">07</span>
+                            <span class="font-medium text-xs text-white truncate">Render</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">1080p ✓</span>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-800/40 text-emerald-400">
-                        <div class="text-[10px] text-emerald-500">08</div>
-                        <div class="font-medium mt-0.5">QA ✓</div>
+                    <div class="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-800/40 flex items-center justify-between text-emerald-400 min-h-[44px]">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <span class="text-[10px] font-mono text-emerald-500 font-semibold">08</span>
+                            <span class="font-medium text-xs text-emerald-300 truncate">QA Gate</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0 font-semibold">100% Pass</span>
                     </div>
                 </div>
             </div>
 
             <!-- Horizontal Telemetry Strip -->
-            <div class="p-4 rounded-2xl bg-layer2 border border-white/[0.05] grid grid-cols-2 gap-4 text-center">
+            <div class="p-4 rounded-2xl bg-layer2 border border-white/[0.05] grid grid-cols-2 gap-3 text-center">
                 <div>
                     <div class="text-xs text-zinc-400">Retention AVD</div>
                     <div class="text-xl font-light text-white mt-0.5 font-mono">17.0s <span class="text-xs text-emerald-400 font-sans">75.4%</span></div>

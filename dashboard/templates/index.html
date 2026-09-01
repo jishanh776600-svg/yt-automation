@@ -126,7 +126,7 @@
                 <span class="text-zinc-300 font-medium">All systems nominal</span>
             </div>
             <span class="text-zinc-700">/</span>
-            <span>Next release: <span class="text-white font-mono">{{ state.publishing.next_slot or "15:00 UTC" }}</span></span>
+            <span>Next release: <span class="text-white font-mono">{{ state.publishing.next_slot.slot_label if state.publishing.next_slot is mapping else (state.publishing.next_slot or "15:00 UTC") }}</span></span>
             <span class="text-zinc-700">/</span>
             <span id="live-utc-clock" class="font-mono text-zinc-400">--:--:-- UTC</span>
             <span class="text-zinc-700">/</span>
@@ -175,65 +175,65 @@
         </div>
 
         <!-- 8-STAGE SPATIAL PRODUCTION PIPELINE (HERO OBJECT) -->
-        <div class="relative py-6">
+        <div class="relative py-4">
             <div class="absolute top-1/2 left-6 right-6 h-[1px] bg-zinc-800/80 -translate-y-1/2 z-0"></div>
 
             <div id="pipeline-grid" class="grid grid-cols-8 gap-3 relative z-10">
                 
                 <!-- Stage 01: Topic -->
-                <div class="magnetic-stage p-4 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default" data-index="0">
+                <div class="magnetic-stage p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="0">
                     <div class="text-[11px] text-zinc-400 font-medium">01</div>
-                    <div class="text-sm font-medium text-zinc-200 mt-1">Topic</div>
-                    <div class="text-[11px] text-zinc-400 mt-1.5 font-mono">16 seeds</div>
+                    <div class="text-sm font-medium text-zinc-200 mt-0.5 truncate">Topic</div>
+                    <div class="text-[11px] text-zinc-400 mt-1 font-mono truncate">16 seeds</div>
                 </div>
 
                 <!-- Stage 02: Facts -->
-                <div class="magnetic-stage p-4 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default" data-index="1">
+                <div class="magnetic-stage p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="1">
                     <div class="text-[11px] text-zinc-400 font-medium">02</div>
-                    <div class="text-sm font-medium text-zinc-200 mt-1">Facts</div>
-                    <div class="text-[11px] text-emerald-400 mt-1.5 font-mono">Grounded</div>
+                    <div class="text-sm font-medium text-zinc-200 mt-0.5 truncate">Facts</div>
+                    <div class="text-[11px] text-emerald-400 mt-1 font-mono truncate">Grounded</div>
                 </div>
 
                 <!-- Stage 03: Script -->
-                <div class="magnetic-stage p-4 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default" data-index="2">
+                <div class="magnetic-stage p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="2">
                     <div class="text-[11px] text-zinc-400 font-medium">03</div>
-                    <div class="text-sm font-medium text-zinc-200 mt-1">Script</div>
-                    <div class="text-[11px] text-zinc-400 mt-1.5 font-mono">50 words</div>
+                    <div class="text-sm font-medium text-zinc-200 mt-0.5 truncate">Script</div>
+                    <div class="text-[11px] text-zinc-400 mt-1 font-mono truncate">50 words</div>
                 </div>
 
                 <!-- Stage 04: Visuals -->
-                <div class="magnetic-stage p-4 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default" data-index="3">
+                <div class="magnetic-stage p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="3">
                     <div class="text-[11px] text-zinc-400 font-medium">04</div>
-                    <div class="text-sm font-medium text-zinc-200 mt-1">Visuals</div>
-                    <div class="text-[11px] text-zinc-400 mt-1.5 font-mono">8 beats</div>
+                    <div class="text-sm font-medium text-zinc-200 mt-0.5 truncate">Visuals</div>
+                    <div class="text-[11px] text-zinc-400 mt-1 font-mono truncate">8 beats</div>
                 </div>
 
                 <!-- Stage 05: Voice -->
-                <div class="magnetic-stage p-4 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default" data-index="4">
+                <div class="magnetic-stage p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="4">
                     <div class="text-[11px] text-zinc-400 font-medium">05</div>
-                    <div class="text-sm font-medium text-zinc-200 mt-1">Voice</div>
-                    <div class="text-[11px] text-emerald-400 mt-1.5 font-mono">{{ state.voice_config.active_voice or "af_bella" }}</div>
+                    <div class="text-sm font-medium text-zinc-200 mt-0.5 truncate">Voice</div>
+                    <div class="text-[11px] text-emerald-400 mt-1 font-mono truncate">{{ state.voice_config.active_voice_id or (state.voice_config.active_voice.id if state.voice_config.active_voice is mapping else state.voice_config.active_voice) or "af_bella" }}</div>
                 </div>
 
                 <!-- Stage 06: Audio -->
-                <div class="magnetic-stage p-4 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default" data-index="5">
+                <div class="magnetic-stage p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="5">
                     <div class="text-[11px] text-zinc-400 font-medium">06</div>
-                    <div class="text-sm font-medium text-zinc-200 mt-1">Audio</div>
-                    <div class="text-[11px] text-emerald-400 mt-1.5 font-mono">BGM -30 LUFS</div>
+                    <div class="text-sm font-medium text-zinc-200 mt-0.5 truncate">Audio</div>
+                    <div class="text-[11px] text-emerald-400 mt-1 font-mono truncate">BGM -30 LUFS</div>
                 </div>
 
                 <!-- Stage 07: Render -->
-                <div class="magnetic-stage p-4 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default" data-index="6">
+                <div class="magnetic-stage p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="6">
                     <div class="text-[11px] text-zinc-400 font-medium">07</div>
-                    <div class="text-sm font-medium text-zinc-200 mt-1">Render</div>
-                    <div class="text-[11px] text-zinc-400 mt-1.5 font-mono">1080x1920</div>
+                    <div class="text-sm font-medium text-zinc-200 mt-0.5 truncate">Render</div>
+                    <div class="text-[11px] text-zinc-400 mt-1 font-mono truncate">1080x1920</div>
                 </div>
 
                 <!-- Stage 08: QA Gate -->
-                <div class="magnetic-stage p-4 rounded-2xl bg-emerald-950/20 border border-emerald-800/40 text-center shadow-lg shadow-black/70 cursor-default" data-index="7">
+                <div class="magnetic-stage p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-800/40 text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="7">
                     <div class="text-[11px] text-emerald-400 font-medium">✓ 08</div>
-                    <div class="text-sm font-medium text-emerald-300 mt-1">QA Gate</div>
-                    <div class="text-[11px] text-emerald-400 mt-1.5 font-mono">100% Pass</div>
+                    <div class="text-sm font-medium text-emerald-300 mt-0.5 truncate">QA Gate</div>
+                    <div class="text-[11px] text-emerald-400 mt-1 font-mono truncate">100% Pass</div>
                 </div>
 
             </div>

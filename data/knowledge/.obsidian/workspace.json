@@ -11,10 +11,14 @@
             "id": "2a12833dddaa36b0",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
+              "type": "markdown",
+              "state": {
+                "file": "Voice/af_bella_canonical.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "af_bella_canonical"
             }
           }
         ]

@@ -1,53 +1,71 @@
 # AL AMR // Autonomous YouTube Shorts Production Brain
 
-*Obsidian Knowledge Vault — Operational Intelligence & System Standards*  
-*Last Synchronized: 2026-08-31 18:00:00 UTC*  
+*Obsidian Knowledge Vault — Operational Intelligence & System Standards*
+*Last Synchronized: 2026-09-01 10:20:03 UTC*
 
 ---
 
 ## 🏛 Core System Invariants
-- **Canonical Voice**: `af_bella` (Kokoro-82M ONNX, American English Female)
-- **Daily Publishing Limit**: `3` Shorts/day (`06:00, 11:00, 15:00 UTC`)
-- **Target Reserve Buffer**: `6` verified Shorts in Google Drive `01_READY`
+- **Canonical Voice**: `af_bella` (Kokoro-v1.0 ONNX, American English Female)
+- **Daily Publishing Limit**: `3` Shorts/day
+- **Target Reserve Buffer**: `6` verified Shorts in Drive `01_READY`
+- **Publishing Slots (UTC)**: `06:00 UTC`, `11:00 UTC`, `15:00 UTC`
 - **Target Duration**: `21.0s – 25.0s` (with mandatory 0.6s outro breathing margin)
 - **Target Resolution**: `1080x1920` (9:16 vertical)
-- **Target Master Loudness**: `-14.0 LUFS` (Stage B BGM bed: `-30.0 LUFS`)
-- **DeepSeek Policy**: `[NOT INTEGRATED / NOT PURCHASED / NOT USED]`
+- **Target Master Loudness**: `-14.0 LUFS` (Broadcast window: `-17.0` to `-11.0` LUFS)
 
 ---
 
-## 🗺 Master Knowledge Index
+## 🧠 Provider Failover Hierarchy
+1. **Gemini Primary** (`gemini-3.6-flash`)
+2. **Gemini Secondary** (Backup Google GenAI credential)
+3. **Groq** (`groq/compound-mini` via high-speed REST)
+4. **OpenRouter** (`meta-llama/llama-3.3-70b-instruct:free` fallback)
+5. **Bounded Clean Failure** (Zero corrupt outputs or infinite retry storms)
 
+---
+
+## 🗺 Knowledge Graph & Operational Workflow
 ```
-[[00 - Project Overview|00. Project Overview]]
+[[Topics/topic_lifecycle|01. Topics]]
        │
-       ├──────────────► [[01 - Architecture|01. Architecture & Storage Tiers]]
-       ├──────────────► [[02 - Production Pipeline|02. 8-Stage Production Pipeline]]
-       ├──────────────► [[03 - AI Provider Strategy|03. AI Provider Hierarchy & Economics]]
-       ├──────────────► [[04 - Reserve & Publishing System|04. Reserve Contract & Publishing Engine]]
-       ├──────────────► [[05 - Analytics & Learning Engine|05. Analytics & UCB1 Learning]]
-       ├──────────────► [[06 - Audio & BGM System|06. Audio Engineering & BGM Standardization]]
-       ├──────────────► [[07 - Testing & Verification|07. Testing Evolution & Regression Suites]]
-       ├──────────────► [[08 - Failure Forensics & Fixes|08. Failure Forensics & Root-Cause Fixes]]
-       ├──────────────► [[09 - Operational State|09. Current Operational State & Inventory]]
-       ├──────────────► [[10 - Decisions & Engineering Principles|10. Engineering Principles & Governance]]
-       ├──────────────► [[11 - Commercial Product Roadmap|11. Future Commercial Product Roadmap]]
-       └──────────────► [[12 - Change Log|12. Chronological Engineering Change Log]]
+       ▼
+[[Research/historical_grounding|02. Research & Fact Verification]]
+       │
+       ▼
+[[Scripts/retention_architecture|03. Retention Scripting]] ──► [[Voice/af_bella_canonical|Voice Engine]]
+       │                                                                 │
+       ▼                                                                 │
+[[Visuals/composition_rules|04. Visual Composition]] ◄──────────────────┘
+       │
+       ├──────────────► [[BGM/acoustic_standards|BGM Acoustic Standards]]
+       ├──────────────► [[SFX/sfx_integration|SFX Director]]
+       │
+       ▼
+[[Production/pipeline_rules|05. Production & Reserve Buffer]] ──► [[Decisions/provider_chain|AI Providers]]
+       │                                                      ──► [[Failures/quarantine_policy|Quarantine Policy]]
+       ▼
+[[Performance/publishing_and_telemetry|06. Published Videos & Telemetry]]
+       │
+       ▼
+[[Learning/strategy_insights|07. Closed-Loop Learning & Strategy Weights]]
+       │
+       └──────────────► [[System/operating_invariants|Channel Baseline & Invariants]]
 ```
 
 ---
 
-## 📂 Domain Records & Historical Notes
-- [[00 - Project Overview|Project Overview & Executive Summary]]
-- [[01 - Architecture|Multi-Tier Topology, Process Locks & Cloud Orchestration]]
-- [[02 - Production Pipeline|8-Stage End-to-End Production Pipeline]]
-- [[03 - AI Provider Strategy|AI Provider Cascade, Token Economics & DeepSeek Invariant]]
-- [[04 - Reserve & Publishing System|6-Short Reserve Contract & Decoupled Publishing]]
-- [[05 - Analytics & Learning Engine|Live YouTube Analytics, Maturation Gate & UCB1 Learning]]
-- [[06 - Audio & BGM System|4 BGM Tracks, EBU R128 Bed Normalization & Acoustic QA]]
-- [[07 - Testing & Verification|Regression Suites (188 Tests) & Testing Philosophy]]
-- [[08 - Failure Forensics & Fixes|Forensics on Kettle War, Analytics 403, Locks & BGM]]
-- [[09 - Operational State|Single Source of Truth: 6/6 Ready Stock & Channel Inventory]]
-- [[10 - Decisions & Engineering Principles|Engineering Governance & "No Success After Retries"]]
-- [[11 - Commercial Product Roadmap|Future Multi-Channel, SaaS & Platform Vision]]
-- [[12 - Change Log|Milestone History from Step 1 to Step 27]]
+## 📂 Domain Index
+- [[Topics/topic_lifecycle|Topic Discovery & Deduplication]]
+- [[Research/historical_grounding|Historical Research & Fact Grounding]]
+- [[Scripts/retention_architecture|5-Stage Retention Scripting]]
+- [[Voice/af_bella_canonical|Canonical Voice: af_bella]]
+- [[Visuals/composition_rules|Visual Composition & Directing]]
+- [[BGM/acoustic_standards|BGM Loudness & Fingerprint Verification]]
+- [[SFX/sfx_integration|SFX Punctuation & Audio Risers]]
+- [[Production/pipeline_rules|6-Stage Production Pipeline]]
+- [[Performance/publishing_and_telemetry|Publishing Slots & Telemetry Data Truth]]
+- [[Learning/strategy_insights|Closed-Loop Performance Learning]]
+- [[Decisions/provider_chain|AI Provider Failover Architecture]]
+- [[Failures/quarantine_policy|Poison-Pill Quarantine & Safe Recovery]]
+- [[System/operating_invariants|System Invariants & Durable Backup]]
