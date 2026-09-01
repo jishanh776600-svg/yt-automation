@@ -40,6 +40,8 @@
             --accent-sky: #38bdf8;
             --accent-emerald: #34d399;
             --accent-emerald-bg: rgba(6, 78, 59, 0.5);
+            --accent-amber: #fbbf24;
+            --accent-rose: #f43f5e;
             --text-main: #f1f5f9;
             --text-muted: #94a3b8;
             --text-dim: #64748b;
@@ -70,6 +72,8 @@
         .text-dim { color: var(--text-dim); }
         .text-sky { color: var(--accent-sky); }
         .text-emerald { color: var(--accent-emerald); }
+        .text-amber { color: var(--accent-amber); }
+        .text-rose { color: var(--accent-rose); }
         .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         /* Startup Logo Overlay */
@@ -285,6 +289,11 @@
             gap: 8px;
             padding-top: 4px;
         }
+        .ops-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
         .btn-primary {
             min-height: 48px;
             background: #ffffff;
@@ -316,7 +325,35 @@
             gap: 6px;
             transition: transform 120ms, opacity 120ms;
         }
-        .btn-primary:active, .btn-secondary:active {
+        .btn-heal {
+            min-height: 44px;
+            background: rgba(56, 189, 248, 0.12);
+            color: var(--accent-sky);
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn-reconcile {
+            min-height: 44px;
+            background: var(--bg-layer2);
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 500;
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn-primary:active, .btn-secondary:active, .btn-heal:active, .btn-reconcile:active {
             transform: scale(0.97);
             opacity: 0.88;
         }
@@ -437,6 +474,15 @@
             <button onclick="handleLogout()" style="font-size: 11px; background: var(--bg-layer2); border: 1px solid var(--border-subtle); color: var(--text-muted); border-radius: 6px; padding: 4px 8px; cursor: pointer;">Logout</button>
         </div>
     </header>
+
+    <!-- CLOUD WORKFLOW BANNER (If Active) -->
+    <div id="mobile-cloud-banner" class="hidden" style="background: rgba(12, 74, 110, 0.85); border-bottom: 1px solid #0284c7; padding: 8px 12px; font-size: 11px; display: flex; align-items: center; justify-content: space-between;">
+        <div class="truncate" style="display: flex; align-items: center; gap: 6px;">
+            <span class="font-mono" style="background: #0369a1; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: 700; color: #bae6fd;">CLOUD</span>
+            <span id="mobile-cloud-msg" class="truncate font-mono text-sky">Workflow active...</span>
+        </div>
+        <button onclick="dismissMobileCloudBanner()" style="background: none; border: none; color: #bae6fd; font-size: 12px; cursor: pointer; margin-left: 8px;">✕</button>
+    </div>
 
     <!-- MAIN CONTAINER -->
     <main class="mob-container">
@@ -571,7 +617,7 @@
                 </div>
             </div>
 
-            <!-- QUICK ACTION BUTTONS -->
+            <!-- PRIMARY ACTIONS (48px Touch Targets) -->
             <div class="actions-grid">
                 <button onclick="openProduceModal()" class="btn-primary">
                     <span>⚡ Refill Buffer</span>
@@ -580,6 +626,64 @@
                     <span>Publish Next</span>
                 </button>
             </div>
+
+            <!-- OPERATIONAL CONTROLS (Self-Heal & Reconcile Parity) -->
+            <div class="ops-grid">
+                <button onclick="handleSelfHeal()" class="btn-heal">
+                    <span>🛡️ Master Self-Heal</span>
+                </button>
+                <button onclick="handleReconcile()" class="btn-reconcile">
+                    <span>🔄 Reconcile Vault</span>
+                </button>
+            </div>
+
+            <!-- PROCESS LOCKS & VOICE CONTROL -->
+            <div class="obsidian-card" style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 12px; font-weight: 600; color: #ffffff;">System State & Voice</span>
+                    <button onclick="openVoiceModal()" style="font-size: 10px; background: var(--bg-layer1); border: 1px solid var(--border-subtle); color: var(--accent-sky); padding: 3px 8px; border-radius: 6px; cursor: pointer;">Change Voice ▾</button>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
+                    <span class="text-muted">Active Voice: <b style="color: #ffffff;">{{ state.voice_config.active_voice_name or state.voice_config.active_voice_id or 'Bella' }}</b></span>
+                    <span class="font-mono text-dim" style="font-size: 10px;">Kokoro ONNX</span>
+                </div>
+                <!-- Locks Subsystem -->
+                {% if state.locks %}
+                <div style="border-top: 1px solid var(--border-subtle); padding-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                    <span class="text-dim" style="font-size: 10px; font-weight: 600;">ACTIVE PROCESS LOCKS</span>
+                    {% for lock_name, lock_info in state.locks.items() %}
+                    <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
+                        <span class="font-mono text-amber">{{ lock_name }} (PID {{ lock_info.get('pid', 'N/A') }})</span>
+                        <button onclick="releaseLock('{{ lock_name }}')" style="font-size: 10px; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); color: var(--accent-rose); padding: 2px 6px; border-radius: 4px; cursor: pointer;">Release Lock</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- REVIEW QUEUE (If Items Need Attention) -->
+            {% if review_queue and review_queue.jobs %}
+            <div class="obsidian-card" style="display: flex; flex-direction: column; gap: 8px; border-color: rgba(251, 191, 36, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 12px; font-weight: 600; color: var(--accent-amber);">Review Queue ({{ review_queue.jobs|length }})</span>
+                    <span class="font-mono text-amber" style="font-size: 10px;">Needs Review</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    {% for item in review_queue.jobs[:3] %}
+                    <div class="video-item" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; width: 100%;">
+                            <span class="font-mono text-dim" style="font-size: 10px;">{{ item.id }}</span>
+                            <span class="text-rose" style="font-size: 10px;">{{ item.error_message | truncate(20) }}</span>
+                        </div>
+                        <div style="display: flex; gap: 6px; width: 100%; margin-top: 4px;">
+                            <button onclick="handleRetryJob('{{ item.id }}')" style="flex: 1; font-size: 10px; padding: 4px; background: var(--bg-layer2); border: 1px solid var(--border-subtle); color: var(--accent-emerald); border-radius: 4px; cursor: pointer;">Retry Job</button>
+                            <button onclick="handleQuarantineJob('{{ item.id }}')" style="flex: 1; font-size: 10px; padding: 4px; background: var(--bg-layer2); border: 1px solid var(--border-subtle); color: var(--accent-rose); border-radius: 4px; cursor: pointer;">Quarantine</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
 
             <!-- READY PREVIEW -->
             <div class="obsidian-card" style="display: flex; flex-direction: column; gap: 8px;">
@@ -606,9 +710,12 @@
 
         <!-- PANEL 2: VAULT & INVENTORY (Hidden by default) -->
         <div id="mob-panel-vault" class="tab-panel hidden">
-            <div style="padding: 0 4px;">
-                <h3 style="font-size: 14px; font-weight: 600; color: #ffffff;">Drive Vault Inventory</h3>
-                <p class="text-muted" style="font-size: 11px;">Isolated 6-tier directory storage</p>
+            <div style="padding: 0 4px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="font-size: 14px; font-weight: 600; color: #ffffff;">Drive Vault Inventory</h3>
+                    <p class="text-muted" style="font-size: 11px;">Isolated 6-tier directory storage</p>
+                </div>
+                <button onclick="handleReconcile()" class="btn-reconcile" style="min-height: 32px; padding: 0 8px; font-size: 10px;">Reconcile</button>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
@@ -637,32 +744,32 @@
         <div id="mob-panel-publishing" class="tab-panel hidden">
             <div style="padding: 0 4px;">
                 <h3 style="font-size: 14px; font-weight: 600; color: #ffffff;">Daily Publishing Slots</h3>
-                <p class="text-muted" style="font-size: 11px;">Ceiling: &le; 3 Shorts/day (06:00, 11:00, 15:00 UTC)</p>
+                <p class="text-muted" style="font-size: 11px;">Target: 2 Shorts/day &middot; 3 release windows available</p>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 8px;">
                 <div class="obsidian-card" style="padding: 12px; display: flex; align-items: center; justify-content: space-between;">
                     <div>
                         <div class="font-mono text-dim" style="font-size: 10px;">Slot 1 &middot; 06:00 UTC</div>
-                        <div style="font-size: 12px; font-weight: 500; color: #ffffff; margin-top: 2px;">Morning Release</div>
+                        <div style="font-size: 12px; font-weight: 500; color: #ffffff; margin-top: 2px;">Morning Release (11:30 AM IST)</div>
                     </div>
-                    <span class="font-mono text-emerald" style="font-size: 10px;">Completed ✓</span>
+                    <span class="font-mono text-emerald" style="font-size: 10px;">Available ✓</span>
                 </div>
 
                 <div class="obsidian-card" style="padding: 12px; display: flex; align-items: center; justify-content: space-between;">
                     <div>
                         <div class="font-mono text-dim" style="font-size: 10px;">Slot 2 &middot; 11:00 UTC</div>
-                        <div style="font-size: 12px; font-weight: 500; color: #ffffff; margin-top: 2px;">Midday Release</div>
+                        <div style="font-size: 12px; font-weight: 500; color: #ffffff; margin-top: 2px;">Midday Release (04:30 PM IST)</div>
                     </div>
-                    <span class="font-mono text-emerald" style="font-size: 10px;">Completed ✓</span>
+                    <span class="font-mono text-emerald" style="font-size: 10px;">Available ✓</span>
                 </div>
 
                 <div class="obsidian-card" style="padding: 12px; display: flex; align-items: center; justify-content: space-between; border-color: var(--border-active);">
                     <div>
                         <div class="font-mono text-sky" style="font-size: 10px;">Slot 3 &middot; 15:00 UTC</div>
-                        <div style="font-size: 12px; font-weight: 500; color: #ffffff; margin-top: 2px;">Evening Peak Release</div>
+                        <div style="font-size: 12px; font-weight: 500; color: #ffffff; margin-top: 2px;">Evening Peak Release (08:30 PM IST)</div>
                     </div>
-                    <span class="font-mono text-sky" style="font-size: 10px;">Next Scheduled</span>
+                    <span class="font-mono text-sky" style="font-size: 10px;">Available ✓</span>
                 </div>
             </div>
         </div>
@@ -752,6 +859,47 @@
         </div>
     </div>
 
+    <!-- VOICE SELECTOR MODAL -->
+    <div id="voice-select-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div>
+                <h3 style="font-size: 15px; font-weight: 600; color: #ffffff;">Select Kokoro Voice</h3>
+                <p class="text-muted" style="font-size: 11px; margin-top: 2px;">Configure active TTS voice for production.</p>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto;">
+                <button onclick="setVoice('af_bella')" class="btn-secondary" style="justify-content: space-between; padding: 0 12px; min-height: 40px;">
+                    <span>Bella (American Female)</span>
+                    <span class="font-mono text-emerald" style="font-size: 10px;">Default</span>
+                </button>
+                <button onclick="setVoice('af_sarah')" class="btn-secondary" style="justify-content: space-between; padding: 0 12px; min-height: 40px;">
+                    <span>Sarah (American Female)</span>
+                    <span class="font-mono text-dim" style="font-size: 10px;">Calm</span>
+                </button>
+                <button onclick="setVoice('am_adam')" class="btn-secondary" style="justify-content: space-between; padding: 0 12px; min-height: 40px;">
+                    <span>Adam (American Male)</span>
+                    <span class="font-mono text-dim" style="font-size: 10px;">Deep</span>
+                </button>
+                <button onclick="setVoice('am_michael')" class="btn-secondary" style="justify-content: space-between; padding: 0 12px; min-height: 40px;">
+                    <span>Michael (American Male)</span>
+                    <span class="font-mono text-dim" style="font-size: 10px;">Authoritative</span>
+                </button>
+                <button onclick="setVoice('bf_emma')" class="btn-secondary" style="justify-content: space-between; padding: 0 12px; min-height: 40px;">
+                    <span>Emma (British Female)</span>
+                    <span class="font-mono text-dim" style="font-size: 10px;">Narrative</span>
+                </button>
+                <button onclick="setVoice('bm_george')" class="btn-secondary" style="justify-content: space-between; padding: 0 12px; min-height: 40px;">
+                    <span>George (British Male)</span>
+                    <span class="font-mono text-dim" style="font-size: 10px;">Classic</span>
+                </button>
+            </div>
+
+            <div style="display: flex; padding-top: 4px;">
+                <button onclick="closeVoiceModal()" class="btn-secondary" style="flex: 1; min-height: 44px;">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function getCsrfToken() {
             return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -768,7 +916,7 @@
 
         // Repeated 120Hz Hover & Touch Swell Engine
         (function initMobileMotion() {
-            const cards = document.querySelectorAll('.stage-card, .telemetry-pill');
+            const cards = document.querySelectorAll('.stage-card, .telemetry-pill, .btn-heal, .btn-reconcile');
             cards.forEach(card => {
                 card.addEventListener('mouseenter', () => {
                     card.style.transform = 'translate3d(0, -2px, 0) scale(1.025)';
@@ -845,6 +993,107 @@
             if (m) m.classList.add('hidden');
         }
 
+        function openVoiceModal() {
+            const m = document.getElementById('voice-select-modal');
+            if (m) m.classList.remove('hidden');
+        }
+        function closeVoiceModal() {
+            const m = document.getElementById('voice-select-modal');
+            if (m) m.classList.add('hidden');
+        }
+
+        async function setVoice(voiceId) {
+            try {
+                const res = await fetch('/api/config/voice', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ voice: voiceId })
+                });
+                const data = await res.json();
+                closeVoiceModal();
+                alert(data.message || `Voice set to ${voiceId}`);
+                window.location.reload();
+            } catch (e) {
+                alert(`Error changing voice: ${e.message}`);
+            }
+        }
+
+        async function handleSelfHeal() {
+            if (!confirm('Execute Master Self-Healing & Vault Reconciliation?')) return;
+            try {
+                const res = await fetch('/api/actions/self-heal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() }
+                });
+                const data = await res.json();
+                alert(data.message || 'Self-healing completed');
+                window.location.reload();
+            } catch (e) {
+                alert(`Self-heal error: ${e.message}`);
+            }
+        }
+
+        async function handleReconcile() {
+            try {
+                const res = await fetch('/api/actions/reconcile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() }
+                });
+                const data = await res.json();
+                alert(data.message || 'Vault reconciliation completed');
+                window.location.reload();
+            } catch (e) {
+                alert(`Reconciliation error: ${e.message}`);
+            }
+        }
+
+        async function releaseLock(lockName) {
+            if (!confirm(`Force release ${lockName} process lock?`)) return;
+            try {
+                const res = await fetch('/api/actions/release-lock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ lock_name: lockName })
+                });
+                const data = await res.json();
+                alert(data.message || `Lock ${lockName} released`);
+                window.location.reload();
+            } catch (e) {
+                alert(`Error releasing lock: ${e.message}`);
+            }
+        }
+
+        async function handleRetryJob(jobId) {
+            try {
+                const res = await fetch('/api/actions/retry-job', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ job_id: jobId })
+                });
+                const data = await res.json();
+                alert(data.message || `Job ${jobId} re-queued`);
+                window.location.reload();
+            } catch (e) {
+                alert(`Retry error: ${e.message}`);
+            }
+        }
+
+        async function handleQuarantineJob(jobId) {
+            if (!confirm(`Quarantine job ${jobId} to 04_FAILED?`)) return;
+            try {
+                const res = await fetch('/api/actions/quarantine-job', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                    body: JSON.stringify({ job_id: jobId })
+                });
+                const data = await res.json();
+                alert(data.message || `Job ${jobId} quarantined`);
+                window.location.reload();
+            } catch (e) {
+                alert(`Quarantine error: ${e.message}`);
+            }
+        }
+
         async function submitProduceBuffer() {
             const target = parseInt(document.getElementById('modal-target-buffer').value, 10) || 6;
             const pass = document.getElementById('modal-admin-pass').value;
@@ -897,6 +1146,11 @@
             } catch (e) {
                 window.location.href = '/login?mobile=true';
             }
+        }
+
+        function dismissMobileCloudBanner() {
+            const b = document.getElementById('mobile-cloud-banner');
+            if (b) b.classList.add('hidden');
         }
     </script>
 </body>

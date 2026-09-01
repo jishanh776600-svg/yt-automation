@@ -182,9 +182,18 @@ def on_startup():
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
     """Renders the operator login screen."""
+    user_agent = request.headers.get("user-agent", "").lower()
+    sec_ch_mobile = request.headers.get("sec-ch-ua-mobile", "")
+    is_mobile = (
+        "?1" in sec_ch_mobile
+        or any(m in user_agent for m in ["mobile", "android", "iphone", "ipod", "ipad", "phone", "webos", "blackberry"])
+        or request.query_params.get("mobile") == "true"
+    )
+
     session = get_optional_session(request)
     if session:
-        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+        redirect_url = "/mobile" if (is_mobile and request.query_params.get("desktop") != "true") else "/"
+        return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
     return templates.TemplateResponse(request=request, name="login.html", context={})
 
 
@@ -228,6 +237,7 @@ def api_login(req: LoginRequest, request: Request, response: Response):
         httponly=True,
         samesite="lax",
         secure=is_https,
+        path="/",
         max_age=12 * 3600
     )
 
