@@ -838,28 +838,29 @@ class ShortsPipeline:
             from config.constants import get_business_day_bounds_utc
             today_start, today_end = get_business_day_bounds_utc()
             
+            now_utc = datetime.utcnow()
             published_count_today = db.query(UploadRecord).filter(
                 UploadRecord.status.in_(["PUBLISHED", "SUCCESS"]),
                 UploadRecord.published_at >= today_start,
                 UploadRecord.published_at < today_end
             ).count()
 
-            now_utc = datetime.utcnow()
             scheduled_count_today = db.query(UploadRecord).filter(
                 UploadRecord.status == "SCHEDULED",
                 UploadRecord.scheduled_publish_at >= now_utc,
                 UploadRecord.scheduled_publish_at < today_end
             ).count()
 
-            total_booked_today = published_count_today + scheduled_count_today
-            remaining_capacity = max(0, DAILY_SHORTS_LIMIT - total_booked_today)
+            vacant_horizon_slots = self.scheduler.get_vacant_slots_in_horizon(db, reference_time=now_utc)
 
             console.print(
-                f"[cyan][*] Daily Capacity Audit:[/cyan] "
+                f"[cyan][*] Horizon Capacity Audit (Current Day + Next Day):[/cyan] "
                 f"Published Today: [bold]{published_count_today}[/bold] | "
                 f"Scheduled Today: [bold]{scheduled_count_today}[/bold] | "
-                f"Remaining Slots: [bold yellow]{remaining_capacity}/{DAILY_SHORTS_LIMIT}[/bold yellow]"
+                f"Vacant Slots in 2-Day Horizon: [bold yellow]{len(vacant_horizon_slots)}[/bold yellow]"
             )
+            for idx, vs in enumerate(vacant_horizon_slots, 1):
+                console.print(f"   [dim]{idx}. Vacant Slot:[/dim] [yellow]{vs.strftime('%Y-%m-%d %H:%M')} UTC[/yellow]")
 
             # 4. Check 02_PROCESSING for any completed or in-flight items
             processing_files = self.drive_engine.list_files_in_folder("02_PROCESSING")
@@ -925,35 +926,35 @@ class ShortsPipeline:
 
             # 6. Calculate eligible quota to schedule in this run
             ready_stock_count = len(all_eligible_candidates)
-            eligible_to_schedule = min(remaining_capacity, ready_stock_count)
+            eligible_to_schedule = min(len(vacant_horizon_slots), ready_stock_count)
             if max_to_schedule is not None and max_to_schedule > 0:
                 eligible_to_schedule = min(eligible_to_schedule, max_to_schedule)
 
             if eligible_to_schedule <= 0:
-                console.print(f"[bold yellow][!] Zero eligible Shorts to schedule (Remaining Capacity: {remaining_capacity}, READY Stock: {ready_stock_count}). Scheduler exiting safely.[/bold yellow]")
+                console.print(f"[bold yellow][!] Zero eligible Shorts to schedule (Vacant Horizon Slots: {len(vacant_horizon_slots)}, READY Stock: {ready_stock_count}). Scheduler exiting safely.[/bold yellow]")
                 return {
                     "scheduled_count": 0,
                     "scheduled_jobs": [],
                     "published_today": published_count_today,
                     "scheduled_today": scheduled_count_today,
-                    "remaining_capacity": remaining_capacity,
+                    "vacant_horizon_slots": len(vacant_horizon_slots),
                     "ready_stock": ready_stock_count,
                     "status": "NO_ACTION_REQUIRED"
                 }
 
-            console.print(f"[bold green][*] Scheduling {eligible_to_schedule} eligible Short(s) into next publication slots...[/bold green]")
+            console.print(f"[bold green][*] Proactively scheduling {eligible_to_schedule} eligible Short(s) into earliest vacant slots across 2-day horizon...[/bold green]")
             scheduled_results = []
 
             for i in range(eligible_to_schedule):
                 cand = all_eligible_candidates[i]
                 cand_folder = "02_PROCESSING" if cand in recovered_candidates else "01_READY"
-                next_slot = self.scheduler.calculate_next_available_slot(db)
-                console.print(f"[cyan][*] Candidate {i+1}/{eligible_to_schedule} allocated Slot:[/cyan] [bold yellow]{next_slot.strftime('%Y-%m-%d %H:%M')} UTC[/bold yellow]")
+                target_slot = vacant_horizon_slots[i]
+                console.print(f"[cyan][*] Candidate {i+1}/{eligible_to_schedule} allocated Slot:[/cyan] [bold yellow]{target_slot.strftime('%Y-%m-%d %H:%M')} UTC[/bold yellow]")
 
                 upload_rec = self._schedule_single_drive_file(
                     db=db,
                     target_file=cand,
-                    scheduled_slot=next_slot,
+                    scheduled_slot=target_slot,
                     current_folder=cand_folder
                 )
                 if upload_rec:
@@ -969,7 +970,7 @@ class ShortsPipeline:
                 "scheduled_jobs": scheduled_results,
                 "published_today": published_count_today,
                 "scheduled_today": scheduled_count_today + len(scheduled_results),
-                "remaining_capacity": max(0, remaining_capacity - len(scheduled_results)),
+                "vacant_horizon_slots": max(0, len(vacant_horizon_slots) - len(scheduled_results)),
                 "ready_stock": max(0, ready_stock_count - len(scheduled_results)),
                 "status": "SUCCESS"
             }

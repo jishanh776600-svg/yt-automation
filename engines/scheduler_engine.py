@@ -66,6 +66,51 @@ class PublicationScheduler:
             for hour, minute in self.get_canonical_slot_times()
         ]
 
+    def get_vacant_slots_in_horizon(
+        self,
+        db: Session,
+        reference_time: Optional[datetime] = None
+    ) -> List[datetime]:
+        """
+        Inspects all publication slots across CURRENT DAY + NEXT DAY (max 2 calendar days = up to 6 slots).
+        Returns a chronologically ordered list of genuinely vacant slots that can be scheduled immediately,
+        strictly respecting the DAILY_SHORTS_LIMIT = 3 ceiling per calendar day.
+        Does NOT schedule beyond the next day's 15:00 UTC slot.
+        """
+        now = reference_time or datetime.utcnow()
+        now = now.replace(microsecond=0)
+        earliest_allowed = now + timedelta(minutes=self.min_lead_minutes)
+
+        occupied_slots = self.get_occupied_slots(db)
+        current_date = now.date()
+        vacant_slots = []
+
+        # Strictly 2 calendar days: Day 0 (Today) and Day 1 (Tomorrow)
+        for day_offset in (0, 1):
+            eval_date = current_date + timedelta(days=day_offset)
+            day_slots = self.get_slots_for_date(eval_date)
+
+            # Count occupied slots already booked for this specific calendar day
+            occupied_count_for_day = sum(1 for s in day_slots if s in occupied_slots)
+            available_capacity_for_day = max(0, DAILY_SHORTS_LIMIT - occupied_count_for_day)
+
+            day_vacancies = []
+            for slot_dt in day_slots:
+                if slot_dt <= earliest_allowed:
+                    continue  # In past or too close (< min_lead_minutes)
+                if slot_dt in occupied_slots:
+                    continue  # Already occupied
+
+                day_vacancies.append(slot_dt)
+
+            # Take up to the daily limit capacity for this calendar day
+            allowed_for_day = day_vacancies[:available_capacity_for_day]
+            vacant_slots.extend(allowed_for_day)
+
+        # Sort chronologically (Today slots first, then Tomorrow slots)
+        vacant_slots.sort()
+        return vacant_slots
+
     def calculate_next_available_slot(
         self,
         db: Session,
