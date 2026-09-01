@@ -113,23 +113,23 @@
     </div>
 
     <!-- DESKTOP UNBOXED HEADER (ZERO PERSISTENT LOGO) -->
-    <header class="border-b border-white/[0.05] px-8 py-4 flex items-center justify-between z-20 bg-layer1/80 backdrop-blur">
-        <div class="flex items-baseline gap-3">
-            <span class="text-base font-semibold tracking-tight text-white">AL AMR Autonomous Media System</span>
+    <header class="border-b border-white/[0.05] px-4 md:px-8 py-3.5 md:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 z-20 bg-layer1/80 backdrop-blur">
+        <div class="flex items-baseline gap-2 sm:gap-3 flex-wrap">
+            <span class="text-sm sm:text-base font-semibold tracking-tight text-white">AL AMR Autonomous Media System</span>
             <span class="text-xs text-zinc-400 font-normal">Production environment</span>
-            <span class="text-[11px] font-mono text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-800/40 ml-2">v3.0.0</span>
+            <span class="text-[11px] font-mono text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-800/40 ml-1">v3.0.0</span>
         </div>
         
-        <div class="flex items-center gap-6 text-xs text-zinc-400">
+        <div class="flex items-center gap-3 sm:gap-6 text-xs text-zinc-400 flex-wrap">
             <div class="flex items-center gap-2">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span class="text-zinc-300 font-medium">All systems nominal</span>
             </div>
-            <span class="text-zinc-700">/</span>
+            <span class="text-zinc-700 hidden sm:inline">/</span>
             <span>Next release &middot; <span class="text-white font-mono">{{ (state.publishing.next_slot.slot_label if state.publishing.next_slot is mapping else (state.publishing.next_slot or "15:00 UTC")) | replace("at ", "&middot; ") }}</span></span>
-            <span class="text-zinc-700">/</span>
+            <span class="text-zinc-700 hidden sm:inline">/</span>
             <span id="live-utc-clock" class="font-mono text-zinc-400">--:--:-- UTC</span>
-            <span class="text-zinc-700">/</span>
+            <span class="text-zinc-700 hidden sm:inline">/</span>
             <div class="flex items-center gap-3">
                 <span class="text-zinc-300 font-mono">{{ user }}</span>
                 <button onclick="handleLogout()" class="px-2.5 py-1 rounded-lg bg-layer2 border border-white/10 hover:bg-layer3 text-zinc-300 hover:text-white transition">Logout</button>
@@ -138,7 +138,7 @@
     </header>
 
     <!-- CLOUD RUNNER STATUS BANNER (ID requirement for test suites) -->
-    <div id="cloud-workflow-banner" class="hidden bg-sky-950/90 border-b border-sky-800 px-8 py-2.5 text-xs font-mono text-sky-200 flex items-center justify-between z-10">
+    <div id="cloud-workflow-banner" class="hidden bg-sky-950/90 border-b border-sky-800 px-4 md:px-8 py-2.5 text-xs font-mono text-sky-200 flex items-center justify-between z-10">
         <div class="flex items-center gap-3">
             <span id="cloud-banner-badge" class="px-2 py-0.5 rounded bg-sky-900 border border-sky-700 text-[10px] font-bold text-sky-300">IN-FLIGHT</span>
             <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
@@ -154,12 +154,12 @@
     </div>
 
     <!-- MAIN SPATIAL APPLICATION CONTAINER -->
-    <main class="flex-1 max-w-6xl w-full mx-auto p-8 space-y-8 relative">
+    <main class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-8 space-y-6 md:space-y-8 relative overflow-x-hidden">
 
         <!-- PRIMARY CAPACITY HERO STATE -->
         <div class="text-center pt-2">
             <div class="text-xs text-zinc-400 font-medium mb-1.5">Drive ready reserve</div>
-            <div class="text-5xl font-light text-white tracking-tight flex items-center justify-center gap-3">
+            <div class="text-4xl sm:text-5xl font-light text-white tracking-tight flex items-center justify-center gap-3">
                 <span>{{ state.inventory.counts.get("01_READY", 0) }}</span>
                 <span class="text-zinc-600 text-3xl font-thin">/</span>
                 <span class="text-zinc-500">{{ state.buffer.target_reserve }}</span>
@@ -176,63 +176,63 @@
 
         <!-- 8-STAGE SPATIAL PRODUCTION PIPELINE (HERO OBJECT) -->
         <div class="relative py-4">
-            <div class="absolute top-1/2 left-6 right-6 h-[1px] bg-zinc-800/80 -translate-y-1/2 z-0"></div>
+            <div class="hidden lg:block absolute top-1/2 left-6 right-6 h-[1px] bg-zinc-800/80 -translate-y-1/2 z-0"></div>
 
-            <div id="pipeline-grid" class="grid grid-cols-8 gap-3 relative z-10">
+            <div id="pipeline-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 md:gap-3 relative z-10">
                 
                 <!-- Stage 01: Topic -->
-                <div class="magnetic-stage p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="0">
+                <div class="magnetic-stage p-3 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-pointer flex flex-col justify-center min-h-[88px] max-h-[96px] overflow-hidden" data-index="0">
                     <div class="text-[11px] text-zinc-400 font-medium">01</div>
-                    <div class="text-sm font-medium text-zinc-200 mt-0.5 truncate">Topic</div>
+                    <div class="text-xs sm:text-sm font-medium text-zinc-200 mt-0.5 truncate">Topic</div>
                     <div class="text-[11px] text-zinc-400 mt-1 font-mono truncate">16 seeds</div>
                 </div>
 
                 <!-- Stage 02: Facts -->
-                <div class="magnetic-stage p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="1">
+                <div class="magnetic-stage p-3 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-pointer flex flex-col justify-center min-h-[88px] max-h-[96px] overflow-hidden" data-index="1">
                     <div class="text-[11px] text-zinc-400 font-medium">02</div>
-                    <div class="text-sm font-medium text-zinc-200 mt-0.5 truncate">Facts</div>
+                    <div class="text-xs sm:text-sm font-medium text-zinc-200 mt-0.5 truncate">Facts</div>
                     <div class="text-[11px] text-emerald-400 mt-1 font-mono truncate">Grounded</div>
                 </div>
 
                 <!-- Stage 03: Script -->
-                <div class="magnetic-stage p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="2">
+                <div class="magnetic-stage p-3 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-pointer flex flex-col justify-center min-h-[88px] max-h-[96px] overflow-hidden" data-index="2">
                     <div class="text-[11px] text-zinc-400 font-medium">03</div>
-                    <div class="text-sm font-medium text-zinc-200 mt-0.5 truncate">Script</div>
+                    <div class="text-xs sm:text-sm font-medium text-zinc-200 mt-0.5 truncate">Script</div>
                     <div class="text-[11px] text-zinc-400 mt-1 font-mono truncate">50 words</div>
                 </div>
 
                 <!-- Stage 04: Visuals -->
-                <div class="magnetic-stage p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="3">
+                <div class="magnetic-stage p-3 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-pointer flex flex-col justify-center min-h-[88px] max-h-[96px] overflow-hidden" data-index="3">
                     <div class="text-[11px] text-zinc-400 font-medium">04</div>
-                    <div class="text-sm font-medium text-zinc-200 mt-0.5 truncate">Visuals</div>
+                    <div class="text-xs sm:text-sm font-medium text-zinc-200 mt-0.5 truncate">Visuals</div>
                     <div class="text-[11px] text-zinc-400 mt-1 font-mono truncate">8 beats</div>
                 </div>
 
                 <!-- Stage 05: Voice -->
-                <div class="magnetic-stage p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="4">
+                <div class="magnetic-stage p-3 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-pointer flex flex-col justify-center min-h-[88px] max-h-[96px] overflow-hidden" data-index="4">
                     <div class="text-[11px] text-zinc-400 font-medium">05</div>
-                    <div class="text-sm font-medium text-zinc-200 mt-0.5 truncate">Voice</div>
-                    <div class="text-[11px] text-emerald-400 mt-1 font-mono truncate">{{ state.voice_config.active_voice_id or (state.voice_config.active_voice.id if state.voice_config.active_voice is mapping else state.voice_config.active_voice) or "af_bella" }}</div>
+                    <div class="text-xs sm:text-sm font-medium text-zinc-200 mt-0.5 truncate">Voice</div>
+                    <div class="text-[11px] text-emerald-400 mt-1 font-mono truncate">{{ state.voice_config.active_voice_name or state.voice_config.active_voice_id or "af_bella" }}</div>
                 </div>
 
                 <!-- Stage 06: Audio -->
-                <div class="magnetic-stage p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="5">
+                <div class="magnetic-stage p-3 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-pointer flex flex-col justify-center min-h-[88px] max-h-[96px] overflow-hidden" data-index="5">
                     <div class="text-[11px] text-zinc-400 font-medium">06</div>
-                    <div class="text-sm font-medium text-zinc-200 mt-0.5 truncate">Audio</div>
+                    <div class="text-xs sm:text-sm font-medium text-zinc-200 mt-0.5 truncate">Audio</div>
                     <div class="text-[11px] text-emerald-400 mt-1 font-mono truncate">BGM -30 LUFS</div>
                 </div>
 
                 <!-- Stage 07: Render -->
-                <div class="magnetic-stage p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="6">
+                <div class="magnetic-stage p-3 rounded-2xl bg-layer2 border border-white/[0.05] text-center shadow-lg shadow-black/70 cursor-pointer flex flex-col justify-center min-h-[88px] max-h-[96px] overflow-hidden" data-index="6">
                     <div class="text-[11px] text-zinc-400 font-medium">07</div>
-                    <div class="text-sm font-medium text-zinc-200 mt-0.5 truncate">Render</div>
+                    <div class="text-xs sm:text-sm font-medium text-zinc-200 mt-0.5 truncate">Render</div>
                     <div class="text-[11px] text-zinc-400 mt-1 font-mono truncate">1080x1920</div>
                 </div>
 
                 <!-- Stage 08: QA Gate -->
-                <div class="magnetic-stage p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-800/40 text-center shadow-lg shadow-black/70 cursor-default flex flex-col justify-center min-h-[92px] max-h-[100px] overflow-hidden" data-index="7">
+                <div class="magnetic-stage p-3 rounded-2xl bg-emerald-950/20 border border-emerald-800/40 text-center shadow-lg shadow-black/70 cursor-pointer flex flex-col justify-center min-h-[88px] max-h-[96px] overflow-hidden" data-index="7">
                     <div class="text-[11px] text-emerald-400 font-medium">✓ 08</div>
-                    <div class="text-sm font-medium text-emerald-300 mt-0.5 truncate">QA Gate</div>
+                    <div class="text-xs sm:text-sm font-medium text-emerald-300 mt-0.5 truncate">QA Gate</div>
                     <div class="text-[11px] text-emerald-400 mt-1 font-mono truncate">100% Pass</div>
                 </div>
 
@@ -240,37 +240,37 @@
         </div>
 
         <!-- INTEGRATED TELEMETRY STRIP (AVD / WATCH TIME / REINFORCEMENT) -->
-        <div id="telemetry-strip" class="grid grid-cols-3 gap-6 pt-4 border-t border-white/[0.05] text-center">
+        <div id="telemetry-strip" class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6 pt-4 border-t border-white/[0.05] text-center">
             
-            <div class="magnetic-stage p-6 rounded-2xl bg-layer2 border border-white/[0.05] space-y-1 shadow-lg shadow-black/60 cursor-default">
+            <div class="magnetic-stage p-4 sm:p-6 rounded-2xl bg-layer2 border border-white/[0.05] space-y-1 shadow-lg shadow-black/60 cursor-pointer">
                 <div class="text-xs text-zinc-400 font-medium">Average view duration</div>
-                <div class="text-3xl font-light text-white mt-1">17.0s <span class="text-xs text-emerald-400 font-normal">75.46% APV</span></div>
+                <div class="text-2xl sm:text-3xl font-light text-white mt-1">17.0s <span class="text-xs text-emerald-400 font-normal">75.46% APV</span></div>
                 <div class="text-[11px] text-zinc-500 pt-1">+14.2% vs historical benchmark (N=12 mature Shorts)</div>
             </div>
 
-            <div class="magnetic-stage p-6 rounded-2xl bg-layer2 border border-white/[0.05] space-y-1 shadow-lg shadow-black/60 cursor-default">
+            <div class="magnetic-stage p-4 sm:p-6 rounded-2xl bg-layer2 border border-white/[0.05] space-y-1 shadow-lg shadow-black/60 cursor-pointer">
                 <div class="text-xs text-zinc-400 font-medium">30-day watch time</div>
-                <div class="text-3xl font-light text-white mt-1">956 min <span class="text-xs text-zinc-400 font-normal">7,763 views</span></div>
+                <div class="text-2xl sm:text-3xl font-light text-white mt-1">956 min <span class="text-xs text-zinc-400 font-normal">7,763 views</span></div>
                 <div class="text-[11px] text-zinc-500 pt-1">Estimated 15.9 hours of organic playback</div>
             </div>
 
-            <div class="magnetic-stage p-6 rounded-2xl bg-layer2 border border-white/[0.05] space-y-1 shadow-lg shadow-black/60 cursor-default">
+            <div class="magnetic-stage p-4 sm:p-6 rounded-2xl bg-layer2 border border-white/[0.05] space-y-1 shadow-lg shadow-black/60 cursor-pointer">
                 <div class="text-xs text-zinc-400 font-medium">Strategy optimization</div>
-                <div class="text-3xl font-light text-white mt-1">1.65 <span class="text-xs text-emerald-400 font-normal">+18% APV</span></div>
+                <div class="text-2xl sm:text-3xl font-light text-white mt-1">1.65 <span class="text-xs text-emerald-400 font-normal">+18% APV</span></div>
                 <div class="text-[11px] text-zinc-500 pt-1">Historical mysteries boost · 94% confidence</div>
             </div>
 
         </div>
 
         <!-- OPERATOR NAVIGATION & TAB CONTROLS -->
-        <nav class="flex items-center justify-center gap-3 border-b border-white/[0.05] pb-2 text-xs">
-            <button onclick="switchTab('pipeline')" id="tab-btn-pipeline" class="nav-btn active px-4 py-2 rounded-lg transition font-medium">Production Pipeline</button>
-            <button onclick="switchTab('vault')" id="tab-btn-vault" class="nav-btn px-4 py-2 rounded-lg transition font-medium">Drive Vault ({{ state.inventory.counts.get("01_READY", 0) }})</button>
-            <button onclick="switchTab('publishing')" id="tab-btn-publishing" class="nav-btn px-4 py-2 rounded-lg transition font-medium">Publishing Schedule</button>
-            <button onclick="switchTab('learning')" id="tab-btn-learning" class="nav-btn px-4 py-2 rounded-lg transition font-medium">Learning Loop</button>
-            <button onclick="switchTab('performance')" id="tab-btn-performance" class="nav-btn px-4 py-2 rounded-lg transition font-medium">Performance Intelligence</button>
-            <button onclick="switchTab('quotas')" id="tab-btn-quotas" class="nav-btn px-4 py-2 rounded-lg transition font-medium">Provider Quotas</button>
-            <button onclick="switchTab('operations')" id="tab-btn-operations" class="nav-btn px-4 py-2 rounded-lg transition font-medium">Operations & Locks</button>
+        <nav class="flex items-center justify-start md:justify-center overflow-x-auto no-scrollbar gap-2 md:gap-3 border-b border-white/[0.05] pb-2 text-xs">
+            <button onclick="switchTab('pipeline')" id="tab-btn-pipeline" class="nav-btn active px-3.5 py-2 rounded-lg transition font-medium whitespace-nowrap">Production Pipeline</button>
+            <button onclick="switchTab('vault')" id="tab-btn-vault" class="nav-btn px-3.5 py-2 rounded-lg transition font-medium whitespace-nowrap">Drive Vault ({{ state.inventory.counts.get("01_READY", 0) }})</button>
+            <button onclick="switchTab('publishing')" id="tab-btn-publishing" class="nav-btn px-3.5 py-2 rounded-lg transition font-medium whitespace-nowrap">Publishing Schedule</button>
+            <button onclick="switchTab('learning')" id="tab-btn-learning" class="nav-btn px-3.5 py-2 rounded-lg transition font-medium whitespace-nowrap">Learning Loop</button>
+            <button onclick="switchTab('performance')" id="tab-btn-performance" class="nav-btn px-3.5 py-2 rounded-lg transition font-medium whitespace-nowrap">Performance Intelligence</button>
+            <button onclick="switchTab('quotas')" id="tab-btn-quotas" class="nav-btn px-3.5 py-2 rounded-lg transition font-medium whitespace-nowrap">Provider Quotas</button>
+            <button onclick="switchTab('operations')" id="tab-btn-operations" class="nav-btn px-3.5 py-2 rounded-lg transition font-medium whitespace-nowrap">Operations & Locks</button>
         </nav>
 
         <!-- TAB CONTENT 1: PRODUCTION PIPELINE & ACTIVE JOBS -->
@@ -654,10 +654,25 @@
         setInterval(updateLiveClock, 1000);
         updateLiveClock();
 
-        // 120Hz Magnetic Proximity Pointer Engine
-        (function initMagneticField() {
+        // 120Hz Repeated Hover & Proximity Motion Engine
+        (function initMotionEngine() {
             const nodes = document.querySelectorAll('.magnetic-stage');
             if (!nodes.length) return;
+
+            nodes.forEach((node) => {
+                node.addEventListener('mouseenter', () => {
+                    node.style.transition = 'transform 160ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 160ms, border-color 160ms';
+                    node.style.transform = 'translate3d(0, -3px, 0) scale(1.02)';
+                    node.style.borderColor = 'rgba(56, 189, 248, 0.35)';
+                    node.style.boxShadow = '0 12px 28px -4px rgba(0,0,0,0.85), 0 0 16px -2px rgba(56, 189, 248, 0.18)';
+                });
+                node.addEventListener('mouseleave', () => {
+                    node.style.transition = 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms, border-color 200ms';
+                    node.style.transform = 'translate3d(0, 0, 0) scale(1)';
+                    node.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                    node.style.boxShadow = '0 4px 20px -2px rgba(0, 0, 0, 0.7)';
+                });
+            });
 
             let mouseX = -9999;
             let mouseY = -9999;
@@ -668,32 +683,23 @@
                 mouseY = e.clientY;
                 if (!isTicking) {
                     window.requestAnimationFrame(() => {
-                        updateMagneticField(mouseX, mouseY);
+                        updateProximityField(mouseX, mouseY);
                         isTicking = false;
                     });
                     isTicking = true;
                 }
             }, { passive: true });
 
-            function updateMagneticField(x, y) {
+            function updateProximityField(x, y) {
                 nodes.forEach((node) => {
                     const rect = node.getBoundingClientRect();
                     const centerX = rect.left + rect.width / 2;
                     const centerY = rect.top + rect.height / 2;
                     const distance = Math.hypot(x - centerX, y - centerY);
 
-                    // Continuous Gaussian falloff
-                    if (distance < 140) {
-                        const intensity = Math.max(0, 1 - distance / 140);
-                        const scale = 1.000 + (intensity * 0.035);
-                        const liftY = -(intensity * 5);
-                        node.style.transform = `translate3d(0, ${liftY}px, 0) scale(${scale})`;
-                        node.style.borderColor = `rgba(56, 189, 248, ${0.05 + intensity * 0.35})`;
-                        node.style.boxShadow = `0 ${8 + intensity * 16}px ${20 + intensity * 24}px -2px rgba(0,0,0,0.8), 0 0 ${intensity * 16}px -2px rgba(56, 189, 248, ${intensity * 0.12})`;
-                    } else {
-                        node.style.transform = 'translate3d(0, 0, 0) scale(1)';
-                        node.style.borderColor = 'rgba(255, 255, 255, 0.05)';
-                        node.style.boxShadow = '0 4px 20px -2px rgba(0, 0, 0, 0.7)';
+                    if (distance < 120) {
+                        const intensity = Math.max(0, 1 - distance / 120);
+                        node.style.borderColor = `rgba(56, 189, 248, ${0.05 + intensity * 0.30})`;
                     }
                 });
             }

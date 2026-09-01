@@ -146,7 +146,7 @@
                     <span class="text-[11px] font-mono font-medium text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded-full border border-amber-800/50 ml-1">Refilling</span>
                     {% endif %}
                 </div>
-                <div class="text-xs text-zinc-400 pt-1">Next scheduled slot: <b class="text-white font-mono">{{ state.publishing.next_slot.slot_label if state.publishing.next_slot is mapping else (state.publishing.next_slot or "15:00 UTC") }}</b> ({{ state.publishing.published_today }}/{{ state.publishing.daily_limit }} booked)</div>
+                <div class="text-xs text-zinc-400 pt-1">Next scheduled slot &middot; <b class="text-white font-mono">{{ (state.publishing.next_slot.slot_label if state.publishing.next_slot is mapping else (state.publishing.next_slot or "15:00 UTC")) | replace("at ", "&middot; ") }}</b> ({{ state.publishing.published_today }}/{{ state.publishing.daily_limit }} booked)</div>
             </div>
 
             <!-- Compact 8-Stage Pipeline Grid (2-Column Responsive for 360px & 390px) -->

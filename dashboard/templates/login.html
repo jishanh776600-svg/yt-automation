@@ -135,7 +135,8 @@
                 }
 
                 btnText.innerText = 'Redirecting...';
-                window.location.href = '/';
+                const isMob = window.innerWidth <= 768 || /Mobi|Android|iPhone|iPad|Phone/i.test(navigator.userAgent);
+                window.location.href = isMob ? '/mobile' : '/';
             } catch (err) {
                 errorBanner.classList.remove('hidden');
                 errorBanner.classList.add('flex');

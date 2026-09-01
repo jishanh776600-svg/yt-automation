@@ -335,9 +335,14 @@ def index(request: Request, db: Session = Depends(get_db)):
     if not session:
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
 
-    # Check for mobile user-agent or query parameter
+    # Check for mobile user-agent, Client Hints, or query parameter
     user_agent = request.headers.get("user-agent", "").lower()
-    is_mobile = any(m in user_agent for m in ["mobile", "android", "iphone", "ipod", "ipad"]) or request.query_params.get("mobile") == "true"
+    sec_ch_mobile = request.headers.get("sec-ch-ua-mobile", "")
+    is_mobile = (
+        "?1" in sec_ch_mobile
+        or any(m in user_agent for m in ["mobile", "android", "iphone", "ipod", "ipad", "phone", "webos", "blackberry"])
+        or request.query_params.get("mobile") == "true"
+    )
     target_template = "mobile.html" if (is_mobile and request.query_params.get("desktop") != "true") else "index.html"
 
     state = data_provider.get_full_system_state(db)
