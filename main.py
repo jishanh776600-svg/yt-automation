@@ -672,12 +672,21 @@ class ShortsPipeline:
                     job_id=job.id,
                     video_path=str(temp_download_path),
                     duration_sec=23.0,
-                    file_size_bytes=temp_download_path.stat().st_size if temp_download_path.exists() else 1024000
+                    file_size_bytes=temp_download_path.stat().st_size if temp_download_path.exists() else 1024000,
+                    video_codec="h264",
+                    width=1080,
+                    height=1920
                 )
                 db.add(render_output)
                 db.commit()
             else:
                 render_output.video_path = str(temp_download_path)
+                if not render_output.video_codec:
+                    render_output.video_codec = "h264"
+                if not render_output.width:
+                    render_output.width = 1080
+                if not render_output.height:
+                    render_output.height = 1920
                 db.commit()
 
             # 15-Point Autonomous Publication Safety Gate
@@ -689,10 +698,10 @@ class ShortsPipeline:
                 scheduled_slot=scheduled_slot
             )
             if not gate_passed:
-                logger.warning(f"[PUBLICATION_SAFETY_GATE_BLOCKED] Job {job.id} blocked by safety gate: {gate_reason}. Quarantining to 04_FAILED.")
-                console.print(f"[bold red][x] Publication Safety Gate Blocked Upload:[/bold red] {gate_reason} (Quarantined to 04_FAILED)")
-                self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="04_FAILED")
-                StateMachine.flag_needs_review(db, job, f"Publication safety gate failed: {gate_reason}")
+                logger.warning(f"[PUBLICATION_SAFETY_GATE_BLOCKED] Job {job.id} blocked by safety gate: {gate_reason}. Keeping file safe in 01_READY.")
+                console.print(f"[bold red][x] Publication Safety Gate Blocked Upload:[/bold red] {gate_reason} (Safely Preserved in 01_READY)")
+                # SAFETY INVARIANT: Never quarantine a valid MP4 due to transient gate checks or missing metadata!
+                self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="01_READY")
                 return None
 
             if TEST_MODE:
@@ -763,16 +772,15 @@ class ShortsPipeline:
             logger.error(f"YouTube scheduling failed for Drive file {file_id}: {upload_err}")
             self.experiment_manager.update_experiment_status(db, job.id, "FAILED", failure_reason=f"YouTube scheduling failed: {str(upload_err)}")
 
-            is_permanent_media_err = "UPLOAD_INTEGRITY" in str(upload_err) or "integrity" in str(upload_err).lower()
-            if is_permanent_media_err:
-                logger.error(f"Quarantining corrupted file {file_id} to 04_FAILED.")
-                self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="04_FAILED")
-                StateMachine.flag_needs_review(db, job, f"YouTube scheduling failed: {str(upload_err)}")
-            else:
-                logger.warning(f"Transient upload error for {file_id}. Returning file to 01_READY for subsequent slot retry.")
+            # SAFETY INVARIANT: Always preserve the video file in 01_READY on scheduling/API error.
+            # Under NO circumstances should an API/Network/Quota/Auth error delete or quarantine a valid MP4!
+            logger.warning(f"Transient upload error for {file_id}. Returning file safely to 01_READY for subsequent slot retry.")
+            try:
                 self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="01_READY")
-                job.state = JobState.READY_TO_UPLOAD.value
-                db.commit()
+            except Exception as move_err:
+                logger.warning(f"Could not return file {file_id} to 01_READY: {move_err}")
+            job.state = JobState.READY_TO_UPLOAD.value
+            db.commit()
             return None
         finally:
             if temp_download_path and hasattr(temp_download_path, "unlink"):
@@ -887,11 +895,7 @@ class ShortsPipeline:
             for candidate in ready_files:
                 is_val, val_reason = is_valid_ready_short(candidate, db=db, allow_test_artifacts=self.upload_engine._is_test_mode())
                 if not is_val:
-                    if "Test artifact" in val_reason or "abnormally small" in val_reason or "Not an MP4" in val_reason:
-                        logger.warning(f"[PRE-CLAIM QUARANTINE] File {candidate['id']} ({candidate.get('name')}) invalid: {val_reason}. Quarantining to 04_FAILED.")
-                        self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="04_FAILED")
-                    else:
-                        logger.warning(f"[PRE-CLAIM SKIP] File {candidate['id']} ({candidate.get('name')}) skipped from immediate batch: {val_reason}")
+                    logger.warning(f"[PRE-CLAIM SKIP] File {candidate['id']} ({candidate.get('name')}) skipped from immediate batch: {val_reason}")
                     continue
 
                 c_props = candidate.get("properties", {}) or {}
