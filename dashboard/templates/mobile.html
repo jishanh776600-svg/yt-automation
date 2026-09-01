@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark h-full">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -19,406 +19,688 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'sans-serif'],
-                        mono: ['"JetBrains Mono"', 'monospace'],
-                    },
-                    colors: {
-                        obsidian: '#050608',
-                        layer1: '#080a0d',
-                        layer2: '#0c0f14',
-                        layer3: '#11151c',
-                    }
-                }
-            }
-        }
-    </script>
-    
     <style>
-        /* Standalone Fallback & Mobile Reset */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        /* ==========================================================================
+           AL AMR STANDALONE ZERO-CDN MOBILE STYLESHEET
+           Guaranteed 100% self-contained for 360px, 375px, 390px, 412px viewports
+           ========================================================================== */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg-obsidian: #050608;
+            --bg-layer1: #080a0d;
+            --bg-layer2: #0c0f14;
+            --bg-layer3: #11151c;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-active: rgba(56, 189, 248, 0.4);
+            --accent-sky: #38bdf8;
+            --accent-emerald: #34d399;
+            --accent-emerald-bg: rgba(6, 78, 59, 0.5);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+        }
+
         html, body {
             width: 100%;
             max-width: 100vw;
-            overflow-x: hidden;
-            background-color: #050608;
-            color: #f1f5f9;
+            min-height: 100%;
+            background-color: var(--bg-obsidian);
+            color: var(--text-main);
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            -webkit-tap-highlight-color: transparent;
             -webkit-font-smoothing: antialiased;
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
         }
 
         body {
-            padding-bottom: calc(72px + env(safe-area-inset-bottom));
+            padding-bottom: calc(76px + env(safe-area-inset-bottom));
         }
 
-        /* Startup Overlay */
+        /* Typography & Font Mono */
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .text-xs { font-size: 12px; line-height: 16px; }
+        .text-sm { font-size: 14px; line-height: 20px; }
+        .text-base { font-size: 16px; line-height: 24px; }
+        .text-muted { color: var(--text-muted); }
+        .text-dim { color: var(--text-dim); }
+        .text-sky { color: var(--accent-sky); }
+        .text-emerald { color: var(--accent-emerald); }
+        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Startup Logo Overlay */
         #mobile-startup-overlay {
             position: fixed;
             inset: 0;
-            background-color: #050608;
+            background-color: var(--bg-obsidian);
             z-index: 9999;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            transition: opacity 350ms cubic-bezier(0.16, 1, 0.3, 1), transform 350ms cubic-bezier(0.16, 1, 0.3, 1);
+            transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1), transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
         }
-        
         .logo-anim-reveal {
-            animation: mobileLogoResolve 950ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: mobileLogoResolve 900ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-
         @keyframes mobileLogoResolve {
             0% { opacity: 0; transform: scale(0.95); filter: blur(2px); }
-            35% { opacity: 0.5; transform: scale(0.98); filter: blur(1px); }
-            65% { opacity: 1; transform: scale(1.00); filter: drop-shadow(0 0 16px rgba(255,255,255,0.22)); }
-            85% { opacity: 1; transform: scale(1.00); }
+            40% { opacity: 0.6; transform: scale(0.98); filter: blur(1px); }
+            70% { opacity: 1; transform: scale(1.00); filter: drop-shadow(0 0 16px rgba(255,255,255,0.2)); }
+            90% { opacity: 1; transform: scale(1.00); }
             100% { opacity: 0; transform: scale(0.98); filter: blur(2px); }
         }
 
-        /* Repeated 120Hz Touch & Hover Motion */
+        /* Top Mobile Bar */
+        .mob-header {
+            position: sticky;
+            top: 0;
+            background: rgba(8, 10, 13, 0.96);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 40;
+        }
+        .brand-badge {
+            background: var(--bg-layer2);
+            border: 1px solid var(--border-subtle);
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--text-muted);
+            margin-left: 6px;
+        }
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background-color: var(--accent-emerald);
+            display: inline-block;
+            margin-right: 6px;
+            animation: pulseDot 2s infinite;
+        }
+        @keyframes pulseDot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        /* Container */
+        .mob-container {
+            width: 100%;
+            max-width: 440px;
+            margin: 0 auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Cards */
+        .obsidian-card {
+            background: var(--bg-layer2);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 14px;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+        }
+
+        /* Drive Hero Reserve */
+        .reserve-hero {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .reserve-count-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 4px 0;
+        }
+        .reserve-large-num {
+            font-size: 34px;
+            font-weight: 300;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+        }
+        .badge-healthy {
+            background: var(--accent-emerald-bg);
+            border: 1px solid rgba(16, 185, 129, 0.5);
+            color: var(--accent-emerald);
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        /* Telemetry Strip (3 Columns) */
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .telemetry-pill {
+            background: var(--bg-layer2);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 8px 6px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            transition: transform 150ms, border-color 150ms;
+        }
+
+        /* 8-Stage Pipeline (2-Column Paired Topology) */
+        .pipeline-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .pipeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 4px;
+        }
+        .pipeline-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
         .stage-card {
-            will-change: transform, box-shadow, border-color;
-            transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 150ms, border-color 150ms;
+            background: var(--bg-layer2);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            min-height: 48px;
+            padding: 0 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), border-color 150ms, box-shadow 150ms;
         }
         .stage-card:active {
             transform: scale(0.975);
-            border-color: rgba(56, 189, 248, 0.45);
+            border-color: var(--border-active);
+        }
+        .stage-card-qa {
+            background: rgba(6, 78, 59, 0.2);
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+        .stage-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        .stage-num {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-dim);
+        }
+        .stage-title {
+            font-size: 12px;
+            font-weight: 500;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .stage-status {
+            font-size: 10px;
+            color: var(--accent-emerald);
+            flex-shrink: 0;
+            margin-left: 4px;
         }
 
-        .touch-action {
-            will-change: transform, opacity;
-            transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), opacity 120ms;
+        /* Stage Detail Drawer */
+        #stage-detail-drawer {
+            display: none;
+            background: var(--bg-layer3);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            border-radius: 12px;
+            padding: 10px 12px;
+            animation: fadeIn 200ms ease;
         }
-        .touch-action:active {
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Quick Action Buttons (48px Touch Targets) */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding-top: 4px;
+        }
+        .btn-primary {
+            min-height: 48px;
+            background: #ffffff;
+            color: #000000;
+            font-size: 12px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15);
+            transition: transform 120ms, opacity 120ms;
+        }
+        .btn-secondary {
+            min-height: 48px;
+            background: var(--bg-layer2);
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: transform 120ms, opacity 120ms;
+        }
+        .btn-primary:active, .btn-secondary:active {
             transform: scale(0.97);
             opacity: 0.88;
         }
 
+        /* Video List Items */
+        .video-item {
+            background: var(--bg-layer1);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            padding: 8px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        /* Bottom Navigation Bar (48px Min Touch Targets) */
+        .mob-nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(8, 10, 13, 0.96);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 4px;
+            padding-bottom: env(safe-area-inset-bottom);
+            z-index: 50;
+        }
+        .mob-nav-tab {
+            min-height: 48px;
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-top: 2px solid transparent;
+            color: var(--text-dim);
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            border-radius: 8px;
+            transition: color 120ms, background-color 120ms;
+        }
         .mob-nav-tab.active {
             color: #ffffff;
-            background-color: #11151c;
-            border-top: 2px solid #38bdf8;
+            background: var(--bg-layer3);
+            border-top: 2px solid var(--accent-sky);
             font-weight: 600;
         }
-        .mob-nav-tab:not(.active) {
-            color: #71717a;
-            border-top: 2px solid transparent;
-        }
 
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Panels */
+        .tab-panel { display: flex; flex-direction: column; gap: 12px; }
+        .hidden { display: none !important; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(6px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .modal-box {
+            background: var(--bg-layer2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            max-width: 360px;
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .input-modal {
+            width: 100%;
+            background: var(--bg-layer1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: #ffffff;
+            font-size: 13px;
+            outline: none;
+        }
     </style>
 </head>
-<body class="bg-obsidian text-zinc-200 min-h-screen">
+<body>
 
-    <!-- STARTUP LOGO OVERLAY (Removed automatically after 950ms) -->
+    <!-- STARTUP LOGO OVERLAY (Removed after 900ms) -->
     <div id="mobile-startup-overlay">
-        <div class="logo-anim-reveal flex flex-col items-center justify-center p-6">
-            <img src="/static/branding/al_amr_logo_transparent.png" alt="AL AMR Brand Emblem" class="h-24 w-auto object-contain">
+        <div class="logo-anim-reveal" style="text-align: center; padding: 24px;">
+            <img src="/static/branding/al_amr_logo_transparent.png" alt="AL AMR Brand Emblem" style="height: 96px; width: auto; object-fit: contain;">
         </div>
-        <div class="text-[11px] font-mono text-zinc-500 mt-2 tracking-wider">AL AMR INITIALIZING SYSTEM...</div>
+        <div class="font-mono text-dim" style="font-size: 11px; margin-top: 8px; letter-spacing: 1px;">AL AMR INITIALIZING SYSTEM...</div>
     </div>
 
-    <!-- COMPACT MOBILE HEADER (ZERO PERSISTENT LOGO) -->
-    <header class="sticky top-0 bg-layer1/95 backdrop-blur border-b border-white/[0.06] px-3.5 py-2.5 flex items-center justify-between z-30">
-        <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span class="text-xs font-semibold tracking-tight text-white">AL AMR</span>
-            <span class="text-[10px] text-zinc-400 font-mono bg-layer2 px-1.5 py-0.5 rounded border border-white/[0.05]">Autonomous</span>
+    <!-- COMPACT MOBILE TOP HEADER -->
+    <header class="mob-header">
+        <div style="display: flex; align-items: center;">
+            <span class="live-dot"></span>
+            <span style="font-size: 13px; font-weight: 600; color: #ffffff; letter-spacing: -0.2px;">AL AMR</span>
+            <span class="brand-badge font-mono">Mobile</span>
         </div>
-        <div class="flex items-center gap-2.5">
-            <span id="mob-clock" class="text-xs font-mono text-zinc-400">--:-- UTC</span>
-            <button onclick="handleLogout()" class="text-[11px] font-medium text-zinc-400 hover:text-white px-2 py-1 rounded bg-layer2 border border-white/[0.06] touch-action">Logout</button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="mob-clock" class="font-mono text-muted" style="font-size: 12px;">--:-- UTC</span>
+            <button onclick="handleLogout()" style="font-size: 11px; background: var(--bg-layer2); border: 1px solid var(--border-subtle); color: var(--text-muted); border-radius: 6px; padding: 4px 8px; cursor: pointer;">Logout</button>
         </div>
     </header>
 
-    <!-- CLOUD WORKFLOW BANNER (If Active) -->
-    <div id="mobile-cloud-banner" class="hidden bg-sky-950/80 border-b border-sky-800 px-3.5 py-2 text-xs font-mono text-sky-200 flex items-center justify-between">
-        <div class="flex items-center gap-2 truncate">
-            <span class="px-1.5 py-0.2 rounded bg-sky-900 border border-sky-700 text-[9px] font-bold text-sky-300">CLOUD</span>
-            <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping flex-shrink-0"></span>
-            <span id="mobile-cloud-msg" class="truncate text-xs text-sky-200">Execution active...</span>
-        </div>
-        <button onclick="dismissMobileCloudBanner()" class="text-zinc-400 hover:text-white text-xs ml-2">✕</button>
-    </div>
+    <!-- MAIN CONTAINER -->
+    <main class="mob-container">
 
-    <!-- MAIN MOBILE CONTENT CONTAINER (360px–412px Optimized Bounds) -->
-    <main class="px-3.5 py-3 space-y-3.5 max-w-md w-full mx-auto overflow-x-hidden">
+        <!-- PANEL 1: OVERVIEW & PIPELINE -->
+        <div id="mob-panel-overview" class="tab-panel">
 
-        <!-- PANEL 1: OVERVIEW & LIVE PIPELINE (Default Tab) -->
-        <div id="mob-panel-overview" class="space-y-3.5">
-
-            <!-- 1. DRIVE READY RESERVE HERO CARD -->
-            <div class="p-4 rounded-2xl bg-layer2 border border-white/[0.06] text-center space-y-1 shadow-lg shadow-black/70">
-                <div class="text-[11px] text-zinc-400 font-medium">Drive ready reserve</div>
-                <div class="text-4xl font-light text-white tracking-tight flex items-center justify-center gap-2 pt-0.5">
-                    <span>{{ state.inventory.counts.get('01_READY', 0) }}</span>
-                    <span class="text-zinc-600 text-2xl font-thin">/</span>
-                    <span class="text-zinc-500">{{ state.buffer.target_reserve }}</span>
-                    <span class="text-[10px] font-mono font-medium text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60 ml-1">
-                        {% if state.inventory.counts.get('01_READY', 0) >= state.buffer.target_reserve %}100% HEALTHY{% else %}REFILLING{% endif %}
-                    </span>
+            <!-- DRIVE READY RESERVE HERO CARD -->
+            <div class="obsidian-card reserve-hero">
+                <span class="text-muted" style="font-size: 11px; font-weight: 500;">Drive ready reserve</span>
+                <div class="reserve-count-row">
+                    <span class="reserve-large-num">{{ state.inventory.counts.get('01_READY', 0) }}</span>
+                    <span style="font-size: 24px; font-weight: 200; color: #475569;">/</span>
+                    <span style="font-size: 24px; font-weight: 300; color: var(--text-dim);">{{ state.buffer.target_reserve }}</span>
+                    <span class="badge-healthy font-mono">{{ state.inventory.counts.get('01_READY', 0) }} / {{ state.buffer.target_reserve }} READY</span>
                 </div>
-                <div class="text-[11px] text-zinc-400 pt-1 font-normal">
-                    Next release &middot; <b class="text-white font-mono font-medium">{{ state.publishing.next_slot.slot_label if state.publishing.next_slot is mapping else (state.publishing.next_slot or "Sep 02, 2026 · 06:00 UTC") }}</b>
+                <div class="text-muted" style="font-size: 11px;">
+                    Next release &middot; <b class="font-mono" style="color: #ffffff;">{{ state.publishing.next_slot.slot_label if state.publishing.next_slot is mapping else (state.publishing.next_slot or "Sep 02, 2026 · 06:00 UTC") }}</b>
                 </div>
-                <div class="text-[10px] text-zinc-500 font-mono pt-0.5">
+                <div class="font-mono text-dim" style="font-size: 10px; margin-top: 2px;">
                     Daily ceiling: {{ state.publishing.published_today }} / {{ state.publishing.daily_limit }} Shorts booked today
                 </div>
             </div>
 
-            <!-- 2. COMPACT 3-PILL TELEMETRY STRIP -->
-            <div class="grid grid-cols-3 gap-2 text-center">
-                <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] space-y-0.5 stage-card">
-                    <div class="text-[10px] text-zinc-400">AVD Retention</div>
-                    <div class="text-sm font-light text-white font-mono">17.0s</div>
-                    <div class="text-[9px] text-emerald-400 font-medium">75.5% APV</div>
+            <!-- 3-PILL TELEMETRY STRIP -->
+            <div class="telemetry-grid">
+                <div class="telemetry-pill">
+                    <span class="text-dim" style="font-size: 10px;">AVD Retention</span>
+                    <span class="font-mono" style="font-size: 14px; font-weight: 300; color: #ffffff;">17.0s</span>
+                    <span class="text-emerald" style="font-size: 9px; font-weight: 600;">75.5% APV</span>
                 </div>
-                <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] space-y-0.5 stage-card">
-                    <div class="text-[10px] text-zinc-400">Watch Time</div>
-                    <div class="text-sm font-light text-white font-mono">956m</div>
-                    <div class="text-[9px] text-zinc-400">7.7k views</div>
+                <div class="telemetry-pill">
+                    <span class="text-dim" style="font-size: 10px;">Watch Time</span>
+                    <span class="font-mono" style="font-size: 14px; font-weight: 300; color: #ffffff;">956m</span>
+                    <span class="text-dim" style="font-size: 9px;">7.7k views</span>
                 </div>
-                <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] space-y-0.5 stage-card">
-                    <div class="text-[10px] text-zinc-400">Strategy Boost</div>
-                    <div class="text-sm font-light text-white font-mono">1.65</div>
-                    <div class="text-[9px] text-emerald-400 font-medium">+18% APV</div>
+                <div class="telemetry-pill">
+                    <span class="text-dim" style="font-size: 10px;">Strategy Boost</span>
+                    <span class="font-mono" style="font-size: 14px; font-weight: 300; color: #ffffff;">1.65</span>
+                    <span class="text-emerald" style="font-size: 9px; font-weight: 600;">+18% APV</span>
                 </div>
             </div>
 
-            <!-- 3. COMPACT 8-STAGE PRODUCTION PIPELINE (2-Column Paired Topology) -->
-            <div class="space-y-2">
-                <div class="flex justify-between items-center px-1">
-                    <span class="text-xs text-zinc-400 font-medium">Production pipeline</span>
-                    <span class="text-[10px] font-mono text-zinc-500">8 stages active</span>
+            <!-- 8-STAGE PRODUCTION PIPELINE (2-Column Paired Topology) -->
+            <div class="pipeline-section">
+                <div class="pipeline-header">
+                    <span class="text-muted" style="font-size: 12px; font-weight: 600;">Production pipeline</span>
+                    <span class="font-mono text-dim" style="font-size: 10px;">8 stages</span>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="pipeline-grid">
                     <!-- Stage 01 -->
-                    <div onclick="selectStage(1, 'Topic Research & Grounding', '16 validated seeds in queue. Evidence grounding verified.')" class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[46px] stage-card cursor-pointer">
-                        <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-zinc-500 font-bold">01</span>
-                            <span class="font-medium text-xs text-white truncate">Topic</span>
+                    <div onclick="selectStage(1, 'Topic Research & Grounding', '16 validated seeds in queue. Grounding verified.')" class="stage-card">
+                        <div class="stage-left">
+                            <span class="stage-num font-mono">01</span>
+                            <span class="stage-title">Topic</span>
                         </div>
-                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">16 seeds ✓</span>
+                        <span class="stage-status font-mono">16 seeds ✓</span>
                     </div>
 
                     <!-- Stage 02 -->
-                    <div onclick="selectStage(2, 'Fact-Checking Gate', 'Wikipedia API verified. Zero hallucinated claims.')" class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[46px] stage-card cursor-pointer">
-                        <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-zinc-500 font-bold">02</span>
-                            <span class="font-medium text-xs text-white truncate">Facts</span>
+                    <div onclick="selectStage(2, 'Fact-Checking Gate', 'Wikipedia API verified. Zero hallucinated claims.')" class="stage-card">
+                        <div class="stage-left">
+                            <span class="stage-num font-mono">02</span>
+                            <span class="stage-title">Facts</span>
                         </div>
-                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">Grounded ✓</span>
+                        <span class="stage-status font-mono">Grounded ✓</span>
                     </div>
 
                     <!-- Stage 03 -->
-                    <div onclick="selectStage(3, 'Scripting Engine', '5-beat narrative arc. 50 words calibrated for 18s pacing.')" class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[46px] stage-card cursor-pointer">
-                        <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-zinc-500 font-bold">03</span>
-                            <span class="font-medium text-xs text-white truncate">Script</span>
+                    <div onclick="selectStage(3, 'Scripting Engine', '5-beat narrative arc. 50 words calibrated for 18s pacing.')" class="stage-card">
+                        <div class="stage-left">
+                            <span class="stage-num font-mono">03</span>
+                            <span class="stage-title">Script</span>
                         </div>
-                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">50 words ✓</span>
+                        <span class="stage-status font-mono">50 words ✓</span>
                     </div>
 
                     <!-- Stage 04 -->
-                    <div onclick="selectStage(4, 'Visual Planning & Assets', '8 beat visual scenes with Ken Burns motion.')" class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[46px] stage-card cursor-pointer">
-                        <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-zinc-500 font-bold">04</span>
-                            <span class="font-medium text-xs text-white truncate">Visuals</span>
+                    <div onclick="selectStage(4, 'Visual Planning & Assets', '8 beat visual scenes with Ken Burns motion.')" class="stage-card">
+                        <div class="stage-left">
+                            <span class="stage-num font-mono">04</span>
+                            <span class="stage-title">Visuals</span>
                         </div>
-                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">8 beats ✓</span>
+                        <span class="stage-status font-mono">8 beats ✓</span>
                     </div>
 
                     <!-- Stage 05 -->
-                    <div onclick="selectStage(5, 'Voice Generation', 'Kokoro-82M ONNX synthesis. Active voice: {{ state.voice_config.active_voice_name or state.voice_config.active_voice_id or 'af_bella' }}')" class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[46px] stage-card cursor-pointer">
-                        <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-zinc-500 font-bold">05</span>
-                            <span class="font-medium text-xs text-white truncate">Voice</span>
+                    <div onclick="selectStage(5, 'Voice Generation', 'Kokoro-82M ONNX synthesis. Active voice: {{ state.voice_config.active_voice_name or state.voice_config.active_voice_id or 'Bella' }}')" class="stage-card">
+                        <div class="stage-left">
+                            <span class="stage-num font-mono">05</span>
+                            <span class="stage-title">Voice</span>
                         </div>
-                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0 truncate max-w-[72px]">{{ state.voice_config.active_voice_name or state.voice_config.active_voice_id or 'af_bella' }} ✓</span>
+                        <span class="stage-status font-mono truncate" style="max-width: 68px;">{{ (state.voice_config.active_voice_name or state.voice_config.active_voice_id or 'Bella') | truncate(8) }} ✓</span>
                     </div>
 
                     <!-- Stage 06 -->
-                    <div onclick="selectStage(6, 'Audio Mastering Invariants', 'Integrated -14.1 LUFS, Peak -0.8 dBTP, BGM bed -30 LUFS.')" class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[46px] stage-card cursor-pointer">
-                        <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-zinc-500 font-bold">06</span>
-                            <span class="font-medium text-xs text-white truncate">Audio</span>
+                    <div onclick="selectStage(6, 'Audio Mastering Invariants', 'Integrated -14.1 LUFS, Peak -0.8 dBTP, BGM -30 LUFS.')" class="stage-card">
+                        <div class="stage-left">
+                            <span class="stage-num font-mono">06</span>
+                            <span class="stage-title">Audio</span>
                         </div>
-                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">-30 LUFS ✓</span>
+                        <span class="stage-status font-mono">-30 LUFS ✓</span>
                     </div>
 
                     <!-- Stage 07 -->
-                    <div onclick="selectStage(7, 'Video Render', 'FFmpeg 1080x1920 vertical format. 60 FPS compositor.')" class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[46px] stage-card cursor-pointer">
-                        <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-zinc-500 font-bold">07</span>
-                            <span class="font-medium text-xs text-white truncate">Render</span>
+                    <div onclick="selectStage(7, 'Video Render', 'FFmpeg 1080x1920 vertical format. 60 FPS compositor.')" class="stage-card">
+                        <div class="stage-left">
+                            <span class="stage-num font-mono">07</span>
+                            <span class="stage-title">Render</span>
                         </div>
-                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">1080p ✓</span>
+                        <span class="stage-status font-mono">1080p ✓</span>
                     </div>
 
                     <!-- Stage 08 -->
-                    <div onclick="selectStage(8, 'QA Gate Validation', '100% automated pass on duration, loudness, and container.')" class="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-800/50 flex items-center justify-between text-emerald-300 min-h-[46px] stage-card cursor-pointer">
-                        <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-emerald-500 font-bold">08</span>
-                            <span class="font-medium text-xs text-emerald-300 truncate">QA Gate</span>
+                    <div onclick="selectStage(8, 'QA Gate Validation', '100% automated pass on duration, loudness, and container.')" class="stage-card stage-card-qa">
+                        <div class="stage-left">
+                            <span class="stage-num font-mono" style="color: var(--accent-emerald);">08</span>
+                            <span class="stage-title" style="color: var(--accent-emerald);">QA Gate</span>
                         </div>
-                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0 font-semibold">100% Pass ✓</span>
+                        <span class="stage-status font-mono" style="font-weight: 600;">100% Pass ✓</span>
                     </div>
                 </div>
 
-                <!-- Interactive Stage Detail Drawer -->
-                <div id="stage-detail-drawer" class="hidden p-3 rounded-xl bg-layer3 border border-sky-500/30 space-y-1 text-xs transition-all">
-                    <div class="flex justify-between items-center">
-                        <span id="detail-stage-title" class="font-semibold text-white">Stage Detail</span>
-                        <button onclick="closeStageDetail()" class="text-zinc-400 hover:text-white text-xs">✕</button>
+                <!-- Inline Stage Detail Expansion Drawer -->
+                <div id="stage-detail-drawer">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span id="detail-stage-title" style="font-size: 12px; font-weight: 600; color: #ffffff;">Stage Detail</span>
+                        <button onclick="closeStageDetail()" style="background: none; border: none; color: var(--text-dim); font-size: 13px; cursor: pointer;">✕</button>
                     </div>
-                    <p id="detail-stage-desc" class="text-[11px] text-zinc-300 font-normal">Details...</p>
+                    <p id="detail-stage-desc" class="text-muted" style="font-size: 11px; line-height: 15px;">Details...</p>
                 </div>
             </div>
 
-            <!-- 4. QUICK ACTION CONTROLS (Mobile 48px Touch Targets) -->
-            <div class="grid grid-cols-2 gap-2 pt-1">
-                <button onclick="openProduceModal()" class="touch-action h-12 px-3 bg-white text-black font-semibold text-xs rounded-xl shadow-lg flex items-center justify-center gap-1.5">
+            <!-- QUICK ACTION BUTTONS -->
+            <div class="actions-grid">
+                <button onclick="openProduceModal()" class="btn-primary">
                     <span>⚡ Refill Buffer</span>
                 </button>
-                <button onclick="handlePublishNext()" class="touch-action h-12 px-3 bg-layer2 border border-white/10 text-white font-medium text-xs rounded-xl hover:bg-layer3 flex items-center justify-center gap-1.5">
+                <button onclick="handlePublishNext()" class="btn-secondary">
                     <span>Publish Next</span>
                 </button>
             </div>
 
-            <!-- 5. 01_READY PREVIEW (Top 3 Verified Shorts) -->
-            <div class="p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] space-y-2">
-                <div class="flex justify-between items-center text-xs">
-                    <span class="font-semibold text-white">Drive Ready Shorts</span>
-                    <span class="text-[10px] font-mono text-emerald-400">{{ state.inventory.files.get('01_READY', [])|length }} videos ready</span>
+            <!-- READY PREVIEW -->
+            <div class="obsidian-card" style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 12px; font-weight: 600; color: #ffffff;">Drive Ready Shorts</span>
+                    <span class="font-mono text-emerald" style="font-size: 10px;">{{ state.inventory.files.get('01_READY', [])|length }} ready</span>
                 </div>
-                <div class="space-y-1.5 text-xs">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
                     {% for file in state.inventory.files.get('01_READY', [])[:3] %}
-                    <div class="p-2.5 rounded-xl bg-layer1 border border-white/[0.04] flex justify-between items-center text-zinc-300">
-                        <div class="truncate pr-2">
-                            <div class="font-medium text-white truncate text-[11px]">{{ file.get('title', file.get('name', 'Short Video')) }}</div>
-                            <div class="text-[10px] font-mono text-zinc-500">1080x1920 HD &middot; -14.1 LUFS</div>
+                    <div class="video-item">
+                        <div style="min-width: 0; flex: 1;">
+                            <div class="truncate" style="font-size: 11px; font-weight: 500; color: #ffffff;">{{ file.get('title', file.get('name', 'Short Video')) }}</div>
+                            <div class="font-mono text-dim" style="font-size: 9px;">1080x1920 HD &middot; -14.1 LUFS</div>
                         </div>
-                        <span class="text-emerald-400 font-mono text-[10px] flex-shrink-0">Verified ✓</span>
+                        <span class="font-mono text-emerald" style="font-size: 10px; flex-shrink: 0;">Verified ✓</span>
                     </div>
                     {% else %}
-                    <div class="text-center text-zinc-500 py-2 text-xs">{{ state.inventory.counts.get('01_READY', 0) }} verified Shorts in vault</div>
+                    <div class="text-dim" style="text-align: center; padding: 8px 0; font-size: 11px;">{{ state.inventory.counts.get('01_READY', 0) }} verified Shorts in vault</div>
                     {% endfor %}
                 </div>
             </div>
 
         </div>
 
-        <!-- PANEL 2: VAULT & INVENTORY -->
-        <div id="mob-panel-vault" class="hidden space-y-3.5">
-            <div class="px-1">
-                <h3 class="text-sm font-semibold text-white">Drive Vault Inventory</h3>
-                <p class="text-[11px] text-zinc-400">Isolated 6-tier directory storage</p>
+        <!-- PANEL 2: VAULT & INVENTORY (Hidden by default) -->
+        <div id="mob-panel-vault" class="tab-panel hidden">
+            <div style="padding: 0 4px;">
+                <h3 style="font-size: 14px; font-weight: 600; color: #ffffff;">Drive Vault Inventory</h3>
+                <p class="text-muted" style="font-size: 11px;">Isolated 6-tier directory storage</p>
             </div>
 
-            <div class="grid grid-cols-2 gap-2 text-xs">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                 {% for folder, count in state.inventory.counts.items() %}
-                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.05] space-y-0.5">
-                    <div class="text-zinc-400 font-mono text-[10px] truncate">{{ folder }}</div>
-                    <div class="text-xl font-light text-white font-mono">{{ count }}</div>
+                <div class="obsidian-card" style="padding: 10px; display: flex; flex-direction: column; gap: 2px;">
+                    <span class="font-mono text-dim truncate" style="font-size: 10px;">{{ folder }}</span>
+                    <span class="font-mono" style="font-size: 20px; font-weight: 300; color: #ffffff;">{{ count }}</span>
                 </div>
                 {% endfor %}
             </div>
 
-            <div class="p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] space-y-2">
-                <div class="text-xs font-semibold text-white">01_READY Verified Shorts ({{ state.inventory.files.get('01_READY', [])|length }})</div>
-                <div class="space-y-1.5 text-xs">
+            <div class="obsidian-card" style="display: flex; flex-direction: column; gap: 8px;">
+                <span style="font-size: 12px; font-weight: 600; color: #ffffff;">01_READY Verified Shorts ({{ state.inventory.files.get('01_READY', [])|length }})</span>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
                     {% for file in state.inventory.files.get('01_READY', []) %}
-                    <div class="p-2.5 rounded-xl bg-layer1 border border-white/[0.04] flex justify-between items-center text-zinc-300">
-                        <span class="truncate pr-2 text-[11px]">{{ loop.index }}. {{ file.get('title', file.get('name', 'Short Video')) }}</span>
-                        <span class="text-emerald-400 font-mono text-[10px] flex-shrink-0">Ready ✓</span>
+                    <div class="video-item">
+                        <span class="truncate text-muted" style="font-size: 11px; flex: 1;">{{ loop.index }}. {{ file.get('title', file.get('name', 'Short Video')) }}</span>
+                        <span class="font-mono text-emerald" style="font-size: 10px; flex-shrink: 0;">Ready ✓</span>
                     </div>
                     {% endfor %}
                 </div>
             </div>
         </div>
 
-        <!-- PANEL 3: PUBLISHING SCHEDULE -->
-        <div id="mob-panel-publishing" class="hidden space-y-3.5">
-            <div class="px-1">
-                <h3 class="text-sm font-semibold text-white">Daily Publishing Slots</h3>
-                <p class="text-[11px] text-zinc-400">Strict ceiling: &le; 3 Shorts/day (06:00, 11:00, 15:00 UTC)</p>
+        <!-- PANEL 3: PUBLISHING SCHEDULE (Hidden by default) -->
+        <div id="mob-panel-publishing" class="tab-panel hidden">
+            <div style="padding: 0 4px;">
+                <h3 style="font-size: 14px; font-weight: 600; color: #ffffff;">Daily Publishing Slots</h3>
+                <p class="text-muted" style="font-size: 11px;">Ceiling: &le; 3 Shorts/day (06:00, 11:00, 15:00 UTC)</p>
             </div>
 
-            <div class="space-y-2 text-xs">
-                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="obsidian-card" style="padding: 12px; display: flex; align-items: center; justify-content: space-between;">
                     <div>
-                        <div class="font-mono text-zinc-400 text-[11px]">Slot 1 &middot; 06:00 UTC</div>
-                        <div class="font-medium text-white mt-0.5">Morning Release</div>
+                        <div class="font-mono text-dim" style="font-size: 10px;">Slot 1 &middot; 06:00 UTC</div>
+                        <div style="font-size: 12px; font-weight: 500; color: #ffffff; margin-top: 2px;">Morning Release</div>
                     </div>
-                    <span class="text-emerald-400 font-mono text-[11px]">Completed ✓</span>
+                    <span class="font-mono text-emerald" style="font-size: 10px;">Completed ✓</span>
                 </div>
 
-                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between">
+                <div class="obsidian-card" style="padding: 12px; display: flex; align-items: center; justify-content: space-between;">
                     <div>
-                        <div class="font-mono text-zinc-400 text-[11px]">Slot 2 &middot; 11:00 UTC</div>
-                        <div class="font-medium text-white mt-0.5">Midday Release</div>
+                        <div class="font-mono text-dim" style="font-size: 10px;">Slot 2 &middot; 11:00 UTC</div>
+                        <div style="font-size: 12px; font-weight: 500; color: #ffffff; margin-top: 2px;">Midday Release</div>
                     </div>
-                    <span class="text-emerald-400 font-mono text-[11px]">Completed ✓</span>
+                    <span class="font-mono text-emerald" style="font-size: 10px;">Completed ✓</span>
                 </div>
 
-                <div class="p-3 rounded-xl bg-layer2 border border-sky-500/40 flex items-center justify-between">
+                <div class="obsidian-card" style="padding: 12px; display: flex; align-items: center; justify-content: space-between; border-color: var(--border-active);">
                     <div>
-                        <div class="font-mono text-sky-400 text-[11px]">Slot 3 &middot; 15:00 UTC</div>
-                        <div class="font-medium text-white mt-0.5">Evening Peak Release</div>
+                        <div class="font-mono text-sky" style="font-size: 10px;">Slot 3 &middot; 15:00 UTC</div>
+                        <div style="font-size: 12px; font-weight: 500; color: #ffffff; margin-top: 2px;">Evening Peak Release</div>
                     </div>
-                    <span class="text-sky-300 font-mono text-[11px]">Next Scheduled</span>
+                    <span class="font-mono text-sky" style="font-size: 10px;">Next Scheduled</span>
                 </div>
             </div>
         </div>
 
-        <!-- PANEL 4: ANALYTICS & LEARNING -->
-        <div id="mob-panel-analytics" class="hidden space-y-3.5">
-            <div class="px-1 flex justify-between items-center">
+        <!-- PANEL 4: ANALYTICS & LEARNING (Hidden by default) -->
+        <div id="mob-panel-analytics" class="tab-panel hidden">
+            <div style="padding: 0 4px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h3 class="text-sm font-semibold text-white">Reinforcement Learning</h3>
-                    <p class="text-[11px] text-zinc-400">Strategy optimization</p>
+                    <h3 style="font-size: 14px; font-weight: 600; color: #ffffff;">Reinforcement Learning</h3>
+                    <p class="text-muted" style="font-size: 11px;">Strategy optimization</p>
                 </div>
-                <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60">24h Gated</span>
+                <span class="badge-healthy font-mono">24h Gated</span>
             </div>
 
-            <div class="p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] space-y-2 text-xs">
-                <div class="flex justify-between items-center">
-                    <span class="font-semibold text-white">Historical mysteries</span>
-                    <span class="text-emerald-400 font-mono font-bold">1.65 (+18% APV)</span>
+            <div class="obsidian-card" style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 12px; font-weight: 600; color: #ffffff;">Historical mysteries</span>
+                    <span class="font-mono text-emerald" style="font-size: 12px; font-weight: 700;">1.65 (+18% APV)</span>
                 </div>
-                <div class="text-[11px] text-zinc-400 font-light">Confidence: 94% &middot; Damped boost applied</div>
+                <span class="text-dim" style="font-size: 10px;">Confidence: 94% &middot; Damped boost applied</span>
             </div>
 
-            <!-- Published Leaderboard -->
-            <div id="mobile-performance-leaderboard" class="p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] space-y-2">
-                <div class="flex justify-between items-center text-xs">
-                    <span class="font-semibold text-white">Performance Leaderboard</span>
-                    <span class="font-mono text-[10px] text-emerald-400">Published</span>
-                </div>
-                <div class="space-y-1.5 text-xs">
+            <div class="obsidian-card" style="display: flex; flex-direction: column; gap: 8px;">
+                <span style="font-size: 12px; font-weight: 600; color: #ffffff;">Performance Leaderboard</span>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
                     {% for item in performance_leaderboard %}
-                    <div class="p-2.5 rounded-xl bg-layer1 border border-white/[0.04] flex justify-between items-center">
-                        <div class="truncate pr-2">
-                            <div class="font-medium text-white truncate text-[11px]">{{ item.title }}</div>
-                            <div class="text-[10px] font-mono text-sky-400">{{ item.youtube_video_id }}</div>
+                    <div class="video-item">
+                        <div style="min-width: 0; flex: 1;">
+                            <div class="truncate" style="font-size: 11px; font-weight: 500; color: #ffffff;">{{ item.title }}</div>
+                            <div class="font-mono text-sky" style="font-size: 9px;">{{ item.youtube_video_id }}</div>
                         </div>
-                        <div class="text-right flex-shrink-0 font-mono text-[10px]">
-                            <div class="text-emerald-400">{{ item.views_display }} views</div>
-                            <div class="text-zinc-400">{{ item.engagement_display }}</div>
+                        <div class="font-mono text-right" style="font-size: 10px;">
+                            <div class="text-emerald">{{ item.views_display }} views</div>
+                            <div class="text-dim">{{ item.engagement_display }}</div>
                         </div>
                     </div>
                     {% else %}
-                    <div class="text-center text-zinc-500 py-2 text-xs">Analytics synchronized</div>
+                    <div class="text-dim" style="text-align: center; padding: 8px 0; font-size: 11px;">Analytics synchronized</div>
                     {% endfor %}
                 </div>
             </div>
@@ -426,46 +708,46 @@
 
     </main>
 
-    <!-- NATIVE 48px BOTTOM TOUCH NAVIGATION (4 Tabs) -->
-    <nav class="fixed bottom-0 left-0 right-0 h-16 bg-layer1/95 backdrop-blur border-t border-white/[0.08] px-2 flex items-center justify-around z-40">
-        <button id="mob-tab-overview" onclick="switchMobTab('overview')" class="mob-nav-tab active touch-action h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
+    <!-- NATIVE 48px BOTTOM TOUCH NAVIGATION -->
+    <nav class="mob-nav-bar">
+        <button id="mob-tab-overview" onclick="switchMobTab('overview')" class="mob-nav-tab active">
             <span>Overview</span>
         </button>
-        <button id="mob-tab-vault" onclick="switchMobTab('vault')" class="mob-nav-tab touch-action h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
+        <button id="mob-tab-vault" onclick="switchMobTab('vault')" class="mob-nav-tab">
             <span>Vault</span>
         </button>
-        <button id="mob-tab-publishing" onclick="switchMobTab('publishing')" class="mob-nav-tab touch-action h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
+        <button id="mob-tab-publishing" onclick="switchMobTab('publishing')" class="mob-nav-tab">
             <span>Schedule</span>
         </button>
-        <button id="mob-tab-analytics" onclick="switchMobTab('analytics')" class="mob-nav-tab touch-action h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
+        <button id="mob-tab-analytics" onclick="switchMobTab('analytics')" class="mob-nav-tab">
             <span>Analytics</span>
         </button>
     </nav>
 
     <!-- REFILL BUFFER MODAL -->
-    <div id="produce-buffer-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-layer2 border border-white/10 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+    <div id="produce-buffer-modal" class="modal-overlay hidden">
+        <div class="modal-box">
             <div>
-                <h3 class="text-base font-semibold text-white">Refill ready buffer</h3>
-                <p class="text-xs text-zinc-400 mt-0.5">Dispatch automated replenishment workflow.</p>
+                <h3 style="font-size: 15px; font-weight: 600; color: #ffffff;">Refill ready buffer</h3>
+                <p class="text-muted" style="font-size: 11px; margin-top: 2px;">Dispatch automated replenishment workflow.</p>
             </div>
             
-            <div id="modal-refill-error" class="hidden p-2.5 rounded-lg bg-rose-950/80 border border-rose-800 text-rose-300 text-xs"></div>
+            <div id="modal-refill-error" class="hidden font-mono text-xs" style="background: rgba(136, 19, 55, 0.6); border: 1px solid #e11d48; color: #fecdd3; padding: 8px; border-radius: 8px;"></div>
 
-            <div class="space-y-3 text-xs">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
                 <div>
-                    <label class="text-zinc-300 font-medium block mb-1">Target Buffer Size</label>
-                    <input type="number" id="modal-target-buffer" min="1" max="24" value="6" class="w-full bg-layer1 border border-white/10 rounded-xl px-3 py-2 text-white outline-none">
+                    <label class="text-muted" style="font-size: 11px; display: block; margin-bottom: 4px;">Target Buffer Size</label>
+                    <input type="number" id="modal-target-buffer" min="1" max="24" value="6" class="input-modal">
                 </div>
                 <div>
-                    <label class="text-zinc-300 font-medium block mb-1">Admin Authorization Password</label>
-                    <input type="password" id="modal-admin-pass" placeholder="••••••••" class="w-full bg-layer1 border border-white/10 rounded-xl px-3 py-2 text-white outline-none font-mono">
+                    <label class="text-muted" style="font-size: 11px; display: block; margin-bottom: 4px;">Admin Authorization Password</label>
+                    <input type="password" id="modal-admin-pass" placeholder="••••••••" class="input-modal font-mono">
                 </div>
             </div>
 
-            <div class="flex gap-2 pt-2">
-                <button onclick="closeProduceModal()" class="flex-1 py-2.5 bg-layer1 border border-white/10 text-zinc-300 rounded-xl text-xs font-medium">Cancel</button>
-                <button onclick="submitProduceBuffer()" class="flex-1 py-2.5 bg-white text-black font-semibold rounded-xl text-xs">Dispatch Refill</button>
+            <div style="display: flex; gap: 8px; padding-top: 4px;">
+                <button onclick="closeProduceModal()" class="btn-secondary" style="flex: 1; min-height: 44px;">Cancel</button>
+                <button onclick="submitProduceBuffer()" class="btn-primary" style="flex: 1; min-height: 44px;">Dispatch</button>
             </div>
         </div>
     </div>
@@ -484,18 +766,18 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // Repeated 120Hz Hover & Touch Swell Handler
+        // Repeated 120Hz Hover & Touch Swell Engine
         (function initMobileMotion() {
-            const cards = document.querySelectorAll('.stage-card');
+            const cards = document.querySelectorAll('.stage-card, .telemetry-pill');
             cards.forEach(card => {
                 card.addEventListener('mouseenter', () => {
                     card.style.transform = 'translate3d(0, -2px, 0) scale(1.025)';
-                    card.style.borderColor = 'rgba(56, 189, 248, 0.35)';
+                    card.style.borderColor = 'rgba(56, 189, 248, 0.4)';
                     card.style.boxShadow = '0 8px 20px -2px rgba(0,0,0,0.8), 0 0 12px -2px rgba(56, 189, 248, 0.15)';
                 });
                 card.addEventListener('mouseleave', () => {
                     card.style.transform = 'translate3d(0, 0, 0) scale(1)';
-                    card.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                    card.style.borderColor = 'var(--border-subtle)';
                     card.style.boxShadow = 'none';
                 });
             });
@@ -503,13 +785,13 @@
 
         // Dismiss startup overlay smoothly
         function dismissMobStartup() {
-            const overlay = document.getElementById('mobile-startup-overlay') || document.getElementById('app-startup-overlay');
+            const overlay = document.getElementById('mobile-startup-overlay');
             if (overlay) {
                 setTimeout(() => {
                     overlay.style.opacity = '0';
                     overlay.style.pointerEvents = 'none';
-                    setTimeout(() => overlay.remove(), 350);
-                }, 950);
+                    setTimeout(() => overlay.remove(), 300);
+                }, 900);
             }
         }
         if (document.readyState === 'loading') {
@@ -526,12 +808,12 @@
             if (drawer && titleEl && descEl) {
                 titleEl.innerText = `Stage 0${num}: ${title}`;
                 descEl.innerText = desc;
-                drawer.classList.remove('hidden');
+                drawer.style.display = 'block';
             }
         }
         function closeStageDetail() {
             const drawer = document.getElementById('stage-detail-drawer');
-            if (drawer) drawer.classList.add('hidden');
+            if (drawer) drawer.style.display = 'none';
         }
 
         // Tab Switching
@@ -554,7 +836,6 @@
             if (targetBtn) targetBtn.classList.add('active');
         }
 
-        // Modal triggers
         function openProduceModal() {
             const m = document.getElementById('produce-buffer-modal');
             if (m) m.classList.remove('hidden');
@@ -612,15 +893,10 @@
         async function handleLogout() {
             try {
                 await fetch('/api/auth/logout', { method: 'POST' });
-                window.location.href = '/login';
+                window.location.href = '/login?mobile=true';
             } catch (e) {
-                window.location.href = '/login';
+                window.location.href = '/login?mobile=true';
             }
-        }
-
-        function dismissMobileCloudBanner() {
-            const b = document.getElementById('mobile-cloud-banner');
-            if (b) b.classList.add('hidden');
         }
     </script>
 </body>
