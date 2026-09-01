@@ -300,8 +300,9 @@ class SystemDataProvider:
         diff_total_sec = max(0, int((next_unoccupied - datetime.utcnow()).total_seconds()))
         h_left = diff_total_sec // 3600
         m_left = (diff_total_sec % 3600) // 60
+        next_slot_label = f"{next_unoccupied.strftime('%b %d, %Y')} · {next_unoccupied.strftime('%H:%M')} UTC"
         next_slot_info = {
-            "slot_label": f"{next_unoccupied.strftime('%b %d, %Y')} at {next_unoccupied.strftime('%H:%M')} UTC",
+            "slot_label": next_slot_label,
             "slot_iso": next_unoccupied.isoformat() + "Z",
             "is_today": today_start <= next_unoccupied < today_end,
             "time_until_display": f"{h_left}h {m_left}m"
@@ -319,13 +320,30 @@ class SystemDataProvider:
                 "status": s.status
             })
 
+        history_list = []
+        for p in published_records_today:
+            history_list.append({
+                "id": p.id,
+                "job_id": p.job_id,
+                "youtube_video_id": p.youtube_video_id,
+                "title": p.title,
+                "published_at": p.published_at.isoformat() + "Z" if p.published_at else None,
+                "privacy_status": p.privacy_status,
+                "status": p.status
+            })
+
         verified_live_count = self.get_verified_live_count(db)
         active_pipeline_count = self.get_active_pipeline_count(db)
 
         return {
+            "daily_limit": DAILY_SHORTS_LIMIT,
             "published_today": published_count_today,
             "scheduled_today": scheduled_count_today,
             "total_booked_today": total_booked_today,
+            "remaining_today": remaining_capacity,
+            "next_slot": next_slot_label,
+            "next_slot_label": next_slot_label,
+            "next_slot_info": next_slot_info,
             "total_published": verified_live_count,
             "active_pipeline_count": active_pipeline_count,
             "daily_limit": DAILY_SHORTS_LIMIT,
@@ -678,9 +696,16 @@ class SystemDataProvider:
         from engines.tts_engine import AVAILABLE_VOICES, get_active_voice
         active_id = get_active_voice(db)
         active_voice = next((v for v in AVAILABLE_VOICES if v["id"] == active_id), AVAILABLE_VOICES[0])
+        display_name = active_voice.get("display_name", active_id)
+        engine = active_voice.get("engine", "Kokoro-82M ONNX")
+        desc = active_voice.get("description", "")
         return {
             "active_voice_id": active_id,
             "active_voice": active_voice,
+            "active_voice_name": display_name,
+            "display_name": display_name,
+            "engine": engine,
+            "description": desc,
             "available_voices": AVAILABLE_VOICES
         }
 

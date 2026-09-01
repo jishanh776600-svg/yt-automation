@@ -440,16 +440,21 @@
         updateClock();
 
         // Dismiss startup overlay smoothly
-        window.addEventListener('DOMContentLoaded', () => {
-            const overlay = document.getElementById('mobile-startup-overlay');
+        function dismissMobStartup() {
+            const overlay = document.getElementById('mobile-startup-overlay') || document.getElementById('app-startup-overlay') || document.getElementById('startup-overlay');
             if (overlay) {
                 setTimeout(() => {
                     overlay.style.opacity = '0';
                     overlay.style.pointerEvents = 'none';
-                    setTimeout(() => overlay.remove(), 400);
-                }, 1200);
+                    setTimeout(() => overlay.remove(), 350);
+                }, 1000);
             }
-        });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', dismissMobStartup);
+        } else {
+            dismissMobStartup();
+        }
 
         // Tab Switching
         function switchMobTab(tab) {

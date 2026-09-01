@@ -298,13 +298,32 @@ def mobile_mission_control(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
 
     state = data_provider.get_full_system_state(db)
+    review_queue = action_manager.get_review_queue(db)
+
     return templates.TemplateResponse(
         request=request,
         name="mobile.html",
         context={
             "user": session["username"],
             "csrf_token": session["csrf_token"],
-            "state": state
+            "state": state,
+            "health": state["health"],
+            "locks": state["locks"],
+            "inventory": state["inventory"],
+            "publishing": state["publishing"],
+            "buffer": state["buffer"],
+            "learning": state["learning"],
+            "db_summary": state["database_summary"],
+            "scheduled_queue": state["scheduled_queue"],
+            "voice_config": state["voice_config"],
+            "bgm_status": state["bgm_status"],
+            "cloud_workflows": state["cloud_workflows"],
+            "timeline": state["timeline"],
+            "activity_feed": state["activity_feed"],
+            "review_queue": review_queue,
+            "database_sync": state.get("database_sync", {}),
+            "service_quotas": state.get("service_quotas", {}),
+            "performance_leaderboard": state.get("performance_leaderboard", [])
         }
     )
 

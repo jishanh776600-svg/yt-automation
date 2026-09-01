@@ -126,7 +126,7 @@
                 <span class="text-zinc-300 font-medium">All systems nominal</span>
             </div>
             <span class="text-zinc-700">/</span>
-            <span>Next release: <span class="text-white font-mono">{{ state.publishing.next_slot.slot_label if state.publishing.next_slot is mapping else (state.publishing.next_slot or "15:00 UTC") }}</span></span>
+            <span>Next release &middot; <span class="text-white font-mono">{{ (state.publishing.next_slot.slot_label if state.publishing.next_slot is mapping else (state.publishing.next_slot or "15:00 UTC")) | replace("at ", "&middot; ") }}</span></span>
             <span class="text-zinc-700">/</span>
             <span id="live-utc-clock" class="font-mono text-zinc-400">--:--:-- UTC</span>
             <span class="text-zinc-700">/</span>
@@ -700,16 +700,21 @@
         })();
 
         // Dismiss Startup Logo smoothly
-        window.addEventListener('DOMContentLoaded', () => {
-            const overlay = document.getElementById('app-startup-overlay');
+        function dismissAppStartup() {
+            const overlay = document.getElementById('app-startup-overlay') || document.getElementById('startup-overlay');
             if (overlay) {
                 setTimeout(() => {
                     overlay.style.opacity = '0';
                     overlay.style.pointerEvents = 'none';
-                    setTimeout(() => overlay.remove(), 400);
-                }, 1250);
+                    setTimeout(() => overlay.remove(), 350);
+                }, 1000);
             }
-        });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', dismissAppStartup);
+        } else {
+            dismissAppStartup();
+        }
 
         // Tab Switching
         function switchTab(tab) {
