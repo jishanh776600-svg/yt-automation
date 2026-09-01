@@ -295,7 +295,7 @@ def mobile_mission_control(request: Request, db: Session = Depends(get_db)):
     """Renders the emergency mobile mission control PWA interface."""
     session = get_optional_session(request)
     if not session:
-        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url="/login?mobile=true", status_code=status.HTTP_303_SEE_OTHER)
 
     state = data_provider.get_full_system_state(db)
     review_queue = action_manager.get_review_queue(db)
@@ -331,10 +331,6 @@ def mobile_mission_control(request: Request, db: Session = Depends(get_db)):
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request, db: Session = Depends(get_db)):
     """Renders the secured live mission control center dashboard."""
-    session = get_optional_session(request)
-    if not session:
-        return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-
     # Check for mobile user-agent, Client Hints, or query parameter
     user_agent = request.headers.get("user-agent", "").lower()
     sec_ch_mobile = request.headers.get("sec-ch-ua-mobile", "")
@@ -343,6 +339,12 @@ def index(request: Request, db: Session = Depends(get_db)):
         or any(m in user_agent for m in ["mobile", "android", "iphone", "ipod", "ipad", "phone", "webos", "blackberry"])
         or request.query_params.get("mobile") == "true"
     )
+
+    session = get_optional_session(request)
+    if not session:
+        login_target = "/login?mobile=true" if is_mobile else "/login"
+        return RedirectResponse(url=login_target, status_code=status.HTTP_303_SEE_OTHER)
+
     target_template = "mobile.html" if (is_mobile and request.query_params.get("desktop") != "true") else "index.html"
 
     state = data_provider.get_full_system_state(db)
