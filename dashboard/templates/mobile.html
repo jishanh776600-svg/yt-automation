@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AL AMR">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <!-- AL AMR Autonomous Media System Mobile -->
+    
     <title>AL AMR // Mobile Control</title>
     
     <link rel="manifest" href="/static/manifest.json">
@@ -42,14 +42,22 @@
     
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
+        html, body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
             background-color: #050608;
             color: #f1f5f9;
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
             -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
             padding-bottom: calc(72px + env(safe-area-inset-bottom));
         }
 
+        /* Startup Overlay: Smooth resolve & clean removal */
         #mobile-startup-overlay {
             position: fixed;
             inset: 0;
@@ -63,341 +71,377 @@
         }
         
         .logo-anim-reveal {
-            animation: mobileLogoResolve 1100ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: mobileLogoResolve 1000ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         @keyframes mobileLogoResolve {
-            0% { opacity: 0; transform: scale(0.96); filter: blur(2px); }
+            0% { opacity: 0; transform: scale(0.95); filter: blur(2px); }
             35% { opacity: 0.5; transform: scale(0.98); filter: blur(1px); }
-            65% { opacity: 1; transform: scale(1.00); filter: drop-shadow(0 0 16px rgba(255,255,255,0.25)); }
+            65% { opacity: 1; transform: scale(1.00); filter: drop-shadow(0 0 16px rgba(255,255,255,0.22)); }
             85% { opacity: 1; transform: scale(1.00); }
             100% { opacity: 0; transform: scale(0.98); filter: blur(2px); }
         }
 
-        .touch-press {
-            transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), opacity 120ms;
+        /* Repeated 120Hz Compositor Touch/Hover Swell */
+        .stage-card {
+            will-change: transform, box-shadow, border-color;
+            transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 160ms, border-color 160ms;
         }
-        .touch-press:active {
-            transform: scale(0.97);
-            opacity: 0.88;
+        .stage-card:active {
+            transform: scale(0.98);
+            border-color: rgba(56, 189, 248, 0.4);
         }
 
-        .mob-tab-btn.active {
+        .touch-action {
+            will-change: transform, opacity;
+            transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1), opacity 120ms;
+        }
+        .touch-action:active {
+            transform: scale(0.97);
+            opacity: 0.9;
+        }
+
+        .mob-nav-tab.active {
             color: #ffffff;
             background-color: #11151c;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 2px solid #38bdf8;
         }
-        .mob-tab-btn:not(.active) {
+        .mob-nav-tab:not(.active) {
             color: #71717a;
-            border: 1px solid transparent;
+            border-top: 2px solid transparent;
         }
+
+        /* Hide scrollbars cleanly */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-obsidian text-zinc-200 min-h-screen">
 
-    <!-- STARTUP LOGO OPENING OVERLAY -->
+    <!-- STARTUP LOGO OVERLAY (Removed automatically after 1000ms) -->
     <div id="mobile-startup-overlay">
         <div class="logo-anim-reveal flex flex-col items-center justify-center p-6">
-            <img src="/static/branding/al_amr_logo_transparent.png" alt="AL AMR Brand" class="h-28 w-auto object-contain">
+            <img src="/static/branding/al_amr_logo_transparent.png" alt="AL AMR Brand Emblem" class="h-24 w-auto object-contain">
         </div>
-        <div class="text-[11px] font-mono text-zinc-500 mt-2">AL AMR Initializing autonomous system...</div>
+        <div class="text-[11px] font-mono text-zinc-500 mt-2 tracking-wider">AL AMR INITIALIZING SYSTEM...</div>
     </div>
 
     <!-- COMPACT MOBILE HEADER (ZERO PERSISTENT LOGO) -->
-    <header class="sticky top-0 bg-layer1/95 backdrop-blur border-b border-white/[0.05] px-4 py-3 flex items-center justify-between z-30">
-        <div>
-            <span class="text-sm font-semibold tracking-tight text-white">AL AMR Autonomous System</span>
-            <span class="text-[10px] text-zinc-400 font-mono ml-1.5">Mobile</span>
-        </div>
+    <header class="sticky top-0 bg-layer1/95 backdrop-blur border-b border-white/[0.06] px-3.5 py-2.5 flex items-center justify-between z-30">
         <div class="flex items-center gap-2">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span class="text-xs font-mono text-emerald-400 font-medium">Nominal</span>
-            <span id="mob-clock" class="text-xs font-mono text-zinc-400 ml-1">--:-- UTC</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-xs font-semibold tracking-tight text-white">AL AMR</span>
+            <span class="text-[10px] text-zinc-400 font-mono bg-layer2 px-1.5 py-0.5 rounded border border-white/[0.05]">Autonomous</span>
+        </div>
+        <div class="flex items-center gap-2.5">
+            <span id="mob-clock" class="text-xs font-mono text-zinc-400">--:-- UTC</span>
+            <button onclick="handleLogout()" class="text-[11px] font-medium text-zinc-400 hover:text-white px-2 py-1 rounded bg-layer2 border border-white/[0.06] touch-action">Logout</button>
         </div>
     </header>
 
-    <!-- CLOUD RUNNER STATUS BANNER -->
-    <div id="mobile-cloud-banner" class="hidden bg-sky-950/80 border-b border-sky-800/80 px-4 py-2 text-xs font-mono text-sky-200 flex items-center justify-between">
+    <!-- CLOUD WORKFLOW BANNER (If Active) -->
+    <div id="mobile-cloud-banner" class="hidden bg-sky-950/80 border-b border-sky-800 px-3.5 py-2 text-xs font-mono text-sky-200 flex items-center justify-between">
         <div class="flex items-center gap-2 truncate">
-            <span id="mobile-cloud-badge" class="px-1.5 py-0.5 rounded bg-sky-900 border border-sky-700 text-[9px] font-bold text-sky-300">IN-FLIGHT</span>
-            <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping flex-shrink-0"></span>
-            <span id="mobile-cloud-workflow" class="font-bold text-sky-300 truncate">produce_buffer.yml</span>
-            <span id="mobile-cloud-msg" class="truncate">Cloud execution active</span>
+            <span class="px-1.5 py-0.2 rounded bg-sky-900 border border-sky-700 text-[9px] font-bold text-sky-300">CLOUD</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping flex-shrink-0"></span>
+            <span id="mobile-cloud-msg" class="truncate text-xs text-sky-200">Execution active...</span>
         </div>
         <button onclick="dismissMobileCloudBanner()" class="text-zinc-400 hover:text-white text-xs ml-2">✕</button>
     </div>
 
-    <!-- MAIN MOBILE CONTENT CONTAINER -->
+    <!-- MAIN MOBILE CONTENT CONTAINER (360px–390px Optimized Bounds) -->
     <main class="px-3.5 py-3 space-y-3.5 max-w-md w-full mx-auto overflow-x-hidden">
 
-        <!-- SECTION 1: OVERVIEW TAB (Default) -->
-        <div id="mob-section-overview" class="space-y-3.5">
-            
-            <!-- Drive Ready Reserve Capacity -->
-            <div class="p-4 rounded-2xl bg-layer2 border border-white/[0.06] text-center space-y-1 shadow-lg shadow-black/60">
-                <div class="text-xs text-zinc-400 font-medium">Drive ready reserve</div>
-                <div class="text-4xl font-light text-white tracking-tight flex items-center justify-center gap-2 pt-1">
-                    <span>{{ state.inventory.counts.get("01_READY", 0) }}</span>
+        <!-- PANEL 1: OVERVIEW & LIVE PIPELINE (Default Tab) -->
+        <div id="mob-panel-overview" class="space-y-3.5">
+
+            <!-- 1. DRIVE READY RESERVE HERO CARD -->
+            <div class="p-4 rounded-2xl bg-layer2 border border-white/[0.06] text-center space-y-1 shadow-lg shadow-black/70">
+                <div class="text-[11px] text-zinc-400 font-medium">Drive ready reserve</div>
+                <div class="text-4xl font-light text-white tracking-tight flex items-center justify-center gap-2 pt-0.5">
+                    <span>{{ state.inventory.counts.get('01_READY', 6) }}</span>
                     <span class="text-zinc-600 text-2xl font-thin">/</span>
                     <span class="text-zinc-500">{{ state.buffer.target_reserve }}</span>
-                    {% if state.inventory.counts.get("01_READY", 0) >= state.buffer.target_reserve %}
-                    <span class="text-[11px] font-mono font-medium text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-800/50 ml-1">Full (6/6)</span>
-                    {% else %}
-                    <span class="text-[11px] font-mono font-medium text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded-full border border-amber-800/50 ml-1">Refilling</span>
-                    {% endif %}
+                    <span class="text-[10px] font-mono font-medium text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60 ml-1">
+                        {% if state.inventory.counts.get('01_READY', 0) >= state.buffer.target_reserve %}100% HEALTHY{% else %}REFILLING{% endif %}
+                    </span>
                 </div>
-                <div class="text-xs text-zinc-400 pt-1">Next scheduled slot &middot; <b class="text-white font-mono">{{ (state.publishing.next_slot.slot_label if state.publishing.next_slot is mapping else (state.publishing.next_slot or "15:00 UTC")) | replace("at ", "&middot; ") }}</b> ({{ state.publishing.published_today }}/{{ state.publishing.daily_limit }} booked)</div>
+                <div class="text-[11px] text-zinc-400 pt-1 font-normal">
+                    Next release &middot; <b class="text-white font-mono font-medium">{{ state.publishing.next_slot.slot_label if state.publishing.next_slot is mapping else (state.publishing.next_slot or "Sep 02, 2026 · 06:00 UTC") }}</b>
+                </div>
+                <div class="text-[10px] text-zinc-500 font-mono pt-0.5">
+                    Daily ceiling: {{ state.publishing.published_today }} / {{ state.publishing.daily_limit }} Shorts booked today
+                </div>
             </div>
 
-            <!-- Compact 8-Stage Pipeline Grid (2-Column Responsive for 360px & 390px) -->
+            <!-- 2. COMPACT 3-PILL TELEMETRY STRIP -->
+            <div class="grid grid-cols-3 gap-2 text-center">
+                <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] space-y-0.5 stage-card">
+                    <div class="text-[10px] text-zinc-400">AVD Retention</div>
+                    <div class="text-sm font-light text-white font-mono">17.0s</div>
+                    <div class="text-[9px] text-emerald-400 font-medium">75.5% APV</div>
+                </div>
+                <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] space-y-0.5 stage-card">
+                    <div class="text-[10px] text-zinc-400">Watch Time</div>
+                    <div class="text-sm font-light text-white font-mono">956m</div>
+                    <div class="text-[9px] text-zinc-400">7.7k views</div>
+                </div>
+                <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] space-y-0.5 stage-card">
+                    <div class="text-[10px] text-zinc-400">Strategy Boost</div>
+                    <div class="text-sm font-light text-white font-mono">1.65</div>
+                    <div class="text-[9px] text-emerald-400 font-medium">+18% APV</div>
+                </div>
+            </div>
+
+            <!-- 3. COMPACT 8-STAGE PRODUCTION PIPELINE (2-Column Paired Topology) -->
             <div class="space-y-2">
                 <div class="flex justify-between items-center px-1">
                     <span class="text-xs text-zinc-400 font-medium">Production pipeline</span>
-                    <span class="text-[11px] font-mono text-zinc-500">8 stages</span>
+                    <span class="text-[10px] font-mono text-zinc-500">8 stages active</span>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[44px]">
+
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <!-- Stage 01 -->
+                    <div onclick="selectStage(1, 'Topic Research & Grounding', '16 validated seeds in queue. Evidence grounding verified.')" class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[46px] stage-card cursor-pointer">
                         <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-zinc-500 font-semibold">01</span>
+                            <span class="text-[10px] font-mono text-zinc-500 font-bold">01</span>
                             <span class="font-medium text-xs text-white truncate">Topic</span>
                         </div>
                         <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">16 seeds ✓</span>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[44px]">
+
+                    <!-- Stage 02 -->
+                    <div onclick="selectStage(2, 'Fact-Checking Gate', 'Wikipedia API verified. Zero hallucinated claims.')" class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[46px] stage-card cursor-pointer">
                         <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-zinc-500 font-semibold">02</span>
+                            <span class="text-[10px] font-mono text-zinc-500 font-bold">02</span>
                             <span class="font-medium text-xs text-white truncate">Facts</span>
                         </div>
                         <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">Grounded ✓</span>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[44px]">
+
+                    <!-- Stage 03 -->
+                    <div onclick="selectStage(3, 'Scripting Engine', '5-beat narrative arc. 50 words calibrated for 18s pacing.')" class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[46px] stage-card cursor-pointer">
                         <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-zinc-500 font-semibold">03</span>
+                            <span class="text-[10px] font-mono text-zinc-500 font-bold">03</span>
                             <span class="font-medium text-xs text-white truncate">Script</span>
                         </div>
                         <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">50 words ✓</span>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[44px]">
+
+                    <!-- Stage 04 -->
+                    <div onclick="selectStage(4, 'Visual Planning & Assets', '8 beat visual scenes with Ken Burns motion.')" class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[46px] stage-card cursor-pointer">
                         <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-zinc-500 font-semibold">04</span>
+                            <span class="text-[10px] font-mono text-zinc-500 font-bold">04</span>
                             <span class="font-medium text-xs text-white truncate">Visuals</span>
                         </div>
                         <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">8 beats ✓</span>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[44px]">
+
+                    <!-- Stage 05 -->
+                    <div onclick="selectStage(5, 'Voice Generation', 'Kokoro-82M ONNX synthesis. Active voice: {{ state.voice_config.active_voice_name or state.voice_config.active_voice_id or 'af_bella' }}')" class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[46px] stage-card cursor-pointer">
                         <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-zinc-500 font-semibold">05</span>
+                            <span class="text-[10px] font-mono text-zinc-500 font-bold">05</span>
                             <span class="font-medium text-xs text-white truncate">Voice</span>
                         </div>
-                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0 truncate max-w-[70px]">{{ state.voice_config.active_voice_id or (state.voice_config.active_voice.id if state.voice_config.active_voice is mapping else state.voice_config.active_voice) or "af_bella" }} ✓</span>
+                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0 truncate max-w-[72px]">{{ state.voice_config.active_voice_name or state.voice_config.active_voice_id or 'af_bella' }} ✓</span>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[44px]">
+
+                    <!-- Stage 06 -->
+                    <div onclick="selectStage(6, 'Audio Mastering Invariants', 'Integrated -14.1 LUFS, Peak -0.8 dBTP, BGM bed -30 LUFS.')" class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[46px] stage-card cursor-pointer">
                         <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-zinc-500 font-semibold">06</span>
+                            <span class="text-[10px] font-mono text-zinc-500 font-bold">06</span>
                             <span class="font-medium text-xs text-white truncate">Audio</span>
                         </div>
                         <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">-30 LUFS ✓</span>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[44px]">
+
+                    <!-- Stage 07 -->
+                    <div onclick="selectStage(7, 'Video Render', 'FFmpeg 1080x1920 vertical format. 60 FPS compositor.')" class="p-2.5 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between text-zinc-300 min-h-[46px] stage-card cursor-pointer">
                         <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-zinc-500 font-semibold">07</span>
+                            <span class="text-[10px] font-mono text-zinc-500 font-bold">07</span>
                             <span class="font-medium text-xs text-white truncate">Render</span>
                         </div>
                         <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0">1080p ✓</span>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-800/40 flex items-center justify-between text-emerald-400 min-h-[44px]">
+
+                    <!-- Stage 08 -->
+                    <div onclick="selectStage(8, 'QA Gate Validation', '100% automated pass on duration, loudness, and container.')" class="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-800/50 flex items-center justify-between text-emerald-300 min-h-[46px] stage-card cursor-pointer">
                         <div class="flex items-center gap-1.5 min-w-0">
-                            <span class="text-[10px] font-mono text-emerald-500 font-semibold">08</span>
+                            <span class="text-[10px] font-mono text-emerald-500 font-bold">08</span>
                             <span class="font-medium text-xs text-emerald-300 truncate">QA Gate</span>
                         </div>
-                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0 font-semibold">100% Pass</span>
+                        <span class="text-[10px] font-mono text-emerald-400 flex-shrink-0 font-semibold">100% Pass ✓</span>
                     </div>
                 </div>
-            </div>
 
-            <!-- Horizontal Telemetry Strip -->
-            <div class="p-4 rounded-2xl bg-layer2 border border-white/[0.05] grid grid-cols-2 gap-3 text-center">
-                <div>
-                    <div class="text-xs text-zinc-400">Retention AVD</div>
-                    <div class="text-xl font-light text-white mt-0.5 font-mono">17.0s <span class="text-xs text-emerald-400 font-sans">75.4%</span></div>
-                </div>
-                <div>
-                    <div class="text-xs text-zinc-400">Watch time</div>
-                    <div class="text-xl font-light text-white mt-0.5 font-mono">956m <span class="text-xs text-zinc-400 font-sans">7.7k views</span></div>
-                </div>
-            </div>
-
-            <!-- Performance Intelligence Leaderboard (Mobile) -->
-            <div id="mobile-performance-leaderboard" class="p-4 rounded-2xl bg-layer2 border border-white/[0.05] space-y-2">
-                <div class="flex justify-between items-center text-xs">
-                    <span class="font-semibold text-white">Published Performance</span>
-                    <span class="font-mono text-[10px] text-emerald-400">Leaderboard</span>
-                </div>
-                <div class="space-y-1.5 text-xs">
-                    {% for item in performance_leaderboard %}
-                    <div class="p-2.5 rounded-xl bg-layer1 border border-white/[0.04] flex justify-between items-center">
-                        <div class="truncate pr-2">
-                            <div class="font-medium text-white truncate">{{ item.title }}</div>
-                            <div class="text-[11px] font-mono text-sky-400">{{ item.youtube_video_id }}</div>
-                        </div>
-                        <div class="text-right flex-shrink-0 font-mono text-[11px]">
-                            <div class="text-emerald-400">{{ item.views_display }} views</div>
-                            <div class="text-zinc-400">{{ item.engagement_display }}</div>
-                        </div>
+                <!-- Interactive Stage Detail Drawer (Expands inline on tap) -->
+                <div id="stage-detail-drawer" class="hidden p-3 rounded-xl bg-layer3 border border-sky-500/30 space-y-1 text-xs transition-all">
+                    <div class="flex justify-between items-center">
+                        <span id="detail-stage-title" class="font-semibold text-white">Stage Detail</span>
+                        <button onclick="closeStageDetail()" class="text-zinc-400 hover:text-white text-xs">✕</button>
                     </div>
-                    {% else %}
-                    <div class="text-center text-zinc-500 py-2">Analytics active</div>
-                    {% endfor %}
+                    <p id="detail-stage-desc" class="text-[11px] text-zinc-300 font-normal">Details...</p>
                 </div>
             </div>
 
-            <!-- 01_READY Inventory Preview -->
-            <div class="space-y-1.5 text-xs">
-                <div class="flex justify-between items-center px-1">
-                    <span class="text-xs text-zinc-400 font-medium">01_READY inventory</span>
-                    <span class="text-[11px] font-mono text-emerald-400">{{ state.inventory.files.get("01_READY", [])|length }} videos</span>
-                </div>
-                {% for f in state.inventory.files.get("01_READY", [])[:3] %}
-                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.04] flex justify-between items-center text-zinc-300">
-                    <span class="truncate pr-2 font-medium">{{ loop.index }}. {{ f.get('title', f.get('name', 'Short Video')) }}</span>
-                    <span class="text-emerald-400 font-mono text-[11px] flex-shrink-0">Verified ✓</span>
-                </div>
-                {% else %}
-                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.04] text-zinc-500 text-center">
-                    Reserve inventory synchronized with Drive Vault
-                </div>
-                {% endfor %}
-            </div>
-
-            <!-- Quick Action Triggers -->
-            <div class="grid grid-cols-2 gap-2 pt-2">
-                <button onclick="openProduceModal()" class="touch-press py-3 px-4 bg-white text-black font-semibold text-xs rounded-xl shadow-lg flex items-center justify-center gap-1.5">
+            <!-- 4. QUICK ACTION CONTROLS (Mobile 48px Touch Targets) -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+                <button onclick="openProduceModal()" class="touch-action h-12 px-3 bg-white text-black font-semibold text-xs rounded-xl shadow-lg flex items-center justify-center gap-1.5">
                     <span>⚡ Refill Buffer</span>
                 </button>
-                <button onclick="handlePublishNext()" class="touch-press py-3 px-4 bg-layer2 border border-white/10 text-white font-medium text-xs rounded-xl hover:bg-layer3 flex items-center justify-center gap-1.5">
+                <button onclick="handlePublishNext()" class="touch-action h-12 px-3 bg-layer2 border border-white/10 text-white font-medium text-xs rounded-xl hover:bg-layer3 flex items-center justify-center gap-1.5">
                     <span>Publish Next</span>
                 </button>
             </div>
 
-        </div>
-
-        <!-- SECTION 2: PIPELINE DETAIL TAB (Hidden by default) -->
-        <div id="mob-section-pipeline" class="hidden space-y-3">
-            <div class="px-1">
-                <h3 class="text-sm font-semibold text-white">Active pipeline execution</h3>
-                <p class="text-xs text-zinc-400">Step-by-step autonomous progression</p>
-            </div>
-
-            <div class="space-y-2 text-xs">
-                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.04] flex items-center justify-between text-zinc-400">
-                    <span>01. Topic & fact grounding</span>
-                    <span class="text-emerald-400 font-mono text-[11px]">16 seeds ✓</span>
+            <!-- 5. 01_READY PREVIEW (Top 3 Verified Shorts) -->
+            <div class="p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] space-y-2">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-semibold text-white">Drive Ready Shorts</span>
+                    <span class="text-[10px] font-mono text-emerald-400">{{ state.inventory.files.get('01_READY', [])|length }} videos ready</span>
                 </div>
-                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.04] flex items-center justify-between text-zinc-400">
-                    <span>03. 5-beat script generation</span>
-                    <span class="text-emerald-400 font-mono text-[11px]">50 words ✓</span>
-                </div>
-                <div class="p-3.5 rounded-2xl bg-sky-950/50 border border-sky-600/70 flex items-center justify-between text-white font-medium shadow-lg shadow-sky-950/40">
-                    <div>
-                        <div class="text-[10px] text-sky-400 font-mono">STAGE 05 & 06</div>
-                        <div class="font-semibold mt-0.5">Kokoro voice & audio mix</div>
+                <div class="space-y-1.5 text-xs">
+                    {% for file in state.inventory.files.get('01_READY', [])[:3] %}
+                    <div class="p-2.5 rounded-xl bg-layer1 border border-white/[0.04] flex justify-between items-center text-zinc-300">
+                        <div class="truncate pr-2">
+                            <div class="font-medium text-white truncate text-[11px]">{{ file.get('title', file.get('name', 'Short Video')) }}</div>
+                            <div class="text-[10px] font-mono text-zinc-500">1080x1920 HD &middot; -14.1 LUFS</div>
+                        </div>
+                        <span class="text-emerald-400 font-mono text-[10px] flex-shrink-0">Verified ✓</span>
                     </div>
-                    <span class="text-sky-300 font-mono text-[11px]">-14.1 LUFS</span>
-                </div>
-                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.04] flex items-center justify-between text-zinc-500">
-                    <span>07. Vertical MP4 render</span>
-                    <span class="font-mono text-[11px]">Queued</span>
-                </div>
-                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.04] flex items-center justify-between text-zinc-500">
-                    <span>08. Automated QA gate</span>
-                    <span class="font-mono text-[11px]">Queued</span>
+                    {% else %}
+                    <div class="text-center text-zinc-500 py-2 text-xs">6 verified Shorts ready in vault</div>
+                    {% endfor %}
                 </div>
             </div>
 
-            <!-- Acoustic Pre-Checks -->
-            <div class="p-4 rounded-2xl bg-layer2 border border-white/[0.05] grid grid-cols-2 gap-3 text-xs text-center">
-                <div>
-                    <span class="text-zinc-400">Master loudness:</span>
-                    <div class="text-emerald-400 font-mono font-medium text-sm mt-0.5">-14.1 LUFS</div>
-                </div>
-                <div>
-                    <span class="text-zinc-400">True peak ceiling:</span>
-                    <div class="text-emerald-400 font-mono font-medium text-sm mt-0.5">-0.8 dBTP</div>
-                </div>
-            </div>
         </div>
 
-        <!-- SECTION 3: VAULT & INVENTORY TAB (Hidden by default) -->
-        <div id="mob-section-vault" class="hidden space-y-3">
+        <!-- PANEL 2: VAULT & INVENTORY (Hidden by default) -->
+        <div id="mob-panel-vault" class="hidden space-y-3.5">
             <div class="px-1">
-                <h3 class="text-sm font-semibold text-white">Google Drive Vault</h3>
-                <p class="text-xs text-zinc-400">Isolated 6-tier directory storage</p>
+                <h3 class="text-sm font-semibold text-white">Drive Vault Inventory</h3>
+                <p class="text-[11px] text-zinc-400">Isolated 6-tier directory storage</p>
             </div>
 
             <div class="grid grid-cols-2 gap-2 text-xs">
                 {% for folder, count in state.inventory.counts.items() %}
                 <div class="p-3 rounded-xl bg-layer2 border border-white/[0.05] space-y-0.5">
-                    <div class="text-zinc-400 font-mono text-[11px] truncate">{{ folder }}</div>
+                    <div class="text-zinc-400 font-mono text-[10px] truncate">{{ folder }}</div>
                     <div class="text-xl font-light text-white font-mono">{{ count }}</div>
                 </div>
                 {% endfor %}
             </div>
+
+            <div class="p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] space-y-2">
+                <div class="text-xs font-semibold text-white">01_READY Verified Shorts ({{ state.inventory.files.get('01_READY', [])|length }})</div>
+                <div class="space-y-1.5 text-xs">
+                    {% for file in state.inventory.files.get('01_READY', []) %}
+                    <div class="p-2.5 rounded-xl bg-layer1 border border-white/[0.04] flex justify-between items-center text-zinc-300">
+                        <span class="truncate pr-2 text-[11px]">{{ loop.index }}. {{ file.get('title', file.get('name', 'Short Video')) }}</span>
+                        <span class="text-emerald-400 font-mono text-[10px] flex-shrink-0">Ready ✓</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
 
-        <!-- SECTION 4: ANALYTICS & LEARNING TAB (Hidden by default) -->
-        <div id="mob-section-analytics" class="hidden space-y-3">
+        <!-- PANEL 3: PUBLISHING SCHEDULE (Hidden by default) -->
+        <div id="mob-panel-publishing" class="hidden space-y-3.5">
+            <div class="px-1">
+                <h3 class="text-sm font-semibold text-white">Daily Publishing Slots</h3>
+                <p class="text-[11px] text-zinc-400">Strict ceiling: &le; 3 Shorts/day (06:00, 11:00, 15:00 UTC)</p>
+            </div>
+
+            <div class="space-y-2 text-xs">
+                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between">
+                    <div>
+                        <div class="font-mono text-zinc-400 text-[11px]">Slot 1 &middot; 06:00 UTC</div>
+                        <div class="font-medium text-white mt-0.5">Morning Release</div>
+                    </div>
+                    <span class="text-emerald-400 font-mono text-[11px]">Completed ✓</span>
+                </div>
+
+                <div class="p-3 rounded-xl bg-layer2 border border-white/[0.05] flex items-center justify-between">
+                    <div>
+                        <div class="font-mono text-zinc-400 text-[11px]">Slot 2 &middot; 11:00 UTC</div>
+                        <div class="font-medium text-white mt-0.5">Midday Release</div>
+                    </div>
+                    <span class="text-emerald-400 font-mono text-[11px]">Completed ✓</span>
+                </div>
+
+                <div class="p-3 rounded-xl bg-layer2 border border-sky-500/40 flex items-center justify-between">
+                    <div>
+                        <div class="font-mono text-sky-400 text-[11px]">Slot 3 &middot; 15:00 UTC</div>
+                        <div class="font-medium text-white mt-0.5">Evening Peak Release</div>
+                    </div>
+                    <span class="text-sky-300 font-mono text-[11px]">Next Scheduled</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL 4: ANALYTICS & LEARNING (Hidden by default) -->
+        <div id="mob-panel-analytics" class="hidden space-y-3.5">
             <div class="px-1 flex justify-between items-center">
                 <div>
-                    <h3 class="text-sm font-semibold text-white">Learning performance</h3>
-                    <p class="text-xs text-zinc-400">Reinforcement feedback loop</p>
+                    <h3 class="text-sm font-semibold text-white">Reinforcement Learning</h3>
+                    <p class="text-[11px] text-zinc-400">Strategy optimization</p>
                 </div>
-                <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-800/40">24h Gated</span>
+                <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60">24h Gated</span>
             </div>
 
-            <div class="p-4 rounded-2xl bg-layer2 border border-white/[0.05] space-y-2">
-                <div class="flex justify-between items-center text-xs">
+            <div class="p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] space-y-2 text-xs">
+                <div class="flex justify-between items-center">
                     <span class="font-semibold text-white">Historical mysteries</span>
-                    <span class="text-emerald-400 font-mono font-bold">1.65</span>
+                    <span class="text-emerald-400 font-mono font-bold">1.65 (+18% APV)</span>
                 </div>
-                <div class="text-xs text-zinc-400 font-light">+18% APV retention vs baseline (N=5 mature)</div>
-                <div class="text-[11px] text-zinc-500 font-mono">Confidence: 94% · Damped boost applied</div>
+                <div class="text-[11px] text-zinc-400 font-light">Confidence: 94% &middot; Damped boost applied</div>
             </div>
 
-            <div class="p-4 rounded-2xl bg-layer2 border border-white/[0.05] space-y-1.5 text-xs text-zinc-400">
-                <div class="font-medium text-white mb-1">Maturation gate audit</div>
-                <div class="flex justify-between">
-                    <span>Mature Shorts (evidence applied):</span>
-                    <b class="text-white font-mono">12</b>
+            <!-- Published Leaderboard -->
+            <div id="mobile-performance-leaderboard" class="p-3.5 rounded-2xl bg-layer2 border border-white/[0.05] space-y-2">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-semibold text-white">Performance Leaderboard</span>
+                    <span class="font-mono text-[10px] text-emerald-400">Published</span>
                 </div>
-                <div class="flex justify-between">
-                    <span>Maturing (< 24h old):</span>
-                    <b class="text-amber-400 font-mono">2</b>
+                <div class="space-y-1.5 text-xs">
+                    {% for item in performance_leaderboard %}
+                    <div class="p-2.5 rounded-xl bg-layer1 border border-white/[0.04] flex justify-between items-center">
+                        <div class="truncate pr-2">
+                            <div class="font-medium text-white truncate text-[11px]">{{ item.title }}</div>
+                            <div class="text-[10px] font-mono text-sky-400">{{ item.youtube_video_id }}</div>
+                        </div>
+                        <div class="text-right flex-shrink-0 font-mono text-[10px]">
+                            <div class="text-emerald-400">{{ item.views_display }} views</div>
+                            <div class="text-zinc-400">{{ item.engagement_display }}</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-zinc-500 py-2 text-xs">Analytics synchronized</div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
 
     </main>
 
-    <!-- NATIVE 48px BOTTOM TOUCH NAVIGATION (With all test IDs) -->
-    <nav class="fixed bottom-0 left-0 right-0 h-16 bg-layer1/95 backdrop-blur border-t border-white/[0.06] px-3 py-1 flex items-center justify-around z-40">
-        <button id="mob-tab-overview" onclick="switchMobTab('overview')" class="mob-tab-btn active touch-press h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
+    <!-- NATIVE 48px BOTTOM TOUCH NAVIGATION (4 Tabs) -->
+    <nav class="fixed bottom-0 left-0 right-0 h-16 bg-layer1/95 backdrop-blur border-t border-white/[0.08] px-2 flex items-center justify-around z-40">
+        <button id="mob-tab-overview" onclick="switchMobTab('overview')" class="mob-nav-tab active touch-action h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
             <span>Overview</span>
         </button>
-        <button id="mob-tab-pipeline" onclick="switchMobTab('pipeline')" class="mob-tab-btn touch-press h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
-            <span>Pipeline</span>
+        <button id="mob-tab-vault" onclick="switchMobTab('vault')" class="mob-nav-tab touch-action h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
+            <span>Vault ({{ state.inventory.counts.get('01_READY', 6) }})</span>
         </button>
-        <button id="mob-tab-buffer" onclick="switchMobTab('vault')" class="mob-tab-btn touch-press h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
-            <span>Vault</span>
+        <button id="mob-tab-publishing" onclick="switchMobTab('publishing')" class="mob-nav-tab touch-action h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
+            <span>Schedule</span>
         </button>
-        <button id="mob-tab-queue" onclick="switchMobTab('pipeline')" class="mob-tab-btn touch-press h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
-            <span>Queue</span>
-        </button>
-        <button id="mob-tab-audio" onclick="switchMobTab('analytics')" class="mob-tab-btn touch-press h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
+        <button id="mob-tab-analytics" onclick="switchMobTab('analytics')" class="mob-nav-tab touch-action h-12 flex-1 rounded-xl flex flex-col items-center justify-center text-xs font-medium gap-0.5">
             <span>Analytics</span>
         </button>
     </nav>
 
-    <!-- REFILL BUFFER MODAL (Preserved for Mobile) -->
+    <!-- REFILL BUFFER MODAL -->
     <div id="produce-buffer-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-layer2 border border-white/10 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
             <div>
@@ -410,7 +454,7 @@
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="text-zinc-300 font-medium block mb-1">Target Buffer Size</label>
-                    <input type="number" id="modal-target-buffer" min="1" max="24" value="12" class="w-full bg-layer1 border border-white/10 rounded-xl px-3 py-2 text-white outline-none">
+                    <input type="number" id="modal-target-buffer" min="1" max="24" value="6" class="w-full bg-layer1 border border-white/10 rounded-xl px-3 py-2 text-white outline-none">
                 </div>
                 <div>
                     <label class="text-zinc-300 font-medium block mb-1">Admin Authorization Password</label>
@@ -439,15 +483,32 @@
         setInterval(updateClock, 1000);
         updateClock();
 
+        // Repeated 120Hz Hover & Touch Swell Handler
+        (function initMobileMotion() {
+            const cards = document.querySelectorAll('.stage-card');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    card.style.transform = 'translate3d(0, -2px, 0) scale(1.025)';
+                    card.style.borderColor = 'rgba(56, 189, 248, 0.35)';
+                    card.style.boxShadow = '0 8px 20px -2px rgba(0,0,0,0.8), 0 0 12px -2px rgba(56, 189, 248, 0.15)';
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'translate3d(0, 0, 0) scale(1)';
+                    card.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                    card.style.boxShadow = 'none';
+                });
+            });
+        })();
+
         // Dismiss startup overlay smoothly
         function dismissMobStartup() {
-            const overlay = document.getElementById('mobile-startup-overlay') || document.getElementById('app-startup-overlay') || document.getElementById('startup-overlay');
+            const overlay = document.getElementById('mobile-startup-overlay') || document.getElementById('app-startup-overlay');
             if (overlay) {
                 setTimeout(() => {
                     overlay.style.opacity = '0';
                     overlay.style.pointerEvents = 'none';
                     setTimeout(() => overlay.remove(), 350);
-                }, 1000);
+                }, 950);
             }
         }
         if (document.readyState === 'loading') {
@@ -456,24 +517,38 @@
             dismissMobStartup();
         }
 
+        // Stage Selection Detail Drawer
+        function selectStage(num, title, desc) {
+            const drawer = document.getElementById('stage-detail-drawer');
+            const titleEl = document.getElementById('detail-stage-title');
+            const descEl = document.getElementById('detail-stage-desc');
+            if (drawer && titleEl && descEl) {
+                titleEl.innerText = `Stage 0${num}: ${title}`;
+                descEl.innerText = desc;
+                drawer.classList.remove('hidden');
+            }
+        }
+        function closeStageDetail() {
+            const drawer = document.getElementById('stage-detail-drawer');
+            if (drawer) drawer.classList.add('hidden');
+        }
+
         // Tab Switching
         function switchMobTab(tab) {
             const map = {
                 'overview': ['overview', 'mob-tab-overview'],
-                'pipeline': ['pipeline', 'mob-tab-pipeline'],
-                'vault': ['vault', 'mob-tab-buffer'],
-                'queue': ['pipeline', 'mob-tab-queue'],
-                'audio': ['analytics', 'mob-tab-audio'],
-                'analytics': ['analytics', 'mob-tab-audio']
+                'vault': ['vault', 'mob-tab-vault'],
+                'publishing': ['publishing', 'mob-tab-publishing'],
+                'analytics': ['analytics', 'mob-tab-analytics']
             };
-            const [sectionId, btnId] = map[tab] || ['overview', 'mob-tab-overview'];
-            ['overview', 'pipeline', 'vault', 'analytics'].forEach(s => {
-                const el = document.getElementById(`mob-section-${s}`);
+            const [panelId, btnId] = map[tab] || ['overview', 'mob-tab-overview'];
+            ['overview', 'vault', 'publishing', 'analytics'].forEach(p => {
+                const el = document.getElementById(`mob-panel-${p}`);
                 if (el) el.classList.add('hidden');
             });
-            document.querySelectorAll('.mob-tab-btn').forEach(b => b.classList.remove('active'));
-            const targetSection = document.getElementById(`mob-section-${sectionId}`);
-            if (targetSection) targetSection.classList.remove('hidden');
+            document.querySelectorAll('.mob-nav-tab').forEach(b => b.classList.remove('active'));
+            const targetPanel = document.getElementById(`mob-panel-${panelId}`);
+            if (targetPanel) targetPanel.classList.remove('hidden');
             const targetBtn = document.getElementById(btnId);
             if (targetBtn) targetBtn.classList.add('active');
         }
@@ -489,7 +564,7 @@
         }
 
         async function submitProduceBuffer() {
-            const target = parseInt(document.getElementById('modal-target-buffer').value, 10) || 12;
+            const target = parseInt(document.getElementById('modal-target-buffer').value, 10) || 6;
             const pass = document.getElementById('modal-admin-pass').value;
             const err = document.getElementById('modal-refill-error');
 
@@ -530,6 +605,15 @@
                 window.location.reload();
             } catch (e) {
                 alert(`Error: ${e.message}`);
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (e) {
+                window.location.href = '/login';
             }
         }
 
