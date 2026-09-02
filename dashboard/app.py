@@ -398,6 +398,12 @@ def api_full_state(db: Session = Depends(get_db), session: Dict[str, Any] = Depe
     return data_provider.get_full_system_state(db)
 
 
+@app.get("/api/telemetry")
+def api_telemetry_alias(db: Session = Depends(get_db), session: Dict[str, Any] = Depends(get_current_session)):
+    """Returns complete real-time system state telemetry."""
+    return data_provider.get_full_system_state(db)
+
+
 @app.get("/api/health")
 def api_health(session: Dict[str, Any] = Depends(get_current_session)):
     """Returns live automation health check diagnostics and warnings."""

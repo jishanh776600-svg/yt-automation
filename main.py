@@ -632,6 +632,29 @@ class ShortsPipeline:
         file_id = target_file["id"]
         props = target_file.get("properties", {}) or {}
 
+        # Pre-Claim Capacity Guard: Refuse claim if target UTC day is already fully booked
+        from datetime import time as dtime
+        target_slot_utc = scheduled_slot.replace(tzinfo=None) if scheduled_slot else datetime.utcnow()
+        target_date = target_slot_utc.date()
+        day_start = datetime.combine(target_date, dtime.min)
+        day_end = datetime.combine(target_date, dtime.max)
+
+        pub_for_day = db.query(UploadRecord).filter(
+            UploadRecord.status.in_(["PUBLISHED", "SUCCESS"]),
+            UploadRecord.published_at >= day_start,
+            UploadRecord.published_at <= day_end
+        ).count()
+
+        sched_for_day = db.query(UploadRecord).filter(
+            UploadRecord.status.in_(["SCHEDULED", "TEST_VERIFIED"]),
+            UploadRecord.scheduled_publish_at >= day_start,
+            UploadRecord.scheduled_publish_at <= day_end
+        ).count()
+
+        if (pub_for_day + sched_for_day) >= DAILY_SHORTS_LIMIT:
+            logger.warning(f"[PRE_CLAIM_LIMIT_REJECT] Slot date {target_date} already at capacity ({pub_for_day + sched_for_day}/{DAILY_SHORTS_LIMIT}). Skipping claim.")
+            return None
+
         # Atomically move 01_READY -> 02_PROCESSING if not already there
         if current_folder != "02_PROCESSING":
             self.drive_engine.move_file_in_vault(file_id, from_folder=current_folder, to_folder="02_PROCESSING")

@@ -89,9 +89,26 @@ class PublicationScheduler:
         for day_offset in (0, 1):
             eval_date = current_date + timedelta(days=day_offset)
             day_slots = self.get_slots_for_date(eval_date)
+            day_start = datetime.combine(eval_date, dtime.min)
+            day_end = datetime.combine(eval_date, dtime.max)
 
-            # Count occupied slots already booked for this specific calendar day
-            occupied_count_for_day = sum(1 for s in day_slots if s in occupied_slots)
+            # Count all published & scheduled releases for this specific UTC calendar day
+            pub_count = db.query(UploadRecord).filter(
+                UploadRecord.status.in_(["PUBLISHED", "SUCCESS"]),
+                UploadRecord.published_at >= day_start,
+                UploadRecord.published_at <= day_end
+            ).count()
+
+            sched_count = db.query(UploadRecord).filter(
+                UploadRecord.status.in_(["SCHEDULED", "TEST_VERIFIED"]),
+                UploadRecord.scheduled_publish_at >= day_start,
+                UploadRecord.scheduled_publish_at <= day_end
+            ).count()
+
+            occupied_count_for_day = max(
+                pub_count + sched_count,
+                sum(1 for s in day_slots if s in occupied_slots)
+            )
             available_capacity_for_day = max(0, DAILY_SHORTS_LIMIT - occupied_count_for_day)
 
             day_vacancies = []

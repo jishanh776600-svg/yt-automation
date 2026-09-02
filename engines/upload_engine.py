@@ -138,16 +138,30 @@ class UploadEngine:
         if existing_pub:
             return False, f"Gate 10 Failed: Job {job.id} already published (Video ID: {existing_pub.youtube_video_id})"
 
-        # 11. Daily upload count below limit
-        from config.constants import DAILY_SHORTS_LIMIT, get_business_day_bounds_utc
-        today_start, today_end = get_business_day_bounds_utc()
-        pub_today = db.query(UploadRecord).filter(
+        # 11. Hard 3-Shorts/Day Ceiling Guard for Target UTC Calendar Day
+        from config.constants import DAILY_SHORTS_LIMIT
+        from datetime import time as dtime
+        target_slot_utc = scheduled_slot.replace(tzinfo=None) if scheduled_slot else datetime.utcnow()
+        target_date = target_slot_utc.date()
+        day_start = datetime.combine(target_date, dtime.min)
+        day_end = datetime.combine(target_date, dtime.max)
+
+        pub_for_day = db.query(UploadRecord).filter(
             UploadRecord.status.in_(["PUBLISHED", "SUCCESS"]),
-            UploadRecord.published_at >= today_start,
-            UploadRecord.published_at < today_end
+            UploadRecord.published_at >= day_start,
+            UploadRecord.published_at <= day_end
         ).count()
-        if pub_today >= DAILY_SHORTS_LIMIT:
-            return False, f"Gate 11 Failed: Daily limit reached ({pub_today}/{DAILY_SHORTS_LIMIT} published today)"
+
+        sched_for_day = db.query(UploadRecord).filter(
+            UploadRecord.status.in_(["SCHEDULED", "TEST_VERIFIED"]),
+            UploadRecord.scheduled_publish_at >= day_start,
+            UploadRecord.scheduled_publish_at <= day_end,
+            UploadRecord.job_id != job.id
+        ).count()
+
+        total_day_booked = pub_for_day + sched_for_day
+        if total_day_booked >= DAILY_SHORTS_LIMIT:
+            return False, f"Gate 11 Failed: Daily limit reached for {target_date} ({total_day_booked}/{DAILY_SHORTS_LIMIT} releases already booked). Refusing 4th release."
 
         # 12. Publishing slot is valid
         if scheduled_slot:
@@ -284,6 +298,33 @@ class UploadEngine:
             job.state = JobState.SCHEDULED.value if existing.status == "SCHEDULED" else JobState.PUBLISHED.value
             db.commit()
             return existing
+
+        # Hard Production Invariant: Final Scheduling Boundary Daily Cap Guard
+        from config.constants import DAILY_SHORTS_LIMIT
+        from datetime import time as dtime
+        target_date = publish_at_utc.date()
+        day_start = datetime.combine(target_date, dtime.min)
+        day_end = datetime.combine(target_date, dtime.max)
+
+        pub_count = db.query(UploadRecord).filter(
+            UploadRecord.status.in_(["PUBLISHED", "SUCCESS"]),
+            UploadRecord.published_at >= day_start,
+            UploadRecord.published_at <= day_end
+        ).count()
+
+        sched_count = db.query(UploadRecord).filter(
+            UploadRecord.status.in_(["SCHEDULED", "TEST_VERIFIED"]),
+            UploadRecord.scheduled_publish_at >= day_start,
+            UploadRecord.scheduled_publish_at <= day_end,
+            UploadRecord.job_id != job.id
+        ).count()
+
+        total_day_booked = pub_count + sched_count
+        if total_day_booked >= DAILY_SHORTS_LIMIT:
+            raise ValueError(
+                f"[DAILY_LIMIT_EXCEEDED] Target UTC date {target_date} already has {total_day_booked}/{DAILY_SHORTS_LIMIT} "
+                f"booked releases ({pub_count} published, {sched_count} scheduled). Refusing 4th release."
+            )
 
         # 2. Test Mode Handling
         if self._is_test_mode():

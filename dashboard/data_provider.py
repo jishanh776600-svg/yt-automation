@@ -391,6 +391,125 @@ class SystemDataProvider:
             "needed_replenishment": max(0, target - ready_stock)
         }
 
+    def get_refill_telemetry(self, db: Session, ready_stock: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Determines the authoritative status of the buffer refill mechanism.
+        Tracks:
+        - Refill status: ACTIVE / IDLE
+        - Trigger condition: Reserve < 6 Shorts (Daily at 02:00 UTC or on-demand)
+        - Next scheduled check: 02:00 UTC
+        - Last refill run: timestamp & outcome from GitHub Actions / SQLite / production summary
+        - Ready stock & target reserve
+        """
+        if ready_stock is None:
+            try:
+                ready_stock = self.drive_engine.get_ready_stock_count()
+            except Exception:
+                ready_stock = 0
+
+        target = TARGET_RESERVE_BUFFER  # 6
+        now = datetime.utcnow()
+
+        # 1. Determine if refill is currently active
+        is_active = False
+        active_reason = None
+        try:
+            prod_lock = ProcessLock(name="production")
+            if prod_lock.is_locked():
+                is_active = True
+                active_reason = "Local production process active"
+            else:
+                from dashboard.github_client import GitHubWorkflowDispatcher
+                dispatcher = GitHubWorkflowDispatcher()
+                active_run = dispatcher.get_active_workflow_run("produce_buffer.yml")
+                if active_run:
+                    is_active = True
+                    active_reason = f"GitHub Actions runner #{active_run.get('run_number', '')} in progress"
+        except Exception:
+            pass
+
+        # 2. Next scheduled run (02:00 UTC daily)
+        next_refill_time = datetime.combine(now.date(), dtime(hour=2, minute=0))
+        if next_refill_time <= now:
+            next_refill_time += timedelta(days=1)
+        diff_sec = max(0, int((next_refill_time - now).total_seconds()))
+        h_until = diff_sec // 3600
+        m_until = (diff_sec % 3600) // 60
+
+        # 3. Last refill execution & result
+        last_refill_ts = None
+        last_refill_result = "IDLE (Standing by)"
+        last_refill_display = "NEVER"
+
+        # Check production_summary.json or latest job
+        prod_summary_file = PROJECT_ROOT / "data" / "production_summary.json"
+        if prod_summary_file.exists():
+            try:
+                import json
+                with open(prod_summary_file, "r", encoding="utf-8") as f:
+                    sdata = json.load(f)
+                    if sdata:
+                        last_refill_result = sdata.get("outcome_message") or sdata.get("outcome") or "COMPLETED"
+                        if sdata.get("timestamp"):
+                            last_refill_ts = sdata["timestamp"]
+            except Exception:
+                pass
+
+        if not last_refill_ts:
+            latest_job = db.query(Job).order_by(Job.created_at.desc()).first()
+            if latest_job and latest_job.created_at:
+                last_refill_ts = latest_job.created_at.isoformat() + "Z"
+                last_refill_result = f"Last job {latest_job.id} ({latest_job.state})"
+
+        if last_refill_ts:
+            try:
+                dt = datetime.fromisoformat(last_refill_ts.replace("Z", "+00:00")).replace(tzinfo=None)
+                diff_prev = int((now - dt).total_seconds())
+                if diff_prev < 60:
+                    last_refill_display = "Just now"
+                elif diff_prev < 3600:
+                    last_refill_display = f"{diff_prev // 60}m ago"
+                elif diff_prev < 86400:
+                    last_refill_display = f"{diff_prev // 3600}h {(diff_prev % 3600) // 60}m ago"
+                else:
+                    last_refill_display = dt.strftime("%b %d, %H:%M UTC")
+            except Exception:
+                last_refill_display = str(last_refill_ts)
+
+        # Last scheduler run info from UploadRecords
+        last_sched = db.query(UploadRecord).filter(
+            UploadRecord.status.in_(["SCHEDULED", "PUBLISHED", "TEST_VERIFIED"])
+        ).order_by(UploadRecord.created_at.desc()).first()
+
+        last_scheduler_run_display = "NEVER"
+        last_scheduler_result = "STANDBY"
+        if last_sched and last_sched.created_at:
+            diff_sc = int((now - last_sched.created_at).total_seconds())
+            if diff_sc < 3600:
+                last_scheduler_run_display = f"{diff_sc // 60}m ago"
+            elif diff_sc < 86400:
+                last_scheduler_run_display = f"{diff_sc // 3600}h ago"
+            else:
+                last_scheduler_run_display = last_sched.created_at.strftime("%b %d, %H:%M UTC")
+            last_scheduler_result = f"Scheduled '{last_sched.title[:25]}...' for {last_sched.scheduled_publish_at.strftime('%b %d %H:%M UTC') if last_sched.scheduled_publish_at else 'UTC'}"
+
+        return {
+            "status": "ACTIVE" if is_active else "IDLE",
+            "active_reason": active_reason,
+            "trigger": f"01_READY < {target} Shorts (Audited daily at 02:00 UTC or manual dispatch)",
+            "target_reserve": target,
+            "current_ready": ready_stock,
+            "needed_replenishment": max(0, target - ready_stock),
+            "next_check_utc": next_refill_time.strftime("%Y-%m-%d %H:%M UTC"),
+            "next_check_iso": next_refill_time.isoformat() + "Z",
+            "next_check_display": f"in {h_until}h {m_until}m (02:00 UTC)",
+            "last_refill_utc": last_refill_ts,
+            "last_refill_display": last_refill_display,
+            "last_refill_result": last_refill_result,
+            "last_scheduler_run": last_scheduler_run_display,
+            "last_scheduler_result": last_scheduler_result
+        }
+
     def get_learning_status(self, db: Session) -> Dict[str, Any]:
         """
         Reads real continuous learning feedback loop, LearningEvents, and pattern intelligence.
@@ -1543,6 +1662,8 @@ class SystemDataProvider:
         ready_count = inventory["counts"].get("01_READY", 0)
         publishing = self.get_publishing_status(db)
         buffer = self.get_buffer_status(ready_stock=ready_count)
+        refill = self.get_refill_telemetry(db, ready_stock=ready_count)
+        buffer["refill"] = refill
         learning = self.get_learning_status(db)
         scheduled_queue = self.get_scheduled_queue(db)
         voice_config = self.get_voice_config(db)
@@ -1651,6 +1772,7 @@ class SystemDataProvider:
             "inventory": inventory,
             "publishing": publishing,
             "buffer": buffer,
+            "refill": refill,
             "learning": learning,
             "scheduled_queue": scheduled_queue,
             "voice_config": voice_config,

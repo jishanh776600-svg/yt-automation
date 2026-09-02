@@ -484,16 +484,29 @@
             <div class="obsidian-card reserve-hero">
                 <span class="text-muted" style="font-size: 11px; font-weight: 500;">Drive ready reserve</span>
                 <div class="reserve-count-row">
-                    <span class="reserve-large-num">{{ state.inventory.counts.get('01_READY', 0) }}</span>
+                    <span id="mob-hero-ready-count" class="reserve-large-num">{{ state.inventory.counts.get('01_READY', 0) }}</span>
                     <span style="font-size: 22px; font-weight: 200; color: #475569;">/</span>
                     <span style="font-size: 22px; font-weight: 300; color: var(--text-dim);">{{ state.buffer.target_reserve }}</span>
-                    <span class="badge-healthy font-mono">{{ state.inventory.counts.get('01_READY', 0) }} / {{ state.buffer.target_reserve }} READY</span>
+                    <span id="mob-hero-badge" class="badge-healthy font-mono">{{ state.inventory.counts.get('01_READY', 0) }} / {{ state.buffer.target_reserve }} READY</span>
                 </div>
                 <div class="text-muted" style="font-size: 11px;">
-                    Next release &middot; <b class="font-mono" style="color: #ffffff;">{{ state.publishing.next_slot.slot_label if state.publishing.next_slot is mapping else (state.publishing.next_slot or "Sep 02, 2026 · 06:00 UTC") }}</b>
+                    Next release &middot; <b id="mob-next-slot-label" class="font-mono" style="color: #ffffff;">{{ state.publishing.next_slot.slot_label if state.publishing.next_slot is mapping else (state.publishing.next_slot or "06:00 UTC") }}</b>
                 </div>
-                <div class="font-mono text-dim" style="font-size: 10px; margin-top: 2px;">
-                    Daily ceiling: {{ state.publishing.published_today }} / {{ state.publishing.daily_limit }} Shorts booked today
+                <div id="mob-daily-ceiling" class="font-mono text-dim" style="font-size: 10px; margin-top: 2px;">
+                    Daily ceiling: {{ state.publishing.published_today }} published · {{ state.publishing.scheduled_today }} scheduled / {{ state.publishing.daily_limit }} max today
+                </div>
+
+                <!-- Live Refill Telemetry Strip -->
+                <div class="font-mono text-dim" style="font-size: 10px; margin-top: 6px; padding: 6px 8px; background: var(--bg-layer1); border-radius: 6px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 2px; text-align: left; width: 100%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Refill: <b id="mob-refill-status" class="{% if state.refill and state.refill.status == 'ACTIVE' %}text-amber{% else %}text-emerald{% endif %}">{{ state.refill.status if state.refill else 'IDLE' }}</b></span>
+                        <span id="mob-refill-ready">Ready: {{ state.inventory.counts.get('01_READY', 0) }}/{{ state.buffer.target_reserve }}</span>
+                    </div>
+                    <div style="font-size: 9px; color: var(--text-muted);" id="mob-refill-trigger">Trigger: {{ state.refill.trigger if state.refill else 'Reserve < 6 Shorts (Daily 02:00 UTC)' }}</div>
+                    <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-dim);">
+                        <span id="mob-refill-next">Next check: {{ state.refill.next_check_display if state.refill else '02:00 UTC' }}</span>
+                        <span id="mob-refill-last">Last: {{ state.refill.last_refill_display if state.refill else 'NEVER' }}</span>
+                    </div>
                 </div>
             </div>
 
@@ -1116,6 +1129,57 @@
                 window.location.href = '/login?mobile=true';
             }
         }
+
+        // Live Telemetry Polling (Every 10 seconds)
+        async function pollLiveTelemetry() {
+            try {
+                const res = await fetch('/api/state');
+                if (!res.ok) return;
+                const state = await res.json();
+                
+                // 1. Update Reserve Hero
+                if (state.inventory && state.inventory.counts) {
+                    const readyCount = state.inventory.counts['01_READY'] || 0;
+                    const target = (state.buffer && state.buffer.target_reserve) || 6;
+                    const heroNum = document.getElementById('mob-hero-ready-count');
+                    if (heroNum) heroNum.innerText = readyCount;
+                    const heroBadge = document.getElementById('mob-hero-badge');
+                    if (heroBadge) heroBadge.innerText = `${readyCount} / ${target} READY`;
+                }
+
+                // 2. Update Publishing & Next Slot
+                if (state.publishing) {
+                    const nextLabel = state.publishing.next_slot_label || (state.publishing.next_slot && state.publishing.next_slot.slot_label) || '—';
+                    const nextEl = document.getElementById('mob-next-slot-label');
+                    if (nextEl) nextEl.innerText = nextLabel;
+
+                    const dailyEl = document.getElementById('mob-daily-ceiling');
+                    if (dailyEl) {
+                        dailyEl.innerText = `Daily ceiling: ${state.publishing.published_today || 0} published · ${state.publishing.scheduled_today || 0} scheduled / ${state.publishing.daily_limit || 3} max today`;
+                    }
+                }
+
+                // 3. Update Refill Telemetry
+                if (state.refill) {
+                    const rStatus = document.getElementById('mob-refill-status');
+                    if (rStatus) {
+                        rStatus.innerText = state.refill.status;
+                        rStatus.className = state.refill.status === 'ACTIVE' ? 'text-amber' : 'text-emerald';
+                    }
+                    const rReady = document.getElementById('mob-refill-ready');
+                    if (rReady) rReady.innerText = `Ready: ${state.refill.current_ready}/${state.refill.target_reserve}`;
+                    const rTrigger = document.getElementById('mob-refill-trigger');
+                    if (rTrigger) rTrigger.innerText = `Trigger: ${state.refill.trigger}`;
+                    const rNext = document.getElementById('mob-refill-next');
+                    if (rNext) rNext.innerText = `Next check: ${state.refill.next_check_display}`;
+                    const rLast = document.getElementById('mob-refill-last');
+                    if (rLast) rLast.innerText = `Last: ${state.refill.last_refill_display}`;
+                }
+            } catch (e) {
+                console.debug('Telemetry poll notice:', e);
+            }
+        }
+        setInterval(pollLiveTelemetry, 10000);
     </script>
 </body>
 </html>

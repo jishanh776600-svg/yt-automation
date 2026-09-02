@@ -902,6 +902,33 @@
             const b = document.getElementById('cloud-workflow-banner');
             if (b) b.classList.add('hidden');
         }
+
+        // Live Telemetry Polling (Every 10 seconds)
+        async function pollLiveTelemetry() {
+            try {
+                const res = await fetch('/api/state');
+                if (!res.ok) return;
+                const state = await res.json();
+                
+                // Update DB Sync & Vault summary counts if present
+                if (state.database_sync && state.database_sync.table_counts) {
+                    const tc = state.database_sync.table_counts;
+                    const elTopics = document.getElementById('db-count-topics');
+                    if (elTopics) elTopics.innerText = tc.topics || 0;
+                    const elScripts = document.getElementById('db-count-scripts');
+                    if (elScripts) elScripts.innerText = tc.scripts || 0;
+                    const elJobs = document.getElementById('db-count-jobs');
+                    if (elJobs) elJobs.innerText = tc.jobs || 0;
+                    const elUploads = document.getElementById('db-count-uploads');
+                    if (elUploads) elUploads.innerText = tc.upload_records || 0;
+                    const elSnaps = document.getElementById('db-count-snapshots');
+                    if (elSnaps) elSnaps.innerText = tc.performance_snapshots || 0;
+                }
+            } catch (e) {
+                console.debug('Desktop telemetry poll notice:', e);
+            }
+        }
+        setInterval(pollLiveTelemetry, 10000);
     </script>
 </body>
 </html>
