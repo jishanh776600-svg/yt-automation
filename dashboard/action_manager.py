@@ -375,6 +375,7 @@ class ActionManager:
     def get_review_queue(self, db: Session) -> Dict[str, Any]:
         """
         Returns all jobs currently requiring operator attention (NEEDS_REVIEW or FAILED).
+        Guarantees structured dictionary objects with explicit string fields.
         """
         jobs = db.query(Job).filter(
             Job.state.in_([JobState.NEEDS_REVIEW.value, JobState.FAILED.value])
@@ -382,17 +383,34 @@ class ActionManager:
 
         results = []
         for j in jobs:
-            topic_title = j.topic.title if j.topic else "Unknown Topic"
-            category = j.topic.category if j.topic else "General"
+            t_title = "Untitled Job"
+            if j.topic and getattr(j.topic, "title", None) and isinstance(j.topic.title, str):
+                t_title = j.topic.title
+
+            category = "General"
+            if j.topic and getattr(j.topic, "category", None) and isinstance(j.topic.category, str):
+                category = j.topic.category
+
+            reason = j.error_message
+            if isinstance(reason, list):
+                reason = ", ".join(str(r) for r in reason) if reason else "Reason unavailable"
+            elif not reason or str(reason).strip() in ["[]", "None", ""]:
+                reason = "Requires operator review"
+            else:
+                reason = str(reason)
+
             results.append({
-                "id": j.id,
-                "state": j.state,
-                "title": topic_title,
-                "category": category,
-                "error_message": j.error_message or "Unknown Error",
-                "retry_count": j.retry_count,
+                "id": str(j.id),
+                "state": str(j.state),
+                "status": str(j.state),
+                "title": str(t_title),
+                "category": str(category),
+                "reason": reason,
+                "error_message": reason,
+                "retry_count": int(j.retry_count or 0),
                 "created_at": j.created_at.isoformat() + "Z" if j.created_at else None,
                 "updated_at": j.updated_at.isoformat() + "Z" if j.updated_at else None,
+                "actions": ["retry", "quarantine"]
             })
 
         return {

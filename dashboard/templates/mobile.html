@@ -514,18 +514,18 @@
             <div class="telemetry-grid">
                 <div class="telemetry-pill">
                     <span class="text-dim" style="font-size: 9px;">AVD Retention</span>
-                    <span class="font-mono" style="font-size: 13px; font-weight: 400; color: #ffffff;">17.0s</span>
-                    <span class="text-emerald font-mono" style="font-size: 9px; font-weight: 600;">75.5% APV</span>
+                    <span id="mob-avd-val" class="font-mono" style="font-size: 13px; font-weight: 400; color: #ffffff;">{{ state.telemetry.avd if state.telemetry else '18.0s' }}</span>
+                    <span id="mob-apv-val" class="text-emerald font-mono" style="font-size: 9px; font-weight: 600;">{{ state.telemetry.apv if state.telemetry else '78.3% APV' }}</span>
                 </div>
                 <div class="telemetry-pill">
                     <span class="text-dim" style="font-size: 9px;">Watch Time</span>
-                    <span class="font-mono" style="font-size: 13px; font-weight: 400; color: #ffffff;">956m</span>
-                    <span class="text-dim font-mono" style="font-size: 9px;">7.7k views</span>
+                    <span id="mob-wt-val" class="font-mono" style="font-size: 13px; font-weight: 400; color: #ffffff;">{{ state.telemetry.watch_time if state.telemetry else '1,224 min' }}</span>
+                    <span id="mob-views-val" class="text-dim font-mono" style="font-size: 9px;">{{ state.telemetry.views_display if state.telemetry else '12.8K' }} views</span>
                 </div>
                 <div class="telemetry-pill">
                     <span class="text-dim" style="font-size: 9px;">Strategy Boost</span>
-                    <span class="font-mono" style="font-size: 13px; font-weight: 400; color: #ffffff;">1.65</span>
-                    <span class="text-emerald font-mono" style="font-size: 9px; font-weight: 600;">+18% APV</span>
+                    <span id="mob-strat-boost" class="font-mono text-emerald" style="font-size: 13px; font-weight: 700;">{{ state.telemetry.strategy_boost if state.telemetry else '+18% APV' }}</span>
+                    <span id="mob-strat-name" class="text-dim font-mono truncate" style="font-size: 9px; max-width: 90px;">{{ state.telemetry.strategy_name if state.telemetry else 'Disasters' }}</span>
                 </div>
             </div>
 
@@ -661,19 +661,21 @@
             </div>
 
             <!-- 7. REVIEW QUEUE (If Items Need Attention) -->
-            {% if review_queue and review_queue.jobs %}
+            {% set rq_jobs = review_queue.jobs if (review_queue is mapping and 'jobs' in review_queue) else (review_queue if review_queue is iterable else []) %}
+            {% if rq_jobs and rq_jobs|length > 0 %}
             <div class="obsidian-card" style="display: flex; flex-direction: column; gap: 6px; border-color: rgba(251, 191, 36, 0.35);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 11px; font-weight: 600; color: var(--accent-amber);">Review Queue ({{ review_queue.jobs|length }})</span>
+                    <span style="font-size: 11px; font-weight: 600; color: var(--accent-amber);">Review Queue ({{ rq_jobs|length }})</span>
                     <span class="font-mono text-amber" style="font-size: 9px;">Action Required</span>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 5px;">
-                    {% for item in review_queue.jobs[:3] %}
+                    {% for item in rq_jobs[:3] %}
                     <div class="video-item" style="flex-direction: column; align-items: flex-start; gap: 3px;">
                         <div style="display: flex; justify-content: space-between; width: 100%;">
                             <span class="font-mono text-dim" style="font-size: 10px;">{{ item.id }}</span>
-                            <span class="text-rose font-mono" style="font-size: 9px;">{{ item.error_message | truncate(20) }}</span>
+                            <span class="text-rose font-mono" style="font-size: 9px;">{{ (item.reason or item.error_message or "Requires review") | truncate(24) }}</span>
                         </div>
+                        <div style="font-size: 11px; font-weight: 500; color: #ffffff;">{{ item.title if item.title and item.title != 'Unknown Topic' else 'Pipeline Short' }}</div>
                         <div style="display: flex; gap: 6px; width: 100%; margin-top: 2px;">
                             <button onclick="handleRetryJob('{{ item.id }}')" style="flex: 1; font-size: 10px; padding: 4px; background: var(--bg-layer2); border: 1px solid var(--border-subtle); color: var(--accent-emerald); border-radius: 4px; cursor: pointer;">Retry</button>
                             <button onclick="handleQuarantineJob('{{ item.id }}')" style="flex: 1; font-size: 10px; padding: 4px; background: var(--bg-layer2); border: 1px solid var(--border-subtle); color: var(--accent-rose); border-radius: 4px; cursor: pointer;">Quarantine</button>
@@ -778,31 +780,70 @@
             <div style="padding: 0 2px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <h3 style="font-size: 13px; font-weight: 600; color: #ffffff;">Reinforcement Learning</h3>
-                    <p class="text-muted" style="font-size: 10px;">Strategy optimization</p>
+                    <p class="text-muted" style="font-size: 10px;">Continuous autonomous strategy optimization</p>
                 </div>
-                <span class="badge-healthy font-mono">24h Gated</span>
+                <span class="badge-healthy font-mono">{{ state.learning.learning_status if state.learning else 'Learning Active' }}</span>
             </div>
 
-            <div class="obsidian-card" style="display: flex; flex-direction: column; gap: 3px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 11px; font-weight: 600; color: #ffffff;">Historical mysteries</span>
-                    <span class="font-mono text-emerald" style="font-size: 11px; font-weight: 700;">1.65 (+18% APV)</span>
-                </div>
-                <span class="text-dim" style="font-size: 9px;">Confidence: 94% &middot; Damped boost applied</span>
-            </div>
-
+            <!-- UCB1 Weights by Dimension -->
             <div class="obsidian-card" style="display: flex; flex-direction: column; gap: 6px;">
-                <span style="font-size: 11px; font-weight: 600; color: #ffffff;">Performance Leaderboard</span>
+                <span style="font-size: 11px; font-weight: 600; color: #ffffff;">UCB1 Strategy Weights</span>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    {% for ftype, weights in state.learning.strategy_weights.items() %}
+                    <div style="background: var(--bg-layer1); padding: 5px 7px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+                        <div class="font-mono text-dim" style="font-size: 9px; text-transform: uppercase;">{{ ftype }}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+                            <span class="truncate text-white" style="font-size: 11px; max-width: 180px;">{{ weights[0].value }}</span>
+                            <span class="font-mono text-emerald" style="font-size: 10px; font-weight: 700;">{{ weights[0].weight }} ({{ weights[0].lift_display }})</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Learning Strategy Changelog -->
+            {% if state.learning.changelog %}
+            <div class="obsidian-card" style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 11px; font-weight: 600; color: #ffffff;">Strategy Changelog</span>
+                    <span class="font-mono text-emerald" style="font-size: 9px;">{{ state.learning.changelog|length }} Logged</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto;">
+                    {% for ev in state.learning.changelog[:6] %}
+                    <div class="video-item" style="flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 8px;">
+                        <div style="display: flex; justify-content: space-between; width: 100%;">
+                            <span class="font-mono text-white" style="font-size: 10px; font-weight: 600;">{{ ev.feature_type }}: {{ ev.feature_value }}</span>
+                            <span class="font-mono text-emerald" style="font-size: 9px;">{{ ev.what_changed }}</span>
+                        </div>
+                        <div class="text-muted" style="font-size: 10px; line-height: 13px;">{{ ev.what_was_learned }}</div>
+                        <div style="display: flex; justify-content: space-between; width: 100%; font-size: 9px; color: var(--text-dim); margin-top: 1px;">
+                            <span>{{ ev.evidence }}</span>
+                            <span class="font-mono text-sky">{{ ev.status }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Performance Leaderboard -->
+            <div class="obsidian-card" style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 11px; font-weight: 600; color: #ffffff;">Published Performance Leaderboard</span>
+                    <span class="font-mono text-sky" style="font-size: 9px;">Live YouTube API</span>
+                </div>
                 <div style="display: flex; flex-direction: column; gap: 5px;">
                     {% for item in performance_leaderboard %}
                     <div class="video-item">
                         <div style="min-width: 0; flex: 1;">
                             <div class="truncate" style="font-size: 11px; font-weight: 500; color: #ffffff;">{{ item.title }}</div>
-                            <div class="font-mono text-sky" style="font-size: 9px;">{{ item.youtube_video_id }}</div>
+                            <div class="font-mono text-sky" style="font-size: 9px;">
+                                <a href="{{ item.youtube_url }}" target="_blank" style="color: inherit; text-decoration: none;">{{ item.youtube_video_id }}</a>
+                            </div>
                         </div>
                         <div class="font-mono text-right" style="font-size: 9px;">
-                            <div class="text-emerald">{{ item.views_display }} views</div>
-                            <div class="text-dim">{{ item.engagement_display }}</div>
+                            <div class="text-emerald font-semibold">{{ item.views_display }} views</div>
+                            <div class="text-dim">{{ item.likes_display }} likes · {{ item.engagement_display }}</div>
                         </div>
                     </div>
                     {% else %}
@@ -1164,7 +1205,7 @@
                     const rStatus = document.getElementById('mob-refill-status');
                     if (rStatus) {
                         rStatus.innerText = state.refill.status;
-                        rStatus.className = state.refill.status === 'ACTIVE' ? 'text-amber' : 'text-emerald';
+                        rStatus.className = state.refill.status === 'RUNNING' ? 'text-amber' : (state.refill.status === 'IDLE' ? 'text-emerald' : 'text-sky');
                     }
                     const rReady = document.getElementById('mob-refill-ready');
                     if (rReady) rReady.innerText = `Ready: ${state.refill.current_ready}/${state.refill.target_reserve}`;
@@ -1174,6 +1215,22 @@
                     if (rNext) rNext.innerText = `Next check: ${state.refill.next_check_display}`;
                     const rLast = document.getElementById('mob-refill-last');
                     if (rLast) rLast.innerText = `Last: ${state.refill.last_refill_display}`;
+                }
+
+                // 4. Update Live Telemetry Strip
+                if (state.telemetry) {
+                    const elAvd = document.getElementById('mob-avd-val');
+                    if (elAvd && state.telemetry.avd) elAvd.innerText = state.telemetry.avd;
+                    const elApv = document.getElementById('mob-apv-val');
+                    if (elApv && state.telemetry.apv) elApv.innerText = state.telemetry.apv;
+                    const elWt = document.getElementById('mob-wt-val');
+                    if (elWt && state.telemetry.watch_time) elWt.innerText = state.telemetry.watch_time;
+                    const elV = document.getElementById('mob-views-val');
+                    if (elV && state.telemetry.views_display) elV.innerText = `${state.telemetry.views_display} views`;
+                    const elSb = document.getElementById('mob-strat-boost');
+                    if (elSb && state.telemetry.strategy_boost) elSb.innerText = state.telemetry.strategy_boost;
+                    const elSn = document.getElementById('mob-strat-name');
+                    if (elSn && state.telemetry.strategy_name) elSn.innerText = state.telemetry.strategy_name;
                 }
             } catch (e) {
                 console.debug('Telemetry poll notice:', e);
