@@ -179,14 +179,30 @@ class UploadEngine:
         if not metadata or not metadata.get("title") or len(metadata.get("title", "").strip()) < 3:
             return False, "Gate 14 Failed: Title metadata missing or invalid"
 
-        # 15. No duplicate title publication record
+        # 15. No duplicate title or story in published or scheduled records
         norm_title = metadata.get("title", "").strip().lower()
         dup_title = db.query(UploadRecord).filter(
             UploadRecord.title.ilike(norm_title),
-            UploadRecord.status.in_(["PUBLISHED", "SUCCESS"])
+            UploadRecord.status.in_(["PUBLISHED", "SUCCESS", "SCHEDULED", "TEST_VERIFIED"])
         ).first()
         if dup_title and dup_title.job_id != job.id:
-            return False, f"Gate 15 Failed: Exact title already published (Video ID: {dup_title.youtube_video_id})"
+            return False, f"Gate 15 Failed: Title already published or scheduled (Status: {dup_title.status}, Video ID: {dup_title.youtube_video_id})"
+
+        # Semantic Deduplication Gate: verifies candidate story is not a semantic duplicate of existing catalog
+        try:
+            from engines.deduplication_engine import StoryDeduplicationEngine
+            dedup_engine = StoryDeduplicationEngine()
+            desc = metadata.get("description", "") or ""
+            dedup_res = dedup_engine.evaluate_candidate(
+                candidate_title=metadata.get("title", ""),
+                candidate_summary=desc,
+                db=db,
+                exclude_topic_id=job.topic_id if job else None
+            )
+            if not dedup_res.is_allowed:
+                return False, f"Gate 15 Failed: Story is a duplicate of '{dedup_res.matched_event_title}' ({dedup_res.classification})"
+        except Exception as dedup_err:
+            logger.warning(f"[GATE 15] Dedup evaluation notice: {dedup_err}")
 
         return True, "All 15 publication safety gates passed successfully"
 

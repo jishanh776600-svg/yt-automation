@@ -102,7 +102,11 @@ class ShortsPipeline:
         db = SessionLocal()
         try:
             authoritative_db_voice = get_active_voice(db)
+            if authoritative_db_voice == "am_adam":
+                authoritative_db_voice = "af_bella"
             chosen_voice = voice or authoritative_db_voice or os.getenv("KOKORO_VOICE") or "af_bella"
+            if chosen_voice == "am_adam" and voice is None:
+                chosen_voice = "af_bella"
             valid_voice_ids = [v["id"] for v in AVAILABLE_VOICES]
             if chosen_voice not in valid_voice_ids:
                 logger.warning(f"Voice '{chosen_voice}' not in AVAILABLE_VOICES. Defaulting to 'af_bella'.")
@@ -903,10 +907,25 @@ class ShortsPipeline:
                     if not existing_upl and cand_title:
                         existing_upl = db.query(UploadRecord).filter(UploadRecord.title.ilike(cand_title.strip())).first()
 
-                    if existing_upl and existing_upl.status in ["PUBLISHED", "SUCCESS"]:
+                    # Check semantic deduplication against full catalog
+                    is_dup_proc = False
+                    dup_proc_status = "PUBLISHED"
+                    if cand_title:
+                        try:
+                            from engines.deduplication_engine import StoryDeduplicationEngine
+                            p_dedup = StoryDeduplicationEngine()
+                            p_res = p_dedup.evaluate_candidate(candidate_title=cand_title, candidate_summary=props.get("description", ""), db=db)
+                            if not p_res.is_allowed:
+                                is_dup_proc = True
+                                m_upl = db.query(UploadRecord).filter(UploadRecord.title.ilike(p_res.matched_event_title)).first() if p_res.matched_event_title else None
+                                dup_proc_status = m_upl.status if m_upl else "PUBLISHED"
+                        except Exception:
+                            pass
+
+                    if (existing_upl and existing_upl.status in ["PUBLISHED", "SUCCESS"]) or (is_dup_proc and dup_proc_status in ["PUBLISHED", "SUCCESS"]):
                         logger.info(f"[PROCESSING CLEANUP] File {candidate['id']} ({candidate.get('name')}) is already PUBLISHED. Moving to 03_PUBLISHED.")
                         self.drive_engine.move_file_in_vault(candidate["id"], from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
-                    elif existing_upl and existing_upl.status == "SCHEDULED":
+                    elif (existing_upl and existing_upl.status in ["SCHEDULED", "TEST_VERIFIED"]) or (is_dup_proc and dup_proc_status in ["SCHEDULED", "TEST_VERIFIED"]):
                         continue
                     else:
                         recovered_candidates.append(candidate)
@@ -929,21 +948,78 @@ class ShortsPipeline:
                     if m:
                         c_job_id = m.group(1)
                 c_title = c_props.get("title") or candidate.get("name", "").replace(".mp4", "")
-                existing_upl = db.query(UploadRecord).filter(
-                    (UploadRecord.job_id == c_job_id) |
-                    (UploadRecord.title.ilike(c_title.strip()))
-                ).first() if c_job_id else None
+                # 1. Direct DB lookup by job_id or exact title
+                existing_upl = None
+                if c_job_id:
+                    existing_upl = db.query(UploadRecord).filter(UploadRecord.job_id == c_job_id).first()
+                if not existing_upl and c_title:
+                    existing_upl = db.query(UploadRecord).filter(UploadRecord.title.ilike(c_title.strip())).first()
 
-                if existing_upl and existing_upl.status in ["PUBLISHED", "SUCCESS"]:
-                    logger.warning(f"[PRE-CLAIM DEDUP] File {candidate['id']} already PUBLISHED on YouTube. Moving to 03_PUBLISHED.")
+                # 2. Semantic deduplication check against full catalog
+                is_duplicate_story = False
+                matched_event = None
+                matched_is_published = False
+                try:
+                    from engines.deduplication_engine import StoryDeduplicationEngine
+                    dedup_eng = StoryDeduplicationEngine()
+                    dedup_res = dedup_eng.evaluate_candidate(
+                        candidate_title=c_title,
+                        candidate_summary=c_props.get("description", ""),
+                        db=db
+                    )
+                    if not dedup_res.is_allowed:
+                        is_duplicate_story = True
+                        matched_event = dedup_res.matched_event_title
+                        matched_upl = db.query(UploadRecord).filter(
+                            UploadRecord.title.ilike(matched_event)
+                        ).first() if matched_event else None
+                        if matched_upl and matched_upl.status in ["PUBLISHED", "SUCCESS"]:
+                            matched_is_published = True
+                        elif matched_upl and matched_upl.status in ["SCHEDULED", "TEST_VERIFIED"]:
+                            matched_is_published = False
+                        else:
+                            matched_is_published = True
+                except Exception as d_err:
+                    logger.warning(f"[PRE-CLAIM] Dedup check notice for {candidate['id']}: {d_err}")
+
+                if (existing_upl and existing_upl.status in ["PUBLISHED", "SUCCESS"]) or (is_duplicate_story and matched_is_published):
+                    matched_str = matched_event or (existing_upl.title if existing_upl else c_title)
+                    logger.warning(f"[PRE-CLAIM DEDUP] File {candidate['id']} ('{c_title}') already PUBLISHED on YouTube (matched: '{matched_str}'). Moving to 03_PUBLISHED.")
                     self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="03_PUBLISHED")
-                elif existing_upl and existing_upl.status == "SCHEDULED":
-                    logger.warning(f"[PRE-CLAIM DEDUP] File {candidate['id']} already SCHEDULED on YouTube. Moving to 02_PROCESSING.")
+                elif (existing_upl and existing_upl.status in ["SCHEDULED", "TEST_VERIFIED"]) or (is_duplicate_story and not matched_is_published):
+                    matched_str = matched_event or (existing_upl.title if existing_upl else c_title)
+                    logger.warning(f"[PRE-CLAIM DEDUP] File {candidate['id']} ('{c_title}') already SCHEDULED on YouTube (matched: '{matched_str}'). Moving to 02_PROCESSING.")
                     self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="02_PROCESSING")
                 else:
                     fresh_ready_files.append(candidate)
 
             all_eligible_candidates = fresh_ready_files + recovered_candidates
+
+            # Intra-batch deduplication: prevent scheduling two videos for the same story in the same run
+            if len(all_eligible_candidates) > 1:
+                deduped_candidates = []
+                seen_candidate_fps = []
+                try:
+                    from engines.deduplication_engine import StoryDeduplicationEngine
+                    b_dedup = StoryDeduplicationEngine()
+                    for cand in all_eligible_candidates:
+                        c_p = cand.get("properties", {}) or {}
+                        c_t = c_p.get("title") or cand.get("name", "").replace(".mp4", "")
+                        c_fp = b_dedup.build_fingerprint(c_t, c_p.get("description", ""))
+                        is_dup_in_batch = False
+                        for prev_fp in seen_candidate_fps:
+                            dup_chk = b_dedup.check_deterministic_duplicate(c_fp, prev_fp)
+                            if dup_chk and dup_chk.is_duplicate:
+                                is_dup_in_batch = True
+                                logger.warning(f"[INTRA_BATCH_DEDUP] Skipping duplicate candidate {cand['id']} ('{c_t}') matching '{prev_fp.title}' in current batch.")
+                                break
+                        if not is_dup_in_batch:
+                            seen_candidate_fps.append(c_fp)
+                            deduped_candidates.append(cand)
+                    all_eligible_candidates = deduped_candidates
+                except Exception as b_err:
+                    logger.warning(f"[INTRA_BATCH_DEDUP] Error during intra-batch dedup: {b_err}")
+
             if target_file_id:
                 all_eligible_candidates = [f for f in all_eligible_candidates if f["id"] == target_file_id]
 

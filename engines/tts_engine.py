@@ -113,15 +113,18 @@ def resolve_voice_config(voice_id: str) -> dict:
 
 
 def get_active_voice(db: Optional[Session] = None) -> str:
-    """Retrieves active production voice preference, preserving canonical system invariant."""
+    """Retrieves active production voice preference, preserving canonical system invariant (af_bella)."""
     if db:
         try:
             cfg = db.query(SystemConfig).filter(SystemConfig.key == "active_voice").first()
             if cfg and cfg.value:
+                # Invariant: Adam cannot be selected accidentally through stale DB default
+                if cfg.value == "am_adam":
+                    return "af_bella"
                 return cfg.value
         except Exception:
             pass
-    return KOKORO_VOICE or "af_bella"
+    return "af_bella"
 
 
 get_authoritative_voice = get_active_voice
@@ -181,7 +184,7 @@ class TTSEngine:
                 logger.warning(f"Failed to load Kokoro ONNX: {e}")
         return None
 
-    def generate_kokoro_audio(self, text: str, output_path: Path, voice: str = "am_adam", speed: float = 1.0) -> Tuple[bool, float]:
+    def generate_kokoro_audio(self, text: str, output_path: Path, voice: str = "af_bella", speed: float = 1.0) -> Tuple[bool, float]:
         """Synthesizes speech using Kokoro ONNX model."""
         kokoro = self._get_kokoro()
         if not kokoro:
@@ -234,7 +237,7 @@ class TTSEngine:
 
         v_cfg = resolve_voice_config(voice_id)
         kokoro_v = v_cfg.get("kokoro_voice", voice_id)
-        edge_v = v_cfg.get("edge_voice", "en-US-GuyNeural")
+        edge_v = v_cfg.get("edge_voice", "en-US-JennyNeural")
 
         text = sample_text or "History holds the secrets of who we once were."
         temp_id = f"preview_{uuid.uuid4().hex[:8]}"
@@ -299,9 +302,11 @@ class TTSEngine:
         wav_path = self.voice_dir / f"{asset_id}.wav"
 
         active_voice = voice or get_active_voice(db)
+        if active_voice == "am_adam" and voice is None:
+            active_voice = "af_bella"
         v_cfg = resolve_voice_config(active_voice)
         kokoro_v = v_cfg.get("kokoro_voice", active_voice)
-        edge_v = v_cfg.get("edge_voice", "en-US-GuyNeural")
+        edge_v = v_cfg.get("edge_voice", "en-US-JennyNeural")
 
         success = False
         duration = 0.0

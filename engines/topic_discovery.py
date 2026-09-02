@@ -269,15 +269,32 @@ class TopicDiscoveryEngine:
         from core.models import Job, UploadRecord
         excluded_ids = set(exclude_topic_ids or [])
 
-        # Exclude topics that have already reached terminal/active publication
+        # Exclude topics that have already reached terminal, scheduled, or active production states
         try:
-            published_jobs = db.query(Job).filter(
-                Job.state.in_(["PUBLISHED", "READY_TO_UPLOAD"])
+            active_jobs = db.query(Job).filter(
+                Job.state.in_([
+                    "PUBLISHED", "SCHEDULED", "READY_TO_UPLOAD", "UPLOADING",
+                    "EDITING", "QA", "RENDERED_QA_PASSED", "VOICE_READY",
+                    "VOICE_GENERATING", "AUDIO_READY", "SCRIPT_READY", "SCRIPTING",
+                    "RESEARCHED", "RESEARCHING", "FACT_CHECKED", "FACT_CHECKING",
+                    "VISUALS_READY", "VISUALS_SEARCHING", "VISUAL_PLANNING"
+                ])
             ).all()
-            published_topic_ids = {getattr(j, "topic_id", None) for j in published_jobs if getattr(j, "topic_id", None)}
-            excluded_ids.update(published_topic_ids)
-        except Exception:
-            pass
+            for j in active_jobs:
+                if j.topic_id:
+                    excluded_ids.add(j.topic_id)
+
+            # Exclude topics referenced by active or historical UploadRecords
+            active_uploads = db.query(UploadRecord).filter(
+                UploadRecord.status.in_(["PUBLISHED", "SCHEDULED", "SUCCESS", "TEST_VERIFIED"])
+            ).all()
+            for u in active_uploads:
+                if u.job_id:
+                    u_job = db.query(Job).filter(Job.id == u.job_id).first()
+                    if u_job and u_job.topic_id:
+                        excluded_ids.add(u_job.topic_id)
+        except Exception as e:
+            logger.warning(f"Error gathering active/published topic exclusions: {e}")
 
         def is_test_topic(t: Topic) -> bool:
             t_id = (t.id or "").lower()
@@ -294,23 +311,32 @@ class TopicDiscoveryEngine:
                 return True
             return False
 
-        # Query eligible unproduced topics
+        # Query eligible unproduced topics (exclude REJECTED, COMPLETED, PUBLISHED, SCHEDULED)
         unproduced = db.query(Topic).filter(
             Topic.id.notin_(excluded_ids),
-            ~Topic.status.in_(["REJECTED"])
+            ~Topic.status.in_(["REJECTED", "COMPLETED", "PUBLISHED", "SCHEDULED"])
         ).all()
 
-        # Filter unproduced topics through deduplication against published stories (bounded to limit)
+        # Filter unproduced topics through deduplication against published/scheduled stories
         valid_unproduced = []
         for t in unproduced:
             if t.id in excluded_ids:
                 continue
             if is_test_topic(t):
                 continue
-            if not self.is_duplicate(db, t.title, t.summary, exclude_topic_id=t.id):
+            # Authoritative check: do NOT exclude t.id so that any match against corpus is caught
+            if not self.is_duplicate(db, t.title, t.summary):
                 valid_unproduced.append(t)
                 if len(valid_unproduced) >= limit:
                     break
+            else:
+                # Mark as already completed/duplicate to prevent re-scanning
+                t.status = "COMPLETED"
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+
         if valid_unproduced:
             from engines.script_engine import CURATED_SCRIPTS
             # Prioritize verified curated documentary scripts
