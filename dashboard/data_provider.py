@@ -48,6 +48,33 @@ _AUTHORITATIVE_YT_INVENTORY_CACHE_TIME: Optional[datetime] = None
 _AUTHORITATIVE_YT_INVENTORY_CACHE_TTL_SEC: int = 60
 
 
+def _parse_yt_iso(ts: str) -> datetime:
+    """
+    Parses a YouTube API ISO 8601 timestamp to a **naive UTC** datetime.
+
+    Handles:
+      - 'Z' suffix  (e.g. '2026-09-03T06:00:00Z')
+      - '+00:00' suffix  (e.g. '2026-09-03T06:00:00+00:00')
+      - Any explicit UTC-offset suffix supported by datetime.fromisoformat()
+        (Python 3.11+ handles ±HH:MM correctly)
+
+    Returns a naive datetime in UTC (tzinfo stripped), matching the behaviour
+    of the previously used ``dateutil.parser.isoparse(ts).replace(tzinfo=None)``.
+
+    Raises:
+        ValueError: if ``ts`` is not a valid ISO 8601 string.
+    """
+    # Replace trailing 'Z' with '+00:00' so fromisoformat() accepts it on all
+    # Python 3.11 builds (3.11 accepts 'Z' natively, but this is explicit/safe).
+    normalized = ts.strip().replace("Z", "+00:00")
+    dt = datetime.fromisoformat(normalized)
+    # Convert any tz-aware datetime to UTC then strip tzinfo → naive UTC
+    if dt.tzinfo is not None:
+        from datetime import timezone
+        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
 def format_compact_number(num: int | float) -> str:
     """Formats 1809354184 -> '1.8B', 45300 -> '45.3K', 987 -> '987'."""
     if num is None:
@@ -109,7 +136,6 @@ class SystemDataProvider:
 
         try:
             from engines.metrics_collector import MetricsCollector
-            import dateutil.parser
             mc = MetricsCollector()
             yt_data, _ = mc.get_youtube_clients()
 
@@ -193,7 +219,7 @@ class SystemDataProvider:
                     try:
                         for p in public_shorts:
                             vid = p["id"]
-                            p_dt = dateutil.parser.isoparse(p["published_at"]).replace(tzinfo=None) if p["published_at"] else now
+                            p_dt = _parse_yt_iso(p["published_at"]) if p["published_at"] else now
                             rec = db.query(UploadRecord).filter(UploadRecord.youtube_video_id == vid).first()
                             if not rec:
                                 rec = UploadRecord(
@@ -216,7 +242,7 @@ class SystemDataProvider:
 
                         for s in scheduled_shorts:
                             vid = s["id"]
-                            s_dt = dateutil.parser.isoparse(s["publish_at"]).replace(tzinfo=None) if s["publish_at"] else now
+                            s_dt = _parse_yt_iso(s["publish_at"]) if s["publish_at"] else now
                             rec = db.query(UploadRecord).filter(UploadRecord.youtube_video_id == vid).first()
                             if not rec:
                                 rec = UploadRecord(
@@ -615,7 +641,6 @@ class SystemDataProvider:
         """Calculates today's published & scheduled count, remaining slots, and next release."""
         now = datetime.utcnow()
         today_start, today_end = get_business_day_bounds_utc(now)
-        import dateutil.parser
 
         inventory = self.fetch_authoritative_youtube_inventory(db=db)
         public_shorts = inventory.get("public_shorts", [])
@@ -626,7 +651,7 @@ class SystemDataProvider:
         for p in public_shorts:
             pub_at_str = p.get("published_at")
             if pub_at_str:
-                p_dt = dateutil.parser.isoparse(pub_at_str).replace(tzinfo=None)
+                p_dt = _parse_yt_iso(pub_at_str)
                 if today_start <= p_dt < today_end:
                     published_records_today.append(p)
 
@@ -635,7 +660,7 @@ class SystemDataProvider:
         for s in scheduled_shorts:
             sch_at_str = s.get("publish_at")
             if sch_at_str:
-                s_dt = dateutil.parser.isoparse(sch_at_str).replace(tzinfo=None)
+                s_dt = _parse_yt_iso(sch_at_str)
                 if today_start <= s_dt < today_end:
                     scheduled_records_today.append(s)
 
@@ -663,12 +688,12 @@ class SystemDataProvider:
         next_slot_info = {}
         if scheduled_shorts:
             sorted_future = sorted(
-                [s for s in scheduled_shorts if s.get("publish_at") and dateutil.parser.isoparse(s["publish_at"]).replace(tzinfo=None) > now],
+                [s for s in scheduled_shorts if s.get("publish_at") and _parse_yt_iso(s["publish_at"]) > now],
                 key=lambda x: x["publish_at"]
             )
             if sorted_future:
                 nxt = sorted_future[0]
-                nxt_dt = dateutil.parser.isoparse(nxt["publish_at"]).replace(tzinfo=None)
+                nxt_dt = _parse_yt_iso(nxt["publish_at"])
                 diff_sec = max(0, int((nxt_dt - now).total_seconds()))
                 h_left = diff_sec // 3600
                 m_left = (diff_sec % 3600) // 60
@@ -1052,7 +1077,6 @@ class SystemDataProvider:
         """
         now = datetime.utcnow()
         today_start, today_end = get_business_day_bounds_utc(now)
-        import dateutil.parser
 
         inventory = self.fetch_authoritative_youtube_inventory(db=db)
         scheduled_shorts = inventory.get("scheduled_shorts", [])
@@ -1081,14 +1105,14 @@ class SystemDataProvider:
         for s in scheduled_shorts:
             pub_at_str = s.get("publish_at")
             if pub_at_str:
-                s_dt = dateutil.parser.isoparse(pub_at_str).replace(tzinfo=None)
+                s_dt = _parse_yt_iso(pub_at_str)
                 slot_key = s_dt.strftime("%Y-%m-%d %H:%M")
                 slot_counts[slot_key] = slot_counts.get(slot_key, 0) + 1
 
         for s in scheduled_shorts:
             vid = s["id"]
             pub_at_str = s.get("publish_at")
-            s_dt = dateutil.parser.isoparse(pub_at_str).replace(tzinfo=None) if pub_at_str else None
+            s_dt = _parse_yt_iso(pub_at_str) if pub_at_str else None
             
             time_until_str = "Scheduled"
             recon_state = "PENDING_RELEASE"
@@ -1137,7 +1161,7 @@ class SystemDataProvider:
         for p in public_shorts[:15]:
             vid = p["id"]
             pub_at_str = p.get("published_at")
-            p_dt = dateutil.parser.isoparse(pub_at_str).replace(tzinfo=None) if pub_at_str else None
+            p_dt = _parse_yt_iso(pub_at_str) if pub_at_str else None
 
             time_until_str = "Published"
             if p_dt:
@@ -1872,7 +1896,6 @@ class SystemDataProvider:
             public_shorts = inventory.get("public_shorts", [])
             api_status = inventory.get("status", "UNAVAILABLE")
 
-            import dateutil.parser
             leaderboard = []
 
             for p in public_shorts:
@@ -1891,7 +1914,7 @@ class SystemDataProvider:
                 pub_iso = p.get("published_at")
                 if pub_iso:
                     try:
-                        p_dt = dateutil.parser.isoparse(pub_iso).replace(tzinfo=None)
+                        p_dt = _parse_yt_iso(pub_iso)
                         pub_date_str = p_dt.strftime("%b %d, %Y %H:%M UTC")
                     except Exception:
                         pub_date_str = pub_iso

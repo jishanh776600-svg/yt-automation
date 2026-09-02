@@ -23,6 +23,25 @@ from core.models import UploadRecord
 logger = logging.getLogger(__name__)
 
 
+def _parse_yt_iso(ts: str) -> datetime:
+    """
+    Parses a YouTube API ISO 8601 timestamp to a **naive UTC** datetime.
+
+    Handles 'Z' suffix, '+00:00', and any explicit UTC-offset.
+    Returns a naive datetime in UTC (tzinfo stripped), matching the behaviour
+    of the previously used ``dateutil.parser.isoparse(ts).replace(tzinfo=None)``.
+
+    Raises:
+        ValueError: if ``ts`` is not a valid ISO 8601 string.
+    """
+    from datetime import timezone
+    normalized = ts.strip().replace("Z", "+00:00")
+    dt = datetime.fromisoformat(normalized)
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
 class PublicationScheduler:
     """Calculates publication slots and ensures collision-free scheduling."""
 
@@ -43,7 +62,6 @@ class PublicationScheduler:
         directly from live YouTube channel inventory and reconciled SQLite records.
         Ensures both published and scheduled Shorts are counted toward the exact UTC calendar day limit.
         """
-        import dateutil.parser
         occupied = set()
         day_counts = {}
         slot_details = {}
@@ -58,7 +76,7 @@ class PublicationScheduler:
             for p in public_shorts:
                 pub_iso = p.get("published_at")
                 if pub_iso:
-                    p_dt = dateutil.parser.isoparse(pub_iso).replace(tzinfo=None)
+                    p_dt = _parse_yt_iso(pub_iso)
                     cal_date = p_dt.date()
                     day_counts[cal_date] = day_counts.get(cal_date, 0) + 1
                     # Associate to nearest canonical slot
@@ -76,7 +94,7 @@ class PublicationScheduler:
             for s in scheduled_shorts:
                 sch_iso = s.get("publish_at")
                 if sch_iso:
-                    s_dt = dateutil.parser.isoparse(sch_iso).replace(tzinfo=None)
+                    s_dt = _parse_yt_iso(sch_iso)
                     cal_date = s_dt.date()
                     day_counts[cal_date] = day_counts.get(cal_date, 0) + 1
                     slot_dt = s_dt.replace(second=0, microsecond=0)
