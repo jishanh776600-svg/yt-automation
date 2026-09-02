@@ -34,33 +34,102 @@ class PublicationScheduler:
         """Returns list of (hour, minute) tuples for release slots."""
         return [(hour, minute) for hour, minute, _ in PUBLISHING_SLOTS_UTC]
 
-    def get_occupied_slots(self, db: Session) -> Set[datetime]:
+    def get_authoritative_schedule_state(
+        self,
+        db: Session
+    ) -> Tuple[Set[datetime], Dict[date, int], Dict[datetime, List[Dict[str, Any]]]]:
         """
-        Retrieves all occupied UTC slot timestamps from SQLite database.
-        Includes both scheduled and published uploads.
+        Retrieves authoritative occupied slots, daily release counts, and slot details
+        directly from live YouTube channel inventory and reconciled SQLite records.
+        Ensures both published and scheduled Shorts are counted toward the exact UTC calendar day limit.
         """
-        records = db.query(UploadRecord).filter(
+        import dateutil.parser
+        occupied = set()
+        day_counts = {}
+        slot_details = {}
+
+        try:
+            from dashboard.data_provider import SystemDataProvider
+            dp = SystemDataProvider()
+            inventory = dp.fetch_authoritative_youtube_inventory(db=db)
+            public_shorts = inventory.get("public_shorts", [])
+            scheduled_shorts = inventory.get("scheduled_shorts", [])
+
+            for p in public_shorts:
+                pub_iso = p.get("published_at")
+                if pub_iso:
+                    p_dt = dateutil.parser.isoparse(pub_iso).replace(tzinfo=None)
+                    cal_date = p_dt.date()
+                    day_counts[cal_date] = day_counts.get(cal_date, 0) + 1
+                    # Associate to nearest canonical slot
+                    for hour, minute in self.get_canonical_slot_times():
+                        slot_cand = p_dt.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                        if abs((p_dt - slot_cand).total_seconds()) <= 3600:
+                            occupied.add(slot_cand)
+                            slot_details.setdefault(slot_cand, []).append({
+                                "id": p["id"],
+                                "title": p["title"],
+                                "type": "PUBLISHED",
+                                "time": p_dt.isoformat() + "Z"
+                            })
+
+            for s in scheduled_shorts:
+                sch_iso = s.get("publish_at")
+                if sch_iso:
+                    s_dt = dateutil.parser.isoparse(sch_iso).replace(tzinfo=None)
+                    cal_date = s_dt.date()
+                    day_counts[cal_date] = day_counts.get(cal_date, 0) + 1
+                    slot_dt = s_dt.replace(second=0, microsecond=0)
+                    occupied.add(slot_dt)
+                    slot_details.setdefault(slot_dt, []).append({
+                        "id": s["id"],
+                        "title": s["title"],
+                        "type": "SCHEDULED",
+                        "time": sch_iso
+                    })
+
+        except Exception as e:
+            logger.warning(f"[SCHEDULER] Authoritative YouTube fetch notice: {e}")
+
+        # Reconcile with any SQLite records not caught above
+        db_records = db.query(UploadRecord).filter(
             UploadRecord.status.in_(["SCHEDULED", "PUBLISHED", "SUCCESS", "TEST_VERIFIED"])
         ).all()
 
-        occupied = set()
-        for r in records:
+        for r in db_records:
             if r.scheduled_publish_at:
-                # Normalize to minute precision
                 dt = r.scheduled_publish_at.replace(second=0, microsecond=0)
-                occupied.add(dt)
+                if dt not in occupied:
+                    occupied.add(dt)
+                    cal_date = dt.date()
+                    day_counts[cal_date] = day_counts.get(cal_date, 0) + 1
+                    slot_details.setdefault(dt, []).append({
+                        "id": r.youtube_video_id or r.id,
+                        "title": r.title,
+                        "type": "SCHEDULED_DB",
+                        "time": dt.isoformat() + "Z"
+                    })
             elif r.published_at:
-                # If published directly without scheduled_publish_at, match nearest slot
                 dt = r.published_at.replace(second=0, microsecond=0)
-                # Find if it fell into one of the canonical slots today
+                cal_date = dt.date()
                 for hour, minute in self.get_canonical_slot_times():
                     slot_cand = dt.replace(hour=hour, minute=minute, second=0, microsecond=0)
                     if abs((dt - slot_cand).total_seconds()) <= 3600:
-                        occupied.add(slot_cand)
+                        if slot_cand not in occupied:
+                            occupied.add(slot_cand)
+                            day_counts[cal_date] = day_counts.get(cal_date, 0) + 1
+
+        return occupied, day_counts, slot_details
+
+    def get_occupied_slots(self, db: Session) -> Set[datetime]:
+        """
+        Retrieves all occupied UTC slot timestamps.
+        """
+        occupied, _, _ = self.get_authoritative_schedule_state(db)
         return occupied
 
     def get_slots_for_date(self, target_date: date) -> List[datetime]:
-        """Returns all 4 canonical slot datetimes for a specific UTC date."""
+        """Returns all 3 canonical slot datetimes for a specific UTC date."""
         return [
             datetime.combine(target_date, dtime(hour=hour, minute=minute))
             for hour, minute in self.get_canonical_slot_times()
@@ -81,7 +150,7 @@ class PublicationScheduler:
         now = now.replace(microsecond=0)
         earliest_allowed = now + timedelta(minutes=self.min_lead_minutes)
 
-        occupied_slots = self.get_occupied_slots(db)
+        occupied_slots, day_counts, slot_details = self.get_authoritative_schedule_state(db)
         current_date = now.date()
         vacant_slots = []
 
@@ -89,34 +158,21 @@ class PublicationScheduler:
         for day_offset in (0, 1):
             eval_date = current_date + timedelta(days=day_offset)
             day_slots = self.get_slots_for_date(eval_date)
-            day_start = datetime.combine(eval_date, dtime.min)
-            day_end = datetime.combine(eval_date, dtime.max)
 
             # Count all published & scheduled releases for this specific UTC calendar day
-            pub_count = db.query(UploadRecord).filter(
-                UploadRecord.status.in_(["PUBLISHED", "SUCCESS"]),
-                UploadRecord.published_at >= day_start,
-                UploadRecord.published_at <= day_end
-            ).count()
-
-            sched_count = db.query(UploadRecord).filter(
-                UploadRecord.status.in_(["SCHEDULED", "TEST_VERIFIED"]),
-                UploadRecord.scheduled_publish_at >= day_start,
-                UploadRecord.scheduled_publish_at <= day_end
-            ).count()
-
-            occupied_count_for_day = max(
-                pub_count + sched_count,
-                sum(1 for s in day_slots if s in occupied_slots)
-            )
+            occupied_count_for_day = day_counts.get(eval_date, 0)
             available_capacity_for_day = max(0, DAILY_SHORTS_LIMIT - occupied_count_for_day)
+
+            if available_capacity_for_day <= 0:
+                logger.debug(f"[SCHEDULER] Date {eval_date} has reached/exceeded daily limit ({occupied_count_for_day}/{DAILY_SHORTS_LIMIT}). Zero vacancies available.")
+                continue
 
             day_vacancies = []
             for slot_dt in day_slots:
                 if slot_dt <= earliest_allowed:
                     continue  # In past or too close (< min_lead_minutes)
                 if slot_dt in occupied_slots:
-                    continue  # Already occupied
+                    continue  # Already occupied or double-booked
 
                 day_vacancies.append(slot_dt)
 
@@ -136,13 +192,13 @@ class PublicationScheduler:
     ) -> datetime:
         """
         Finds the next valid, unoccupied publication slot in UTC.
-        Enforces DAILY_SHORTS_LIMIT = 4 ceiling per UTC calendar day.
+        Enforces DAILY_SHORTS_LIMIT = 3 ceiling per UTC calendar day.
         """
         now = reference_time or datetime.utcnow()
         now = now.replace(microsecond=0)
         earliest_allowed = now + timedelta(minutes=self.min_lead_minutes)
 
-        occupied_slots = self.get_occupied_slots(db)
+        occupied_slots, day_counts, _ = self.get_authoritative_schedule_state(db)
 
         current_date = now.date()
         for day_offset in range(max_days_forward):
@@ -150,9 +206,9 @@ class PublicationScheduler:
             day_slots = self.get_slots_for_date(eval_date)
 
             # Count occupied slots for this UTC date
-            occupied_count_for_day = sum(1 for s in day_slots if s in occupied_slots)
+            occupied_count_for_day = day_counts.get(eval_date, 0)
             if occupied_count_for_day >= DAILY_SHORTS_LIMIT:
-                logger.debug(f"Date {eval_date} is fully booked ({occupied_count_for_day}/{DAILY_SHORTS_LIMIT} slots). Rolling over.")
+                logger.debug(f"[SCHEDULER] Date {eval_date} is fully booked ({occupied_count_for_day}/{DAILY_SHORTS_LIMIT} slots). Rolling over.")
                 continue
 
             for slot_dt in day_slots:
