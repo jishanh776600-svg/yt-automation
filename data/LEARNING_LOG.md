@@ -3214,3 +3214,19 @@
 | `duration_target` | **SWEET_SPOT** | 3 | `+10.0%` | `WEAK_EVIDENCE` | **1.03** | Weak evidence (N=3). Conservative +-10% damped adjustment (+10.0% lift vs baseline). |
 | `hook_archetype` | **DATE_TIME_ANCHOR** | 3 | `+10.0%` | `WEAK_EVIDENCE` | **1.03** | Weak evidence (N=3). Conservative +-10% damped adjustment (+10.0% lift vs baseline). |
 | `motion_style` | **DYNAMIC_ZOOM_PAN** | 3 | `+10.0%` | `WEAK_EVIDENCE` | **1.03** | Weak evidence (N=3). Conservative +-10% damped adjustment (+10.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-02 10:00:40 UTC
+
+- **Mature Videos Evaluated**: 12
+- **Channel Performance Baseline**: 37.71/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 4 | `-6.7%` | `WEAK_EVIDENCE` | **0.98** | Weak evidence (N=4). Conservative +-10% damped adjustment (-6.7% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `+9.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `+21.9%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+22.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-5.6%` | `WEAK_EVIDENCE` | **0.98** | Weak evidence (N=4). Conservative +-10% damped adjustment (-5.6% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 4 | `-6.7%` | `WEAK_EVIDENCE` | **0.98** | Weak evidence (N=4). Conservative +-10% damped adjustment (-6.7% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 4 | `-6.7%` | `WEAK_EVIDENCE` | **0.98** | Weak evidence (N=4). Conservative +-10% damped adjustment (-6.7% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 4 | `-6.7%` | `WEAK_EVIDENCE` | **0.98** | Weak evidence (N=4). Conservative +-10% damped adjustment (-6.7% lift vs baseline). |
