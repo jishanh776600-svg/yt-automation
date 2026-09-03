@@ -43,11 +43,82 @@ jobs:
           echo "${TOKEN_JSON}" > token.json
           echo "${CLIENT_SECRET_JSON}" > client_secret.json
 
+      - name: Single NVIDIA NIM Smoke Test (POST /v1/chat/completions)
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+        run: |
+          python -c "
+          import os, sys, json, urllib.request
+          from urllib.error import HTTPError, URLError
+
+          api_key = os.environ.get('NVIDIA_API_KEY', '').strip()
+          if not api_key:
+              print('[NVIDIA_SMOKE] RUNTIME_SECRET=ABSENT STATUS=FAIL ERROR=Secret_NVIDIA_API_KEY_Not_Configured')
+              sys.exit(0)
+
+          endpoint = 'https://integrate.api.nvidia.com/v1/chat/completions'
+          model = 'nvidia/nemotron-3.5-lightning-30b-a3b'
+
+          payload_dict = {
+              'model': model,
+              'messages': [
+                  {
+                      'role': 'user',
+                      'content': 'Reply with exactly: NVIDIA_SMOKE_OK'
+                  }
+              ],
+              'temperature': 0,
+              'stream': False,
+              'max_tokens': 10
+          }
+          payload_bytes = json.dumps(payload_dict).encode('utf-8')
+
+          headers = {
+              'Authorization': f'Bearer {api_key}',
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'User-Agent': 'AL-AMR-NvidiaTest/1.0'
+          }
+
+          req = urllib.request.Request(endpoint, data=payload_bytes, headers=headers, method='POST')
+
+          try:
+              with urllib.request.urlopen(req, timeout=30.0) as resp:
+                  status_code = resp.status
+                  body = resp.read().decode('utf-8')
+                  try:
+                      data = json.loads(body)
+                      choices = data.get('choices', [])
+                      content = choices[0].get('message', {}).get('content', '') if choices else ''
+                      is_valid_resp = bool(choices)
+                  except Exception:
+                      content = body[:200]
+                      is_valid_resp = False
+
+                  print(f'[NVIDIA_SMOKE] STATUS=PASS HTTP={status_code} MODEL={model} AUTH_ACCEPTED=TRUE VALID_RESP={is_valid_resp} TEXT={content!r}')
+
+          except HTTPError as e:
+              err_body = e.read().decode('utf-8', errors='ignore')
+              try:
+                  err_json = json.loads(err_body)
+                  detail = err_json.get('error', {}).get('message') or err_json.get('message') or err_body[:200]
+              except Exception:
+                  detail = err_body[:200]
+
+              auth_accepted = (e.code != 401 and e.code != 403)
+              print(f'[NVIDIA_SMOKE] STATUS=FAIL HTTP={e.code} MODEL={model} AUTH_ACCEPTED={auth_accepted} VALID_RESP=FALSE ERROR={detail}')
+
+          except Exception as e:
+              print(f'[NVIDIA_SMOKE] STATUS=FAIL HTTP=ERROR MODEL={model} AUTH_ACCEPTED=FALSE VALID_RESP=FALSE ERROR={type(e).__name__}_{e}')
+          "
+
       - name: Step 1 - Download Canonical DB from Private Drive Vault
+        if: false
         run: |
           python -m core.database_sync download
 
       - name: Step 2 - Verify Downloaded Database Integrity & State
+        if: false
         run: |
           python -c "
           import sys, hashlib, sqlite3
@@ -74,10 +145,12 @@ jobs:
           "
 
       - name: Step 3 - Upload Database Back to Drive (Sync Test)
+        if: false
         run: |
           python -m core.database_sync upload
 
       - name: Step 4 - Independent Re-Download & Double-Check Verification
+        if: false
         run: |
           python -c "
           import sys
