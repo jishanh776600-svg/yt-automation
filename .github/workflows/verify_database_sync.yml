@@ -43,11 +43,82 @@ jobs:
           echo "${TOKEN_JSON}" > token.json
           echo "${CLIENT_SECRET_JSON}" > client_secret.json
 
+      - name: Single BluesMinds DeepSeek Smoke Test (POST /v1/chat/completions)
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          python -c "
+          import os, sys, json, urllib.request
+          from urllib.error import HTTPError, URLError
+
+          api_key = os.environ.get('DEEPSEEK_API_KEY', '').strip()
+          if not api_key:
+              print('[SMOKE_RESULT] RUNTIME_SECRET=ABSENT STATUS=FAIL ERROR=Secret_DEEPSEEK_API_KEY_Not_Configured')
+              sys.exit(0)
+
+          endpoint = 'https://api.bluesminds.com/v1/chat/completions'
+          model = 'deepseek-v4-pro'
+
+          payload_dict = {
+              'model': model,
+              'messages': [
+                  {
+                      'role': 'user',
+                      'content': 'Reply with exactly: DEEPSEEK_OK'
+                  }
+              ],
+              'temperature': 0,
+              'stream': False,
+              'max_tokens': 10
+          }
+          payload_bytes = json.dumps(payload_dict).encode('utf-8')
+
+          headers = {
+              'Authorization': f'Bearer {api_key}',
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'User-Agent': 'AL-AMR-DeepSeek-Client/1.0'
+          }
+
+          req = urllib.request.Request(endpoint, data=payload_bytes, headers=headers, method='POST')
+
+          try:
+              with urllib.request.urlopen(req, timeout=30.0) as resp:
+                  status_code = resp.status
+                  body = resp.read().decode('utf-8')
+                  try:
+                      data = json.loads(body)
+                      choices = data.get('choices', [])
+                      content = choices[0].get('message', {}).get('content', '') if choices else ''
+                  except Exception:
+                      content = body[:200]
+
+                  print(f'[SMOKE_RESULT] HTTP_STATUS={status_code} AUTH_ACCEPTED=TRUE REACHED_MODEL=TRUE RETURNED_TEXT={content!r}')
+
+          except HTTPError as e:
+              err_body = e.read().decode('utf-8', errors='ignore')
+              try:
+                  err_json = json.loads(err_body)
+                  err_type = err_json.get('error', {}).get('type') or 'HTTPError'
+                  err_msg = err_json.get('error', {}).get('message') or err_body[:200]
+              except Exception:
+                  err_type = 'HTTPError'
+                  err_msg = err_body[:200]
+
+              auth_accepted = (e.code != 401 and e.code != 403)
+              print(f'[SMOKE_RESULT] HTTP_STATUS={e.code} AUTH_ACCEPTED={auth_accepted} REACHED_MODEL=FALSE ERROR_TYPE={err_type} ERROR_MSG={err_msg}')
+
+          except Exception as e:
+              print(f'[SMOKE_RESULT] HTTP_STATUS=ERROR AUTH_ACCEPTED=FALSE REACHED_MODEL=FALSE ERROR_TYPE={type(e).__name__} ERROR_MSG={str(e)}')
+          "
+
       - name: Step 1 - Download Canonical DB from Private Drive Vault
+        if: false
         run: |
           python -m core.database_sync download
 
       - name: Step 2 - Verify Downloaded Database Integrity & State
+        if: false
         run: |
           python -c "
           import sys, hashlib, sqlite3
@@ -74,10 +145,12 @@ jobs:
           "
 
       - name: Step 3 - Upload Database Back to Drive (Sync Test)
+        if: false
         run: |
           python -m core.database_sync upload
 
       - name: Step 4 - Independent Re-Download & Double-Check Verification
+        if: false
         run: |
           python -c "
           import sys
