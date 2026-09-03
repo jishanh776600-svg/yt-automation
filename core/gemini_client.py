@@ -343,7 +343,7 @@ class GeminiClient:
         if base_delay is None:
             base_delay = 0.05 if is_test else 2.0
 
-        endpoint = DEEPSEEK_BASE_URL or "https://api.deepseek.com/chat/completions"
+        endpoint = DEEPSEEK_BASE_URL or "https://api.bluesminds.com/v1/chat/completions"
 
         # Format user prompt
         if isinstance(contents, str):
