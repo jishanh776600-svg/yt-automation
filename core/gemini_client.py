@@ -125,6 +125,16 @@ class OpenRouterResponse:
         return f"<OpenRouterResponse text={snippet!r}>"
 
 
+class NvidiaResponse:
+    """Wrapper to maintain exact interface compatibility with google.genai response objects."""
+    def __init__(self, text: str):
+        self.text = text
+
+    def __repr__(self) -> str:
+        snippet = (self.text[:40] + "...") if len(self.text) > 40 else self.text
+        return f"<NvidiaResponse text={snippet!r}>"
+
+
 class GeminiClient:
     """
     Unified AI Client providing centralized rate limiting, 429-aware backoff,
@@ -142,6 +152,8 @@ class GeminiClient:
         openrouter_model: Optional[str] = None,
         deepseek_api_key: Optional[str] = None,
         deepseek_model: Optional[str] = None,
+        nvidia_api_key: Optional[str] = None,
+        nvidia_model: Optional[str] = None,
         rate_limiter: Optional[GeminiRateLimiter] = None,
         sleeper: Callable[[float], None] = time.sleep
     ):
@@ -155,18 +167,22 @@ class GeminiClient:
             OPENROUTER_API_KEY,
             OPENROUTER_MODEL,
             DEEPSEEK_API_KEY,
-            DEEPSEEK_MODEL
+            DEEPSEEK_MODEL,
+            NVIDIA_API_KEY,
+            NVIDIA_MODEL
         )
         self.api_key = api_key if api_key is not None else GEMINI_API_KEY
         self.secondary_api_key = secondary_api_key if secondary_api_key is not None else GEMINI_API_KEY_SECONDARY
         self.groq_api_key = groq_api_key if groq_api_key is not None else GROQ_API_KEY
         self.openrouter_api_key = openrouter_api_key if openrouter_api_key is not None else OPENROUTER_API_KEY
         self.deepseek_api_key = deepseek_api_key if deepseek_api_key is not None else DEEPSEEK_API_KEY
+        self.nvidia_api_key = nvidia_api_key if nvidia_api_key is not None else NVIDIA_API_KEY
         self.primary_model = GEMINI_MODEL
         self.secondary_model = secondary_model or GEMINI_MODEL_SECONDARY or GEMINI_MODEL
         self.groq_model = groq_model or GROQ_MODEL or "llama-3.1-8b-instant"
         self.openrouter_model = openrouter_model or OPENROUTER_MODEL or "meta-llama/llama-3.3-70b-instruct"
         self.deepseek_model = deepseek_model or DEEPSEEK_MODEL or "deepseek-v4-pro"
+        self.nvidia_model = nvidia_model or NVIDIA_MODEL or "nvidia/nemotron-3.5-lightning-30b-a3b"
         self.rate_limiter = rate_limiter or get_shared_rate_limiter()
         self.sleeper = sleeper
         self._provider_lock = threading.Lock()
@@ -193,7 +209,7 @@ class GeminiClient:
             self.active_provider = "primary"
 
     def _get_configured_providers(self, requested_model: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Returns ordered list of configured, non-empty provider credentials: Primary -> Secondary -> Groq -> OpenRouter -> DeepSeek."""
+        """Returns ordered list of configured, non-empty provider credentials: Primary -> Secondary -> Groq -> OpenRouter -> DeepSeek -> NVIDIA."""
         providers = []
         if self.api_key:
             providers.append({
@@ -229,6 +245,13 @@ class GeminiClient:
                 "type": "deepseek",
                 "api_key": self.deepseek_api_key,
                 "model": self.deepseek_model
+            })
+        if self.nvidia_api_key:
+            providers.append({
+                "name": "nvidia",
+                "type": "nvidia",
+                "api_key": self.nvidia_api_key,
+                "model": self.nvidia_model
             })
         return providers
 
@@ -451,6 +474,135 @@ class GeminiClient:
         self.mark_provider_exhausted("deepseek")
         err_msg = f"DeepSeek API retries exhausted after {max_retries} attempts: {last_exception}"
         logger.error(f"[DEEPSEEK_EXHAUSTED] {err_msg}")
+        raise GeminiQuotaExhaustedError(err_msg) from last_exception
+
+    def _execute_nvidia_request(
+        self,
+        api_key: str,
+        model: str,
+        contents: Any,
+        max_retries: int = 3,
+        base_delay: Optional[float] = None,
+        max_delay: float = 60.0,
+        **kwargs
+    ) -> NvidiaResponse:
+        """Executes API call to NVIDIA NIM OpenAI-compatible chat completion endpoint with pacing and backoff."""
+        import json
+        import urllib.request
+        from urllib.error import HTTPError, URLError
+        from config.settings import NVIDIA_BASE_URL
+
+        is_test = is_test_environment()
+        if base_delay is None:
+            base_delay = 0.05 if is_test else 2.0
+
+        endpoint = NVIDIA_BASE_URL or "https://integrate.api.nvidia.com/v1/chat/completions"
+
+        # Format user prompt
+        if isinstance(contents, str):
+            user_prompt = contents
+        elif isinstance(contents, list):
+            user_prompt = "\n\n".join(str(c) for c in contents)
+        else:
+            user_prompt = str(contents)
+
+        payload_dict = {
+            "model": model,
+            "messages": [
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": 0.7,
+            "stream": False
+        }
+        payload_bytes = json.dumps(payload_dict).encode("utf-8")
+
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "User-Agent": "AL-AMR-Nvidia-Client/1.0"
+        }
+
+        last_exception = None
+
+        for attempt in range(1, max_retries + 1):
+            self.rate_limiter.wait_for_slot()
+
+            try:
+                req = urllib.request.Request(endpoint, data=payload_bytes, headers=headers, method="POST")
+                with urllib.request.urlopen(req, timeout=45.0) as resp:
+                    resp_body = resp.read().decode("utf-8")
+                    data = json.loads(resp_body)
+                    choices = data.get("choices", [])
+                    if not choices:
+                        raise ValueError(f"NVIDIA returned empty choices: {resp_body[:200]}")
+                    text_content = choices[0].get("message", {}).get("content", "")
+                    return NvidiaResponse(text=text_content)
+            except HTTPError as http_err:
+                last_exception = http_err
+                code = http_err.code
+                try:
+                    err_body = http_err.read().decode("utf-8", errors="ignore")
+                except Exception:
+                    err_body = ""
+                err_lower = err_body.lower()
+
+                # Quota / Rate limit
+                is_quota_or_balance = (
+                    code == 429 or
+                    code == 402 or
+                    "insufficient" in err_lower or
+                    "quota" in err_lower or
+                    "rate limit" in err_lower
+                )
+
+                if is_quota_or_balance:
+                    self.mark_provider_exhausted("nvidia")
+                    logger.warning(
+                        f"[NVIDIA_EXHAUSTED] NVIDIA API quota/rate-limit exhausted (HTTP {code}): {err_body[:200]}"
+                    )
+                    raise GeminiQuotaExhaustedError(
+                        f"NVIDIA API quota or rate limit exhausted (HTTP {code})"
+                    ) from http_err
+
+                # Non-retryable 4xx errors
+                if 400 <= code < 500:
+                    self.mark_provider_exhausted("nvidia")
+                    logger.error(f"[NVIDIA_AUTH_FAIL] NVIDIA client error (HTTP {code}). Marking provider exhausted permanently for session: {err_body[:200]}")
+                    raise GeminiQuotaExhaustedError(f"NVIDIA API error (HTTP {code}): {err_body[:200]}") from http_err
+
+                # Transient 5xx server errors
+                if attempt >= max_retries:
+                    break
+
+                raw_delay = base_delay * (2 ** (attempt - 1))
+                jitter = 0.01 if is_test else random.uniform(0.5, 1.5)
+                delay = min(max_delay, raw_delay) + jitter
+                logger.warning(
+                    f"[NVIDIA_RETRY] Transient failure from NVIDIA (attempt {attempt}/{max_retries}, HTTP {code}). Retrying in {delay:.2f}s..."
+                )
+                self.sleeper(delay)
+
+            except (URLError, TimeoutError, ConnectionError, OSError) as net_err:
+                last_exception = net_err
+                if attempt >= max_retries:
+                    break
+                raw_delay = base_delay * (2 ** (attempt - 1))
+                jitter = 0.01 if is_test else random.uniform(0.5, 1.5)
+                delay = min(max_delay, raw_delay) + jitter
+                logger.warning(
+                    f"[NVIDIA_NET_RETRY] Network connection error to NVIDIA (attempt {attempt}/{max_retries}): {net_err}. Retrying in {delay:.2f}s..."
+                )
+                self.sleeper(delay)
+
+            except Exception as unk_err:
+                logger.error(f"[NVIDIA_ERROR] Unhandled error calling NVIDIA: {unk_err}")
+                raise unk_err
+
+        # All retries exhausted on NVIDIA
+        self.mark_provider_exhausted("nvidia")
+        err_msg = f"NVIDIA API retries exhausted after {max_retries} attempts: {last_exception}"
+        logger.error(f"[NVIDIA_EXHAUSTED] {err_msg}")
         raise GeminiQuotaExhaustedError(err_msg) from last_exception
 
     def _execute_groq_request(
@@ -742,18 +894,18 @@ class GeminiClient:
     ) -> Any:
         """
         Executes text generation across configured AI providers:
-        Primary Gemini -> Secondary Gemini -> Groq -> OpenRouter -> DeepSeek.
+        Primary Gemini -> Secondary Gemini -> Groq -> OpenRouter -> BluesMinds DeepSeek -> NVIDIA Nemotron.
         Skips previously exhausted providers to prevent retry amplification.
         """
         all_providers = self._get_configured_providers(requested_model=model)
         if not all_providers:
-            raise ValueError("No valid AI provider credentials (GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY, DEEPSEEK_API_KEY) configured.")
+            raise ValueError("No valid AI provider credentials (GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY, DEEPSEEK_API_KEY, NVIDIA_API_KEY) configured.")
 
         # Determine eligible providers (unexhausted first)
         available_providers = [p for p in all_providers if not self.is_provider_exhausted(p["name"])]
 
         if not available_providers:
-            err_msg = "All configured AI providers (PRIMARY, SECONDARY, GROQ, OPENROUTER, DEEPSEEK) exhausted daily API quotas."
+            err_msg = "All configured AI providers (PRIMARY, SECONDARY, GROQ, OPENROUTER, DEEPSEEK, NVIDIA) exhausted daily API quotas."
             logger.error(f"[AI_EXHAUSTED] {err_msg}")
             raise GeminiQuotaExhaustedError(err_msg)
 
@@ -791,6 +943,16 @@ class GeminiClient:
                     )
                 elif prov_type == "deepseek":
                     result = self._execute_deepseek_request(
+                        api_key=prov_key,
+                        model=prov_model,
+                        contents=contents,
+                        max_retries=max_retries,
+                        base_delay=base_delay,
+                        max_delay=max_delay,
+                        **kwargs
+                    )
+                elif prov_type == "nvidia":
+                    result = self._execute_nvidia_request(
                         api_key=prov_key,
                         model=prov_model,
                         contents=contents,
@@ -858,11 +1020,13 @@ def get_gemini_client(
     openrouter_api_key: Optional[str] = None,
     openrouter_model: Optional[str] = None,
     deepseek_api_key: Optional[str] = None,
-    deepseek_model: Optional[str] = None
+    deepseek_model: Optional[str] = None,
+    nvidia_api_key: Optional[str] = None,
+    nvidia_model: Optional[str] = None
 ) -> GeminiClient:
     global _SHARED_CLIENT
     with _INIT_LOCK:
-        if _SHARED_CLIENT is None or api_key or secondary_api_key or groq_api_key or openrouter_api_key or deepseek_api_key:
+        if _SHARED_CLIENT is None or api_key or secondary_api_key or groq_api_key or openrouter_api_key or deepseek_api_key or nvidia_api_key:
             client = GeminiClient(
                 api_key=api_key,
                 secondary_api_key=secondary_api_key,
@@ -872,9 +1036,11 @@ def get_gemini_client(
                 openrouter_api_key=openrouter_api_key,
                 openrouter_model=openrouter_model,
                 deepseek_api_key=deepseek_api_key,
-                deepseek_model=deepseek_model
+                deepseek_model=deepseek_model,
+                nvidia_api_key=nvidia_api_key,
+                nvidia_model=nvidia_model
             )
-            if not api_key and not secondary_api_key and not groq_api_key and not openrouter_api_key and not deepseek_api_key:
+            if not api_key and not secondary_api_key and not groq_api_key and not openrouter_api_key and not deepseek_api_key and not nvidia_api_key:
                 _SHARED_CLIENT = client
             return client
         return _SHARED_CLIENT
