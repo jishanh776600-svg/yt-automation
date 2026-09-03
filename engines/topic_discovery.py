@@ -324,18 +324,11 @@ class TopicDiscoveryEngine:
                 continue
             if is_test_topic(t):
                 continue
-            # Authoritative check: do NOT exclude t.id so that any match against corpus is caught
-            if not self.is_duplicate(db, t.title, t.summary):
+            # Pass exclude_topic_id=t.id so the topic is not compared against itself in the corpus
+            if not self.is_duplicate(db, t.title, t.summary, exclude_topic_id=t.id):
                 valid_unproduced.append(t)
                 if len(valid_unproduced) >= limit:
                     break
-            else:
-                # Mark as already completed/duplicate to prevent re-scanning
-                t.status = "COMPLETED"
-        try:
-            db.commit()
-        except Exception:
-            db.rollback()
 
         if valid_unproduced:
             from engines.script_engine import CURATED_SCRIPTS
