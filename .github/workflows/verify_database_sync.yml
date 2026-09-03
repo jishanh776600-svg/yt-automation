@@ -43,82 +43,11 @@ jobs:
           echo "${TOKEN_JSON}" > token.json
           echo "${CLIENT_SECRET_JSON}" > client_secret.json
 
-      - name: Single BluesMinds Models Inspection (GET /v1/models)
-        env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-        run: |
-          python -c "
-          import os, sys, json, urllib.request
-          from urllib.error import HTTPError, URLError
-
-          api_key = os.environ.get('DEEPSEEK_API_KEY', '').strip()
-          if not api_key:
-              print('[MODELS_TEST] RUNTIME_SECRET=ABSENT STATUS=FAIL ERROR=Secret_DEEPSEEK_API_KEY_Not_Configured')
-              sys.exit(0)
-
-          endpoint = 'https://api.bluesminds.com/v1/models'
-          headers = {
-              'Authorization': f'Bearer {api_key}',
-              'Accept': 'application/json',
-              'User-Agent': 'AL-AMR-ModelsCheck/1.0'
-          }
-
-          req = urllib.request.Request(endpoint, headers=headers, method='GET')
-
-          try:
-              with urllib.request.urlopen(req, timeout=30.0) as resp:
-                  status_code = resp.status
-                  body = resp.read().decode('utf-8')
-                  try:
-                      data = json.loads(body)
-                      is_valid_json = True
-                  except Exception:
-                      data = {}
-                      is_valid_json = False
-
-                  raw_list = data.get('data', []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
-                  
-                  all_ids = []
-                  for item in raw_list:
-                      if isinstance(item, dict):
-                          mid = item.get('id') or item.get('name') or ''
-                      elif isinstance(item, str):
-                          mid = item
-                      else:
-                          mid = ''
-                      if mid:
-                          all_ids.append(str(mid))
-                  
-                  deepseek_ids = [m for m in all_ids if 'deepseek' in m.lower()]
-                  
-                  print(f'[MODELS_TEST] HTTP_STATUS={status_code} AUTH_SUCCESS=TRUE VALID_JSON={is_valid_json}')
-                  print(f'[MODELS_TEST] TOTAL_MODELS={len(all_ids)} DEEPSEEK_MATCHES_COUNT={len(deepseek_ids)}')
-                  print('[DEEPSEEK_MODELS_START]')
-                  for m in deepseek_ids:
-                      print(f'MODEL_ID: {m}')
-                  print('[DEEPSEEK_MODELS_END]')
-
-          except HTTPError as e:
-              err_body = e.read().decode('utf-8', errors='ignore')
-              try:
-                  err_json = json.loads(err_body)
-                  detail = err_json.get('error', {}).get('message') or err_json.get('message') or err_body[:150]
-                  is_json = True
-              except Exception:
-                  detail = err_body[:150]
-                  is_json = False
-              print(f'[MODELS_TEST] HTTP_STATUS={e.code} AUTH_SUCCESS=FALSE VALID_JSON={is_json} ERROR={detail}')
-          except Exception as e:
-              print(f'[MODELS_TEST] HTTP_STATUS=ERROR AUTH_SUCCESS=FALSE ERROR={type(e).__name__}_{e}')
-          "
-
       - name: Step 1 - Download Canonical DB from Private Drive Vault
-        if: false
         run: |
           python -m core.database_sync download
 
       - name: Step 2 - Verify Downloaded Database Integrity & State
-        if: false
         run: |
           python -c "
           import sys, hashlib, sqlite3
@@ -145,12 +74,10 @@ jobs:
           "
 
       - name: Step 3 - Upload Database Back to Drive (Sync Test)
-        if: false
         run: |
           python -m core.database_sync upload
 
       - name: Step 4 - Independent Re-Download & Double-Check Verification
-        if: false
         run: |
           python -c "
           import sys
