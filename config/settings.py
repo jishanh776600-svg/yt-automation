@@ -52,17 +52,20 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_MODEL_SECONDARY = os.getenv("GEMINI_MODEL_SECONDARY", "")
 GEMINI_FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")  # llama-3.3-70b-versatile was retired (HTTP 404)
 GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1/chat/completions")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct")
 OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1/chat/completions")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-pro")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/chat/completions")
 
 AI_PROVIDER_AVAILABLE = bool(
     GEMINI_API_KEY
     or GROQ_API_KEY
     or OPENROUTER_API_KEY
+    or DEEPSEEK_API_KEY
 )
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
 YOUTUBE_CLIENT_ID = os.getenv("YOUTUBE_CLIENT_ID", "")

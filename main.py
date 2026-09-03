@@ -356,6 +356,7 @@ class ShortsPipeline:
                     return None
                 topic = topics[0]
             else:
+                topic = db.query(Topic).filter(Topic.id == topic.id).first() or topic
                 StateMachine.transition(db, job, JobState.RESEARCHING, f"Selected topic: {topic.title}")
 
             # Quarantine candidate in in-memory attempted set for failure isolation
@@ -456,11 +457,39 @@ class ShortsPipeline:
             block_reason = None
             attempted_topic_ids: Set[str] = set()
 
+            # TARGETED SCRIPT BATCHING: Pre-discover topics and generate scripts in ONE AI call
+            batch_topic_queue: List[Topic] = []
+            if effective_count >= 2 and AI_PROVIDER_AVAILABLE:
+                db_batch = SessionLocal()
+                try:
+                    candidate_topics = self.topic_engine.discover_topics(
+                        db_batch, limit=effective_count, exclude_topic_ids=attempted_topic_ids
+                    )
+                    if len(candidate_topics) >= 2:
+                        console.print(f"[bold cyan][*] Pre-generating batch scripts for {len(candidate_topics)} topics via single AI call...[/bold cyan]")
+                        research_map = {}
+                        for cand in candidate_topics:
+                            research_map[cand.id] = self.research_engine.research_topic(db_batch, cand)
+
+                        batch_scripts = self.script_engine.generate_batch_scripts(
+                            db_batch, candidate_topics, research_data_map=research_map
+                        )
+                        for cand in candidate_topics:
+                            script_data = batch_scripts.get(cand.id)
+                            if script_data:
+                                self.script_engine.cache_script(cand.id, script_data)
+                            batch_topic_queue.append(cand)
+                except Exception as b_err:
+                    logger.warning(f"[BATCH] Script batching setup notice: {b_err}. Proceeding with sequential single-script path.")
+                finally:
+                    db_batch.close()
+
             while success_count < effective_count and total_attempts < MAX_PRODUCTION_ATTEMPTS_CEILING:
                 total_attempts += 1
                 console.print(f"\n[bold cyan]>>> Generating Batch Item {success_count + 1}/{effective_count} (Attempt {total_attempts}/{MAX_PRODUCTION_ATTEMPTS_CEILING}) <<<[/bold cyan]")
+                target_topic = batch_topic_queue.pop(0) if batch_topic_queue else None
                 try:
-                    job = self.produce_single_to_vault(exclude_topic_ids=attempted_topic_ids)
+                    job = self.produce_single_to_vault(topic=target_topic, exclude_topic_ids=attempted_topic_ids)
                     if job:
                         success_count += 1
                         consecutive_failures = 0

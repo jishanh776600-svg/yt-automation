@@ -153,16 +153,20 @@ class GeminiClient:
             GROQ_API_KEY,
             GROQ_MODEL,
             OPENROUTER_API_KEY,
-            OPENROUTER_MODEL
+            OPENROUTER_MODEL,
+            DEEPSEEK_API_KEY,
+            DEEPSEEK_MODEL
         )
         self.api_key = api_key if api_key is not None else GEMINI_API_KEY
         self.secondary_api_key = secondary_api_key if secondary_api_key is not None else GEMINI_API_KEY_SECONDARY
         self.groq_api_key = groq_api_key if groq_api_key is not None else GROQ_API_KEY
         self.openrouter_api_key = openrouter_api_key if openrouter_api_key is not None else OPENROUTER_API_KEY
+        self.deepseek_api_key = deepseek_api_key if deepseek_api_key is not None else DEEPSEEK_API_KEY
         self.primary_model = GEMINI_MODEL
         self.secondary_model = secondary_model or GEMINI_MODEL_SECONDARY or GEMINI_MODEL
-        self.groq_model = groq_model or GROQ_MODEL or "groq/compound-mini"
-        self.openrouter_model = openrouter_model or OPENROUTER_MODEL or "meta-llama/llama-3.3-70b-instruct:free"
+        self.groq_model = groq_model or GROQ_MODEL or "llama-3.1-8b-instant"
+        self.openrouter_model = openrouter_model or OPENROUTER_MODEL or "meta-llama/llama-3.3-70b-instruct"
+        self.deepseek_model = deepseek_model or DEEPSEEK_MODEL or "deepseek-v4-pro"
         self.rate_limiter = rate_limiter or get_shared_rate_limiter()
         self.sleeper = sleeper
         self._provider_lock = threading.Lock()
@@ -189,7 +193,7 @@ class GeminiClient:
             self.active_provider = "primary"
 
     def _get_configured_providers(self, requested_model: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Returns ordered list of configured, non-empty provider credentials: Primary -> Secondary -> Groq -> OpenRouter."""
+        """Returns ordered list of configured, non-empty provider credentials: Primary -> Secondary -> Groq -> OpenRouter -> DeepSeek."""
         providers = []
         if self.api_key:
             providers.append({
@@ -218,6 +222,13 @@ class GeminiClient:
                 "type": "openrouter",
                 "api_key": self.openrouter_api_key,
                 "model": self.openrouter_model
+            })
+        if self.deepseek_api_key:
+            providers.append({
+                "name": "deepseek",
+                "type": "deepseek",
+                "api_key": self.deepseek_api_key,
+                "model": self.deepseek_model
             })
         return providers
 
@@ -332,7 +343,7 @@ class GeminiClient:
         if base_delay is None:
             base_delay = 0.05 if is_test else 2.0
 
-        endpoint = DEEPSEEK_BASE_URL or "https://integrate.api.nvidia.com/v1/chat/completions"
+        endpoint = DEEPSEEK_BASE_URL or "https://api.deepseek.com/chat/completions"
 
         # Format user prompt
         if isinstance(contents, str):
@@ -731,18 +742,18 @@ class GeminiClient:
     ) -> Any:
         """
         Executes text generation across configured AI providers:
-        Primary Gemini -> Secondary Gemini -> Groq -> OpenRouter.
+        Primary Gemini -> Secondary Gemini -> Groq -> OpenRouter -> DeepSeek.
         Skips previously exhausted providers to prevent retry amplification.
         """
         all_providers = self._get_configured_providers(requested_model=model)
         if not all_providers:
-            raise ValueError("No valid AI provider credentials (GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY) configured.")
+            raise ValueError("No valid AI provider credentials (GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY, DEEPSEEK_API_KEY) configured.")
 
         # Determine eligible providers (unexhausted first)
         available_providers = [p for p in all_providers if not self.is_provider_exhausted(p["name"])]
 
         if not available_providers:
-            err_msg = "All configured AI providers (PRIMARY, SECONDARY, GROQ, OPENROUTER) exhausted daily API quotas."
+            err_msg = "All configured AI providers (PRIMARY, SECONDARY, GROQ, OPENROUTER, DEEPSEEK) exhausted daily API quotas."
             logger.error(f"[AI_EXHAUSTED] {err_msg}")
             raise GeminiQuotaExhaustedError(err_msg)
 

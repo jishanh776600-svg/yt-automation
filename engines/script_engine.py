@@ -341,6 +341,19 @@ class ScriptEngine:
 
     def __init__(self):
         self.critic = ScriptCritic()
+        self._script_cache: Dict[str, Dict[str, str]] = {}
+
+    def cache_script(self, topic_id: str, script_data: Dict[str, str]) -> None:
+        """Caches a pre-generated batch script for a topic."""
+        self._script_cache[topic_id] = script_data
+
+    def get_cached_script(self, topic_id: str) -> Optional[Dict[str, str]]:
+        """Retrieves and clears any cached script for a topic."""
+        return self._script_cache.pop(topic_id, None)
+
+    def clear_script_cache(self) -> None:
+        """Clears all cached pre-generated scripts."""
+        self._script_cache.clear()
 
     def generate_hook_candidates(self, topic: Topic, research_data: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Generates 3 distinct hook candidates (Date-Anchor, In-Medias-Res, Unexpected Consequence)."""
@@ -516,20 +529,37 @@ class ScriptEngine:
         target_hook_archetype = strategy.get("hook_archetype") if strategy else None
         target_duration = strategy.get("duration_target") if strategy else None
 
-        # 1. Check curated seed library first for exact or normalized approved scripts
-        curated_match = None
-        norm_title = re.sub(r"[^\w\s]", "", topic.title.lower()).strip()
-        for k in CURATED_SCRIPTS:
-            norm_k = re.sub(r"[^\w\s]", "", k.lower()).strip()
-            if norm_k in norm_title or norm_title in norm_k or k.lower() in topic.title.lower():
-                curated_match = k
-                break
+        data = None
+        eval_res = None
 
-        if curated_match:
-            logger.info(f"Using verified curated script for '{topic.title}' (matched: '{curated_match}')")
-            data = CURATED_SCRIPTS[curated_match]
-            eval_res = self.critic.evaluate(data, research_data)
-        elif AI_PROVIDER_AVAILABLE:
+        # 1. Check pre-generated batch script cache first
+        if topic.id and topic.id in self._script_cache:
+            cached_data = self._script_cache.pop(topic.id)
+            cached_eval = self.critic.evaluate(cached_data, research_data)
+            if cached_eval.passed:
+                logger.info(f"[BATCH_CACHE_HIT] Using pre-generated batch script for '{topic.title}' (Score: {cached_eval.score}/100)")
+                data = cached_data
+                eval_res = cached_eval
+            else:
+                logger.warning(f"[BATCH_CACHE_REJECT] Pre-generated script for '{topic.title}' failed critic ({cached_eval.feedback}). Retrying individually.")
+                # data remains None -> falls through to curated/AI generation
+
+        # 2. Check curated seed library for exact or normalized approved scripts
+        if not data:
+            curated_match = None
+            norm_title = re.sub(r"[^\w\s]", "", topic.title.lower()).strip()
+            for k in CURATED_SCRIPTS:
+                norm_k = re.sub(r"[^\w\s]", "", k.lower()).strip()
+                if norm_k in norm_title or norm_title in norm_k or k.lower() in topic.title.lower():
+                    curated_match = k
+                    break
+
+            if curated_match:
+                logger.info(f"Using verified curated script for '{topic.title}' (matched: '{curated_match}')")
+                data = CURATED_SCRIPTS[curated_match]
+                eval_res = self.critic.evaluate(data, research_data)
+
+        if not data and AI_PROVIDER_AVAILABLE:
             # 2. Multi-Candidate Hook Selection
             hook_candidates = self.generate_hook_candidates(topic, research_data)
             
@@ -596,7 +626,7 @@ class ScriptEngine:
                     err_msg = f"Script quality gate failed after {max_attempts} attempts (Score: {eval_res.score if eval_res else 0}/100). Feedback: {eval_res.feedback if eval_res else 'Unknown'}"
                     logger.error(err_msg)
                     raise RuntimeError(err_msg)
-        else:
+        elif not data:
             if topic.title in CURATED_SCRIPTS:
                 data = CURATED_SCRIPTS[topic.title]
             else:
@@ -633,6 +663,318 @@ class ScriptEngine:
         db.commit()
         logger.info(f"[+] Script Approved ({eval_res.score if eval_res else 95.0}/100): '{topic.title}' ({word_count} words | ~{estimated_duration}s | Archetype: {final_hook_archetype} | Duration: {final_duration_target})")
         return script_rec
+
+    def generate_batch_scripts(
+        self,
+        db: Session,
+        topics: List[Topic],
+        research_data_map: Optional[Dict[str, Dict[str, Any]]] = None,
+        _mock_response: Optional[str] = None
+    ) -> Dict[str, Optional[Dict[str, str]]]:
+        """
+        Executes ONE AI generation call for a batch of topics (e.g. 3 topics)
+        and returns a dict mapping topic.id -> validated script dictionary (or None if failed).
+
+        Strict Requirements Implemented:
+        1. Return EXACTLY N scripts when N topics are supplied.
+        2. Each script maps to exactly one supplied topic.
+        3. 45–68 words per script (MIN_WORD_COUNT to MAX_WORD_COUNT).
+        4. Do not combine topics.
+        5. Do not reuse story, facts, angle, hook, or substantially similar narrative.
+        6. Scripts must be meaningfully distinct.
+        7. Do not invent an extra (N+1)th script.
+        8. Unambiguous structured JSON mapping (topic_index, topic_id).
+        9. Preserve fact-grounding behavior (use only supplied research).
+        10. Do not weaken existing quality gates (evaluated by ScriptCritic).
+
+        Recovery:
+        If any script fails validation, that topic returns None while valid scripts
+        are preserved. The caller retries ONLY the failed script via single-script path.
+        """
+        if not topics:
+            return {}
+
+        n = len(topics)
+        results: Dict[str, Optional[Dict[str, str]]] = {t.id: None for t in topics}
+
+        if not AI_PROVIDER_AVAILABLE and _mock_response is None:
+            logger.warning("[BATCH_SCRIPT] AI provider not available and no mock response — falling back per-script.")
+            return results
+
+        # Build full context block for each topic
+        topic_blocks = []
+        topic_id_by_index: Dict[int, str] = {}
+        topic_title_by_index: Dict[int, str] = {}
+
+        for idx, topic in enumerate(topics, start=1):
+            topic_id_by_index[idx] = topic.id
+            topic_title_by_index[idx] = topic.title
+            rd = (research_data_map or {}).get(topic.id, {})
+            claims = [c.get("claim", "") for c in rd.get("verified_claims", []) if c.get("claim")]
+            if claims:
+                facts_text = "VERIFIED RESEARCH FACTS (USE ONLY THESE):\n- " + "\n- ".join(claims[:5])
+            elif rd.get("summary"):
+                facts_text = f"VERIFIED RESEARCH CONTEXT (USE ONLY THIS):\n{rd.get('summary')}"
+            else:
+                facts_text = f"TOPIC SUMMARY:\n{topic.summary or 'Documented historical event.'}"
+
+            cat_text = f"Category: {topic.category}" if topic.category else ""
+            topic_blocks.append(
+                f"=== TOPIC {idx} of {n} ===\n"
+                f"topic_index: {idx}\n"
+                f"topic_id: {topic.id}\n"
+                f"title: \"{topic.title}\"\n"
+                f"{cat_text}\n"
+                f"{facts_text}\n"
+            )
+
+        topics_section = "\n".join(topic_blocks)
+
+        # Closed-loop learned guidance if available
+        learned_guidance = ""
+        try:
+            from engines.learning_engine import LearningEngine
+            learned_guidance = LearningEngine().get_learned_production_profile(db)
+        except Exception:
+            pass
+
+        batch_prompt = (
+            f"You are a master historical documentary scriptwriter for YouTube Shorts.\n"
+            f"Write EXACTLY {n} independent, fact-grounded documentary scripts — one per topic supplied below.\n\n"
+            f"{'=' * 65}\n"
+            f"{topics_section}\n"
+            f"{'=' * 65}\n\n"
+            f"{learned_guidance}\n\n"
+            f"CRITICAL PRODUCTION CONTRACT & CONSTRAINTS:\n"
+            f"1. EXACT SCRIPT COUNT: Return EXACTLY {n} scripts when {n} topics are supplied.\n"
+            f"   - Do NOT omit any topic (missing scripts are rejected).\n"
+            f"   - Do NOT invent extra scripts ({n+1}th script is strictly rejected).\n"
+            f"2. UNAMBIGUOUS TOPIC MAPPING:\n"
+            f"   - Each script must map to EXACTLY ONE topic using 'topic_index' (1 to {n}) and 'topic_id'.\n"
+            f"   - Do NOT swap topics or assign one topic's narrative to another.\n"
+            f"3. WORD COUNT SPECIFICATION (CRITICAL QUALITY GATE):\n"
+            f"   - HARD MINIMUM: 45 words per script.\n"
+            f"   - HARD MAXIMUM: 68 words per script.\n"
+            f"   - PREFERRED TARGET: 50–55 words total across all 5 narrative stages combined.\n"
+            f"   - Any script outside 45–68 words will be rejected.\n"
+            f"4. DO NOT COMBINE TOPICS: Each script must exclusively narrate its assigned topic.\n"
+            f"5. MEANINGFULLY DISTINCT NARRATIVES:\n"
+            f"   - Do NOT reuse the same story, facts, angle, hook structure, or opening phrase across scripts.\n"
+            f"   - Each script must have a distinct hook archetype, unique dramatic tension, and different tone.\n"
+            f"6. 5-STAGE NARRATIVE STRUCTURE (for each script):\n"
+            f"   - hook: (0-2s) Immediate curiosity/tension gap (6-14 words). No generic intros ('Did you know', 'You won't believe').\n"
+            f"   - context: Clear, rapid historical setting and grounding with forward momentum.\n"
+            f"   - escalation: Rising stakes, intensifying conflict or bizarre progression. Every claim MUST be supported by supplied research.\n"
+            f"   - reveal: The definitive, surprising historical payoff/climax.\n"
+            f"   - loop_twist: Complete final resolution and loop-compatible ending statement. No filler conclusions.\n"
+            f"7. STRICT FACTUAL GROUNDING:\n"
+            f"   - Use ONLY facts explicitly supported by the supplied research for that topic.\n"
+            f"   - NEVER invent dates, names, casualty counts, or details.\n"
+            f"8. FORBIDDEN AI CLICHÉS IN ALL SCRIPTS:\n"
+            f"   - NEVER use 'will shock you', 'unbelievable true story', 'events spiraled', 'shocked historians', 'changed history forever'.\n"
+            f"9. STYLE & CADENCE:\n"
+            f"   - Natural spoken American English. Short, punchy sentences (6-12 words/sentence). Zero filler.\n\n"
+            f"OUTPUT FORMAT — strictly valid JSON object matching this exact schema:\n"
+            f"{{\n"
+            f"  \"scripts\": [\n"
+            f"    {{\n"
+            f"      \"topic_index\": 1,\n"
+            f"      \"topic_id\": \"{topics[0].id}\",\n"
+            f"      \"hook\": \"...\",\n"
+            f"      \"context\": \"...\",\n"
+            f"      \"escalation\": \"...\",\n"
+            f"      \"reveal\": \"...\",\n"
+            f"      \"loop_twist\": \"...\"\n"
+            f"    }}\n"
+            f"  ]\n"
+            f"}}\n"
+            f"SELF-CHECK BEFORE RETURNING:\n"
+            f"- Verify 'scripts' list has EXACTLY {n} elements.\n"
+            f"- Verify each element has all 5 keys: hook, context, escalation, reveal, loop_twist.\n"
+            f"- Verify every script word count is between 45 and 68 words."
+        )
+
+        raw_text = ""
+        if _mock_response is not None:
+            raw_text = _mock_response.strip()
+        else:
+            try:
+                from core.gemini_client import get_gemini_client
+                from config.settings import GEMINI_MODEL
+                gemini_client = get_gemini_client()
+                logger.info(f"[BATCH_SCRIPT] Dispatching single batch script generation request for {n} topics...")
+                response = gemini_client.generate_content(model=GEMINI_MODEL, contents=batch_prompt)
+                raw_text = response.text.strip()
+            except Exception as e:
+                logger.error(f"[BATCH_SCRIPT] Batch AI request failed: {e}. Falling back to per-script generation.")
+                return results
+
+        # Parse JSON
+        batch_data = None
+        try:
+            batch_data = json.loads(raw_text)
+        except Exception:
+            m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw_text, re.DOTALL)
+            if m:
+                try:
+                    batch_data = json.loads(m.group(1).strip())
+                except Exception:
+                    pass
+            if not batch_data:
+                m = re.search(r"(\{.*\})", raw_text, re.DOTALL)
+                if m:
+                    try:
+                        batch_data = json.loads(m.group(1).strip())
+                    except Exception:
+                        pass
+
+        if not batch_data or not isinstance(batch_data, dict):
+            logger.warning("[BATCH_SCRIPT] Failed to parse valid JSON from batch response. Falling back per-script.")
+            return results
+
+        raw_scripts = batch_data.get("scripts", [])
+        if not isinstance(raw_scripts, list):
+            logger.warning("[BATCH_SCRIPT] 'scripts' field in response is not a list. Falling back per-script.")
+            return results
+
+        # 1. Exact count check: reject extra scripts or missing scripts
+        if len(raw_scripts) != n:
+            logger.warning(
+                f"[BATCH_SCRIPT] Expected exactly {n} scripts, got {len(raw_scripts)}. "
+                f"Batch count invariant violated ({'extra' if len(raw_scripts) > n else 'missing'} scripts). "
+                f"Falling back to per-script generation."
+            )
+            return results
+
+        REQUIRED_KEYS = {"hook", "context", "escalation", "reveal", "loop_twist"}
+
+        def _validate_individual_script(script_dict: Dict[str, Any], expected_topic: Topic) -> Tuple[bool, List[str]]:
+            """Validates a single candidate script against production quality gates."""
+            failures = []
+            if not isinstance(script_dict, dict):
+                return False, ["Script item is not a dictionary"]
+
+            missing = REQUIRED_KEYS - set(script_dict.keys())
+            if missing:
+                failures.append(f"Missing required keys: {sorted(missing)}")
+                return False, failures
+
+            # Word count check (45 - 68 words)
+            full_text = " ".join(str(script_dict.get(k, "")).strip() for k in ["hook", "context", "escalation", "reveal", "loop_twist"])
+            wc = len(full_text.split())
+            if not (MIN_WORD_COUNT <= wc <= MAX_WORD_COUNT):
+                failures.append(f"Word count ({wc}) outside calibrated {MIN_WORD_COUNT}-{MAX_WORD_COUNT} range")
+
+            # Forbidden clichés check
+            full_lower = full_text.lower()
+            for cliche in FORBIDDEN_CLICHES:
+                if cliche in full_lower:
+                    failures.append(f"Forbidden AI cliché detected: '{cliche}'")
+
+            # Critic evaluation
+            rd = (research_data_map or {}).get(expected_topic.id)
+            eval_res = self.critic.evaluate(script_dict, rd)
+            if not eval_res.passed:
+                failures.append(f"Critic rejected (Score {eval_res.score}/100): {eval_res.feedback}")
+
+            return len(failures) == 0, failures
+
+        # 2. Topic Mapping & Structural Extraction
+        # Build mapping by topic_index or topic_id
+        mapped_scripts: Dict[str, Dict[str, str]] = {}
+        used_indices: set = set()
+
+        for s_idx, item in enumerate(raw_scripts, start=1):
+            if not isinstance(item, dict):
+                continue
+            # Determine mapped topic
+            t_idx = item.get("topic_index")
+            t_id = item.get("topic_id")
+            resolved_topic_id = None
+
+            if t_id and any(t.id == t_id for t in topics):
+                resolved_topic_id = t_id
+            elif isinstance(t_idx, int) and t_idx in topic_id_by_index and t_idx not in used_indices:
+                resolved_topic_id = topic_id_by_index[t_idx]
+                used_indices.add(t_idx)
+            elif s_idx in topic_id_by_index and s_idx not in used_indices:
+                # Fallback to ordinal position if unambiguous
+                resolved_topic_id = topic_id_by_index[s_idx]
+                used_indices.add(s_idx)
+
+            if resolved_topic_id and resolved_topic_id not in mapped_scripts:
+                clean_script = {k: str(item.get(k, "")).strip() for k in REQUIRED_KEYS}
+                mapped_scripts[resolved_topic_id] = clean_script
+
+        if len(mapped_scripts) != n:
+            logger.warning(
+                f"[BATCH_SCRIPT] Ambiguous or incomplete topic mapping: resolved {len(mapped_scripts)}/{n} topics. "
+                f"Unmapped topics will fall back to single-script path."
+            )
+
+        # 3. Cross-Script Deduplication / Similarity Check
+        # Reject duplicate or substantially similar narratives within the same batch
+        rejected_by_similarity: set = set()
+        topic_id_list = list(mapped_scripts.keys())
+        for i in range(len(topic_id_list)):
+            id_a = topic_id_list[i]
+            script_a = mapped_scripts[id_a]
+            full_a = " ".join(script_a.get(k, "") for k in REQUIRED_KEYS).lower()
+            words_a = set(re.findall(r"\b\w{4,}\b", full_a))
+
+            hook_words_a = set(re.findall(r"\b\w{4,}\b", script_a.get("hook", "").lower()))
+
+            for j in range(i + 1, len(topic_id_list)):
+                id_b = topic_id_list[j]
+                script_b = mapped_scripts[id_b]
+                full_b = " ".join(script_b.get(k, "") for k in REQUIRED_KEYS).lower()
+                words_b = set(re.findall(r"\b\w{4,}\b", full_b))
+                hook_words_b = set(re.findall(r"\b\w{4,}\b", script_b.get("hook", "").lower()))
+
+                # Check hook overlap (4+ significant shared words)
+                shared_hook = hook_words_a & hook_words_b
+                if len(shared_hook) >= 4:
+                    logger.warning(f"[BATCH_SCRIPT] Hook similarity conflict between '{id_a}' and '{id_b}': shared {shared_hook}")
+                    rejected_by_similarity.add(id_b)
+
+                # Check content word Jaccard similarity (> 0.35 threshold)
+                if words_a and words_b:
+                    jaccard = len(words_a & words_b) / len(words_a | words_b)
+                    if jaccard > 0.35:
+                        logger.warning(f"[BATCH_SCRIPT] High cross-script similarity ({jaccard:.2f}) between '{id_a}' and '{id_b}'. Rejecting '{id_b}'.")
+                        rejected_by_similarity.add(id_b)
+
+        # 4. Final Per-Topic Validation & Result Assembly
+        for topic in topics:
+            if topic.id not in mapped_scripts:
+                logger.info(f"[BATCH_SCRIPT] Topic '{topic.title[:45]}' not mapped in batch output -> single-script fallback.")
+                results[topic.id] = None
+                continue
+
+            if topic.id in rejected_by_similarity:
+                logger.info(f"[BATCH_SCRIPT] Topic '{topic.title[:45]}' rejected for batch similarity -> single-script fallback.")
+                results[topic.id] = None
+                continue
+
+            candidate_script = mapped_scripts[topic.id]
+            is_valid, failure_reasons = _validate_individual_script(candidate_script, topic)
+
+            if is_valid:
+                wc = len(" ".join(candidate_script.values()).split())
+                logger.info(f"[BATCH_SCRIPT] Topic '{topic.title[:45]}' VALID ({wc} words).")
+                results[topic.id] = candidate_script
+            else:
+                logger.warning(
+                    f"[BATCH_SCRIPT] Topic '{topic.title[:45]}' INVALID ({failure_reasons}). "
+                    f"Will retry individually via single-script path."
+                )
+                results[topic.id] = None
+
+        valid_count = sum(1 for v in results.values() if v is not None)
+        logger.info(f"[BATCH_SCRIPT] Batch generation complete: {valid_count}/{n} scripts approved on first pass.")
+        return results
+
+
 
     @staticmethod
     def classify_hook_archetype(hook_text: str) -> str:
