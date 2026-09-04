@@ -83,6 +83,18 @@ class HistoricalCategory(str, Enum):
     FORGOTTEN_FIGURES = "Forgotten Figures"
 
 
+class CurrentAffairsCategory(str, Enum):
+    GEOPOLITICS = "Geopolitics"
+    GLOBAL_CONFLICT = "Global Conflict"
+    WORLD_POLITICS = "World Politics"
+    US_POLITICS = "US Politics"
+    EUROPE_POLITICS = "Europe Politics"
+    GLOBAL_ECONOMY = "Global Economy"
+    DIPLOMACY = "Diplomacy"
+    SECURITY = "Security"
+    MAJOR_WORLD_EVENT = "Major World Event"
+
+
 class LicenseType(str, Enum):
     PEXELS_LICENSE = "Pexels License (Commercial $0)"
     PUBLIC_DOMAIN_CC0 = "Public Domain / CC0"

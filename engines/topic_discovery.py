@@ -263,6 +263,25 @@ class TopicDiscoveryEngine:
         )
         return topic
 
+    def discover_current_affairs_candidates(
+        self,
+        db: Session,
+        limit: int = 3,
+        include_gdelt: bool = False,
+        **kwargs
+    ) -> List[Topic]:
+        """
+        Discovers verified, multi-source current-affairs opportunities via the isolated
+        intelligence layer and persists qualifying items as approved Topic records.
+        Fails safely and returns an empty list if any external error occurs.
+        """
+        try:
+            from intelligence import discover_current_affairs_candidates as run_discovery
+            return run_discovery(db=db, limit=limit, include_gdelt=include_gdelt, **kwargs)
+        except Exception as e:
+            logger.warning(f"[CURRENT_AFFAIRS_DISCOVERY] Discovery cycle noticed exception: {e}")
+            return []
+
     def discover_topics(self, db: Session, limit: int = 5, exclude_topic_ids: Optional[Any] = None) -> List[Topic]:
         """Discovers new candidate topics or returns unproduced approved topics."""
         # 1. First check if we have approved topics in DB that have not been published or produced yet
