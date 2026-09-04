@@ -3444,3 +3444,20 @@
 | `duration_target` | **SWEET_SPOT** | 4 | `+1.4%` | `WEAK_EVIDENCE` | **1.00** | Weak evidence (N=4). Conservative +-10% damped adjustment (+1.4% lift vs baseline). |
 | `hook_archetype` | **DATE_TIME_ANCHOR** | 4 | `+1.4%` | `WEAK_EVIDENCE` | **1.00** | Weak evidence (N=4). Conservative +-10% damped adjustment (+1.4% lift vs baseline). |
 | `motion_style` | **DYNAMIC_ZOOM_PAN** | 4 | `+1.4%` | `WEAK_EVIDENCE` | **1.00** | Weak evidence (N=4). Conservative +-10% damped adjustment (+1.4% lift vs baseline). |
+
+## Learning Cycle — 2026-09-04 14:36:12 UTC
+
+- **Mature Videos Evaluated**: 25
+- **Channel Performance Baseline**: 38.92/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 4 | `+0.8%` | `WEAK_EVIDENCE` | **1.00** | Weak evidence (N=4). Conservative +-10% damped adjustment (+0.8% lift vs baseline). |
+| `category` | **Documented Disasters** | 4 | `+1.8%` | `WEAK_EVIDENCE` | **1.00** | Weak evidence (N=4). Conservative +-10% damped adjustment (+1.8% lift vs baseline). |
+| `category` | **Historical Documentaries** | 2 | `-37.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Unusual Wars** | 2 | `+5.3%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `+17.6%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+18.6%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `duration_target` | **SWEET_SPOT** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 4 | `+0.8%` | `WEAK_EVIDENCE` | **1.00** | Weak evidence (N=4). Conservative +-10% damped adjustment (+0.8% lift vs baseline). |
