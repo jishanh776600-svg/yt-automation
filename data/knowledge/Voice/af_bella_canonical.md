@@ -1,17 +1,15 @@
 # Canonical Narration Voice: af_bella
 
-## Overview
-`af_bella` is the authoritative permanent voice for all AL AMR historical YouTube Shorts narration.
+> [!CAUTION]
+> **SUPERSEDED & DECOMMISSIONED**  
+> `af_bella` was tested as a high-energy voice during earlier production phases. It has been **permanently decommissioned** due to rushed cadence and lack of documentary authority.  
+> **Active Authoritative Voice:** [[Voice/af_sarah_canonical|af_sarah (Sarah - US Female)]]  
+> **Master Reference:** [[06 - Audio & Voice|Audio & Voice Architecture]]
 
-## Configuration & Standards
-- **Voice Identifier**: `af_bella`
-- **Engine**: Kokoro-v1.0 ONNX (Zero GPU dependency, ultra-fast CPU inference)
-- **Format**: 24kHz / 44.1kHz 16-bit PCM WAV
-- **Speed / Pacing**: 1.05x normal conversational speed (~2.3 to 2.6 words/sec)
-- **Word Target**: 50 to 56 words for ~22.0 to 24.0s of clean narration
-- **Outro Breathing Room**: Exactly +0.6s visual and audio buffer after final syllable
+---
 
-## Voice Invariants
-1. All modules (`tts_engine.py`, `settings.py`, workflows, preview UI, E2E) resolve to `af_bella`.
-2. Fallback to `am_adam` or other voices is strictly prohibited in production.
-- **Pipeline Integration**: Implemented in [[Production/pipeline_rules|Pipeline Rules]].
+## Historical Context (Preserved for Reference)
+- **Voice Identifier:** `af_bella`
+- **Engine:** Kokoro-v1.0 ONNX
+- **Former Speed:** 1.05x normal speed
+- **Retirement Reason:** Extended audition evaluations proved that Sarah (`af_sarah`) delivers significantly better viewer trust, documentary gravitas, and audience retention for weird science and bizarre mysteries.

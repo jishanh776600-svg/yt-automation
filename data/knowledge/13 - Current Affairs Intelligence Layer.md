@@ -1,11 +1,14 @@
 # 13 — Current-Affairs Intelligence Layer
 
-> **Status:** `[IMPLEMENTED & OFFLINE VERIFIED]`  
-> **Scope:** Autonomous discovery, multi-source corroboration, and opportunity scoring for geopolitical, world-affairs, and breaking news Shorts.  
+> [!WARNING]
+> **SUPERSEDED EXPERIMENT / HISTORICAL ARCHIVE**  
+> The Geopolitics and Breaking News editorial direction was thoroughly evaluated and **permanently abandoned**.  
+> **Active Production Strategy:** The channel focuses exclusively on **Mystery/Bizarre Real-World Stories** and **Weird Science / Unbelievable Facts**. All conventional politics, warfare, military conflict, and diplomacy are fail-closed rejected via `is_niche_compliant`.  
+> **Master Reference:** [[02 - Content Strategy|Authoritative Content Strategy]] and [[15 - Historical Decisions|Historical Decisions (Geopolitics Pivot)]]
 
 ---
 
-## 1. Architectural Overview
+## 1. Architectural Overview (Historical Architecture)
 
 The Current-Affairs Intelligence Layer introduces an autonomous, zero-cost intelligence pipeline that harvests, normalizes, clusters, scores, and corroborates real-world geopolitical events prior to script generation.
 
