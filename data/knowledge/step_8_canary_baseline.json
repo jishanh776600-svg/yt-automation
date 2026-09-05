@@ -1,0 +1,60 @@
+{
+  "snapshot_type": "STEP_8_PRE_CANARY_BASELINE",
+  "timestamp_utc": "2026-09-04T12:33:11.333737+00:00",
+  "today_date": "2026-09-04",
+  "db": {
+    "total_jobs": 410,
+    "jobs_by_state": {
+      "NEEDS_REVIEW": 111,
+      "PUBLISHED": 185,
+      "QA": 8,
+      "QUEUED": 55,
+      "READY_TO_UPLOAD": 28,
+      "RENDERED_QA_PASSED": 4,
+      "RESEARCHING": 18,
+      "UPLOADING": 1
+    },
+    "total_uploads": 226,
+    "uploads_by_status": {
+      "PENDING": 25,
+      "PUBLISHED": 47,
+      "SUCCESS": 154
+    },
+    "topics_by_status": {
+      "APPROVED": 19,
+      "COMPLETED": 3,
+      "DISCOVERED": 427
+    }
+  },
+  "youtube": {
+    "total_occupied_slots": 21,
+    "today_count": 0,
+    "limit": 3
+  },
+  "drive_vault": {
+    "vault_root": "1MCyT07bauHEeBP3er17-sMxtKvMx9Puw",
+    "ready_folder_id": "1xyknuEVracrgFP9xZ8kQitY_cSAmX3Wv",
+    "file_counts": {
+      "01_READY": 0,
+      "02_PROCESSING": 0,
+      "03_PUBLISHED": 0,
+      "04_FAILED": 0
+    },
+    "files": {
+      "01_READY": [],
+      "02_PROCESSING": [],
+      "03_PUBLISHED": [],
+      "04_FAILED": []
+    }
+  },
+  "reserve_reconciliation": {
+    "ready_count": 0,
+    "processing_count": 0,
+    "target_reserve": 6,
+    "deficit": 6,
+    "is_healthy": false
+  },
+  "ai_providers": [
+    "primary"
+  ]
+}

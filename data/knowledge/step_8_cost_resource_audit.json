@@ -1,0 +1,63 @@
+{
+  "audit_type": "STEP_8_COST_AND_RESOURCE_AUDIT",
+  "canary_job_id": "job_af6201a41691",
+  "topic_id": "top_7511e7d8c0ab",
+  "topic_title": "Germany's far-right AfD party is poised for power in a state election",
+  "total_wall_clock_sec": 307.58,
+  "ai_usage": {
+    "provider": "Google GenAI (Direct API)",
+    "primary_model": "gemma-4-26b-a4b-it",
+    "fallback_model": "gemma-4-31b-it",
+    "calls_dispatched": {
+      "script_generation": 1,
+      "bgm_director_decision": 2
+    },
+    "total_tokens_estimated": 840,
+    "cost_usd": 0.0,
+    "quota_tier": "Free Tier ($0.00)"
+  },
+  "tts_usage": {
+    "engine": "Kokoro TTS (Local ONNX)",
+    "model_file": "kokoro-v1.0.onnx",
+    "voice": "af_bella",
+    "audio_duration_sec": 22.14,
+    "cost_usd": 0.0
+  },
+  "media_acquisition": {
+    "provider": "Pexels Video API",
+    "resolution": "1080p (1080x1920 / 1920x1080 / 2160x3840)",
+    "shots_acquired": 8,
+    "cost_usd": 0.0
+  },
+  "audio_mixing": {
+    "engine": "FFmpeg audio_mixer",
+    "target_loudness_lufs": -14.0,
+    "measured_loudness_lufs": -14.6,
+    "max_true_peak_db": -0.7,
+    "bgm_track": "No copyright Best Historical.wav",
+    "bgm_fft_correlation_score": 1.5733,
+    "bgm_verified": true
+  },
+  "rendering": {
+    "engine": "FFmpeg 7.1 (imageio_ffmpeg)",
+    "output_resolution": "1080x1920",
+    "video_duration_sec": 23.12,
+    "file_size_bytes": 36550869,
+    "file_size_mb": 34.86,
+    "render_wall_time_sec": 47.0
+  },
+  "cloud_storage": {
+    "vault": "Google Drive Vault",
+    "target_folder": "01_READY",
+    "file_id": "1MjaDMjJRCBpM09SLV-NgJ_7eyBQc-Q5f",
+    "bytes_transferred": 36550869,
+    "cost_usd": 0.0
+  },
+  "youtube": {
+    "uploads_dispatched": 0,
+    "schedules_dispatched": 0,
+    "quota_consumed": 0,
+    "cost_usd": 0.0
+  },
+  "total_financial_cost_usd": 0.0
+}

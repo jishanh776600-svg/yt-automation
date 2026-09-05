@@ -25,20 +25,20 @@ logger = logging.getLogger(__name__)
 KOKORO_MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx"
 KOKORO_VOICES_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin"
 
-APPROVED_PRODUCTION_VOICES = ["af_bella"]
+APPROVED_PRODUCTION_VOICES = ["af_sarah"]
 
 AVAILABLE_VOICES = [
     {
-        "id": "af_bella",
-        "display_name": "Bella (US Female)",
+        "id": "af_sarah",
+        "display_name": "Sarah (US Female)",
         "engine": "Kokoro-82M ONNX / Edge-TTS",
-        "description": "Clear, crisp, and high-energy narration. Best for fast-paced viral hooks and sudden twists.",
-        "style": "Dynamic / Engaging",
+        "description": "Clear, authoritative, and engaging narration. Authentic pacing for mystery and science storytelling.",
+        "style": "Authoritative / Engaging",
         "gender": "Female",
         "accent": "American",
-        "kokoro_voice": "af_bella",
+        "kokoro_voice": "af_sarah",
         "edge_voice": "en-US-JennyNeural",
-        "delivery_profile": "BELLA_MAX_CREATOR",
+        "delivery_profile": "SARAH_CANONICAL",
         "available": True
     }
 ]
@@ -49,12 +49,12 @@ def resolve_voice_config(voice_id: str) -> dict:
     Authoritative voice configuration resolver.
     Returns the canonical voice entry for any supported voice_id, ensuring
     both Kokoro and Edge-TTS providers resolve to the exact intended voice profile.
-    Restricted strictly to APPROVED_PRODUCTION_VOICES (af_bella).
+    Restricted strictly to APPROVED_PRODUCTION_VOICES (af_sarah).
     """
     for v in AVAILABLE_VOICES:
         if v["id"] == voice_id:
             return v
-    # Safe fallback to approved production voice (Bella)
+    # Safe fallback to approved production voice (Sarah)
     return AVAILABLE_VOICES[0]
 
 
@@ -67,7 +67,7 @@ def get_active_voice(db: Optional[Session] = None) -> str:
                 return cfg.value
         except Exception:
             pass
-    return "af_bella"
+    return "af_sarah"
 
 
 def select_voice_by_policy(category: str = "", title: str = "", script_text: str = "") -> str:
@@ -139,10 +139,10 @@ class TTSEngine:
         self,
         text: str,
         output_path: Path,
-        voice: str = "af_bella",
+        voice: str = "af_sarah",
         speed: float = 1.05,
-        sentence_pause: float = 0.12,
-        clause_pause: float = 0.04
+        sentence_pause: float = 0.08,
+        clause_pause: float = 0.03
     ) -> Tuple[bool, float]:
         """Synthesizes speech using Kokoro ONNX model with calibrated pause controls."""
         kokoro = self._get_kokoro()
@@ -287,10 +287,10 @@ class TTSEngine:
             return False
 
     @staticmethod
-    def compress_silence_gaps(input_wav: Path, output_wav: Path, max_pause_sec: float = 0.14) -> Tuple[bool, float]:
+    def compress_silence_gaps(input_wav: Path, output_wav: Path, max_pause_sec: float = 0.10) -> Tuple[bool, float]:
         """
         Compresses dead air and excessive pauses between spoken phrases/sentences down to max_pause_sec.
-        Preserves natural breathing pauses (80-120ms) without clipping words or phonemes.
+        Preserves natural breathing pauses (80-100ms) without clipping words or phonemes.
         """
         try:
             data, sr = sf.read(str(input_wav))
@@ -345,17 +345,17 @@ class TTSEngine:
 
         active_voice = voice or get_active_voice(db)
         if active_voice not in APPROVED_PRODUCTION_VOICES:
-            logger.warning(f"[TTS_ENGINE] Voice '{active_voice}' not approved for production. Defaulting to 'af_bella'.")
-            active_voice = "af_bella"
+            logger.warning(f"[TTS_ENGINE] Voice '{active_voice}' not approved for production. Defaulting to 'af_sarah'.")
+            active_voice = "af_sarah"
         v_cfg = resolve_voice_config(active_voice)
         kokoro_v = v_cfg.get("kokoro_voice", active_voice)
         edge_v = v_cfg.get("edge_voice", "en-US-JennyNeural")
 
-        # Extract delivery parameters if delivery_spec is provided
+        # Extract delivery parameters if delivery_spec is provided (tight 0.08s / 0.03s pauses)
         synthesize_text = delivery_spec.prepared_text if (delivery_spec and getattr(delivery_spec, "prepared_text", None)) else text
         eff_speed = delivery_spec.speed_multiplier if (delivery_spec and speed_multiplier == 1.0) else speed_multiplier
-        sentence_pause = getattr(delivery_spec, "sentence_pause_sec", 0.12) if delivery_spec else 0.12
-        clause_pause = getattr(delivery_spec, "clause_pause_sec", 0.04) if delivery_spec else 0.04
+        sentence_pause = getattr(delivery_spec, "sentence_pause_sec", 0.08) if delivery_spec else 0.08
+        clause_pause = getattr(delivery_spec, "clause_pause_sec", 0.03) if delivery_spec else 0.03
 
         success = False
         duration = 0.0
@@ -407,27 +407,39 @@ class TTSEngine:
                 tts_source = "edge_tts"
                 license_type = LicenseType.AI_GENERATED_OPEN.value
 
-        # 3b. Apply silence gap tightening to eliminate awkward dead air between phrases
+        # 3b. Apply silence gap tightening to eliminate awkward dead air between phrases (max 100ms)
         if wav_path.exists():
             tightened_wav = self.voice_dir / f"{asset_id}_tightened.wav"
-            t_ok, t_dur = self.compress_silence_gaps(wav_path, tightened_wav, max_pause_sec=0.14)
+            t_ok, t_dur = self.compress_silence_gaps(wav_path, tightened_wav, max_pause_sec=0.10)
             if t_ok and t_dur > 0:
                 wav_path = tightened_wav
                 duration = t_dur
 
-        # 4. Check Duration Sanity & Calibrate toward ~23s (22-25s)
-        if duration < MIN_DURATION_SEC and duration > 16.0:
-            logger.info(f"Duration {duration}s slightly short; re-synthesizing at 0.95x speed...")
+        # 4. Check Duration Sanity & Calibrate toward ~23.2s (22.0 - 25.0s)
+        # Re-synthesizes at calibrated speed while STILL enforcing silence gap compression (max 100ms)
+        if (duration < MIN_DURATION_SEC and duration > 14.0) or (duration > MAX_DURATION_SEC and duration < 32.0):
+            target_dur = 23.2
+            cal_speed = round(max(0.88, min(1.15, eff_speed * (duration / target_dur))), 2)
+            logger.info(f"Duration {duration}s outside [{MIN_DURATION_SEC}, {MAX_DURATION_SEC}]s; re-synthesizing at calibrated speed {cal_speed}x with silence compression...")
             if tts_source == "kokoro":
-                s_ok, s_dur = self.generate_kokoro_audio(text, wav_path, voice=kokoro_v, speed=0.95, sentence_pause=0.14, clause_pause=0.05)
-                if s_ok:
-                    duration = s_dur
-        elif duration > MAX_DURATION_SEC and duration < 32.0:
-            logger.info(f"Duration {duration}s slightly long; re-synthesizing at 1.08x speed...")
-            if tts_source == "kokoro":
-                s_ok, s_dur = self.generate_kokoro_audio(text, wav_path, voice=kokoro_v, speed=1.08, sentence_pause=0.10, clause_pause=0.03)
-                if s_ok:
-                    duration = s_dur
+                raw_cal = self.voice_dir / f"{asset_id}_cal_raw.wav"
+                s_ok, s_dur = self.generate_kokoro_audio(
+                    synthesize_text,
+                    raw_cal,
+                    voice=kokoro_v,
+                    speed=cal_speed,
+                    sentence_pause=sentence_pause,
+                    clause_pause=clause_pause
+                )
+                if s_ok and raw_cal.exists():
+                    cal_tight = self.voice_dir / f"{asset_id}_cal_tight.wav"
+                    t_ok, t_dur = self.compress_silence_gaps(raw_cal, cal_tight, max_pause_sec=0.10)
+                    if t_ok and t_dur > 0:
+                        wav_path = cal_tight
+                        duration = t_dur
+                    else:
+                        wav_path = raw_cal
+                        duration = s_dur
 
         # 5. Apply Studio Presence Mastering Chain
         mastered_wav = self.voice_dir / f"{asset_id}_mastered.wav"

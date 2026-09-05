@@ -91,9 +91,7 @@ jobs:
             echo "NVIDIA_API_KEY=${NVIDIA_API_KEY}" >> .env
           fi
           echo "TEST_MODE=false" >> .env
-          if [ -n "${{ inputs.active_voice }}" ]; then
-            echo "KOKORO_VOICE=${{ inputs.active_voice }}" >> .env
-          fi
+          echo "KOKORO_VOICE=${{ inputs.active_voice || 'af_sarah' }}" >> .env
           echo "${TOKEN_JSON}" > token.json
           echo "${CLIENT_SECRET_JSON}" > client_secret.json
 
@@ -106,10 +104,7 @@ jobs:
           BATCH_COUNT="${{ inputs.batch_count }}"
           TARGET_BUFFER="${{ inputs.target_buffer }}"
           VOICE_INPUT="${{ inputs.active_voice }}"
-          VOICE_FLAG=""
-          if [ -n "$VOICE_INPUT" ]; then
-            VOICE_FLAG="--voice $VOICE_INPUT"
-          fi
+          VOICE_FLAG="--voice ${VOICE_INPUT:-af_sarah}"
 
           if [ -n "$BATCH_COUNT" ] && [ "$BATCH_COUNT" -gt 0 ] 2>/dev/null; then
             echo "[*] Running targeted batch production for $BATCH_COUNT Shorts (Voice: ${VOICE_INPUT:-default})..."

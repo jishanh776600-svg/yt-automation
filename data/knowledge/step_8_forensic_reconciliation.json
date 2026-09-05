@@ -1,0 +1,88 @@
+{
+  "audit_type": "STEP_8_FORENSIC_RECONCILIATION",
+  "timestamp_utc": "2026-09-04T13:10:58.816795+00:00",
+  "baseline_timestamp": "2026-09-04T12:33:11.333737+00:00",
+  "comparison": {
+    "db_total_jobs": {
+      "before": 410,
+      "after": 415,
+      "diff": 5
+    },
+    "db_total_uploads": {
+      "before": 226,
+      "after": 226,
+      "diff": 0
+    },
+    "youtube_occupied_slots": {
+      "before": 21,
+      "after": 21,
+      "diff": 0
+    },
+    "youtube_today_count": {
+      "before": 0,
+      "after": 0,
+      "diff": 0
+    },
+    "drive_01_ready_count": {
+      "before": 0,
+      "after": 1,
+      "diff": 1
+    },
+    "drive_02_processing_count": {
+      "before": 0,
+      "after": 0,
+      "diff": 0
+    },
+    "drive_03_published_count": {
+      "before": 0,
+      "after": 20,
+      "diff": 20
+    },
+    "reserve_ready_count": {
+      "before": 0,
+      "after": 1,
+      "diff": 1
+    },
+    "reserve_deficit": {
+      "before": 6,
+      "after": 5,
+      "diff": -1
+    }
+  },
+  "current_state": {
+    "jobs_by_state": {
+      "FAILED": 3,
+      "NEEDS_REVIEW": 112,
+      "PUBLISHED": 185,
+      "QA": 8,
+      "QUEUED": 55,
+      "READY_TO_UPLOAD": 29,
+      "RENDERED_QA_PASSED": 4,
+      "RESEARCHING": 18,
+      "UPLOADING": 1
+    },
+    "uploads_by_status": {
+      "PENDING": 25,
+      "PUBLISHED": 47,
+      "SUCCESS": 154
+    },
+    "topics_by_status": {
+      "APPROVED": 20,
+      "COMPLETED": 3,
+      "DISCOVERED": 427
+    },
+    "drive_file_counts": {
+      "01_READY": 1,
+      "02_PROCESSING": 0,
+      "03_PUBLISHED": 20,
+      "04_FAILED": 22
+    },
+    "reserve_reconciliation": {
+      "ready_count": 1,
+      "processing_count": 0,
+      "target_reserve": 6,
+      "deficit": 5,
+      "is_healthy": false
+    }
+  }
+}

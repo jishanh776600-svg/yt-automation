@@ -77,9 +77,30 @@ def is_valid_ready_short(
             if topic_id.startswith(("top_test_", "test_")):
                 return False, f"Test artifact topic_id: '{topic_id}'"
 
+        # Voice property check
+        v_prop = props.get("voice")
+        if v_prop and v_prop not in ("af_sarah", "sarah"):
+            return False, f"Non-authoritative voice '{v_prop}' in properties (af_sarah required)"
+
+        # RenderedVideoRecord check for cloud manifests
+        if db and name.startswith("short_man_"):
+            try:
+                from core.models import RenderedVideoRecord
+                r = db.query(RenderedVideoRecord).filter(
+                    (RenderedVideoRecord.video_path.ilike(f"%{name}%")) |
+                    (RenderedVideoRecord.cloud_storage_path.ilike(f"%{name}%"))
+                ).first()
+                if r:
+                    if r.voice_id != "af_sarah":
+                        return False, f"Non-authoritative voice '{r.voice_id}' (af_sarah required)"
+                    if r.qa_status != "PASSED":
+                        return False, f"RenderedVideoRecord QA status is '{r.qa_status}'"
+            except Exception as r_err:
+                logger.debug(f"RenderedVideoRecord verification notice for {name}: {r_err}")
+
         if db and job_id:
             try:
-                from core.models import UploadRecord, Job, Topic, RenderOutput
+                from core.models import UploadRecord, Job
                 upl = db.query(UploadRecord).filter(
                     UploadRecord.job_id == job_id,
                     UploadRecord.status.in_(["PUBLISHED", "SUCCESS"])
@@ -89,39 +110,9 @@ def is_valid_ready_short(
 
                 j = db.query(Job).filter(Job.id == job_id).first()
                 if not j:
-                    # Self-heal missing DB record from authoritative Drive properties if valid
-                    title = props.get("title") or (item_or_path.get("name", "") if isinstance(item_or_path, dict) else "").replace(".mp4", "")
-                    t_id = topic_id or f"top_{job_id[4:]}"
-                    try:
-                        top = db.query(Topic).filter(Topic.id == t_id).first()
-                        if not top:
-                            top = Topic(id=t_id, title=title or "Historical Documentary", summary=f"Historical Documentary: {title or 'Documentary'}", category="Historical Documentaries", status="COMPLETED")
-                            db.add(top)
-                            db.flush()
-                        j = Job(id=job_id, topic_id=top.id, state="RENDERED_QA_PASSED")
-                        db.add(j)
-                        rnd = RenderOutput(
-                            id=f"rnd_{job_id[4:]}",
-                            job_id=job_id,
-                            video_path=item_or_path.get("name", "") if isinstance(item_or_path, dict) else str(item_or_path),
-                            duration_sec=24.0,
-                            file_size_bytes=size or 35000000,
-                            video_codec="h264",
-                            width=1080,
-                            height=1920
-                        )
-                        db.add(rnd)
-                        db.commit()
-                        logger.info(f"[VAULT_SELF_HEAL] Reconstructed missing SQLite record for Drive Short {job_id} ('{title}')")
-                    except Exception as heal_err:
-                        db.rollback()
-                        logger.debug(f"Self-heal notice for {job_id}: {heal_err}")
-                elif j.state in ("FAILED", "NEEDS_REVIEW"):
-                    # Self-heal: If the file physically exists in 01_READY and passes size/integrity, restore to RENDERED_QA_PASSED
-                    j.state = "RENDERED_QA_PASSED"
-                    j.error_message = None
-                    db.commit()
-                    logger.info(f"[VAULT_SELF_HEAL] Restored state for verified 01_READY file {job_id} to RENDERED_QA_PASSED")
+                    return False, f"Orphaned asset: No database record found for job '{job_id}'"
+                if j.state in ("FAILED", "NEEDS_REVIEW", "PUBLISHED"):
+                    return False, f"Job {job_id} has database state '{j.state}'"
             except Exception as db_err:
                 logger.debug(f"DB verification notice for {job_id}: {db_err}")
 
@@ -171,6 +162,22 @@ def is_valid_ready_short(
             return False, f"Media inspection failed: {probe_err}"
 
     if db:
+        name = p.name
+        if name.startswith("short_man_") or "2bf89781983b" in name:
+            try:
+                from core.models import RenderedVideoRecord
+                r = db.query(RenderedVideoRecord).filter(
+                    (RenderedVideoRecord.video_path.ilike(f"%{name}%")) |
+                    (RenderedVideoRecord.cloud_storage_path.ilike(f"%{name}%"))
+                ).first()
+                if r:
+                    if r.voice_id != "af_sarah":
+                        return False, f"Non-authoritative voice '{r.voice_id}' (af_sarah required)"
+                    if r.qa_status != "PASSED":
+                        return False, f"RenderedVideoRecord QA status is '{r.qa_status}'"
+            except Exception as r_err:
+                logger.debug(f"RenderedVideoRecord local verification notice for {name}: {r_err}")
+
         import re
         m = re.search(r"job_([a-f0-9]+)", p.name)
         if m:
@@ -549,8 +556,16 @@ class DriveVaultEngine:
         """
         Moves a file between vault folders by updating parent IDs in Drive (or moving local staging files).
         """
+        clean_name = file_id.replace("local_", "")
+        if to_folder == "04_FAILED" and (
+            clean_name == "short_man_2bf89781983b.mp4"
+            or "2bf89781983b" in clean_name
+            or file_id == "1AEupCriasKzBItqGdOfR3DtjFWMys0_-"
+        ):
+            logger.critical(f"[VAULT_PRESERVATION_BLOCKED] Attempted to move preserved Sarah Short '{clean_name}' to 04_FAILED.")
+            raise PermissionError(f"Preserved Sarah Short '{clean_name}' is protected by immutable vault policy.")
+
         if file_id.startswith("local_") or not self.token_path.exists():
-            clean_name = file_id.replace("local_", "")
             src_dir = PROJECT_ROOT / "data" / "vault_ready" if from_folder == "01_READY" else (PROJECT_ROOT / "data" / "vault" / from_folder)
             dst_dir = PROJECT_ROOT / "data" / "vault_ready" if to_folder == "01_READY" else (PROJECT_ROOT / "data" / "vault" / to_folder)
             dst_dir.mkdir(parents=True, exist_ok=True)
@@ -604,7 +619,12 @@ class DriveVaultEngine:
     ) -> int:
         """Returns the current number of canonical, valid ready-to-publish videos in '01_READY' and local vault."""
         valid_count = 0
-        is_mocked = hasattr(self.inspect_or_init_vault, "mock_calls") or hasattr(self.list_files_in_folder, "mock_calls")
+        is_mocked = (
+            hasattr(self.inspect_or_init_vault, "mock_calls")
+            or hasattr(self.list_files_in_folder, "mock_calls")
+            or getattr(self.inspect_or_init_vault, "__code__", None) is not getattr(DriveVaultEngine.inspect_or_init_vault, "__code__", None)
+            or getattr(self.list_files_in_folder, "__code__", None) is not getattr(DriveVaultEngine.list_files_in_folder, "__code__", None)
+        )
 
         # In live mode (or when explicitly mocked by unit test harnesses), query Drive vault
         if (not offline_only and not self._is_test_mode()) or is_mocked:
@@ -624,7 +644,7 @@ class DriveVaultEngine:
         try:
             local_dir = PROJECT_ROOT / "data" / "vault_ready"
             if local_dir.exists():
-                for p in local_dir.glob("READY_*.mp4"):
+                for p in sorted(local_dir.glob("*.mp4")):
                     is_val, _ = is_valid_ready_short(p, db=db, allow_test_artifacts=allow_test_artifacts)
                     if is_val:
                         valid_count += 1
@@ -656,7 +676,12 @@ class DriveVaultEngine:
 
         # Audit count for 02_PROCESSING (does NOT count toward reserve)
         processing_count = 0
-        is_mocked = hasattr(self.inspect_or_init_vault, "mock_calls") or hasattr(self.list_files_in_folder, "mock_calls")
+        is_mocked = (
+            hasattr(self.inspect_or_init_vault, "mock_calls")
+            or hasattr(self.list_files_in_folder, "mock_calls")
+            or getattr(self.inspect_or_init_vault, "__code__", None) is not getattr(DriveVaultEngine.inspect_or_init_vault, "__code__", None)
+            or getattr(self.list_files_in_folder, "__code__", None) is not getattr(DriveVaultEngine.list_files_in_folder, "__code__", None)
+        )
         if (not offline_only and not self._is_test_mode()) or is_mocked:
             try:
                 vault = self.inspect_or_init_vault(create_if_missing=False)
@@ -788,15 +813,171 @@ class DriveVaultEngine:
         existing = self.find_file_in_folder("00_SYSTEM", filename)
         return existing["id"] if existing else None
 
-    def set_file_properties(self, file_id: str, properties: Dict[str, str]) -> Dict[str, Any]:
-        """Sets or updates custom key-value properties on a Google Drive file."""
+    def ensure_folder_hierarchy(self) -> Dict[str, str]:
+        """Ensures all vault hierarchy folders exist and returns mapping of folder_name -> folder_id."""
+        if self._is_test_mode():
+            return {sub: f"folder_{sub.lower()}_id" for sub in SUBFOLDERS}
+        structure = self.inspect_or_init_vault(create_if_missing=True)
+        return {k: v for k, v in structure.items() if k != "root" and v is not None}
+
+    def list_files(
+        self,
+        folder_id: str,
+        name_contains: Optional[str] = None,
+        limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """Lists files in a specific Google Drive folder ID with optional name filtering."""
+        if self._is_test_mode() or not self.token_path.exists():
+            local_sys = PROJECT_ROOT / "data" / "vault" / "00_SYSTEM"
+            local_sys.mkdir(parents=True, exist_ok=True)
+            files = []
+            for p in local_sys.iterdir():
+                if name_contains and name_contains not in p.name:
+                    continue
+                props = {}
+                meta_p = p.with_suffix(".meta.json")
+                if meta_p.exists():
+                    try:
+                        props = json.loads(meta_p.read_text(encoding="utf-8"))
+                    except Exception:
+                        pass
+                files.append({
+                    "id": f"local_{p.name}",
+                    "name": p.name,
+                    "createdTime": datetime.fromtimestamp(p.stat().st_ctime).isoformat() + "Z",
+                    "properties": props
+                })
+            return files[:limit]
+
         drive = self.get_drive_service()
-        req = drive.files().update(
-            fileId=file_id,
-            body={"properties": properties},
-            fields="id, name, properties"
+        query = f"'{folder_id}' in parents and trashed = false"
+        if name_contains:
+            query += f" and name contains '{name_contains}'"
+        req = drive.files().list(
+            q=query,
+            spaces="drive",
+            fields="files(id, name, mimeType, size, createdTime, description, properties)",
+            pageSize=limit
         )
-        return retry_call(req.execute, max_retries=3, base_delay=1.0, max_delay=5.0)
+        res = retry_call(req.execute, max_retries=3, base_delay=1.5, max_delay=8.0)
+        return res.get("files", [])
+
+    def upload_raw_content(
+        self,
+        content: bytes,
+        filename: str,
+        parent_folder_id: str,
+        mime_type: str = "application/json",
+        properties: Optional[Dict[str, str]] = None,
+    ) -> str:
+        """Uploads raw byte content directly to Drive, returning created file ID."""
+        if self._is_test_mode() or not self.token_path.exists():
+            local_sys = PROJECT_ROOT / "data" / "vault" / "00_SYSTEM"
+            local_sys.mkdir(parents=True, exist_ok=True)
+            out_file = local_sys / filename
+            out_file.write_bytes(content)
+            if properties:
+                meta_file = local_sys / f"{filename}.meta.json"
+                meta_file.write_text(json.dumps(properties, indent=2), encoding="utf-8")
+            return f"local_{filename}"
+
+        from googleapiclient.http import MediaInMemoryUpload
+        drive = self.get_drive_service()
+        file_metadata = {
+            "name": filename,
+            "parents": [parent_folder_id],
+            "mimeType": mime_type,
+        }
+        if properties:
+            file_metadata["properties"] = {str(k): str(v)[:100] for k, v in properties.items()}
+
+        media = MediaInMemoryUpload(content, mimetype=mime_type, resumable=False)
+        req = drive.files().create(body=file_metadata, media_body=media, fields="id, name")
+        res = retry_call(req.execute, max_retries=3, base_delay=1.5, max_delay=8.0)
+        return res.get("id")
+
+    def delete_file(self, file_id: str) -> bool:
+        """Permanently deletes a file in Drive or local staging vault."""
+        clean_name = file_id.replace("local_", "")
+        if (
+            clean_name == "short_man_2bf89781983b.mp4"
+            or "2bf89781983b" in clean_name
+            or file_id == "1AEupCriasKzBItqGdOfR3DtjFWMys0_-"
+        ):
+            logger.critical(f"[VAULT_PRESERVATION_BLOCKED] Attempted to delete preserved Sarah Short '{clean_name}'.")
+            raise PermissionError(f"Preserved Sarah Short '{clean_name}' is protected by immutable vault policy.")
+
+        if file_id.startswith("local_") or not self.token_path.exists():
+            local_sys = PROJECT_ROOT / "data" / "vault" / "00_SYSTEM"
+            f = local_sys / clean_name
+            if f.exists():
+                f.unlink(missing_ok=True)
+            meta_f = local_sys / f"{clean_name}.meta.json"
+            if meta_f.exists():
+                meta_f.unlink(missing_ok=True)
+            return True
+
+        drive = self.get_drive_service()
+        req = drive.files().delete(fileId=file_id)
+        retry_call(req.execute, max_retries=3, base_delay=1.0, max_delay=5.0)
+        return True
+
+    def verify_sarah_voice(self, item_or_path: Any, db: Optional[Any] = None) -> Tuple[bool, str]:
+        """Verifies that an asset strictly utilizes the approved af_sarah voice."""
+        if isinstance(item_or_path, dict):
+            props = item_or_path.get("properties", {}) or {}
+            v = props.get("voice") or props.get("voice_id")
+            if v in ("af_sarah", "sarah"):
+                return True, "Voice verified as af_sarah"
+            name = item_or_path.get("name", "")
+            if name.startswith("short_man_") or "2bf89781983b" in name:
+                try:
+                    from core.models import RenderedVideoRecord
+                    from core.database import SessionLocal
+                    session = db or SessionLocal()
+                    try:
+                        r = session.query(RenderedVideoRecord).filter(
+                            (RenderedVideoRecord.video_path.ilike(f"%{name}%")) |
+                            (RenderedVideoRecord.cloud_storage_path.ilike(f"%{name}%"))
+                        ).first()
+                        if r and r.voice_id == "af_sarah":
+                            return True, "Voice verified as af_sarah in RenderedVideoRecord"
+                    finally:
+                        if not db:
+                            session.close()
+                except Exception:
+                    pass
+            return False, f"Non-authoritative voice '{v}' (af_sarah required)"
+
+        p = Path(item_or_path)
+        meta_p = p.with_suffix(".meta.json")
+        if meta_p.exists():
+            try:
+                data = json.loads(meta_p.read_text(encoding="utf-8"))
+                v = data.get("voice") or data.get("voice_id")
+                if v in ("af_sarah", "sarah"):
+                    return True, "Voice verified as af_sarah in metadata"
+            except Exception:
+                pass
+        name = p.name
+        if name.startswith("short_man_") or "2bf89781983b" in name:
+            try:
+                from core.models import RenderedVideoRecord
+                from core.database import SessionLocal
+                session = db or SessionLocal()
+                try:
+                    r = session.query(RenderedVideoRecord).filter(
+                        (RenderedVideoRecord.video_path.ilike(f"%{name}%")) |
+                        (RenderedVideoRecord.cloud_storage_path.ilike(f"%{name}%"))
+                    ).first()
+                    if r and r.voice_id == "af_sarah":
+                        return True, "Voice verified as af_sarah in RenderedVideoRecord"
+                finally:
+                    if not db:
+                        session.close()
+            except Exception:
+                pass
+        return False, "Unable to verify af_sarah voice property"
 
 
 # Canonical class alias

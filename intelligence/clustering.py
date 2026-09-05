@@ -44,6 +44,74 @@ def determine_action_domains(action_tokens: Set[str], action_domain_map: Optiona
     return domains
 
 
+BANNED_POLITICAL_KEYWORDS = [
+    "war", "warfare", "ceasefire", "military", "army", "troops", "infantry", "forces",
+    "diplomacy", "diplomat", "diplomatic", "treaty", "election", "elections", "voters",
+    "voting", "ballot", "parliament", "congress", "senate", "minister", "prime minister",
+    "president", "presidential", "spokesperson", "spokesman", "sanctions", "tariff", "tariffs",
+    "bilateral", "geopolitical", "geopolitics", "pentagon", "kremlin", "white house", "nato",
+    "un security council", "missile strike", "air strike", "artillery", "offensive",
+    "insurgency", "coup", "foreign policy", "envoy", "ambassador", "national security",
+    "ground forces", "defense secretary", "state department", "foreign ministry", "legislation",
+    "lawmakers", "referendum", "regime", "geopolitic"
+]
+
+APPROVED_NICHE_KEYWORDS = [
+    "anomaly", "anomalies", "bizarre", "mysterious", "mystery", "unexplained", "strange",
+    "ancient", "discovery", "discovered", "discoveries", "deep sea", "fossil", "fossils",
+    "archaeolog", "quantum", "astronom", "telescope", "creature", "creatures", "species",
+    "mutation", "dna", "skeleton", "tomb", "tombs", "pyramid", "pyramids", "space",
+    "planet", "planets", "galaxy", "galaxies", "ocean", "oceans", "sound", "signal",
+    "signals", "physics", "biology", "geology", "microscopic", "organism", "meteor",
+    "meteorite", "asteroid", "laboratory", "experiment", "phenomenon", "phenomena",
+    "radio burst", "submersible", "trench", "oddity", "peculiar", "unusual", "baffling",
+    "puzzle", "enigma", "stone age", "cosmic", "deep ocean", "antarctica", "glacier",
+    "ruins", "artifact", "artifacts", "monolith", "extraterrestrial", "supernova", "black hole",
+    "cryptid", "megalith", "underwater city", "fossilized", "evolutionary", "bizarre fact",
+    "weird science"
+]
+
+
+def is_niche_compliant(
+    title: str,
+    text: str = "",
+    entities: Optional[List[str]] = None,
+    allow_political: bool = False
+) -> Tuple[bool, str]:
+    """
+    STRICT NICHE PURITY GATE.
+    Authoritatively enforces the channel's sole target niches:
+    1. Mystery / Bizarre real-world stories
+    2. Weird Science / unbelievable-but-real facts
+    Strictly rejects conventional politics, geopolitics, elections,
+    military conflicts, diplomacy, and government commentary.
+    """
+    combined = f"{title} {text} {' '.join(entities or [])}".lower()
+
+    # 1. Hard check for political/geopolitical/military terms
+    if not allow_political:
+        matched_political = []
+        for kw in BANNED_POLITICAL_KEYWORDS:
+            pattern = rf"\b{re.escape(kw)}\b"
+            if re.search(pattern, combined):
+                matched_political.append(kw)
+
+        if matched_political:
+            return False, f"REJECTED_POLITICAL_CONTENT: matched {matched_political[:3]}"
+
+    # 2. Check for positive mystery / weird science alignment
+    matched_niche = []
+    for kw in APPROVED_NICHE_KEYWORDS:
+        if kw in combined:
+            matched_niche.append(kw)
+
+    if matched_niche:
+        return True, f"APPROVED_NICHE: matched {matched_niche[:3]}"
+
+    return False, "REJECTED_OUT_OF_NICHE: Lacks mystery, archaeological, or weird science indicators"
+
+
+
 class SemanticEmbeddingService:
     """
     Singleton service for local, CPU-friendly text embeddings via FastEmbed.

@@ -1,0 +1,82 @@
+{
+  "execution_type": "STEP_8_REAL_LIVE_CANARY",
+  "start_time": "2026-09-04T13:04:44.662514+00:00",
+  "end_time": "2026-09-04T13:09:52.245717+00:00",
+  "duration_sec": 307.58,
+  "telemetry": {
+    "timestamp": "2026-09-04T13:04:44.663142+00:00",
+    "canary_mode": true,
+    "status": "SUCCESS",
+    "preflight": {
+      "all_passed": true,
+      "failed_gate": null,
+      "reason": null,
+      "gates": {
+        "process_lock": {
+          "passed": true,
+          "reason": "Worker process lock is available or held by current process",
+          "details": {}
+        },
+        "queue_interlock": {
+          "passed": true,
+          "reason": "Queue is active and operational mode is AUTONOMOUS",
+          "details": {}
+        },
+        "ai_providers": {
+          "passed": true,
+          "reason": "AI providers available: ['primary']",
+          "details": {
+            "providers": [
+              "primary"
+            ]
+          }
+        },
+        "drive_vault": {
+          "passed": true,
+          "reason": "Google Drive vault reachable and verified",
+          "details": {}
+        },
+        "youtube_state": {
+          "passed": true,
+          "reason": "Authoritative YouTube schedule state successfully queried",
+          "details": {
+            "total_occupied_slots": 21
+          }
+        },
+        "reserve_state": {
+          "passed": true,
+          "reason": "Cloud reserve state verified: 0/6 verified Shorts (Deficit: 6)",
+          "details": {
+            "ready_count": 0,
+            "processing_count": 0,
+            "target_reserve": 6,
+            "deficit": 6,
+            "is_healthy": false
+          }
+        },
+        "daily_limit": {
+          "passed": true,
+          "reason": "Daily YouTube publication capacity available (0/3)",
+          "details": {
+            "used_today": 0,
+            "limit": 3
+          }
+        },
+        "canary_consumed": {
+          "passed": true,
+          "reason": "Canary has not yet been executed in this session",
+          "details": {}
+        }
+      },
+      "timestamp": "2026-09-04T13:05:08.776229+00:00"
+    },
+    "job_id": "job_af6201a41691",
+    "topic_title": "Germany's far-right AfD party is poised for power in a state election",
+    "resumed_in_flight": false,
+    "stages_completed": [],
+    "drive_file_id": "1MjaDMjJRCBpM09SLV-NgJ_7eyBQc-Q5f",
+    "verified_in_ready": true,
+    "post_canary_reserve": 1,
+    "error": null
+  }
+}

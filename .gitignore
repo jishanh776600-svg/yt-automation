@@ -49,3 +49,8 @@ data/database/*
 !data/database/.gitkeep
 !assets/music/*.wav
 !assets/music/*.mp3
+
+# Runtime locks & temporary cache
+data/locks/
+data/cache/
+.agents/

@@ -324,6 +324,10 @@ class RecoveryManager:
                         m = re.search(r"short_(job_[a-f0-9]+)", f.get("name", ""))
                         if m:
                             jid = m.group(1)
+                        else:
+                            m_man = re.search(r"short_(man_[a-f0-9]+)", f.get("name", ""))
+                            if m_man:
+                                jid = m_man.group(1)
                     if jid:
                         jids.add(jid)
                 return jids

@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#030712">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>AL AMR // MISSION CONTROL // Autonomous Operations Center</title>
+
+    <!-- Typography: JetBrains Mono for data & Plus Jakarta Sans for UI -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        space: {
+                            950: '#030712',
+                            900: '#060d1b',
+                            850: '#0b1326',
+                            800: '#101c38',
+                            700: '#1a2c56',
+                        },
+                        cyber: {
+                            cyan: '#06b6d4',
+                            blue: '#0284c7',
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                            rose: '#f43f5e',
+                            violet: '#a855f7'
+                        }
+                    },
+                    boxShadow: {
+                        'neon-cyan': '0 0 20px -3px rgba(6, 182, 212, 0.35)',
+                        'neon-emerald': '0 0 20px -3px rgba(16, 185, 129, 0.35)',
+                        'neon-amber': '0 0 20px -3px rgba(245, 158, 11, 0.35)',
+                        'neon-rose': '0 0 20px -3px rgba(244, 63, 94, 0.35)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #030712;
+            color: #f3f4f6;
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* 3D Perspective Pipeline Track */
+        .pipeline-perspective {
+            perspective: 1000px;
+        }
+        .pipeline-rail {
+            transform: rotateX(8deg);
+            transform-style: preserve-3d;
+            transition: transform 0.4s ease;
+        }
+        .stage-card-3d {
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+            transform: translateZ(0);
+        }
+        .stage-card-3d:hover {
+            transform: translateY(-4px) translateZ(12px) scale(1.02);
+        }
+        .stage-active-pulse {
+            animation: pulseGlow 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(6, 182, 212, 0.4), inset 0 0 15px rgba(6, 182, 212, 0.2); }
+            50% { box-shadow: 0 0 30px rgba(6, 182, 212, 0.8), inset 0 0 25px rgba(6, 182, 212, 0.4); }
+        }
+
+        /* Scanline & Grid Effect */
+        .cyber-grid {
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+
+        /* Reduced Motion Compliance */
+        @media (prefers-reduced-motion: reduce) {
+            *, ::before, ::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+            .pipeline-rail { transform: none !important; }
+            .stage-card-3d:hover { transform: none !important; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #030712; }
+        ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #374151; }
+
+        .tab-btn.active {
+            color: #38bdf8;
+            border-bottom: 2px solid #38bdf8;
+            background: linear-gradient(180deg, transparent 0%, rgba(56, 189, 248, 0.08) 100%);
+        }
+    </style>
+</head>
+<body class="bg-space-950 text-slate-100 min-h-screen flex flex-col selection:bg-cyan-500 selection:text-black cyber-grid">
+
+    <!-- TOP TELEMETRY HUD -->
+    <header class="sticky top-0 z-50 bg-space-950/90 backdrop-blur-xl border-b border-white/[0.08] px-4 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+        <!-- Logo & Brand -->
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-neon-cyan">
+                <span class="text-black font-extrabold text-sm font-mono">AMR</span>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold tracking-tight text-white font-mono">AL AMR</span>
+                    <span class="text-xs text-zinc-500 font-mono">// MISSION CONTROL</span>
+                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/60 text-cyan-300">STEP 4</span>
+                </div>
+                <div class="text-[11px] text-zinc-400">Autonomous Media Production Command Center</div>
+            </div>
+        </div>
+
+        <!-- System Mode & Dynamic Niche Controls -->
+        <div class="flex items-center gap-3 flex-wrap">
+            <!-- Active Niche Switcher -->
+            <div class="flex items-center gap-1.5 bg-space-900 border border-white/10 rounded-lg px-2.5 py-1">
+                <span class="text-[11px] text-zinc-400 font-mono">NICHE:</span>
+                <select id="niche-selector" onchange="handleNicheChange(this.value)" class="bg-transparent text-xs font-semibold text-cyan-300 font-mono focus:outline-none cursor-pointer">
+                    {% for n in niches %}
+                    <option value="{{ n.name }}" class="bg-space-900 text-white" {% if n.is_active %}selected{% endif %}>{{ n.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Operational Mode Pill -->
+            <div id="mode-pill" class="flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-mono font-semibold transition-all
+                {% if op_state.mode == 'AUTONOMOUS' %}bg-emerald-950/40 border-emerald-500/50 text-emerald-400 shadow-neon-emerald
+                {% elif op_state.mode == 'PAUSED' %}bg-amber-950/40 border-amber-500/50 text-amber-400 shadow-neon-amber
+                {% elif op_state.mode == 'NEEDS_REVIEW' %}bg-rose-950/40 border-rose-500/50 text-rose-400 shadow-neon-rose
+                {% else %}bg-zinc-900 border-zinc-700 text-zinc-300{% endif %}">
+                <span class="w-2 h-2 rounded-full {% if op_state.mode == 'AUTONOMOUS' %}bg-emerald-400 animate-pulse{% else %}bg-amber-400{% endif %}"></span>
+                <span id="mode-label">{{ op_state.mode }}</span>
+            </div>
+
+            <!-- Real-time SSE Stream Status -->
+            <div class="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-space-900 border border-white/10 text-[11px] font-mono">
+                <span id="sse-indicator" class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span id="sse-text" class="text-zinc-300">LIVE TELEMETRY</span>
+            </div>
+
+            <!-- UTC Clock -->
+            <div class="text-xs font-mono text-zinc-400 bg-space-900 border border-white/10 px-2.5 py-1 rounded-lg">
+                <span id="live-utc-clock">--:--:-- UTC</span>
+            </div>
+
+            <!-- Operator & Logout -->
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-mono text-zinc-400">{{ user }}</span>
+                <a href="/login" class="text-xs text-zinc-500 hover:text-zinc-200 transition">Logout</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- OPERATIONAL ACTION TOOLBAR -->
+    <div class="bg-space-900/80 border-b border-white/[0.06] px-4 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-zinc-500 font-mono">CONTROLS:</span>
+            
+            <button id="btn-pause-queue" onclick="toggleQueuePause()" class="px-3 py-1 rounded-md font-mono transition flex items-center gap-1.5
+                {% if op_state.queue_paused %}bg-emerald-900/60 text-emerald-300 hover:bg-emerald-800/80 border border-emerald-700/60
+                {% else %}bg-amber-950/60 text-amber-300 hover:bg-amber-900/80 border border-amber-700/60{% endif %}">
+                <span id="btn-pause-icon">{% if op_state.queue_paused %}▶ RESUME QUEUE{% else %}⏸ PAUSE QUEUE{% endif %}</span>
+            </button>
+
+            <button onclick="openBatchModal()" class="px-3 py-1 rounded-md bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 font-mono transition flex items-center gap-1.5">
+                ⚡ PRODUCE BATCH
+            </button>
+
+            <button onclick="setMode('SAFE_MODE')" class="px-3 py-1 rounded-md bg-space-850 hover:bg-space-800 text-zinc-300 border border-white/10 font-mono transition">
+                🛡 SAFE MODE
+            </button>
+
+            <button onclick="setMode('AUTONOMOUS')" class="px-3 py-1 rounded-md bg-space-850 hover:bg-space-800 text-zinc-300 border border-white/10 font-mono transition">
+                ⚙ AUTONOMOUS
+            </button>
+        </div>
+
+        <div class="flex items-center gap-4 text-zinc-400 font-mono text-[11px]">
+            <span>Active Policy: <span id="telemetry-policy" class="text-cyan-400">{{ op_state.deduplication_policy }}</span></span>
+            <span>Ceiling: <span class="text-white">{{ telemetry.published_today }} / {{ telemetry.daily_limit }} Shorts</span></span>
+            <span>Drive Vault: <span class="text-emerald-400">01_READY</span></span>
+        </div>
+    </div>
+
+    <!-- PRIMARY NAVIGATION TABS -->
+    <nav class="bg-space-950 border-b border-white/[0.08] px-4 lg:px-8 flex space-x-1 overflow-x-auto text-xs font-mono">
+        <button onclick="switchTab('command-center')" id="tab-command-center" class="tab-btn active px-4 py-3 text-zinc-400 hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+            <span>COMMAND CENTER</span>
+        </button>
+        <button onclick="switchTab('pipeline')" id="tab-pipeline" class="tab-btn px-4 py-3 text-zinc-400 hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+            <span>16-STAGE PIPELINE</span>
+        </button>
+        <button onclick="switchTab('queue')" id="tab-queue" class="tab-btn px-4 py-3 text-zinc-400 hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+            <span>PRODUCTION QUEUE</span>
+            <span id="badge-queue-size" class="px-1.5 py-0.2 rounded-full bg-cyan-950 text-cyan-300 text-[10px] border border-cyan-800/60">{{ telemetry.queue_size }}</span>
+        </button>
+        <button onclick="switchTab('topics')" id="tab-topics" class="tab-btn px-4 py-3 text-zinc-400 hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+            <span>TOPIC INTELLIGENCE</span>
+            <span id="badge-evidence-verified" class="px-1.5 py-0.2 rounded-full bg-emerald-950 text-emerald-300 text-[10px] border border-emerald-800/60">{{ telemetry.topics_approved }}</span>
+        </button>
+        <button onclick="switchTab('inspector')" id="tab-inspector" class="tab-btn px-4 py-3 text-zinc-400 hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+            <span>JOB INSPECTOR</span>
+        </button>
+        <button onclick="switchTab('health')" id="tab-health" class="tab-btn px-4 py-3 text-zinc-400 hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+            <span>SYSTEM HEALTH</span>
+        </button>
+        <button onclick="switchTab('events')" id="tab-events" class="tab-btn px-4 py-3 text-zinc-400 hover:text-white transition flex items-center gap-2 whitespace-nowrap">
+            <span>AUDIT STREAM</span>
+        </button>
+    </nav>
+
+    <!-- MAIN VIEW CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 space-y-6">
+
+        <!-- =============================================================== -->
+        <!-- VIEW 1: COMMAND CENTER -->
+        <!-- =============================================================== -->
+        <div id="view-command-center" class="space-y-6">
+
+            <!-- Hero Cockpit Card -->
+            <div class="relative overflow-hidden rounded-2xl bg-gradient-to-b from-space-900/90 to-space-950/90 border border-white/[0.08] p-6 backdrop-blur shadow-2xl">
+                <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+                    <!-- Left: Current Job Telemetry & Worker Status -->
+                    <div class="space-y-2 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <div id="hero-worker-badge" class="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono border {{ 'bg-emerald-950/60 text-emerald-400 border-emerald-800/40' if (telemetry.worker and telemetry.worker.online) else 'bg-amber-950/60 text-amber-400 border-amber-800/40' }}">
+                                <span class="w-1.5 h-1.5 rounded-full {{ 'bg-emerald-400 animate-pulse' if (telemetry.worker and telemetry.worker.online) else 'bg-amber-400' }}"></span>
+                                <span id="hero-worker-text">WORKER {{ telemetry.worker.status if telemetry.worker else 'OFFLINE' }}</span>
+                            </div>
+                            <span class="text-xs font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40">ACTIVE JOB</span>
+                            <span id="hero-job-id" class="text-xs font-mono text-zinc-400">{{ telemetry.current_production_job.id if telemetry.current_production_job else 'NO ACTIVE JOB' }}</span>
+                            <span id="hero-stage-badge" class="text-xs font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40">{{ telemetry.current_pipeline_stage }}</span>
+                            <span id="hero-worker-task" class="text-xs font-mono text-purple-300 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-800/40">TASK: {{ telemetry.worker.current_task if telemetry.worker else 'STANDBY' }}</span>
+                        </div>
+                        <h2 id="hero-topic-title" class="text-2xl lg:text-3xl font-bold tracking-tight text-white">
+                            {{ telemetry.current_production_job.topic_title if telemetry.current_production_job else 'Orchestrator standing by for production batch' }}
+                        </h2>
+                        <p id="hero-niche-desc" class="text-xs text-zinc-400 max-w-2xl">
+                            {{ telemetry.active_niche.description }} &middot; Tone: {{ telemetry.active_niche.tone }}
+                        </p>
+                    </div>
+
+                    <!-- Right: Runtime Worker Telemetry & Next Publication Slot -->
+                    <div class="flex flex-col sm:flex-row lg:flex-row gap-3">
+                        <div class="bg-space-850 border border-white/10 rounded-xl p-4 text-center min-w-[190px]">
+                            <div class="text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">Autonomous Runtime</div>
+                            <div id="hero-worker-status-display" class="text-base font-bold font-mono {{ 'text-emerald-400' if (telemetry.worker and telemetry.worker.online) else 'text-amber-400' }}">
+                                {{ 'ONLINE' if (telemetry.worker and telemetry.worker.online) else 'STANDBY' }}
+                            </div>
+                            <div class="text-[10px] font-mono text-zinc-400 mt-1">
+                                Cycles: <span id="hero-worker-cycles" class="text-white">{{ telemetry.worker.cycles_completed or 0 if telemetry.worker else 0 }}</span> &middot; Retries: <span id="hero-worker-retries" class="text-amber-300">{{ telemetry.worker.errors_count or 0 if telemetry.worker else 0 }}</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-space-850 border border-white/10 rounded-xl p-4 text-center min-w-[190px]">
+                            <div class="text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">Next Scheduled Slot</div>
+                            <div id="hero-next-slot-label" class="text-base font-bold font-mono text-cyan-300">
+                                {{ telemetry.next_scheduled_publication.slot_label if telemetry.next_scheduled_publication else '15:00 UTC' }}
+                            </div>
+                            <div id="hero-next-slot-countdown" class="text-xs font-mono text-emerald-400 mt-1">
+                                In {{ telemetry.next_scheduled_publication.hours_remaining or 2 }}h {{ telemetry.next_scheduled_publication.minutes_remaining or 15 }}m
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Pipeline Progress Bar -->
+                <div class="mt-6 pt-6 border-t border-white/[0.06]">
+                    <div class="flex items-center justify-between text-xs font-mono mb-2">
+                        <span class="text-zinc-400">16-STAGE LIFECYCLE PROGRESS: <span id="hero-progress-label" class="text-cyan-400 font-bold">{{ telemetry.pipeline_progress }}%</span></span>
+                        <span class="text-zinc-400">STAGE: <span id="hero-stage-name" class="text-white font-bold">{{ telemetry.current_pipeline_stage }}</span></span>
+                    </div>
+                    <div class="w-full h-2.5 rounded-full bg-space-800 overflow-hidden relative">
+                        <div id="hero-progress-bar" class="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-emerald-400 transition-all duration-500 rounded-full" style="width: {{ telemetry.pipeline_progress }}%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4-Quadrant Operational Telemetry Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Card 1: Queue Depth -->
+                <div class="rounded-xl bg-space-900/80 border border-white/[0.06] p-4 space-y-3">
+                    <div class="flex items-center justify-between text-xs font-mono text-zinc-400">
+                        <span>QUEUE BREAKDOWN</span>
+                        <span class="text-cyan-400 font-bold">{{ telemetry.queue_size }} Queued</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-center">
+                        <div class="bg-space-850 p-2 rounded-lg border border-white/[0.04]">
+                            <div class="text-lg font-bold text-emerald-400 font-mono">{{ telemetry.jobs_running }}</div>
+                            <div class="text-[10px] text-zinc-500 font-mono">RUNNING</div>
+                        </div>
+                        <div class="bg-space-850 p-2 rounded-lg border border-white/[0.04]">
+                            <div class="text-lg font-bold text-white font-mono">{{ telemetry.jobs_completed }}</div>
+                            <div class="text-[10px] text-zinc-500 font-mono">COMPLETED</div>
+                        </div>
+                        <div class="bg-space-850 p-2 rounded-lg border border-white/[0.04]">
+                            <div class="text-lg font-bold text-rose-400 font-mono">{{ telemetry.jobs_failed }}</div>
+                            <div class="text-[10px] text-zinc-500 font-mono">FAILED</div>
+                        </div>
+                        <div class="bg-space-850 p-2 rounded-lg border border-white/[0.04]">
+                            <div class="text-lg font-bold text-amber-400 font-mono">{{ telemetry.jobs_requiring_review }}</div>
+                            <div class="text-[10px] text-zinc-500 font-mono">REVIEW</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Topic Intelligence Radar -->
+                <div class="rounded-xl bg-space-900/80 border border-white/[0.06] p-4 space-y-3">
+                    <div class="flex items-center justify-between text-xs font-mono text-zinc-400">
+                        <span>INTELLIGENCE RADAR</span>
+                        <span class="text-emerald-400 font-bold">{{ telemetry.topics_approved }} Approved</span>
+                    </div>
+                    <div class="space-y-1.5 text-xs font-mono">
+                        <div class="flex justify-between py-1 border-b border-white/[0.04]">
+                            <span class="text-zinc-400">Total Harvested</span>
+                            <span class="text-white font-bold">{{ telemetry.topics_discovered }}</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-white/[0.04]">
+                            <span class="text-zinc-400">Awaiting Consensus</span>
+                            <span class="text-amber-400 font-bold">{{ telemetry.topics_awaiting_evidence }}</span>
+                        </div>
+                        <div class="flex justify-between py-1">
+                            <span class="text-zinc-400">Evidence Gate</span>
+                            <span class="text-emerald-400 font-bold">&ge; 2 Domains</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: AI Provider Cascade -->
+                <div class="rounded-xl bg-space-900/80 border border-white/[0.06] p-4 space-y-3">
+                    <div class="flex items-center justify-between text-xs font-mono text-zinc-400">
+                        <span>AI PROVIDER CASCADE</span>
+                        <span class="text-cyan-400 font-bold">{{ telemetry.provider_status.configured_count }} / {{ telemetry.provider_status.total_providers }}</span>
+                    </div>
+                    <div class="text-xs space-y-1 font-mono">
+                        <div class="text-[11px] text-zinc-400 truncate">Active: <span class="text-emerald-400 font-bold">{{ telemetry.provider_status.active_provider }}</span></div>
+                        <div class="text-[10px] text-zinc-500 truncate">T1: Gemini Primary &middot; T2: Gemini Sec</div>
+                        <div class="text-[10px] text-zinc-500 truncate">T3: Groq &middot; T4: OpenRouter</div>
+                        <div class="text-[10px] text-zinc-500 truncate">T5: DeepSeek V4 &middot; T6: NVIDIA</div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Storage & Publication -->
+                <div class="rounded-xl bg-space-900/80 border border-white/[0.06] p-4 space-y-3">
+                    <div class="flex items-center justify-between text-xs font-mono text-zinc-400">
+                        <span>STORAGE & PUBLISHING</span>
+                        <span class="text-emerald-400 font-bold">NOMINAL</span>
+                    </div>
+                    <div class="space-y-1.5 text-xs font-mono">
+                        <div class="flex justify-between py-1 border-b border-white/[0.04]">
+                            <span class="text-zinc-400">Drive Vault</span>
+                            <span class="text-emerald-400 font-bold">01_READY</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-white/[0.04]">
+                            <span class="text-zinc-400">Daily Booked</span>
+                            <span class="text-cyan-400 font-bold">{{ telemetry.published_today }} / {{ telemetry.daily_limit }}</span>
+                        </div>
+                        <div class="flex justify-between py-1">
+                            <span class="text-zinc-400">TTS Engine</span>
+                            <span class="text-white font-bold">af_bella</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent System Events Ticker -->
+            <div class="rounded-xl bg-space-900/70 border border-white/[0.06] p-4 space-y-2">
+                <div class="text-xs font-mono text-zinc-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>Recent Operational Events</span>
+                    <span class="text-[10px] text-cyan-400 cursor-pointer" onclick="switchTab('events')">VIEW ALL EVENTS &rarr;</span>
+                </div>
+                <div id="command-center-events" class="space-y-1.5 font-mono text-xs">
+                    {% for evt in telemetry.recent_events %}
+                    <div class="flex items-center justify-between py-1 px-2.5 rounded bg-space-850/60 border border-white/[0.03]">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] px-1.5 py-0.2 rounded font-bold
+                                {% if evt.severity == 'ERROR' %}bg-rose-950 text-rose-300 border border-rose-800
+                                {% elif evt.severity == 'WARN' %}bg-amber-950 text-amber-300 border border-amber-800
+                                {% else %}bg-cyan-950 text-cyan-300 border border-cyan-800{% endif %}">{{ evt.category }}</span>
+                            <span class="text-zinc-300">{{ evt.message }}</span>
+                        </div>
+                        <span class="text-[10px] text-zinc-500">{{ evt.timestamp[11:19] }} UTC</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- VIEW 2: 16-STAGE PIPELINE VISUALIZATION -->
+        <!-- =============================================================== -->
+        <div id="view-pipeline" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-white font-mono">16-STAGE PRODUCTION PIPELINE TRACK</h3>
+                    <p class="text-xs text-zinc-400">Complete end-to-end autonomous lifecycle. Click any stage to inspect execution details.</p>
+                </div>
+                <button onclick="refreshPipelineData()" class="px-3 py-1 bg-space-900 hover:bg-space-850 border border-white/10 rounded text-xs font-mono text-cyan-300">
+                    ↻ REFRESH TRACK
+                </button>
+            </div>
+
+            <!-- Spatial 16-Stage Track -->
+            <div class="pipeline-perspective py-4">
+                <div id="pipeline-stages-grid" class="pipeline-rail grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                    {% for s in pipeline.stages %}
+                    <div onclick="inspectStage('{{ s.name }}', {{ s.index }})" class="stage-card-3d p-3.5 rounded-xl border cursor-pointer relative flex flex-col justify-between min-h-[110px]
+                        {% if s.status == 'running' %}bg-cyan-950/40 border-cyan-500 stage-active-pulse text-cyan-300
+                        {% elif s.status == 'completed' %}bg-space-900 border-emerald-800/60 text-emerald-400
+                        {% elif s.status == 'failed' %}bg-rose-950/40 border-rose-600 text-rose-300
+                        {% elif s.status == 'blocked' %}bg-amber-950/40 border-amber-600 text-amber-300
+                        {% else %}bg-space-900/60 border-white/[0.06] text-zinc-500{% endif %}"
+                        data-stage-index="{{ s.index }}">
+                        
+                        <div class="flex items-center justify-between text-[11px] font-mono">
+                            <span class="text-zinc-400">{{ "%02d" % (s.index + 1) }}</span>
+                            <span class="text-[9px] px-1 py-0.2 rounded font-bold uppercase
+                                {% if s.status == 'running' %}bg-cyan-900 text-cyan-200 animate-pulse
+                                {% elif s.status == 'completed' %}bg-emerald-950 text-emerald-300
+                                {% elif s.status == 'failed' %}bg-rose-950 text-rose-300
+                                {% else %}bg-space-850 text-zinc-500{% endif %}">{{ s.status }}</span>
+                        </div>
+
+                        <div class="font-bold text-xs sm:text-sm text-white mt-1">{{ s.name }}</div>
+
+                        <div class="text-[10px] text-zinc-400 font-mono truncate mt-1">
+                            {{ s.detail or 'Pending' }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Stage Details Box -->
+            <div id="stage-inspect-panel" class="rounded-xl bg-space-900 border border-white/10 p-5 hidden space-y-3">
+                <div class="flex items-center justify-between">
+                    <h4 id="stage-inspect-title" class="text-sm font-bold text-cyan-300 font-mono uppercase">STAGE DETAILS</h4>
+                    <button onclick="document.getElementById('stage-inspect-panel').classList.add('hidden')" class="text-zinc-500 hover:text-white text-xs">✕ CLOSE</button>
+                </div>
+                <div id="stage-inspect-body" class="text-xs text-zinc-300 font-mono space-y-1"></div>
+            </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- VIEW 3: PRODUCTION QUEUE -->
+        <!-- =============================================================== -->
+        <div id="view-queue" class="hidden space-y-4">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                    <h3 class="text-lg font-bold text-white font-mono">PRODUCTION QUEUE</h3>
+                    <p class="text-xs text-zinc-400">Real-time status of queued, active, and completed jobs.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="loadQueueData()" class="px-3 py-1 bg-space-900 hover:bg-space-850 border border-white/10 rounded text-xs font-mono text-cyan-300">
+                        ↻ REFRESH QUEUE
+                    </button>
+                </div>
+            </div>
+
+            <!-- Queue Table -->
+            <div class="rounded-xl bg-space-900/90 border border-white/[0.08] overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-space-850 border-b border-white/[0.06] text-zinc-400 uppercase text-[11px]">
+                            <tr>
+                                <th class="p-3">Priority</th>
+                                <th class="p-3">Job ID / Topic</th>
+                                <th class="p-3">Niche</th>
+                                <th class="p-3">Current Stage</th>
+                                <th class="p-3">Progress</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3">Retries</th>
+                                <th class="p-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="queue-table-body" class="divide-y divide-white/[0.04]">
+                            <!-- Dynamically injected via JS loadQueueData() -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- VIEW 4: TOPIC INTELLIGENCE -->
+        <!-- =============================================================== -->
+        <div id="view-topics" class="hidden space-y-4">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                    <h3 class="text-lg font-bold text-white font-mono">TOPIC INTELLIGENCE & CONSENSUS RADAR</h3>
+                    <p class="text-xs text-zinc-400">Harvested candidates evaluated against multi-source evidence gate (&ge; 2 independent publisher domains).</p>
+                </div>
+                <button onclick="loadTopicsData()" class="px-3 py-1 bg-space-900 hover:bg-space-850 border border-white/10 rounded text-xs font-mono text-cyan-300">
+                    ↻ REFRESH TOPICS
+                </button>
+            </div>
+
+            <!-- Evidence Gate Rule Banner -->
+            <div class="bg-space-900/90 border border-cyan-800/40 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-mono">
+                <div class="flex items-center gap-3">
+                    <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 text-[10px] font-bold">GATE RULE</span>
+                    <span class="text-zinc-300">&ge; 2 Independent Publisher Domains &rarr; <strong class="text-emerald-400">VERIFIED</strong> &middot; 1 Domain &rarr; <strong class="text-amber-400">INSUFFICIENT EVIDENCE</strong></span>
+                </div>
+                <div class="text-zinc-400">Deduplication: <span class="text-cyan-400">Event-Action Domain Matrix</span></div>
+            </div>
+
+            <!-- Topics Grid / Cards -->
+            <div id="topics-list" class="space-y-3">
+                <!-- Dynamically populated by JS loadTopicsData() -->
+            </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- VIEW 5: JOB INSPECTOR -->
+        <!-- =============================================================== -->
+        <div id="view-inspector" class="hidden space-y-4">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                    <h3 class="text-lg font-bold text-white font-mono">LIFECYCLE JOB INSPECTOR</h3>
+                    <p class="text-xs text-zinc-400">Audit all 16 stages: research sources, claims, 5-beat script, critic review, assets, voice, audio, render, QA, and upload records.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input id="inspector-search-id" type="text" placeholder="Enter Job UUID..." class="bg-space-900 border border-white/10 rounded px-3 py-1 text-xs font-mono text-white focus:outline-none focus:border-cyan-500">
+                    <button onclick="loadJobInspector(document.getElementById('inspector-search-id').value)" class="px-3 py-1 bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700 rounded text-xs font-mono">
+                        INSPECT
+                    </button>
+                </div>
+            </div>
+
+            <!-- Inspector Content Container -->
+            <div id="inspector-content" class="rounded-xl bg-space-900/90 border border-white/[0.08] p-6 space-y-6">
+                <div class="text-center py-12 text-zinc-500 font-mono text-xs">
+                    Select a job from the Production Queue or enter a Job UUID above to inspect its complete 16-stage lifecycle.
+                </div>
+            </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- VIEW 6: SYSTEM HEALTH -->
+        <!-- =============================================================== -->
+        <div id="view-health" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-white font-mono">SYSTEM HEALTH MATRIX</h3>
+                    <p class="text-xs text-zinc-400">6-quadrant operational diagnostics backed by genuine backend telemetry.</p>
+                </div>
+                <button onclick="loadHealthData()" class="px-3 py-1 bg-space-900 hover:bg-space-850 border border-white/10 rounded text-xs font-mono text-cyan-300">
+                    ↻ RUN DIAGNOSTICS
+                </button>
+            </div>
+
+            <div id="health-matrix" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Dynamically populated by JS loadHealthData() -->
+            </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- VIEW 7: AUDIT STREAM -->
+        <!-- =============================================================== -->
+        <div id="view-events" class="hidden space-y-4">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                    <h3 class="text-lg font-bold text-white font-mono">OPERATIONAL AUDIT & EVENT STREAM</h3>
+                    <p class="text-xs text-zinc-400">Real-time structured event log with category, severity, and timestamped payloads.</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap text-xs font-mono">
+                    <select id="event-category-filter" onchange="loadEventsData()" class="bg-space-900 border border-white/10 rounded px-2.5 py-1 text-zinc-300">
+                        <option value="">ALL CATEGORIES</option>
+                        <option value="DISCOVERY">DISCOVERY</option>
+                        <option value="EVIDENCE">EVIDENCE</option>
+                        <option value="DEDUPLICATION">DEDUPLICATION</option>
+                        <option value="RESEARCH">RESEARCH</option>
+                        <option value="SCRIPT">SCRIPT</option>
+                        <option value="CRITIC">CRITIC</option>
+                        <option value="QA">QA</option>
+                        <option value="SCHEDULER">SCHEDULER</option>
+                        <option value="SYSTEM">SYSTEM</option>
+                        <option value="FAILURE">FAILURE</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="events-stream-list" class="space-y-2 font-mono text-xs">
+                <!-- Dynamically injected by JS loadEventsData() -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- BATCH PRODUCTION MODAL -->
+    <div id="modal-batch-produce" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-space-900 border border-white/10 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl">
+            <div class="flex items-center justify-between">
+                <h4 class="text-base font-bold text-white font-mono flex items-center gap-2">
+                    <span class="text-cyan-400">⚡</span> TRIGGER AUTONOMOUS BATCH
+                </h4>
+                <button onclick="closeBatchModal()" class="text-zinc-500 hover:text-white text-xs">✕</button>
+            </div>
+
+            <div class="space-y-3 text-xs font-mono">
+                <div>
+                    <label class="text-zinc-400 block mb-1">Batch Count (Shorts):</label>
+                    <input id="batch-count-input" type="number" min="1" max="5" value="1" class="w-full bg-space-850 border border-white/10 rounded px-3 py-2 text-white font-bold">
+                </div>
+
+                <div class="flex items-center gap-2 bg-space-850 p-3 rounded-lg border border-white/10">
+                    <input id="batch-dryrun-checkbox" type="checkbox" checked class="w-4 h-4 rounded text-cyan-500">
+                    <label for="batch-dryrun-checkbox" class="text-zinc-300">Enforce Safe Dry-Run Boundary (Zero Live AI Spend / No Video Render)</label>
+                </div>
+
+                <div class="text-[11px] text-zinc-500 leading-relaxed">
+                    All 16 lifecycle stages (DISCOVER &rarr; SCRIPT &rarr; CRITIC &rarr; QA &rarr; SCHEDULE) will execute under strict capability bounds with 100% ProcessLock isolation.
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeBatchModal()" class="px-4 py-2 rounded bg-space-850 hover:bg-space-800 text-zinc-400 font-mono text-xs">CANCEL</button>
+                <button onclick="executeBatchProduction()" id="btn-submit-batch" class="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-500 text-black font-bold font-mono text-xs">DISPATCH BATCH</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APP LOGIC & SSE SUBSCRIBER -->
+    <script>
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        let activeTab = 'command-center';
+        let sseSource = null;
+
+        // Clock Ticker
+        function updateClock() {
+            const now = new Date();
+            const utcString = now.toUTCString().split(' ')[4] + ' UTC';
+            const el = document.getElementById('live-utc-clock');
+            if (el) el.innerText = utcString;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Tab Switching
+        function switchTab(tabName) {
+            activeTab = tabName;
+            document.querySelectorAll('nav .tab-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById('tab-' + tabName);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            ['command-center', 'pipeline', 'queue', 'topics', 'inspector', 'health', 'events'].forEach(t => {
+                const view = document.getElementById('view-' + t);
+                if (view) {
+                    if (t === tabName) view.classList.remove('hidden');
+                    else view.classList.add('hidden');
+                }
+            });
+
+            if (tabName === 'queue') loadQueueData();
+            if (tabName === 'topics') loadTopicsData();
+            if (tabName === 'pipeline') refreshPipelineData();
+            if (tabName === 'health') loadHealthData();
+            if (tabName === 'events') loadEventsData();
+        }
+
+        // Initialize Real-time Server-Sent Events (SSE)
+        function initSSE() {
+            if (!!window.EventSource) {
+                sseSource = new EventSource('/api/mission-control/stream');
+                
+                sseSource.onopen = function() {
+                    const ind = document.getElementById('sse-indicator');
+                    const txt = document.getElementById('sse-text');
+                    if (ind) ind.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                    if (txt) txt.innerText = 'STREAM ACTIVE';
+                };
+
+                sseSource.addEventListener('audit_event', function(e) {
+                    const evt = JSON.parse(e.data);
+                    handleIncomingAuditEvent(evt);
+                });
+
+                sseSource.onerror = function() {
+                    const ind = document.getElementById('sse-indicator');
+                    const txt = document.getElementById('sse-text');
+                    if (ind) ind.className = 'w-2 h-2 rounded-full bg-amber-400';
+                    if (txt) txt.innerText = 'RECONNECTING...';
+                };
+            }
+        }
+        initSSE();
+
+        function handleIncomingAuditEvent(evt) {
+            // Prepend to event ticker in Command Center
+            const ccEvents = document.getElementById('command-center-events');
+            if (ccEvents) {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between py-1 px-2.5 rounded bg-space-850/60 border border-white/[0.03] animate-fade-in';
+                const sevClass = evt.severity === 'ERROR' ? 'bg-rose-950 text-rose-300 border-rose-800' :
+                                 evt.severity === 'WARN' ? 'bg-amber-950 text-amber-300 border-amber-800' :
+                                 'bg-cyan-950 text-cyan-300 border-cyan-800';
+                row.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] px-1.5 py-0.2 rounded font-bold border ${sevClass}">${evt.category}</span>
+                        <span class="text-zinc-300">${evt.message}</span>
+                    </div>
+                    <span class="text-[10px] text-zinc-500">${(evt.timestamp || '').substring(11, 19)} UTC</span>
+                `;
+                ccEvents.insertBefore(row, ccEvents.firstChild);
+                if (ccEvents.children.length > 8) ccEvents.removeChild(ccEvents.lastChild);
+            }
+
+            // If on events tab, prepend there too
+            if (activeTab === 'events') loadEventsData();
+        }
+
+        // Dynamic Niche Switching
+        async function handleNicheChange(niche) {
+            try {
+                const res = await fetch('/api/mission-control/actions/niche', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+                    body: JSON.stringify({ niche: niche })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert('Active niche switched successfully to: ' + data.active_niche);
+                    window.location.reload();
+                } else {
+                    alert('Niche switch failed: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+            }
+        }
+
+        // System Operational Mode Change
+        async function setMode(mode) {
+            try {
+                const res = await fetch('/api/mission-control/actions/mode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+                    body: JSON.stringify({ mode: mode, reason: 'Operator HUD button click' })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById('mode-label').innerText = data.mode;
+                    window.location.reload();
+                } else {
+                    alert('Mode transition rejected: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+            }
+        }
+
+        // Pause / Resume Queue
+        async function toggleQueuePause() {
+            const btn = document.getElementById('btn-pause-queue');
+            const isPaused = btn.innerText.includes('RESUME');
+            const endpoint = isPaused ? '/api/mission-control/actions/queue/resume' : '/api/mission-control/actions/queue/pause';
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+                    body: JSON.stringify({ reason: 'Operator toolbar click' })
+                });
+                if (res.ok) {
+                    window.location.reload();
+                }
+            } catch (err) {
+                alert('Action failed: ' + err.message);
+            }
+        }
+
+        // Load Production Queue Data
+        async function loadQueueData() {
+            try {
+                const res = await fetch('/api/mission-control/queue?limit=50');
+                const data = await res.json();
+                const tbody = document.getElementById('queue-table-body');
+                if (!tbody) return;
+
+                if (!data.jobs || data.jobs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-zinc-500">No jobs in queue. Use Produce Batch above to dispatch new content.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.jobs.map(j => {
+                    const statusClass = j.state === 'PUBLISHED' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' :
+                                        j.state === 'FAILED' ? 'bg-rose-950 text-rose-300 border-rose-800' :
+                                        j.state === 'NEEDS_REVIEW' ? 'bg-amber-950 text-amber-300 border-amber-800' :
+                                        j.state === 'QUEUED' ? 'bg-zinc-850 text-zinc-400 border-zinc-700' :
+                                        'bg-cyan-950 text-cyan-300 border-cyan-800 animate-pulse';
+
+                    return `
+                        <tr class="hover:bg-space-850/50 transition">
+                            <td class="p-3">
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${j.priority === 'HIGH' ? 'bg-cyan-950 text-cyan-300 border border-cyan-800' : 'bg-space-800 text-zinc-400'}">${j.priority}</span>
+                            </td>
+                            <td class="p-3">
+                                <div class="font-bold text-white">${j.topic_title}</div>
+                                <div class="text-[10px] text-zinc-500 font-mono">${j.id}</div>
+                            </td>
+                            <td class="p-3 text-zinc-400">${j.niche}</td>
+                            <td class="p-3">
+                                <span class="text-cyan-300 font-bold">${j.current_stage}</span>
+                            </td>
+                            <td class="p-3">
+                                <div class="w-16 bg-space-800 h-1.5 rounded-full overflow-hidden">
+                                    <div class="bg-cyan-400 h-full rounded-full" style="width: ${j.progress_percent}%;"></div>
+                                </div>
+                                <div class="text-[10px] text-zinc-500 mt-0.5">${j.progress_percent}%</div>
+                            </td>
+                            <td class="p-3">
+                                <span class="px-2 py-0.5 rounded border text-[10px] font-bold ${statusClass}">${j.state}</span>
+                            </td>
+                            <td class="p-3 text-zinc-400">${j.retry_count}</td>
+                            <td class="p-3 text-right space-x-1">
+                                <button onclick="loadJobInspector('${j.id}')" class="px-2 py-0.5 rounded bg-space-850 hover:bg-space-800 text-cyan-300 border border-white/10 text-[10px]">Inspect</button>
+                                ${j.is_actionable ? `<button onclick="retryJob('${j.id}')" class="px-2 py-0.5 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 text-[10px]">Retry</button>` : ''}
+                                ${j.state !== 'FAILED' && j.state !== 'PUBLISHED' ? `<button onclick="quarantineJob('${j.id}')" class="px-2 py-0.5 rounded bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-800 text-[10px]">Quarantine</button>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Queue load error:', err);
+            }
+        }
+
+        // Load Topic Intelligence Data
+        async function loadTopicsData() {
+            try {
+                const res = await fetch('/api/mission-control/topics?limit=50');
+                const data = await res.json();
+                const container = document.getElementById('topics-list');
+                if (!container) return;
+
+                if (!data.topics || data.topics.length === 0) {
+                    container.innerHTML = '<div class="p-6 text-center text-zinc-500 font-mono text-xs">No topics harvested yet.</div>';
+                    return;
+                }
+
+                container.innerHTML = data.topics.map(t => {
+                    const isVerified = t.evidence_status === 'VERIFIED';
+                    const badgeClass = isVerified ? 'bg-emerald-950 text-emerald-300 border-emerald-700' : 'bg-amber-950 text-amber-300 border-amber-700';
+
+                    return `
+                        <div class="p-4 rounded-xl bg-space-900 border border-white/[0.06] hover:border-white/20 transition space-y-3">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="px-2 py-0.5 rounded border text-[10px] font-bold ${badgeClass}">
+                                        ${t.evidence_status}: ${t.evidence_label}
+                                    </span>
+                                    <span class="text-zinc-500 font-mono text-xs">${t.category}</span>
+                                    <span class="text-zinc-500 font-mono text-[11px]">&middot; Opp Score: <strong class="text-white">${t.opportunity_score}</strong></span>
+                                </div>
+                                <span class="px-2 py-0.5 rounded bg-space-850 text-zinc-400 font-mono text-[10px] border border-white/[0.04]">
+                                    ${t.deduplication_result}
+                                </span>
+                            </div>
+
+                            <h4 class="text-base font-bold text-white">${t.title}</h4>
+                            <p class="text-xs text-zinc-400 leading-relaxed">${t.summary || 'No summary available.'}</p>
+
+                            <div class="pt-2 border-t border-white/[0.04] flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+                                <div class="flex items-center gap-1.5 flex-wrap text-zinc-400">
+                                    <span>Domains:</span>
+                                    ${t.publisher_domains.map(d => `<span class="px-1.5 py-0.2 rounded bg-space-800 text-cyan-300 border border-white/[0.05]">${d}</span>`).join('') || '<span class="text-zinc-600">None</span>'}
+                                </div>
+                                <span class="text-zinc-500 italic">${t.rationale}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Topics load error:', err);
+            }
+        }
+
+        // Load Comprehensive Job Inspector
+        async function loadJobInspector(jobId) {
+            if (!jobId) return;
+            switchTab('inspector');
+            const searchInput = document.getElementById('inspector-search-id');
+            if (searchInput) searchInput.value = jobId;
+
+            const container = document.getElementById('inspector-content');
+            container.innerHTML = '<div class="text-center py-12 text-cyan-400 font-mono text-xs animate-pulse">Querying 16-stage job telemetry...</div>';
+
+            try {
+                const res = await fetch('/api/mission-control/jobs/' + jobId);
+                if (!res.ok) {
+                    container.innerHTML = `<div class="p-6 text-center text-rose-400 font-mono text-xs">Job '${jobId}' not found.</div>`;
+                    return;
+                }
+                const data = await res.json();
+                renderJobInspectorUI(data);
+            } catch (err) {
+                container.innerHTML = `<div class="p-6 text-center text-rose-400 font-mono text-xs">Failed to load job: ${err.message}</div>`;
+            }
+        }
+
+        function renderJobInspectorUI(data) {
+            const container = document.getElementById('inspector-content');
+            const j = data.job;
+            const t = data.topic;
+            const s = data.script;
+            const qa = data.qa;
+            const up = data.upload;
+
+            container.innerHTML = `
+                <!-- Job Header -->
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between pb-6 border-b border-white/[0.08] gap-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold">${j.state}</span>
+                            <span class="text-xs font-mono text-zinc-400">${j.id}</span>
+                            <span class="text-xs font-mono text-zinc-500">Retries: ${j.retry_count}</span>
+                        </div>
+                        <h2 class="text-xl font-bold text-white mt-1">${t.title}</h2>
+                        <div class="text-xs text-zinc-400 font-mono mt-0.5">Category: ${t.category} &middot; Score: ${t.score}</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="retryJob('${j.id}')" class="px-3 py-1 bg-cyan-950 hover:bg-cyan-900 border border-cyan-800 text-cyan-300 rounded font-mono text-xs">RETRY JOB</button>
+                        <button onclick="quarantineJob('${j.id}')" class="px-3 py-1 bg-amber-950 hover:bg-amber-900 border border-amber-800 text-amber-300 rounded font-mono text-xs">QUARANTINE</button>
+                    </div>
+                </div>
+
+                <!-- 4 Tabs for Deep Inspection -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 font-mono text-xs">
+                    <!-- Research & Sources -->
+                    <div class="bg-space-850 p-4 rounded-xl border border-white/[0.06] space-y-3">
+                        <h4 class="text-xs font-bold text-cyan-300 uppercase">1. Research & Evidence Sources</h4>
+                        <div class="space-y-1.5">
+                            ${(data.sources || []).map(src => `
+                                <div class="p-2 rounded bg-space-900 border border-white/[0.04]">
+                                    <div class="font-bold text-white text-[11px] truncate">${src.title || src.publisher_domain}</div>
+                                    <div class="text-[10px] text-cyan-400 truncate">${src.url}</div>
+                                </div>
+                            `).join('') || '<div class="text-zinc-500">No attached sources found.</div>'}
+                        </div>
+                    </div>
+
+                    <!-- Script & Critic Evaluation -->
+                    <div class="bg-space-850 p-4 rounded-xl border border-white/[0.06] space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-cyan-300 uppercase">2. Script & Critic Evaluation</h4>
+                            ${s ? `<span class="px-1.5 py-0.2 rounded text-[10px] font-bold ${s.critic_verdict === 'PASSED' ? 'bg-emerald-950 text-emerald-300' : 'bg-rose-950 text-rose-300'}">${s.critic_verdict} (${s.critic_score || 0}/100)</span>` : ''}
+                        </div>
+                        ${s ? `
+                            <div class="p-3 bg-space-900 rounded border border-white/[0.04] text-[11px] text-zinc-300 leading-relaxed">
+                                "${s.full_text}"
+                            </div>
+                            <div class="flex justify-between text-[11px] text-zinc-400">
+                                <span>Word Count: <strong class="text-white">${s.word_count}</strong> (Target 45-68)</span>
+                                <span>Pacing: <strong class="text-white">${s.pacing_wpm || 140} WPM</strong></span>
+                            </div>
+                        ` : '<div class="text-zinc-500">Script not yet generated.</div>'}
+                    </div>
+
+                    <!-- QA Evaluation -->
+                    <div class="bg-space-850 p-4 rounded-xl border border-white/[0.06] space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-cyan-300 uppercase">3. QA Hard Gate Breakdown</h4>
+                            ${qa ? `<span class="px-1.5 py-0.2 rounded text-[10px] font-bold ${qa.passed ? 'bg-emerald-950 text-emerald-300' : 'bg-rose-950 text-rose-300'}">${qa.passed ? 'PASSED QA' : 'FAILED QA'} (${qa.overall_score}/100)</span>` : ''}
+                        </div>
+                        ${qa ? `
+                            <div class="space-y-1 text-[11px]">
+                                <div class="flex justify-between"><span>Audio Fidelity:</span><strong class="text-white">${qa.audio_fidelity_score}/100</strong></div>
+                                <div class="flex justify-between"><span>Visual Match:</span><strong class="text-white">${qa.visual_match_score}/100</strong></div>
+                                <div class="flex justify-between"><span>Integrated LUFS:</span><strong class="text-emerald-400">${qa.lufs_integrated} LUFS</strong></div>
+                                <div class="flex justify-between"><span>Render Duration:</span><strong class="text-white">${qa.duration_seconds}s</strong></div>
+                            </div>
+                        ` : '<div class="text-zinc-500">QA evaluation pending render.</div>'}
+                    </div>
+
+                    <!-- Vault & Publication -->
+                    <div class="bg-space-850 p-4 rounded-xl border border-white/[0.06] space-y-3">
+                        <h4 class="text-xs font-bold text-cyan-300 uppercase">4. Vault & Publication Status</h4>
+                        ${up ? `
+                            <div class="space-y-1 text-[11px]">
+                                <div class="flex justify-between"><span>Upload Status:</span><strong class="text-emerald-400">${up.status}</strong></div>
+                                <div class="flex justify-between"><span>YouTube Video ID:</span><strong class="text-white font-mono">${up.youtube_video_id || 'Pending'}</strong></div>
+                                <div class="flex justify-between"><span>Scheduled For:</span><strong class="text-cyan-300">${up.scheduled_publish_at || 'Instant'}</strong></div>
+                                ${up.publish_url ? `<div class="pt-2"><a href="${up.publish_url}" target="_blank" class="text-cyan-400 underline">Open YouTube Short ↗</a></div>` : ''}
+                            </div>
+                        ` : '<div class="text-zinc-500">Publication slot unassigned.</div>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Job Operations (Retry, Quarantine)
+        async function retryJob(jobId) {
+            try {
+                const res = await fetch('/api/mission-control/actions/job/retry', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+                    body: JSON.stringify({ job_id: jobId })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert('Job retried: reset to QUEUED.');
+                    if (activeTab === 'queue') loadQueueData();
+                    if (activeTab === 'inspector') loadJobInspector(jobId);
+                } else {
+                    alert('Retry failed: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+            }
+        }
+
+        async function quarantineJob(jobId) {
+            const reason = prompt('Enter reason for quarantining this job:', 'Flagged by operator inspection');
+            if (!reason) return;
+
+            try {
+                const res = await fetch('/api/mission-control/actions/job/quarantine', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+                    body: JSON.stringify({ job_id: jobId, reason: reason })
+                });
+                if (res.ok) {
+                    alert('Job quarantined to NEEDS_REVIEW.');
+                    if (activeTab === 'queue') loadQueueData();
+                    if (activeTab === 'inspector') loadJobInspector(jobId);
+                }
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+            }
+        }
+
+        // Health Diagnostics
+        async function loadHealthData() {
+            try {
+                const res = await fetch('/api/mission-control/health');
+                const data = await res.json();
+                const container = document.getElementById('health-matrix');
+                if (!container) return;
+
+                const sub = data.subsystems || {};
+                container.innerHTML = Object.keys(sub).map(k => {
+                    const item = sub[k];
+                    const isHealthy = item.status === 'HEALTHY';
+                    return `
+                        <div class="rounded-xl bg-space-900 border border-white/[0.06] p-4 space-y-3 font-mono text-xs">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-white uppercase">${k}</span>
+                                <span class="px-1.5 py-0.2 rounded text-[10px] font-bold ${isHealthy ? 'bg-emerald-950 text-emerald-300' : 'bg-amber-950 text-amber-300'}">${item.status}</span>
+                            </div>
+                            <div class="space-y-1 text-zinc-400 text-[11px]">
+                                ${Object.keys(item).filter(ik => ik !== 'status' && ik !== 'fallback_tiers').map(ik => `
+                                    <div class="flex justify-between">
+                                        <span>${ik.replace(/_/g, ' ')}:</span>
+                                        <strong class="text-zinc-200">${item[ik]}</strong>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Health load error:', err);
+            }
+        }
+
+        // Event Stream Loading
+        async function loadEventsData() {
+            try {
+                const catFilter = document.getElementById('event-category-filter')?.value || '';
+                const url = '/api/mission-control/events?limit=50' + (catFilter ? `&category=${catFilter}` : '');
+                const res = await fetch(url);
+                const data = await res.json();
+                const container = document.getElementById('events-stream-list');
+                if (!container) return;
+
+                if (!data.events || data.events.length === 0) {
+                    container.innerHTML = '<div class="p-6 text-center text-zinc-500 font-mono text-xs">No events logged.</div>';
+                    return;
+                }
+
+                container.innerHTML = data.events.map(evt => {
+                    const sevClass = evt.severity === 'ERROR' ? 'bg-rose-950 text-rose-300 border-rose-800' :
+                                     evt.severity === 'WARN' ? 'bg-amber-950 text-amber-300 border-amber-800' :
+                                     'bg-cyan-950 text-cyan-300 border-cyan-800';
+                    return `
+                        <div class="p-3 rounded bg-space-900 border border-white/[0.04] space-y-1">
+                            <div class="flex items-center justify-between text-[11px]">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-1.5 py-0.2 rounded font-bold border text-[10px] ${sevClass}">${evt.category}</span>
+                                    <span class="text-white font-bold">${evt.message}</span>
+                                </div>
+                                <span class="text-zinc-500">${evt.timestamp.replace('T', ' ').substring(0, 19)} UTC</span>
+                            </div>
+                            ${Object.keys(evt.metadata || {}).length > 0 ? `
+                                <div class="text-[10px] text-zinc-500 bg-space-850 p-2 rounded mt-1 font-mono overflow-x-auto">
+                                    ${JSON.stringify(evt.metadata)}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Events load error:', err);
+            }
+        }
+
+        // Modal Batch Produce Handlers
+        function openBatchModal() {
+            document.getElementById('modal-batch-produce').classList.remove('hidden');
+        }
+        function closeBatchModal() {
+            document.getElementById('modal-batch-produce').classList.add('hidden');
+        }
+        async function executeBatchProduction() {
+            const count = parseInt(document.getElementById('batch-count-input').value, 10) || 1;
+            const dryRun = document.getElementById('batch-dryrun-checkbox').checked;
+            const btn = document.getElementById('btn-submit-batch');
+            btn.disabled = true;
+            btn.innerText = 'DISPATCHING...';
+
+            try {
+                const res = await fetch('/api/mission-control/actions/produce', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+                    body: JSON.stringify({ count: count, dry_run: dryRun })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(`Batch production completed! (${data.success_count} / ${data.total_requested} successful)`);
+                    closeBatchModal();
+                    window.location.reload();
+                } else {
+                    alert('Production failed: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'DISPATCH BATCH';
+            }
+        }
+
+        // Inspect Stage Node Click
+        function inspectStage(stageName, index) {
+            const panel = document.getElementById('stage-inspect-panel');
+            const title = document.getElementById('stage-inspect-title');
+            const body = document.getElementById('stage-inspect-body');
+            panel.classList.remove('hidden');
+            title.innerText = `STAGE ${index + 1}: ${stageName}`;
+
+            const descriptions = {
+                'DISCOVER': 'Harvests fresh intelligence from configured RSS feeds / GDELT adapters with sub-second parsing and canonical normalization.',
+                'FILTER': 'Applies low-relevance noise filtering and checks domain authority and structural integrity.',
+                'RANK': 'Calculates narrative tension, freshness decay, and opportunity scoring for all valid candidates.',
+                'SELECT': 'Applies deduplication matrix and selects top-ranking unblocked topic candidate for production.',
+                'RESEARCH': 'Gathers verifiable claims from pre-attached sources or reference archives; extracts key facts.',
+                'SCRIPT': 'Generates exact 5-beat narrative script strictly respecting word count bounds (45-68 words) and anti-cliché defense.',
+                'CRITIC': 'Automated editorial evaluation enforcing 70/100 threshold; checks hook velocity, factual fidelity, and cadence.',
+                'VISUAL PLAN': 'Constructs 5-8 beat storyboard with high-intent descriptive asset prompts and camera motion.',
+                'ASSETS': 'Fetches visual assets from licensed provider (Pexels) or generated visual assets under strict quota limits.',
+                'TTS': 'Synthesizes studio voiceover using Kokoro TTS (af_bella default voice) at 24kHz sample rate.',
+                'AUDIO': 'Applies EBU R128 Stage B bed normalization (-30 LUFS) with dynamic ducking over BGM library.',
+                'RENDER': 'Composes 1080x1920 (9:16) MP4 video with synced captions, motion Ken-Burns effect, and audio track.',
+                'QA': 'Automated quality assurance gate evaluating LUFS loudness, duration bounds, visual match, and audio fidelity (75/100 threshold).',
+                'VAULT': 'Moves rendered artifact to 01_READY in Drive Vault or local vault archive.',
+                'SCHEDULE': 'Assigns upcoming optimal UTC publication slot respecting DAILY_SHORTS_LIMIT = 4 ceiling.',
+                'PUBLISH': 'Executes YouTube Shorts publication under idempotency protection.'
+            };
+
+            body.innerHTML = `
+                <div class="text-zinc-300 font-normal leading-relaxed">${descriptions[stageName] || 'Standard lifecycle stage.'}</div>
+                <div class="pt-2 text-zinc-500 text-[11px]">Lifecycle Sequence: ${index + 1} of 16 &middot; Gate: Non-bypassable</div>
+            `;
+        }
+
+        async function refreshPipelineData() {
+            try {
+                const res = await fetch('/api/mission-control/pipeline');
+                const data = await res.json();
+                if (data.stages) {
+                    const grid = document.getElementById('pipeline-stages-grid');
+                    if (grid) {
+                        grid.innerHTML = data.stages.map(s => {
+                            const isRunning = s.status === 'running';
+                            const isCompleted = s.status === 'completed';
+                            const isFailed = s.status === 'failed';
+                            const isBlocked = s.status === 'blocked';
+
+                            const cardClass = isRunning ? 'bg-cyan-950/40 border-cyan-500 stage-active-pulse text-cyan-300' :
+                                              isCompleted ? 'bg-space-900 border-emerald-800/60 text-emerald-400' :
+                                              isFailed ? 'bg-rose-950/40 border-rose-600 text-rose-300' :
+                                              isBlocked ? 'bg-amber-950/40 border-amber-600 text-amber-300' :
+                                              'bg-space-900/60 border-white/[0.06] text-zinc-500';
+
+                            const badgeClass = isRunning ? 'bg-cyan-900 text-cyan-200 animate-pulse' :
+                                               isCompleted ? 'bg-emerald-950 text-emerald-300' :
+                                               isFailed ? 'bg-rose-950 text-rose-300' :
+                                               'bg-space-850 text-zinc-500';
+
+                            return `
+                                <div onclick="inspectStage('${s.name}', ${s.index})" class="stage-card-3d p-3.5 rounded-xl border cursor-pointer relative flex flex-col justify-between min-h-[110px] ${cardClass}" data-stage-index="${s.index}">
+                                    <div class="flex items-center justify-between text-[11px] font-mono">
+                                        <span class="text-zinc-400">${String(s.index + 1).padStart(2, '0')}</span>
+                                        <span class="text-[9px] px-1 py-0.2 rounded font-bold uppercase ${badgeClass}">${s.status}</span>
+                                    </div>
+                                    <div class="font-bold text-xs sm:text-sm text-white mt-1">${s.name}</div>
+                                    <div class="text-[10px] text-zinc-400 font-mono truncate mt-1">${s.detail || 'Pending'}</div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+            } catch (err) {
+                console.error('Pipeline refresh error:', err);
+            }
+        }
+    </script>
+</body>
+</html>

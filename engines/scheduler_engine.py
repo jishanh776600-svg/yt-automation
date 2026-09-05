@@ -169,24 +169,27 @@ class PublicationScheduler:
     def get_vacant_slots_in_horizon(
         self,
         db: Session,
-        reference_time: Optional[datetime] = None
+        reference_time: Optional[datetime] = None,
+        horizon_hours: int = 48
     ) -> List[datetime]:
         """
-        Inspects all publication slots across CURRENT DAY + NEXT DAY (max 2 calendar days = up to 6 slots).
+        Inspects all publication slots across the rolling 48-hour forward horizon
+        (spanning Today, Tomorrow, and Day+2 as needed up to reference_time + horizon_hours).
         Returns a chronologically ordered list of genuinely vacant slots that can be scheduled immediately,
         strictly respecting the DAILY_SHORTS_LIMIT = 3 ceiling per calendar day.
-        Does NOT schedule beyond the next day's 15:00 UTC slot.
         """
         now = reference_time or datetime.utcnow()
         now = now.replace(microsecond=0)
         earliest_allowed = now + timedelta(minutes=self.min_lead_minutes)
+        horizon_end = now + timedelta(hours=horizon_hours)
 
         occupied_slots, day_counts, slot_details = self.get_authoritative_schedule_state(db)
         current_date = now.date()
+        end_date = horizon_end.date()
+        total_days = max(1, (end_date - current_date).days + 1)
         vacant_slots = []
 
-        # Strictly 2 calendar days: Day 0 (Today) and Day 1 (Tomorrow)
-        for day_offset in (0, 1):
+        for day_offset in range(total_days):
             eval_date = current_date + timedelta(days=day_offset)
             day_slots = self.get_slots_for_date(eval_date)
 
@@ -202,6 +205,8 @@ class PublicationScheduler:
             for slot_dt in day_slots:
                 if slot_dt <= earliest_allowed:
                     continue  # In past or too close (< min_lead_minutes)
+                if slot_dt > horizon_end:
+                    continue  # Outside forward horizon
                 if slot_dt in occupied_slots:
                     continue  # Already occupied or double-booked
 
@@ -211,7 +216,7 @@ class PublicationScheduler:
             allowed_for_day = day_vacancies[:available_capacity_for_day]
             vacant_slots.extend(allowed_for_day)
 
-        # Sort chronologically (Today slots first, then Tomorrow slots)
+        # Sort chronologically
         vacant_slots.sort()
         return vacant_slots
 

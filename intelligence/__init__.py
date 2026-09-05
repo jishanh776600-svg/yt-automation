@@ -11,7 +11,7 @@ from intelligence.models import RawArticle, EventCluster
 from intelligence.normalization import normalize_article
 from intelligence.sources.rss_source import RSSSourceAdapter
 from intelligence.sources.gdelt_source import GDELTSourceAdapter
-from intelligence.clustering import EventClusterEngine
+from intelligence.clustering import EventClusterEngine, is_niche_compliant
 from intelligence.freshness import FreshnessScorer
 from intelligence.relevance import RelevanceScorer
 from intelligence.scoring import OpportunityScorer

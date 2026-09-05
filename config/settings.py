@@ -48,7 +48,7 @@ for d in [DATABASE_DIR, TOPICS_DIR, RESEARCH_DIR, SCRIPTS_DIR, STORYBOARDS_DIR,
 TEST_MODE = os.getenv("TEST_MODE", "true").lower() == "true"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_API_KEY_SECONDARY = os.getenv("GEMINI_API_KEY_SECONDARY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemma-4-26b-a4b-it")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_MODEL_SECONDARY = os.getenv("GEMINI_MODEL_SECONDARY", "")
 GEMINI_FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemma-4-31b-it")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
@@ -77,10 +77,10 @@ YOUTUBE_CLIENT_SECRET = os.getenv("YOUTUBE_CLIENT_SECRET", "")
 YOUTUBE_REFRESH_TOKEN = os.getenv("YOUTUBE_REFRESH_TOKEN", "")
 CLIENT_SECRETS_FILE = os.getenv("CLIENT_SECRETS_FILE", str(PROJECT_ROOT / "client_secret.json"))
 
-# TTS Settings — Authoritative Production Lock: Bella Only (af_bella)
+# TTS Settings — Authoritative Production Lock: Sarah Only (af_sarah)
 TTS_PROVIDER = os.getenv("TTS_PROVIDER", "kokoro")  # kokoro, edge, piper
-KOKORO_VOICE = "af_bella"
-APPROVED_PRODUCTION_VOICES = ["af_bella"]
+KOKORO_VOICE = "af_sarah"
+APPROVED_PRODUCTION_VOICES = ["af_sarah"]
 KOKORO_MODEL_PATH = DATA_DIR / "kokoro-v1.0.onnx"
 KOKORO_VOICES_PATH = DATA_DIR / "voices-v1.0.bin"
 

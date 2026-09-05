@@ -26,7 +26,8 @@ from config.settings import (
     TEST_MODE, RENDERS_DIR,
     MAX_BATCH_PRODUCTION_CEILING,
     MAX_PRODUCTION_ATTEMPTS_CEILING,
-    MAX_BUFFER_RESERVE_CEILING
+    MAX_BUFFER_RESERVE_CEILING,
+    AI_PROVIDER_AVAILABLE
 )
 from config.constants import JobState, DAILY_SHORTS_LIMIT
 from sqlalchemy.orm import Session
@@ -34,6 +35,7 @@ from core.database import init_db, SessionLocal
 from core.models import Job, Topic, RenderOutput, UploadRecord, ScriptRecord
 from core.state_machine import StateMachine
 from core.lock import ProcessLock, ProcessLockError
+from core.cloud_lock import CompositeLock, CloudLockManager, CloudLockError
 from engines.topic_discovery import TopicDiscoveryEngine
 from engines.research_engine import ResearchEngine
 from engines.script_engine import ScriptEngine
@@ -103,11 +105,11 @@ class ShortsPipeline:
         try:
             authoritative_db_voice = get_active_voice(db)
             if authoritative_db_voice not in APPROVED_PRODUCTION_VOICES:
-                authoritative_db_voice = "af_bella"
-            chosen_voice = voice or authoritative_db_voice or os.getenv("KOKORO_VOICE") or "af_bella"
+                authoritative_db_voice = "af_sarah"
+            chosen_voice = voice or authoritative_db_voice or os.getenv("KOKORO_VOICE") or "af_sarah"
             if chosen_voice not in APPROVED_PRODUCTION_VOICES:
-                logger.warning(f"Voice '{chosen_voice}' not in APPROVED_PRODUCTION_VOICES. Defaulting to 'af_bella'.")
-                chosen_voice = "af_bella"
+                logger.warning(f"Voice '{chosen_voice}' not in APPROVED_PRODUCTION_VOICES. Defaulting to 'af_sarah'.")
+                chosen_voice = "af_sarah"
             self.run_voice = chosen_voice
         finally:
             db.close()
@@ -431,7 +433,12 @@ class ShortsPipeline:
         Acquires process lock, validates production quota, generates assets, renders, QAs,
         and uploads directly to Google Drive '01_READY' folder.
         """
-        lock = ProcessLock(name="production", command_name="produce-batch")
+        lock = CompositeLock(
+            name="production",
+            command_name="produce-batch",
+            drive_engine=getattr(self, "drive_engine", None),
+            cloud_lock_name="cloud_production",
+        )
         if not lock.acquire():
             info = lock.get_lock_info()
             owner_pid = info.get("pid") if info else "unknown"
@@ -557,99 +564,35 @@ class ShortsPipeline:
 
         console.print(Panel.fit(f"[bold cyan]Auditing Reserve Buffer (Target: {clamped_target} Shorts)[/bold cyan]", border_style="cyan"))
         
-        lock = ProcessLock(name="production", command_name="maintain-buffer")
-        try:
-            lock.acquire()
-        except ProcessLockError as e:
-            logger.warning(f"Production lock already held: {e}")
-            console.print(f"[bold yellow][!] Production lock active: {e}[/bold yellow]")
-            return 0, {"outcome": "BLOCKED", "block_reason": "LOCK_HELD", "produced_count": 0}
+        from intelligence.cloud_orchestrator import CloudProductionOrchestrator
+        orchestrator = CloudProductionOrchestrator(
+            drive_engine=self.drive_engine,
+            voice_id="af_sarah"
+        )
+        telemetry = orchestrator.run_production_cycle(target_buffer=clamped_target)
 
-        try:
-            initial_stock = self.drive_engine.get_ready_stock_count()
-            initial_needed = max(0, clamped_target - initial_stock)
-            produced_count = 0
-            total_attempts = 0
-            consecutive_failures = 0
-            block_reason = None
-            attempted_topic_ids: Set[str] = set()
+        summary = {
+            "action": "MAINTAIN_BUFFER",
+            "outcome": telemetry.status,
+            "block_reason": "; ".join(telemetry.failure_reasons) if telemetry.failure_reasons else None,
+            "requested_deficit": max(0, clamped_target - telemetry.initial_ready_stock),
+            "produced_count": telemetry.videos_deposited,
+            "initial_stock": telemetry.initial_ready_stock,
+            "final_stock": telemetry.final_ready_stock,
+            "target_stock": clamped_target,
+            "voice": "af_sarah",
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+        self._write_production_summary(summary)
 
-            while total_attempts < MAX_PRODUCTION_ATTEMPTS_CEILING:
-                current_stock = self.drive_engine.get_ready_stock_count()
-                needed = max(0, clamped_target - current_stock)
-
-                if needed == 0:
-                    console.print(Panel.fit(
-                        f"[bold green][+] Reserve Buffer Healthy & Fully Stocked![/bold green]\n"
-                        f"Current Ready Stock in 01_READY: [bold cyan]{current_stock} Shorts[/bold cyan]\n"
-                        f"Target Reserve: [bold]{clamped_target} Shorts[/bold]\n"
-                        f"Produced This Session: [bold]{produced_count} Shorts[/bold]",
-                        border_style="green"
-                     ))
-                    break
-
-                if produced_count >= MAX_BATCH_PRODUCTION_CEILING:
-                    logger.warning(f"Batch production reached session limit ({MAX_BATCH_PRODUCTION_CEILING}). Halting safely.")
-                    if not block_reason:
-                        block_reason = "SESSION_LIMIT_REACHED"
-                    break
-
-                total_attempts += 1
-                console.print(f"\n[bold yellow][*] Reserve Deficit: {needed} Shorts remaining (Current: {current_stock}/{clamped_target}). Producing next Short (Attempt {total_attempts})...[/bold yellow]")
-                try:
-                    job = self.produce_single_to_vault(exclude_topic_ids=attempted_topic_ids)
-                    if job:
-                        produced_count += 1
-                        consecutive_failures = 0
-                    else:
-                        consecutive_failures += 1
-                        if consecutive_failures >= 3:
-                            block_reason = "CONSECUTIVE_FAILURES"
-                            logger.error("[BUFFER] 3 consecutive production failures encountered. Halting buffer maintenance safely.")
-                            break
-                except Exception as fatal_e:
-                    if "QuotaExhausted" in type(fatal_e).__name__ or "quota" in str(fatal_e).lower() or "429" in str(fatal_e):
-                        block_reason = "ALL_AI_PROVIDERS_EXHAUSTED"
-                        logger.error(f"[BUFFER] Fatal AI provider quota exhaustion detected across all fallbacks: {fatal_e}. Halting buffer maintenance immediately.")
-                        break
-                    raise fatal_e
-                time.sleep(2)
-
-            final_stock = self.drive_engine.get_ready_stock_count()
-            
-            if initial_needed == 0 or produced_count >= initial_needed or final_stock >= clamped_target:
-                outcome = "SUCCEEDED"
-            elif produced_count > 0:
-                outcome = "PARTIAL"
-            elif block_reason:
-                outcome = "BLOCKED"
-            else:
-                outcome = "FAILED"
-
-            summary = {
-                "action": "MAINTAIN_BUFFER",
-                "outcome": outcome,
-                "block_reason": block_reason,
-                "requested_deficit": initial_needed,
-                "produced_count": produced_count,
-                "initial_stock": initial_stock,
-                "final_stock": final_stock,
-                "target_stock": clamped_target,
-                "voice": self.run_voice,
-                "timestamp": datetime.utcnow().isoformat() + "Z"
-            }
-            self._write_production_summary(summary)
-
-            console.print(Panel.fit(
-                f"[bold green]=== Buffer Maintenance Complete ===[/bold green]\n"
-                f"Outcome: [bold]{outcome}[/bold] (Reason: {block_reason or 'None'})\n"
-                f"Produced: [bold]{produced_count}/{initial_needed}[/bold] (Total Attempts: {total_attempts})\n"
-                f"Vault Reserve: [bold cyan]{final_stock}/{clamped_target} Shorts[/bold cyan]",
-                border_style="green" if outcome == "SUCCEEDED" else ("yellow" if outcome == "PARTIAL" else "red")
-            ))
-            return produced_count, summary
-        finally:
-            lock.release()
+        console.print(Panel.fit(
+            f"[bold green]=== Buffer Maintenance Complete ===[/bold green]\n"
+            f"Outcome: [bold]{telemetry.status}[/bold]\n"
+            f"Videos Deposited: [bold cyan]{telemetry.videos_deposited}[/bold cyan]\n"
+            f"Vault Reserve: [bold cyan]{telemetry.final_ready_stock}/{clamped_target} Shorts[/bold cyan]",
+            border_style="green" if telemetry.status == "SUCCEEDED" else ("yellow" if telemetry.status == "PARTIAL" else "red")
+        ))
+        return telemetry.videos_deposited, summary
 
     def _schedule_single_drive_file(
         self,
@@ -751,10 +694,9 @@ class ShortsPipeline:
                 scheduled_slot=scheduled_slot
             )
             if not gate_passed:
-                logger.warning(f"[PUBLICATION_SAFETY_GATE_BLOCKED] Job {job.id} blocked by safety gate: {gate_reason}. Keeping file safe in 01_READY.")
-                console.print(f"[bold red][x] Publication Safety Gate Blocked Upload:[/bold red] {gate_reason} (Safely Preserved in 01_READY)")
-                # SAFETY INVARIANT: Never quarantine a valid MP4 due to transient gate checks or missing metadata!
-                self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="01_READY")
+                logger.warning(f"[PUBLICATION_SAFETY_GATE_BLOCKED] Job {job.id} blocked by safety gate: {gate_reason}. Quarantining file to 04_FAILED.")
+                console.print(f"[bold red][x] Publication Safety Gate Blocked Upload:[/bold red] {gate_reason} (Quarantined to 04_FAILED)")
+                self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="04_FAILED")
                 return None
 
             if TEST_MODE:
@@ -851,7 +793,12 @@ class ShortsPipeline:
         evaluates available fresh 01_READY inventory, and schedules all eligible videos into consecutive
         upcoming publication slots in ONE atomic operation.
         """
-        lock = ProcessLock(name="publisher", command_name="schedule-ready")
+        lock = CompositeLock(
+            name="publisher",
+            command_name="schedule-ready",
+            drive_engine=getattr(self, "drive_engine", None),
+            cloud_lock_name="cloud_publisher",
+        )
         if not lock.acquire():
             info = lock.get_lock_info()
             owner_pid = info.get("pid") if info else "unknown"
@@ -1100,12 +1047,126 @@ class ShortsPipeline:
         res = self.schedule_ready_buffer(max_to_schedule=1, target_file_id=target_file_id)
         return bool(res.get("scheduled_count", 0) > 0)
 
+    def run_autonomous_daemon(
+        self,
+        target_stock: int = 6,
+        check_interval_sec: int = 900
+    ) -> None:
+        """
+        CANONICAL AUTONOMOUS DAEMON CONTROLLER:
+        Continuous convergence loop operating 24/7 without manual intervention:
+        1. Sync canonical & auxiliary DBs from Drive (00_SYSTEM).
+        2. Horizon Audit: Proactively schedules eligible 01_READY videos into vacant slots
+           in the 48-hour forward horizon (06:00, 11:00, 15:00 UTC, max 3/day).
+        3. Reconciles past scheduled uploads from 02_PROCESSING to 03_PUBLISHED.
+        4. Buffer Audit: Checks verified 01_READY stock in Drive.
+           If stock < target_stock (6), sequentially produces fresh Shorts (strict niche, Sarah voice, QA)
+           to refill the reserve buffer.
+        5. Uploads and synchronizes updated DB state back to Drive (00_SYSTEM).
+        6. Sleeps for check_interval_sec (default: 15 mins) with graceful interrupt handling.
+        """
+        import signal
+        from core.database_sync import download_canonical_database, upload_canonical_database
+
+        console.print(Panel.fit(
+            f"[bold green]=== AL-AMR 100% Autonomous Production & Scheduling Daemon ===[/bold green]\n"
+            f"Reserve Buffer Target: [bold cyan]{target_stock} Verified Shorts[/bold cyan]\n"
+            f"Voice Lock: [bold green]af_sarah[/bold green]\n"
+            f"Publishing Limit: [bold]3 Shorts/day (06:00, 11:00, 15:00 UTC)[/bold]\n"
+            f"Horizon: [bold]Rolling 48-Hour Forward Horizon[/bold]\n"
+            f"Convergence Interval: [bold yellow]{check_interval_sec // 60} minutes[/bold yellow]",
+            border_style="green"
+        ))
+
+        running = True
+
+        def _handle_stop(sig, frame):
+            nonlocal running
+            logger.info(f"Stop signal received ({sig}). Shutting down daemon gracefully...")
+            console.print("\n[bold yellow][!] Shutdown signal received. Exiting daemon safely...[/bold yellow]")
+            running = False
+
+        try:
+            signal.signal(signal.SIGINT, _handle_stop)
+            signal.signal(signal.SIGTERM, _handle_stop)
+        except Exception:
+            pass
+
+        cycle_count = 0
+        while running:
+            cycle_count += 1
+            now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+            console.print(f"\n[bold cyan][Cycle {cycle_count} - {now_str}][/bold cyan] Starting convergence pass...")
+
+            try:
+                # 1. Download & Reconcile Canonical Database from Cloud Vault
+                if self.drive_engine and not getattr(self, "offline_mode", False):
+                    try:
+                        logger.info("Syncing canonical DB from Drive...")
+                        download_canonical_database(drive_engine=self.drive_engine)
+                    except Exception as sync_e:
+                        logger.warning(f"Notice syncing DB from Drive: {sync_e}")
+
+                # 2. Schedule Ready Buffer into 48-Hour Horizon
+                console.print("[cyan][*] Auditing 48-hour forward publication horizon...[/cyan]")
+                try:
+                    sched_res = self.schedule_ready_buffer()
+                    console.print(
+                        f"[bold green][+] Horizon Audit Result:[/bold green] "
+                        f"Scheduled: {sched_res.get('scheduled_count', 0)} | "
+                        f"Vacant Slots: {sched_res.get('vacant_horizon_slots', 0)} | "
+                        f"Ready Stock: {sched_res.get('ready_stock', 0)}"
+                    )
+                except Exception as sched_err:
+                    logger.error(f"Error during scheduled horizon pass: {sched_err}")
+
+                # 3. Buffer Reserve Audit & Autonomous Replenishment
+                console.print("[cyan][*] Auditing verified 01_READY reserve buffer...[/cyan]")
+                try:
+                    prod_count, prod_summary = self.maintain_buffer(target_stock=target_stock)
+                    console.print(
+                        f"[bold green][+] Buffer Maintenance Result:[/bold green] "
+                        f"Outcome: {prod_summary.get('outcome')} | "
+                        f"Produced: {prod_count} | "
+                        f"Current Reserve: {prod_summary.get('final_stock', 0)}/{target_stock}"
+                    )
+                except Exception as prod_err:
+                    logger.error(f"Error during buffer maintenance pass: {prod_err}")
+
+                # 4. Upload Canonical Database back to Cloud Vault
+                if self.drive_engine and not getattr(self, "offline_mode", False):
+                    try:
+                        logger.info("Uploading canonical DB back to Drive...")
+                        upload_canonical_database(drive_engine=self.drive_engine)
+                    except Exception as up_e:
+                        logger.warning(f"Notice uploading DB to Drive: {up_e}")
+
+            except Exception as loop_err:
+                logger.error(f"Unexpected error in daemon loop: {loop_err}", exc_info=True)
+
+            # Sleep interval with interrupt sensitivity
+            if not running:
+                break
+            console.print(f"[dim]Convergence pass completed. Sleeping {check_interval_sec // 60}m until next audit...[/dim]")
+            sleep_chunks = max(1, check_interval_sec // 5)
+            for _ in range(sleep_chunks):
+                if not running:
+                    break
+                time.sleep(5)
+
+        console.print("[bold green]AL-AMR Autonomous Daemon cleanly stopped.[/bold green]")
+
     def run_single_job(self, topic: Optional[Topic] = None, force: bool = False) -> bool:
         """
         LEGACY MONOLITHIC / FALLBACK RUNNER:
         Executes single production cycle and uploads immediately.
         """
-        lock = ProcessLock(name="production", command_name="run-single-job")
+        lock = CompositeLock(
+            name="production",
+            command_name="run-single-job",
+            drive_engine=getattr(self, "drive_engine", None),
+            cloud_lock_name="cloud_production",
+        )
         if not lock.acquire():
             info = lock.get_lock_info()
             owner_pid = info.get("pid") if info else "unknown"
@@ -1339,15 +1400,8 @@ def main():
     elif args.run_once or args.test:
         pipeline.run_single_job(force=args.force)
     elif args.daemon:
-        import schedule
-        console.print("[bold green]Starting automated daemon scheduler (Strictly 3 Shorts/day at 06:00, 11:00, 15:00 UTC)...[/bold green]")
-        schedule.every().day.at("06:00").do(pipeline.publish_next_from_vault)
-        schedule.every().day.at("11:00").do(pipeline.publish_next_from_vault)
-        schedule.every().day.at("15:00").do(pipeline.publish_next_from_vault)
-        pipeline.publish_next_from_vault()  # Run initial cycle
-        while True:
-            schedule.run_pending()
-            time.sleep(60)
+        target_buf = args.maintain_buffer if args.maintain_buffer > 0 else 6
+        pipeline.run_autonomous_daemon(target_stock=target_buf)
     elif args.runtime:
         from runtime.service import autonomous_runtime_service
         console.print("[bold green]Starting persistent AL-AMR Autonomous Runtime Service...[/bold green]")
@@ -1370,7 +1424,7 @@ def main():
         orchestrator = CloudProductionOrchestrator(
             drive_engine=pipeline.drive_engine,
             is_dry_run=args.dry_run,
-            voice_id=args.voice or "af_bella"
+            voice_id=args.voice or "af_sarah"
         )
         telemetry = orchestrator.run_production_cycle(
             target_buffer=args.maintain_buffer if args.maintain_buffer > 0 else 6,

@@ -1,0 +1,17 @@
+{
+  "audit_type": "YOUTUBE_NEGATIVE_PROOF",
+  "timestamp_utc": "2026-09-04T13:10:41.017778+00:00",
+  "canary_job_id": "job_af6201a41691",
+  "job_state": "READY_TO_UPLOAD",
+  "job_is_not_published": true,
+  "job_is_not_scheduled": true,
+  "upload_records_for_job_count": 0,
+  "total_uploads_in_db": 226,
+  "baseline_total_uploads": 226,
+  "upload_record_growth": 0,
+  "youtube_today_published_count": 0,
+  "baseline_today_count": 0,
+  "total_occupied_slots": 21,
+  "baseline_occupied_slots": 21,
+  "negative_proof_passed": true
+}

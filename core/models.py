@@ -523,7 +523,7 @@ class RenderedVideoRecord(Base):
     qa_status = Column(String(32), default="PENDING", nullable=False)  # PASSED, FAILED, PENDING
     qa_report_json = Column(Text, nullable=True)
     cloud_storage_path = Column(Text, nullable=True)
-    voice_id = Column(String(64), default="af_bella", nullable=False)
+    voice_id = Column(String(64), default="af_sarah", nullable=False)
     has_bgm = Column(Boolean, default=True, nullable=False)
     has_sfx = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
