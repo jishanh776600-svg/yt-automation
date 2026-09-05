@@ -33,6 +33,7 @@ from engines.tts_engine import (
 )
 from engines.sfx_manager import SFXManager
 from engines.caption_engine import CaptionEngine
+from config.constants import VOICEOVER_PAUSE_MULTIPLIER
 
 
 # ------------------------------------------------------------------------------
@@ -94,8 +95,8 @@ def test_liam_max_creator_parameters():
     spec = director.build_delivery_spec(DeliveryProfile.LIAM_MAX_CREATOR, "Test script text.")
     assert spec.profile == DeliveryProfile.LIAM_MAX_CREATOR
     assert spec.speed_multiplier == 1.08
-    assert spec.sentence_pause_sec == 0.17
-    assert spec.clause_pause_sec == 0.07
+    assert spec.sentence_pause_sec == round(0.17 * VOICEOVER_PAUSE_MULTIPLIER, 3)
+    assert spec.clause_pause_sec == round(0.07 * VOICEOVER_PAUSE_MULTIPLIER, 3)
     assert spec.presence_boost_db == 2.2
     assert spec.eq_freq_hz == 3000
     assert spec.target_lufs == -15.5
@@ -123,8 +124,8 @@ def test_sarah_max_creator_parameters():
     spec = director.build_delivery_spec(DeliveryProfile.SARAH_MAX_CREATOR, "Test script text.")
     assert spec.profile == DeliveryProfile.SARAH_MAX_CREATOR
     assert spec.speed_multiplier == 1.08
-    assert spec.sentence_pause_sec == 0.17
-    assert spec.clause_pause_sec == 0.07
+    assert spec.sentence_pause_sec == round(0.17 * VOICEOVER_PAUSE_MULTIPLIER, 3)
+    assert spec.clause_pause_sec == round(0.07 * VOICEOVER_PAUSE_MULTIPLIER, 3)
     assert spec.presence_boost_db == 2.2
     assert spec.eq_freq_hz == 3000
     assert spec.target_lufs == -15.5

@@ -14,6 +14,18 @@ from dataclasses import dataclass, field, asdict
 from enum import Enum
 from typing import Dict, Any, List, Optional, Tuple, Set
 
+from config.constants import (
+    VOICEOVER_PAUSE_MULTIPLIER,
+    BASE_CLAUSE_PAUSE_SEC,
+    BASE_SENTENCE_PAUSE_SEC,
+    BASE_PARAGRAPH_PAUSE_SEC,
+    BASE_EMPHASIS_PAUSE_SEC,
+    EFFECTIVE_CLAUSE_PAUSE_SEC,
+    EFFECTIVE_SENTENCE_PAUSE_SEC,
+    EFFECTIVE_PARAGRAPH_PAUSE_SEC,
+    EFFECTIVE_EMPHASIS_PAUSE_SEC,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -51,8 +63,10 @@ class DeliverySpec:
     """Complete directorial speech delivery specification for TTS synthesis."""
     profile: DeliveryProfile
     speed_multiplier: float = 1.0
-    sentence_pause_sec: float = 0.25
-    clause_pause_sec: float = 0.10
+    sentence_pause_sec: float = EFFECTIVE_SENTENCE_PAUSE_SEC
+    clause_pause_sec: float = EFFECTIVE_CLAUSE_PAUSE_SEC
+    paragraph_pause_sec: float = EFFECTIVE_PARAGRAPH_PAUSE_SEC
+    emphasis_pause_sec: float = EFFECTIVE_EMPHASIS_PAUSE_SEC
     presence_boost_db: float = 2.2
     eq_freq_hz: int = 3000
     target_lufs: float = -15.5
@@ -433,11 +447,28 @@ class DeliveryDirector:
         elif intensity == "LOW":
             speed = round(speed * 0.97, 2)
 
+        # Scale intentional pauses by canonical VOICEOVER_PAUSE_MULTIPLIER (1.40x)
+        base_sent = preset["sentence_pause_sec"]
+        base_clause = preset["clause_pause_sec"]
+        base_para = preset.get("paragraph_pause_sec", BASE_PARAGRAPH_PAUSE_SEC)
+        base_emphasis = preset.get("emphasis_pause_sec", BASE_EMPHASIS_PAUSE_SEC)
+
+        effective_sentence_pause = round(base_sent * VOICEOVER_PAUSE_MULTIPLIER, 3)
+        effective_clause_pause = round(base_clause * VOICEOVER_PAUSE_MULTIPLIER, 3)
+        effective_paragraph_pause = round(base_para * VOICEOVER_PAUSE_MULTIPLIER, 3)
+        effective_emphasis_pause = round(base_emphasis * VOICEOVER_PAUSE_MULTIPLIER, 3)
+
+        # Apply emphasis pause for dramatic / climax moments
+        if intensity == "CLIMAX" or profile in (DeliveryProfile.SHOCK_REVEAL, DeliveryProfile.DRAMATIC_REVEAL):
+            effective_sentence_pause = max(effective_sentence_pause, effective_emphasis_pause)
+
         return DeliverySpec(
             profile=profile,
             speed_multiplier=speed,
-            sentence_pause_sec=preset["sentence_pause_sec"],
-            clause_pause_sec=preset["clause_pause_sec"],
+            sentence_pause_sec=effective_sentence_pause,
+            clause_pause_sec=effective_clause_pause,
+            paragraph_pause_sec=effective_paragraph_pause,
+            emphasis_pause_sec=effective_emphasis_pause,
             presence_boost_db=preset.get("presence_boost_db", 2.2),
             eq_freq_hz=preset.get("eq_freq_hz", 3000),
             target_lufs=preset.get("target_lufs", -15.5),

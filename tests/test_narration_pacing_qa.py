@@ -47,6 +47,21 @@ def test_silence_compression_caps_pauses_to_100ms(tmp_audio_dir):
     assert metrics["max_pause"] <= 0.12
 
 
+def test_silence_compression_calibrated_140ms_default(tmp_audio_dir):
+    """Verifies default silence gap compression caps pauses to 140ms (1.40x multiplier)."""
+    raw_wav = tmp_audio_dir / "raw_with_500ms_gap_default.wav"
+    tight_wav = tmp_audio_dir / "tightened_default.wav"
+    _generate_synthetic_speech_with_gap(raw_wav, gap_sec=0.50)
+    ok, dur = TTSEngine.compress_silence_gaps(raw_wav, tight_wav)  # Uses EFFECTIVE_MAX_SILENCE_CAP_SEC (0.14s)
+    assert ok is True
+    assert 4.10 <= dur <= 4.25
+
+    qa = VideoQAEngine()
+    metrics = qa.analyze_narration_pacing(tight_wav)
+    assert metrics["max_pause"] <= 0.16
+    assert metrics["max_pause"] >= 0.12
+
+
 def test_audio_qa_fails_on_excessive_silence_gap(tmp_audio_dir):
     raw_wav = tmp_audio_dir / "gap_450ms.wav"
     _generate_synthetic_speech_with_gap(raw_wav, gap_sec=0.45)

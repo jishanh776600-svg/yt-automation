@@ -17,7 +17,11 @@ import soundfile as sf
 import numpy as np
 from sqlalchemy.orm import Session
 from config.settings import VOICE_DIR, KOKORO_MODEL_PATH, KOKORO_VOICES_PATH, KOKORO_VOICE, TTS_PROVIDER
-from config.constants import MIN_DURATION_SEC, MAX_DURATION_SEC, TARGET_DURATION_SEC, LicenseType
+from config.constants import (
+    MIN_DURATION_SEC, MAX_DURATION_SEC, TARGET_DURATION_SEC, LicenseType,
+    VOICEOVER_PAUSE_MULTIPLIER, EFFECTIVE_SENTENCE_PAUSE_SEC, EFFECTIVE_CLAUSE_PAUSE_SEC,
+    EFFECTIVE_MAX_SILENCE_CAP_SEC
+)
 from core.models import AssetRecord, SystemConfig
 
 logger = logging.getLogger(__name__)
@@ -141,8 +145,8 @@ class TTSEngine:
         output_path: Path,
         voice: str = "af_sarah",
         speed: float = 1.05,
-        sentence_pause: float = 0.08,
-        clause_pause: float = 0.03
+        sentence_pause: float = EFFECTIVE_SENTENCE_PAUSE_SEC,
+        clause_pause: float = EFFECTIVE_CLAUSE_PAUSE_SEC
     ) -> Tuple[bool, float]:
         """Synthesizes speech using Kokoro ONNX model with calibrated pause controls."""
         kokoro = self._get_kokoro()
@@ -287,10 +291,10 @@ class TTSEngine:
             return False
 
     @staticmethod
-    def compress_silence_gaps(input_wav: Path, output_wav: Path, max_pause_sec: float = 0.10) -> Tuple[bool, float]:
+    def compress_silence_gaps(input_wav: Path, output_wav: Path, max_pause_sec: float = EFFECTIVE_MAX_SILENCE_CAP_SEC) -> Tuple[bool, float]:
         """
         Compresses dead air and excessive pauses between spoken phrases/sentences down to max_pause_sec.
-        Preserves natural breathing pauses (80-100ms) without clipping words or phonemes.
+        Preserves natural breathing pauses (110-140ms) without clipping words or phonemes.
         """
         try:
             data, sr = sf.read(str(input_wav))
@@ -351,11 +355,11 @@ class TTSEngine:
         kokoro_v = v_cfg.get("kokoro_voice", active_voice)
         edge_v = v_cfg.get("edge_voice", "en-US-JennyNeural")
 
-        # Extract delivery parameters if delivery_spec is provided (tight 0.08s / 0.03s pauses)
+        # Extract delivery parameters if delivery_spec is provided (calibrated natural breathing pauses)
         synthesize_text = delivery_spec.prepared_text if (delivery_spec and getattr(delivery_spec, "prepared_text", None)) else text
         eff_speed = delivery_spec.speed_multiplier if (delivery_spec and speed_multiplier == 1.0) else speed_multiplier
-        sentence_pause = getattr(delivery_spec, "sentence_pause_sec", 0.08) if delivery_spec else 0.08
-        clause_pause = getattr(delivery_spec, "clause_pause_sec", 0.03) if delivery_spec else 0.03
+        sentence_pause = getattr(delivery_spec, "sentence_pause_sec", EFFECTIVE_SENTENCE_PAUSE_SEC) if delivery_spec else EFFECTIVE_SENTENCE_PAUSE_SEC
+        clause_pause = getattr(delivery_spec, "clause_pause_sec", EFFECTIVE_CLAUSE_PAUSE_SEC) if delivery_spec else EFFECTIVE_CLAUSE_PAUSE_SEC
 
         success = False
         duration = 0.0
@@ -379,7 +383,7 @@ class TTSEngine:
                 tts_source = "edge_tts"
                 license_type = LicenseType.AI_GENERATED_OPEN.value
         else:
-            # 2. Kokoro TTS route with calibrated tight pauses
+            # 2. Kokoro TTS route with calibrated natural pauses
             success, duration = self.generate_kokoro_audio(
                 text=synthesize_text,
                 output_path=wav_path,
@@ -407,16 +411,17 @@ class TTSEngine:
                 tts_source = "edge_tts"
                 license_type = LicenseType.AI_GENERATED_OPEN.value
 
-        # 3b. Apply silence gap tightening to eliminate awkward dead air between phrases (max 100ms)
+        # 3b. Apply silence gap tightening to eliminate awkward dead air between phrases (preserving calibrated breathing room)
         if wav_path.exists():
             tightened_wav = self.voice_dir / f"{asset_id}_tightened.wav"
-            t_ok, t_dur = self.compress_silence_gaps(wav_path, tightened_wav, max_pause_sec=0.10)
+            max_pause_cap = round(max(EFFECTIVE_MAX_SILENCE_CAP_SEC, min(0.30, sentence_pause * 1.05)), 2)
+            t_ok, t_dur = self.compress_silence_gaps(wav_path, tightened_wav, max_pause_sec=max_pause_cap)
             if t_ok and t_dur > 0:
                 wav_path = tightened_wav
                 duration = t_dur
 
         # 4. Check Duration Sanity & Calibrate toward ~23.2s (22.0 - 25.0s)
-        # Re-synthesizes at calibrated speed while STILL enforcing silence gap compression (max 100ms)
+        # Re-synthesizes at calibrated speed while STILL enforcing silence gap compression (max 140ms or sentence_pause)
         if (duration < MIN_DURATION_SEC and duration > 14.0) or (duration > MAX_DURATION_SEC and duration < 32.0):
             target_dur = 23.2
             cal_speed = round(max(0.88, min(1.15, eff_speed * (duration / target_dur))), 2)
@@ -433,7 +438,8 @@ class TTSEngine:
                 )
                 if s_ok and raw_cal.exists():
                     cal_tight = self.voice_dir / f"{asset_id}_cal_tight.wav"
-                    t_ok, t_dur = self.compress_silence_gaps(raw_cal, cal_tight, max_pause_sec=0.10)
+                    max_pause_cap = round(max(EFFECTIVE_MAX_SILENCE_CAP_SEC, min(0.30, sentence_pause * 1.05)), 2)
+                    t_ok, t_dur = self.compress_silence_gaps(raw_cal, cal_tight, max_pause_sec=max_pause_cap)
                     if t_ok and t_dur > 0:
                         wav_path = cal_tight
                         duration = t_dur
