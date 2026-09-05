@@ -615,34 +615,59 @@
     </main>
 
     <!-- BATCH PRODUCTION MODAL -->
-    <div id="modal-batch-produce" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div id="modal-batch-produce" onclick="handleModalBackdropClick(event)" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-space-900 border border-white/10 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl">
             <div class="flex items-center justify-between">
                 <h4 class="text-base font-bold text-white font-mono flex items-center gap-2">
                     <span class="text-cyan-400">⚡</span> TRIGGER AUTONOMOUS BATCH
                 </h4>
-                <button onclick="closeBatchModal()" class="text-zinc-500 hover:text-white text-xs">✕</button>
+                <button type="button" onclick="closeBatchModal()" class="text-zinc-500 hover:text-white text-xs">✕</button>
             </div>
 
-            <div class="space-y-3 text-xs font-mono">
+            <div class="space-y-4 text-xs font-mono">
                 <div>
-                    <label class="text-zinc-400 block mb-1">Batch Count (Shorts):</label>
-                    <input id="batch-count-input" type="number" min="1" max="5" value="1" class="w-full bg-space-850 border border-white/10 rounded px-3 py-2 text-white font-bold">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label for="batch-count-input" class="text-zinc-300 font-bold">Batch Count (Shorts):</label>
+                        <span class="text-[11px] text-zinc-500">Range: 1 – 5 Shorts</span>
+                    </div>
+
+                    <!-- Quick Preset Pills (Autofill) -->
+                    <div class="flex items-center gap-1.5 mb-2.5">
+                        <button type="button" onclick="setBatchCount(1)" class="batch-count-pill px-2.5 py-1 rounded bg-cyan-950/50 hover:bg-cyan-900/60 text-cyan-300 border border-cyan-700/60 text-[11px] font-mono transition">1 Short</button>
+                        <button type="button" onclick="setBatchCount(2)" class="batch-count-pill px-2.5 py-1 rounded bg-space-850 hover:bg-space-800 text-zinc-300 border border-white/10 text-[11px] font-mono transition">2 Shorts</button>
+                        <button type="button" onclick="setBatchCount(3)" class="batch-count-pill px-2.5 py-1 rounded bg-space-850 hover:bg-space-800 text-zinc-300 border border-white/10 text-[11px] font-mono transition">3 Shorts</button>
+                        <button type="button" onclick="setBatchCount(5)" class="batch-count-pill px-2.5 py-1 rounded bg-space-850 hover:bg-space-800 text-zinc-300 border border-white/10 text-[11px] font-mono transition">5 (Max)</button>
+                    </div>
+
+                    <!-- Manual Input Field -->
+                    <div class="relative">
+                        <input id="batch-count-input" type="number" min="1" max="5" step="1" value="1"
+                               autocomplete="off"
+                               oninput="onBatchCountInputChanged()"
+                               onkeydown="if(event.key==='Enter'){event.preventDefault();executeBatchProduction();}"
+                               class="w-full bg-space-850 border border-white/10 rounded px-3 py-2.5 text-white font-bold text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition">
+                    </div>
+                    <div id="batch-count-error" class="text-rose-400 text-[11px] mt-1 hidden font-mono"></div>
                 </div>
 
                 <div class="flex items-center gap-2 bg-space-850 p-3 rounded-lg border border-white/10">
-                    <input id="batch-dryrun-checkbox" type="checkbox" checked class="w-4 h-4 rounded text-cyan-500">
-                    <label for="batch-dryrun-checkbox" class="text-zinc-300">Enforce Safe Dry-Run Boundary (Zero Live AI Spend / No Video Render)</label>
+                    <input id="batch-dryrun-checkbox" type="checkbox" checked class="w-4 h-4 rounded text-cyan-500 bg-space-900 border-white/20 focus:ring-0">
+                    <label for="batch-dryrun-checkbox" class="text-zinc-300 cursor-pointer select-none">Enforce Safe Dry-Run Boundary (Zero Live AI Spend / No Video Render)</label>
                 </div>
 
                 <div class="text-[11px] text-zinc-500 leading-relaxed">
                     All 16 lifecycle stages (DISCOVER &rarr; SCRIPT &rarr; CRITIC &rarr; QA &rarr; SCHEDULE) will execute under strict capability bounds with 100% ProcessLock isolation.
                 </div>
+
+                <!-- Status / Alert message box inside modal -->
+                <div id="batch-modal-alert" class="hidden p-3 rounded-lg text-xs font-mono leading-normal"></div>
             </div>
 
             <div class="flex justify-end gap-3 pt-2">
-                <button onclick="closeBatchModal()" class="px-4 py-2 rounded bg-space-850 hover:bg-space-800 text-zinc-400 font-mono text-xs">CANCEL</button>
-                <button onclick="executeBatchProduction()" id="btn-submit-batch" class="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-500 text-black font-bold font-mono text-xs">DISPATCH BATCH</button>
+                <button type="button" onclick="closeBatchModal()" class="px-4 py-2 rounded bg-space-850 hover:bg-space-800 text-zinc-400 font-mono text-xs transition">CANCEL</button>
+                <button type="button" onclick="executeBatchProduction()" id="btn-submit-batch" class="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-500 text-black font-bold font-mono text-xs transition flex items-center gap-1.5">
+                    <span id="btn-submit-batch-text">DISPATCH BATCH</span>
+                </button>
             </div>
         </div>
     </div>
@@ -1132,18 +1157,113 @@
         }
 
         // Modal Batch Produce Handlers
-        function openBatchModal() {
-            document.getElementById('modal-batch-produce').classList.remove('hidden');
+        function setBatchCount(n) {
+            const input = document.getElementById('batch-count-input');
+            input.value = n;
+            onBatchCountInputChanged();
+            updateBatchPresetPills(n);
         }
+
+        function updateBatchPresetPills(activeVal) {
+            document.querySelectorAll('.batch-count-pill').forEach(btn => {
+                const count = parseInt(btn.innerText, 10);
+                if (count === activeVal) {
+                    btn.classList.add('bg-cyan-950/50', 'text-cyan-300', 'border-cyan-700/60');
+                    btn.classList.remove('bg-space-850', 'text-zinc-300', 'border-white/10');
+                } else {
+                    btn.classList.remove('bg-cyan-950/50', 'text-cyan-300', 'border-cyan-700/60');
+                    btn.classList.add('bg-space-850', 'text-zinc-300', 'border-white/10');
+                }
+            });
+        }
+
+        function onBatchCountInputChanged() {
+            const input = document.getElementById('batch-count-input');
+            const errDiv = document.getElementById('batch-count-error');
+            const btn = document.getElementById('btn-submit-batch');
+            const raw = input.value.trim();
+            const val = Number(raw);
+
+            if (raw === "") {
+                errDiv.innerText = "Please enter a batch count (1 to 5).";
+                errDiv.classList.remove('hidden');
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                return false;
+            }
+            if (isNaN(val) || !Number.isInteger(val) || val < 1 || val > 5) {
+                errDiv.innerText = "Batch count must be a whole integer between 1 and 5.";
+                errDiv.classList.remove('hidden');
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                return false;
+            }
+
+            errDiv.innerText = "";
+            errDiv.classList.add('hidden');
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            updateBatchPresetPills(val);
+            return true;
+        }
+
+        function openBatchModal(suggestedCount = 1) {
+            const modal = document.getElementById('modal-batch-produce');
+            const input = document.getElementById('batch-count-input');
+            const alertDiv = document.getElementById('batch-modal-alert');
+            const errDiv = document.getElementById('batch-count-error');
+            alertDiv.className = 'hidden';
+            alertDiv.innerHTML = '';
+            errDiv.className = 'hidden';
+            errDiv.innerHTML = '';
+
+            const targetVal = (Number.isInteger(suggestedCount) && suggestedCount >= 1 && suggestedCount <= 5) ? suggestedCount : 1;
+            input.value = targetVal;
+            onBatchCountInputChanged();
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                input.focus();
+                input.select();
+            }, 60);
+        }
+
         function closeBatchModal() {
             document.getElementById('modal-batch-produce').classList.add('hidden');
         }
+
+        function handleModalBackdropClick(evt) {
+            if (evt.target.id === 'modal-batch-produce') {
+                closeBatchModal();
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('modal-batch-produce');
+                if (modal && !modal.classList.contains('hidden')) {
+                    closeBatchModal();
+                }
+            }
+        });
+
         async function executeBatchProduction() {
-            const count = parseInt(document.getElementById('batch-count-input').value, 10) || 1;
+            if (!onBatchCountInputChanged()) {
+                return;
+            }
+            const count = parseInt(document.getElementById('batch-count-input').value.trim(), 10);
             const dryRun = document.getElementById('batch-dryrun-checkbox').checked;
             const btn = document.getElementById('btn-submit-batch');
+            const btnText = document.getElementById('btn-submit-batch-text');
+            const alertDiv = document.getElementById('batch-modal-alert');
+
             btn.disabled = true;
-            btn.innerText = 'DISPATCHING...';
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            if (btnText) btnText.innerText = `DISPATCHING (${count})...`;
+
+            alertDiv.className = 'p-3 rounded-lg text-xs font-mono bg-cyan-950/40 text-cyan-300 border border-cyan-800/40';
+            alertDiv.innerHTML = `<span class="animate-pulse">⚡ Dispatching batch of ${count} Short${count > 1 ? 's' : ''} (${dryRun ? 'DRY-RUN' : 'PRODUCTION'})...</span>`;
+            alertDiv.classList.remove('hidden');
 
             try {
                 const res = await fetch('/api/mission-control/actions/produce', {
@@ -1153,17 +1273,31 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    alert(`Batch production completed! (${data.success_count} / ${data.total_requested} successful)`);
-                    closeBatchModal();
-                    window.location.reload();
+                    alertDiv.className = 'p-3 rounded-lg text-xs font-mono bg-emerald-950/60 text-emerald-300 border border-emerald-800/40';
+                    alertDiv.innerHTML = `✓ Batch production completed! (${data.success_count} / ${data.total_requested} successful)`;
+                    setTimeout(() => {
+                        closeBatchModal();
+                        window.location.reload();
+                    }, 1200);
                 } else {
-                    alert('Production failed: ' + (data.detail || 'Unknown error'));
+                    let errMsg = 'Production failed: ';
+                    if (typeof data.detail === 'string') {
+                        errMsg += data.detail;
+                    } else if (Array.isArray(data.detail)) {
+                        errMsg += data.detail.map(d => d.msg || JSON.stringify(d)).join('; ');
+                    } else {
+                        errMsg += JSON.stringify(data.detail || 'Unknown server error');
+                    }
+                    alertDiv.className = 'p-3 rounded-lg text-xs font-mono bg-rose-950/60 text-rose-300 border border-rose-800/40';
+                    alertDiv.innerText = errMsg;
                 }
             } catch (err) {
-                alert('Request failed: ' + err.message);
+                alertDiv.className = 'p-3 rounded-lg text-xs font-mono bg-rose-950/60 text-rose-300 border border-rose-800/40';
+                alertDiv.innerText = 'Request failed: ' + err.message;
             } finally {
                 btn.disabled = false;
-                btn.innerText = 'DISPATCH BATCH';
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                if (btnText) btnText.innerText = 'DISPATCH BATCH';
             }
         }
 

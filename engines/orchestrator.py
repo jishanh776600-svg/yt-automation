@@ -220,6 +220,10 @@ class StageResult:
     details: Dict[str, Any] = field(default_factory=dict)
     error: Optional[str] = None
 
+    @property
+    def duration_s(self) -> float:
+        return self.duration_sec
+
 
 @dataclass
 class ProductionJobReport:
@@ -235,6 +239,22 @@ class ProductionJobReport:
     artifacts: Dict[str, Any] = field(default_factory=dict)
     error_message: Optional[str] = None
     success: bool = False
+
+    @property
+    def status(self) -> str:
+        return "SUCCESS" if self.success else ("FAILED" if self.final_state == "FAILED" else self.final_state)
+
+    @property
+    def stages_completed(self) -> List[StageResult]:
+        return [s for s in self.stages if s.status == "SUCCESS"]
+
+    @property
+    def total_duration_s(self) -> float:
+        return sum(getattr(s, "duration_sec", getattr(s, "duration_s", 0.0)) for s in self.stages)
+
+    @property
+    def error(self) -> Optional[str]:
+        return self.error_message
 
 
 # ==============================================================================
@@ -1184,13 +1204,17 @@ class ProductionOrchestrator:
     # --------------------------------------------------------------------------
     def produce_batch(
         self,
-        batch_size: int = 3,
+        batch_size: Optional[int] = None,
+        count: Optional[int] = None,
         db: Optional[Session] = None
     ) -> List[ProductionJobReport]:
         """
         Executes autonomous batch production with process-level locking,
         candidate pre-filtering, and sequential job execution.
+        Accepts either count or batch_size for caller flexibility (defaults to 3).
         """
+        target_count = count if count is not None else (batch_size if batch_size is not None else 3)
+
         lock = ProcessLock(name="production", command_name="orchestrator-batch")
         if not lock.acquire():
             logger.warning("[ORCHESTRATOR_BATCH] Concurrency lock active. Exiting safely.")
@@ -1203,11 +1227,11 @@ class ProductionOrchestrator:
 
         reports: List[ProductionJobReport] = []
         try:
-            raw_candidates = self.stage_discover(db, limit=batch_size * 2)
+            raw_candidates = self.stage_discover(db, limit=target_count * 2)
             qualified_topics = self.stage_filter_and_rank(db, raw_candidates)
-            target_batch = qualified_topics[:batch_size]
+            target_batch = qualified_topics[:target_count]
 
-            logger.info(f"[ORCHESTRATOR_BATCH] Selected {len(target_batch)} topics for batch production (Requested: {batch_size})")
+            logger.info(f"[ORCHESTRATOR_BATCH] Selected {len(target_batch)} topics for batch production (Requested: {target_count})")
 
             for topic in target_batch:
                 job_rep = self.produce_job(topic=topic, db=db)

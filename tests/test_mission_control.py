@@ -20,12 +20,18 @@ Verifies:
 16. HTML rendering & responsiveness verification (GET / and GET /mission-control)
 17. AST architectural audit (zero hardcoded niche conditionals)
 """
+import os
 import ast
+import json
 import uuid
 import unittest
+from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone, timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+
+from config.settings import LOCKS_DIR
+from engines.orchestrator import ProductionOrchestrator, ProductionJobReport, StageResult, ExecutionCapabilities
 
 from core.database import SessionLocal, get_db
 from core.models import (
@@ -531,6 +537,257 @@ class TestMissionControl(unittest.TestCase):
                             test_dump,
                             f"Hardcoded niche conditional '{fn}' found in {file_path} at line {node.lineno}"
                         )
+
+
+    # ==========================================================================
+    # 18. ORCHESTRATOR PRODUCE_BATCH CONTRACT FLEXIBILITY
+    # ==========================================================================
+
+    def test_18_orchestrator_produce_batch_signature_flexibility(self):
+        """Test 18: Verifies produce_batch accepts count, batch_size, or defaults without TypeError."""
+        orchestrator = ProductionOrchestrator(capabilities=ExecutionCapabilities.dry_run())
+
+        dummy_report = ProductionJobReport(
+            job_id="job_test_123",
+            topic_id="top_test_123",
+            topic_title="Test Topic",
+            niche="CURRENT_AFFAIRS",
+            stages=[
+                StageResult("DISCOVER", "SUCCESS", 0.05),
+                StageResult("SCRIPT", "SUCCESS", 0.12)
+            ],
+            success=True
+        )
+
+        with patch.object(orchestrator, "stage_discover", return_value=[MagicMock(id="top_1"), MagicMock(id="top_2")]), \
+             patch.object(orchestrator, "stage_filter_and_rank", side_effect=lambda db, cands: cands), \
+             patch.object(orchestrator, "produce_job", return_value=dummy_report):
+
+            # Test 1: with count=1
+            rep1 = orchestrator.produce_batch(count=1, db=self.db)
+            self.assertEqual(len(rep1), 1)
+            self.assertEqual(rep1[0].status, "SUCCESS")
+            self.assertEqual(len(rep1[0].stages_completed), 2)
+            self.assertAlmostEqual(rep1[0].total_duration_s, 0.17, places=2)
+            self.assertIsNone(rep1[0].error)
+
+            # Test 2: with batch_size=2
+            rep2 = orchestrator.produce_batch(batch_size=2, db=self.db)
+            self.assertEqual(len(rep2), 2)
+
+            # Test 3: positional arg
+            rep3 = orchestrator.produce_batch(1, db=self.db)
+            self.assertEqual(len(rep3), 1)
+
+            # Test 4: default (no count or batch_size)
+            rep4 = orchestrator.produce_batch(db=self.db)
+            self.assertEqual(len(rep4), 2)
+
+    # ==========================================================================
+    # 19. PRODUCTION JOB REPORT COMPATIBILITY PROPERTIES
+    # ==========================================================================
+
+    def test_19_production_job_report_properties(self):
+        """Test 19: Verifies ProductionJobReport compatibility properties work for both SUCCESS and FAILURE."""
+        success_rep = ProductionJobReport(
+            job_id="job_s",
+            topic_id="top_s",
+            topic_title="Success Topic",
+            niche="MYSTERY",
+            stages=[
+                StageResult("STAGE_1", "SUCCESS", 0.5),
+                StageResult("STAGE_2", "SUCCESS", 0.5)
+            ],
+            success=True
+        )
+        self.assertEqual(success_rep.status, "SUCCESS")
+        self.assertEqual(len(success_rep.stages_completed), 2)
+        self.assertEqual(success_rep.total_duration_s, 1.0)
+        self.assertIsNone(success_rep.error)
+
+        fail_rep = ProductionJobReport(
+            job_id="job_f",
+            topic_id="top_f",
+            topic_title="Failed Topic",
+            niche="MYSTERY",
+            stages=[
+                StageResult("STAGE_1", "SUCCESS", 0.5),
+                StageResult("STAGE_2", "FAILED", 0.2)
+            ],
+            final_state="FAILED",
+            error_message="Rendering error",
+            success=False
+        )
+        self.assertEqual(fail_rep.status, "FAILED")
+        self.assertEqual(len(fail_rep.stages_completed), 1)
+        self.assertEqual(fail_rep.total_duration_s, 0.7)
+        self.assertEqual(fail_rep.error, "Rendering error")
+
+    # ==========================================================================
+    # 20. TRIGGER AUTONOMOUS BATCH SERVICE EXECUTION
+    # ==========================================================================
+
+    def test_20_trigger_autonomous_batch_service(self):
+        """Test 20: Verifies MissionControlService.trigger_autonomous_batch handles count and returns structured report."""
+        dummy_report = ProductionJobReport(
+            job_id="job_batch_001",
+            topic_id="top_001",
+            topic_title="Batch Story",
+            niche="CURRENT_AFFAIRS",
+            stages=[StageResult("DISCOVER", "SUCCESS", 0.1)],
+            success=True
+        )
+
+        with patch("dashboard.mission_control_service.ProductionOrchestrator") as MockOrchClass:
+            mock_orch = MagicMock()
+            mock_orch.produce_batch.return_value = [dummy_report]
+            MockOrchClass.return_value = mock_orch
+
+            res = self.service.trigger_autonomous_batch(self.db, count=1, force_dry_run=True)
+            self.assertEqual(res["status"], "COMPLETED")
+            self.assertEqual(res["total_requested"], 1)
+            self.assertEqual(res["success_count"], 1)
+            self.assertEqual(len(res["reports"]), 1)
+            self.assertEqual(res["reports"][0]["job_id"], "job_batch_001")
+            self.assertEqual(res["reports"][0]["status"], "SUCCESS")
+
+            mock_orch.produce_batch.assert_called_once_with(count=1, db=self.db)
+
+    # ==========================================================================
+    # 21. API PRODUCE ENDPOINT VALIDATION (1-5 BOUNDS)
+    # ==========================================================================
+
+    def test_21_api_produce_endpoint_validation_and_dispatch(self):
+        """Test 21: Verifies /api/mission-control/actions/produce validates input bounds (1-5) and dry_run."""
+        with patch.object(mission_control_service, "trigger_autonomous_batch") as mock_trigger:
+            mock_trigger.return_value = {
+                "status": "COMPLETED",
+                "total_requested": 2,
+                "success_count": 2,
+                "reports": [{"job_id": "job_1", "status": "SUCCESS"}]
+            }
+
+            # Valid count = 2
+            res = self.client.post(
+                "/api/mission-control/actions/produce",
+                headers=self.auth_headers,
+                json={"count": 2, "dry_run": True}
+            )
+            self.assertEqual(res.status_code, 200)
+            self.assertEqual(res.json()["success_count"], 2)
+
+            # Valid count = 1
+            res1 = self.client.post(
+                "/api/mission-control/actions/produce",
+                headers=self.auth_headers,
+                json={"count": 1, "dry_run": True}
+            )
+            self.assertEqual(res1.status_code, 200)
+
+            # Valid count = 5
+            res5 = self.client.post(
+                "/api/mission-control/actions/produce",
+                headers=self.auth_headers,
+                json={"count": 5, "dry_run": True}
+            )
+            self.assertEqual(res5.status_code, 200)
+
+            # Invalid count = 0 (below min 1)
+            res_zero = self.client.post(
+                "/api/mission-control/actions/produce",
+                headers=self.auth_headers,
+                json={"count": 0, "dry_run": True}
+            )
+            self.assertEqual(res_zero.status_code, 422)
+
+            # Invalid count = -1 (negative)
+            res_neg = self.client.post(
+                "/api/mission-control/actions/produce",
+                headers=self.auth_headers,
+                json={"count": -1, "dry_run": True}
+            )
+            self.assertEqual(res_neg.status_code, 422)
+
+            # Invalid count = 6 (above max 5)
+            res_six = self.client.post(
+                "/api/mission-control/actions/produce",
+                headers=self.auth_headers,
+                json={"count": 6, "dry_run": True}
+            )
+            self.assertEqual(res_six.status_code, 422)
+
+            # Invalid count = non-numeric
+            res_nan = self.client.post(
+                "/api/mission-control/actions/produce",
+                headers=self.auth_headers,
+                json={"count": "three", "dry_run": True}
+            )
+            self.assertEqual(res_nan.status_code, 422)
+
+    # ==========================================================================
+    # 22. WORKER STATE TRUTHFULNESS
+    # ==========================================================================
+
+    def test_22_worker_state_truthfulness(self):
+        """Test 22: Verifies worker status accurately reports OFFLINE when inactive and ONLINE when active."""
+        state_file = LOCKS_DIR / "worker_state.json"
+        backup = None
+        if state_file.exists():
+            backup = state_file.read_text(encoding="utf-8")
+
+        try:
+            # Case A: When worker_state.json does not exist
+            with patch("dashboard.mission_control_service.LOCKS_DIR", LOCKS_DIR / "nonexistent_test"):
+                state = self.service.get_worker_state()
+                self.assertFalse(state["online"])
+                self.assertEqual(state["status"], "OFFLINE")
+
+            # Case B: When worker_state.json has a dead PID
+            test_data = {
+                "pid": 9999999,
+                "status": "ONLINE",
+                "online": True,
+                "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+                "current_task": "TEST"
+            }
+            state_file.write_text(json.dumps(test_data), encoding="utf-8")
+            state = self.service.get_worker_state()
+            self.assertFalse(state["online"])
+            self.assertEqual(state["status"], "OFFLINE")
+            self.assertEqual(state["current_task"], "WORKER_INACTIVE")
+
+            # Case C: When worker_state.json has current process PID with fresh heartbeat
+            current_pid = os.getpid()
+            test_data_alive = {
+                "pid": current_pid,
+                "status": "ONLINE",
+                "online": True,
+                "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+                "current_task": "IDLE"
+            }
+            state_file.write_text(json.dumps(test_data_alive), encoding="utf-8")
+            state_alive = self.service.get_worker_state()
+            self.assertTrue(state_alive["online"])
+            self.assertEqual(state_alive["status"], "ONLINE")
+
+            # Case D: When PID is alive but heartbeat is expired (> 180s ago)
+            test_data_stale = {
+                "pid": current_pid,
+                "status": "ONLINE",
+                "online": True,
+                "last_heartbeat": (datetime.now(timezone.utc) - timedelta(seconds=300)).isoformat(),
+                "current_task": "IDLE"
+            }
+            state_file.write_text(json.dumps(test_data_stale), encoding="utf-8")
+            state_stale = self.service.get_worker_state()
+            self.assertFalse(state_stale["online"])
+            self.assertEqual(state_stale["status"], "OFFLINE")
+
+        finally:
+            if backup is not None:
+                state_file.write_text(backup, encoding="utf-8")
+            elif state_file.exists():
+                state_file.unlink()
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ import time
 import json
 import logging
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
 from rich.console import Console
@@ -1079,12 +1079,56 @@ class ShortsPipeline:
         ))
 
         running = True
+        start_time_iso = datetime.now(timezone.utc).isoformat()
+
+        def _update_daemon_telemetry(task_desc: str = "CONVERGENCE_IDLE"):
+            try:
+                LOCKS_DIR.mkdir(parents=True, exist_ok=True)
+                sfile = LOCKS_DIR / "worker_state.json"
+                state_data = {
+                    "pid": os.getpid(),
+                    "status": "ONLINE",
+                    "online": True,
+                    "started_at": start_time_iso,
+                    "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+                    "current_task": task_desc,
+                    "current_job_id": None,
+                    "active_niche": "MYSTERY_SCIENCE",
+                    "last_successful_run": datetime.now(timezone.utc).isoformat(),
+                    "next_scheduled_run": (datetime.now(timezone.utc) + timedelta(seconds=check_interval_sec)).isoformat(),
+                    "cycles_completed": cycle_count,
+                    "jobs_produced": 0,
+                    "jobs_published": 0,
+                    "jobs_recovered": 0,
+                    "errors_count": 0,
+                    "last_error": None,
+                    "dry_run": getattr(self, "dry_run", False)
+                }
+                tmp_sfile = sfile.with_suffix(".tmp")
+                tmp_sfile.write_text(json.dumps(state_data, indent=2), encoding="utf-8")
+                tmp_sfile.replace(sfile)
+            except Exception as w_err:
+                logger.debug(f"Notice writing daemon worker state: {w_err}")
+
+        def _cleanup_daemon_state():
+            try:
+                sfile = LOCKS_DIR / "worker_state.json"
+                if sfile.exists():
+                    state_data = json.loads(sfile.read_text(encoding="utf-8"))
+                    state_data["online"] = False
+                    state_data["status"] = "OFFLINE"
+                    state_data["current_task"] = "SHUTDOWN"
+                    state_data["last_heartbeat"] = datetime.now(timezone.utc).isoformat()
+                    sfile.write_text(json.dumps(state_data, indent=2), encoding="utf-8")
+            except Exception:
+                pass
 
         def _handle_stop(sig, frame):
             nonlocal running
             logger.info(f"Stop signal received ({sig}). Shutting down daemon gracefully...")
             console.print("\n[bold yellow][!] Shutdown signal received. Exiting daemon safely...[/bold yellow]")
             running = False
+            _cleanup_daemon_state()
 
         try:
             signal.signal(signal.SIGINT, _handle_stop)
@@ -1093,66 +1137,73 @@ class ShortsPipeline:
             pass
 
         cycle_count = 0
-        while running:
-            cycle_count += 1
-            now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-            console.print(f"\n[bold cyan][Cycle {cycle_count} - {now_str}][/bold cyan] Starting convergence pass...")
+        _update_daemon_telemetry("DAEMON_STARTING")
+        try:
+            while running:
+                cycle_count += 1
+                now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+                console.print(f"\n[bold cyan][Cycle {cycle_count} - {now_str}][/bold cyan] Starting convergence pass...")
+                _update_daemon_telemetry(f"CONVERGENCE_PASS_{cycle_count}")
 
-            try:
-                # 1. Download & Reconcile Canonical Database from Cloud Vault
-                if self.drive_engine and not getattr(self, "offline_mode", False):
-                    try:
-                        logger.info("Syncing canonical DB from Drive...")
-                        download_canonical_database(drive_engine=self.drive_engine)
-                    except Exception as sync_e:
-                        logger.warning(f"Notice syncing DB from Drive: {sync_e}")
-
-                # 2. Schedule Ready Buffer into 48-Hour Horizon
-                console.print("[cyan][*] Auditing 48-hour forward publication horizon...[/cyan]")
                 try:
-                    sched_res = self.schedule_ready_buffer()
-                    console.print(
-                        f"[bold green][+] Horizon Audit Result:[/bold green] "
-                        f"Scheduled: {sched_res.get('scheduled_count', 0)} | "
-                        f"Vacant Slots: {sched_res.get('vacant_horizon_slots', 0)} | "
-                        f"Ready Stock: {sched_res.get('ready_stock', 0)}"
-                    )
-                except Exception as sched_err:
-                    logger.error(f"Error during scheduled horizon pass: {sched_err}")
+                    # 1. Download & Reconcile Canonical Database from Cloud Vault
+                    if self.drive_engine and not getattr(self, "offline_mode", False):
+                        try:
+                            logger.info("Syncing canonical DB from Drive...")
+                            download_canonical_database(drive_engine=self.drive_engine)
+                        except Exception as sync_e:
+                            logger.warning(f"Notice syncing DB from Drive: {sync_e}")
 
-                # 3. Buffer Reserve Audit & Autonomous Replenishment
-                console.print("[cyan][*] Auditing verified 01_READY reserve buffer...[/cyan]")
-                try:
-                    prod_count, prod_summary = self.maintain_buffer(target_stock=target_stock)
-                    console.print(
-                        f"[bold green][+] Buffer Maintenance Result:[/bold green] "
-                        f"Outcome: {prod_summary.get('outcome')} | "
-                        f"Produced: {prod_count} | "
-                        f"Current Reserve: {prod_summary.get('final_stock', 0)}/{target_stock}"
-                    )
-                except Exception as prod_err:
-                    logger.error(f"Error during buffer maintenance pass: {prod_err}")
-
-                # 4. Upload Canonical Database back to Cloud Vault
-                if self.drive_engine and not getattr(self, "offline_mode", False):
+                    # 2. Schedule Ready Buffer into 48-Hour Horizon
+                    console.print("[cyan][*] Auditing 48-hour forward publication horizon...[/cyan]")
                     try:
-                        logger.info("Uploading canonical DB back to Drive...")
-                        upload_canonical_database(drive_engine=self.drive_engine)
-                    except Exception as up_e:
-                        logger.warning(f"Notice uploading DB to Drive: {up_e}")
+                        sched_res = self.schedule_ready_buffer()
+                        console.print(
+                            f"[bold green][+] Horizon Audit Result:[/bold green] "
+                            f"Scheduled: {sched_res.get('scheduled_count', 0)} | "
+                            f"Vacant Slots: {sched_res.get('vacant_horizon_slots', 0)} | "
+                            f"Ready Stock: {sched_res.get('ready_stock', 0)}"
+                        )
+                    except Exception as sched_err:
+                        logger.error(f"Error during scheduled horizon pass: {sched_err}")
 
-            except Exception as loop_err:
-                logger.error(f"Unexpected error in daemon loop: {loop_err}", exc_info=True)
+                    # 3. Buffer Reserve Audit & Autonomous Replenishment
+                    console.print("[cyan][*] Auditing verified 01_READY reserve buffer...[/cyan]")
+                    try:
+                        prod_count, prod_summary = self.maintain_buffer(target_stock=target_stock)
+                        console.print(
+                            f"[bold green][+] Buffer Maintenance Result:[/bold green] "
+                            f"Outcome: {prod_summary.get('outcome')} | "
+                            f"Produced: {prod_count} | "
+                            f"Current Reserve: {prod_summary.get('final_stock', 0)}/{target_stock}"
+                        )
+                    except Exception as prod_err:
+                        logger.error(f"Error during buffer maintenance pass: {prod_err}")
 
-            # Sleep interval with interrupt sensitivity
-            if not running:
-                break
-            console.print(f"[dim]Convergence pass completed. Sleeping {check_interval_sec // 60}m until next audit...[/dim]")
-            sleep_chunks = max(1, check_interval_sec // 5)
-            for _ in range(sleep_chunks):
+                    # 4. Upload Canonical Database back to Cloud Vault
+                    if self.drive_engine and not getattr(self, "offline_mode", False):
+                        try:
+                            logger.info("Uploading canonical DB back to Drive...")
+                            upload_canonical_database(drive_engine=self.drive_engine)
+                        except Exception as up_e:
+                            logger.warning(f"Notice uploading DB to Drive: {up_e}")
+
+                except Exception as loop_err:
+                    logger.error(f"Unexpected error in daemon loop: {loop_err}", exc_info=True)
+
+                _update_daemon_telemetry("CONVERGENCE_IDLE")
+
+                # Sleep interval with interrupt sensitivity
                 if not running:
                     break
-                time.sleep(5)
+                console.print(f"[dim]Convergence pass completed. Sleeping {check_interval_sec // 60}m until next audit...[/dim]")
+                sleep_chunks = max(1, check_interval_sec // 5)
+                for _ in range(sleep_chunks):
+                    if not running:
+                        break
+                    time.sleep(5)
+        finally:
+            _cleanup_daemon_state()
 
         console.print("[bold green]AL-AMR Autonomous Daemon cleanly stopped.[/bold green]")
 

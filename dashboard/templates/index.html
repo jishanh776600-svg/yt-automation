@@ -165,10 +165,10 @@
         <div class="text-center pt-2">
             <div class="text-xs text-zinc-400 font-medium mb-1.5">Drive ready reserve</div>
             <div class="text-4xl sm:text-5xl font-light text-white tracking-tight flex items-center justify-center gap-3">
-                <span>{{ state.inventory.counts.get("01_READY", 0) }}</span>
+                <span>{{ state.inventory.counts.get("01_READY", 0) if (state.inventory is mapping and state.inventory.counts is mapping) else 0 }}</span>
                 <span class="text-zinc-600 text-3xl font-thin">/</span>
-                <span class="text-zinc-500">{{ state.buffer.target_reserve }}</span>
-                {% if state.inventory.counts.get("01_READY", 0) >= state.buffer.target_reserve %}
+                <span class="text-zinc-500">{{ (state.buffer.target_reserve if (state.buffer is mapping and 'target_reserve' in state.buffer) else 6) }}</span>
+                {% if (state.inventory.counts.get("01_READY", 0) if (state.inventory is mapping and state.inventory.counts is mapping) else 0) >= (state.buffer.target_reserve if (state.buffer is mapping and 'target_reserve' in state.buffer) else 6) %}
                 <span class="text-xs font-mono font-medium text-emerald-400 bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-800/40 ml-2">6 / 6 ready</span>
                 {% else %}
                 <span class="text-xs font-mono font-medium text-amber-400 bg-amber-950/40 px-2.5 py-1 rounded-full border border-amber-800/40 ml-2">Refilling</span>
@@ -298,8 +298,8 @@
                         <span id="refill-status-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold {{ state.refill.status_badge_class }}">{{ state.refill.status }}</span>
                     </div>
                     <div class="flex items-center gap-3 text-xs font-mono">
-                        <span class="text-zinc-400">Ready Reserve: <strong id="refill-ready-count" class="text-white">{{ state.refill.current_ready }}</strong> / {{ state.refill.target_reserve }}</span>
-                        <span class="text-zinc-400">Deficit: <strong id="refill-deficit-count" class="{{ 'text-rose-400' if state.refill.deficit > 0 else 'text-emerald-400' }}">{{ state.refill.deficit }}</strong></span>
+                        <span class="text-zinc-400">Ready Reserve: <strong id="refill-ready-count" class="text-white">{{ state.refill.current_ready if (state.refill is mapping and 'current_ready' in state.refill) else state.inventory.counts.get("01_READY", 0) }}</strong> / {{ (state.refill.target_reserve if (state.refill is mapping and 'target_reserve' in state.refill) else 6) }}</span>
+                        <span class="text-zinc-400">Deficit: <strong id="refill-deficit-count" class="{{ 'text-rose-400' if (state.refill is mapping and state.refill.deficit > 0) else 'text-emerald-400' }}">{{ state.refill.deficit if (state.refill is mapping and 'deficit' in state.refill) else 0 }}</strong></span>
                     </div>
                 </div>
 
@@ -333,7 +333,7 @@
             <div class="flex items-center justify-between p-4 rounded-2xl bg-layer2 border border-white/[0.05]">
                 <div class="space-y-0.5">
                     <div class="text-xs font-semibold text-white">Automated Production Controls</div>
-                    <div class="text-xs text-zinc-400">Target buffer: {{ state.buffer.target_reserve }} Shorts · Deficit: {{ state.buffer.deficit }}</div>
+                    <div class="text-xs text-zinc-400">Target buffer: {{ (state.buffer.target_reserve if (state.buffer is mapping and 'target_reserve' in state.buffer) else 6) }} Shorts · Deficit: {{ (state.buffer.deficit if (state.buffer is mapping and 'deficit' in state.buffer) else 0) }}</div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button onclick="handlePublishNext()" class="px-4 py-2 bg-layer3 border border-white/10 hover:bg-white/10 text-white text-xs font-medium rounded-xl transition">Publish Next</button>
@@ -703,21 +703,25 @@
             <div class="p-6 rounded-2xl bg-layer2 border border-white/[0.05] space-y-4">
                 <div class="text-xs font-semibold text-white">Process Lock Management</div>
                 <div class="grid grid-cols-2 gap-4">
+                    {% if state.locks is mapping %}
                     {% for lock_name, lock_info in state.locks.items() %}
+                    {% if lock_info is mapping %}
                     <div class="p-4 rounded-xl bg-layer1 border border-white/[0.04] space-y-2">
                         <div class="flex justify-between items-center text-xs">
                             <span class="font-mono text-white">{{ lock_name }}</span>
-                            {% if lock_info.is_locked %}
-                            <span class="text-rose-400 font-mono text-[11px]">LOCKED (PID {{ lock_info.pid }})</span>
+                            {% if lock_info.get('is_locked') or lock_info.get('active') %}
+                            <span class="text-rose-400 font-mono text-[11px]">LOCKED (PID {{ lock_info.get('pid', 'N/A') }})</span>
                             {% else %}
                             <span class="text-emerald-400 font-mono text-[11px]">FREE</span>
                             {% endif %}
                         </div>
-                        {% if lock_info.is_locked %}
+                        {% if lock_info.get('is_locked') or lock_info.get('active') %}
                         <button onclick="releaseLock('{{ lock_name }}')" class="w-full py-1.5 bg-rose-950 border border-rose-800 text-rose-300 text-xs rounded-lg hover:bg-rose-900 transition">Force Release Lock</button>
                         {% endif %}
                     </div>
+                    {% endif %}
                     {% endfor %}
+                    {% endif %}
                 </div>
             </div>
         </div>

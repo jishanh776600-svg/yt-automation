@@ -130,7 +130,6 @@ class SystemDataProvider:
             public_shorts = []
             scheduled_shorts = []
             if db:
-                from core.models import UploadRecord
                 records = db.query(UploadRecord).all()
                 for r in records:
                     if r.status in ("PUBLISHED", "SUCCESS"):

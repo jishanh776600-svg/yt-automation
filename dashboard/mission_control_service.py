@@ -24,7 +24,7 @@ from collections import deque
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
-from config.settings import RENDERS_DIR, DATABASE_DIR
+from config.settings import RENDERS_DIR, DATABASE_DIR, LOCKS_DIR
 from config.constants import JobState, DAILY_SHORTS_LIMIT
 from core.database import SessionLocal
 from core.models import (
@@ -516,7 +516,6 @@ class MissionControlService:
         Reads authoritative runtime worker state and heartbeat.
         Verifies whether worker process is alive and responsive.
         """
-        from config.settings import LOCKS_DIR
         from core.lock import is_pid_alive
 
         state_file = LOCKS_DIR / "worker_state.json"
@@ -570,6 +569,9 @@ class MissionControlService:
             logger.warning(f"Error reading worker state file: {err}")
             default_state["last_error"] = str(err)
             return default_state
+
+    # Alias for worker state querying
+    get_worker_state = get_runtime_status
 
     def _get_provider_cascade_status(self) -> Dict[str, Any]:
         """Inspects configured AI providers and fallback chain."""
@@ -1153,8 +1155,8 @@ class MissionControlService:
         )
 
         try:
-            reports = orchestrator.produce_batch(count=count)
-            success_count = sum(1 for r in reports if r.status == "SUCCESS")
+            reports = orchestrator.produce_batch(count=count, db=db)
+            success_count = sum(1 for r in reports if getattr(r, "success", False) or getattr(r, "status", "") == "SUCCESS")
             return {
                 "status": "COMPLETED",
                 "total_requested": count,
@@ -1162,10 +1164,10 @@ class MissionControlService:
                 "reports": [
                     {
                         "job_id": r.job_id,
-                        "status": r.status,
-                        "stages_completed": len(r.stages_completed),
-                        "total_duration_s": r.total_duration_s,
-                        "error": r.error
+                        "status": getattr(r, "status", "SUCCESS" if getattr(r, "success", False) else "FAILED"),
+                        "stages_completed": len(getattr(r, "stages_completed", getattr(r, "stages", []))),
+                        "total_duration_s": getattr(r, "total_duration_s", 0.0),
+                        "error": getattr(r, "error", getattr(r, "error_message", None))
                     }
                     for r in reports
                 ]

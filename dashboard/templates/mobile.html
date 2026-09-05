@@ -484,23 +484,23 @@
             <div class="obsidian-card reserve-hero">
                 <span class="text-muted" style="font-size: 11px; font-weight: 500;">Drive ready reserve</span>
                 <div class="reserve-count-row">
-                    <span id="mob-hero-ready-count" class="reserve-large-num">{{ state.inventory.counts.get('01_READY', 0) }}</span>
+                    <span id="mob-hero-ready-count" class="reserve-large-num">{{ state.inventory.counts.get('01_READY', 0) if (state.inventory is mapping and state.inventory.counts is mapping) else 0 }}</span>
                     <span style="font-size: 22px; font-weight: 200; color: #475569;">/</span>
-                    <span style="font-size: 22px; font-weight: 300; color: var(--text-dim);">{{ state.buffer.target_reserve }}</span>
-                    <span id="mob-hero-badge" class="badge-healthy font-mono">{{ state.inventory.counts.get('01_READY', 0) }} / {{ state.buffer.target_reserve }} READY</span>
+                    <span style="font-size: 22px; font-weight: 300; color: var(--text-dim);">{{ (state.buffer.target_reserve if (state.buffer is mapping and 'target_reserve' in state.buffer) else 6) }}</span>
+                    <span id="mob-hero-badge" class="badge-healthy font-mono">{{ state.inventory.counts.get('01_READY', 0) if (state.inventory is mapping and state.inventory.counts is mapping) else 0 }} / {{ (state.buffer.target_reserve if (state.buffer is mapping and 'target_reserve' in state.buffer) else 6) }} READY</span>
                 </div>
                 <div class="text-muted" style="font-size: 11px;">
-                    Next release &middot; <b id="mob-next-slot-label" class="font-mono" style="color: #ffffff;">{{ state.publishing.next_slot.slot_label if state.publishing.next_slot is mapping else (state.publishing.next_slot or "06:00 UTC") }}</b>
+                    Next release &middot; <b id="mob-next-slot-label" class="font-mono" style="color: #ffffff;">{{ state.publishing.next_slot.slot_label if (state.publishing is mapping and state.publishing.next_slot is mapping) else (state.publishing.next_slot if state.publishing is mapping else "06:00 UTC") }}</b>
                 </div>
                 <div id="mob-daily-ceiling" class="font-mono text-dim" style="font-size: 10px; margin-top: 2px;">
-                    Daily ceiling: {{ state.publishing.published_today }} published · {{ state.publishing.scheduled_today }} scheduled / {{ state.publishing.daily_limit }} max today
+                    Daily ceiling: {{ state.publishing.published_today if state.publishing is mapping else 0 }} published · {{ state.publishing.scheduled_today if state.publishing is mapping else 0 }} scheduled / {{ state.publishing.daily_limit if state.publishing is mapping else 4 }} max today
                 </div>
 
                 <!-- Live Refill Telemetry Strip -->
                 <div class="font-mono text-dim" style="font-size: 10px; margin-top: 6px; padding: 6px 8px; background: var(--bg-layer1); border-radius: 6px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 2px; text-align: left; width: 100%;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span>Refill: <b id="mob-refill-status" class="{% if state.refill and state.refill.status == 'ACTIVE' %}text-amber{% else %}text-emerald{% endif %}">{{ state.refill.status if state.refill else 'IDLE' }}</b></span>
-                        <span id="mob-refill-ready">Ready: {{ state.inventory.counts.get('01_READY', 0) }}/{{ state.buffer.target_reserve }}</span>
+                        <span id="mob-refill-ready">Ready: {{ state.inventory.counts.get('01_READY', 0) if (state.inventory is mapping and state.inventory.counts is mapping) else 0 }}/{{ (state.buffer.target_reserve if (state.buffer is mapping and 'target_reserve' in state.buffer) else 6) }}</span>
                     </div>
                     <div style="font-size: 9px; color: var(--text-muted);" id="mob-refill-trigger">Trigger: {{ state.refill.trigger if state.refill else 'Reserve < 6 Shorts (Daily 02:00 UTC)' }}</div>
                     <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-dim);">
@@ -644,13 +644,21 @@
             <div class="obsidian-card" style="display: flex; flex-direction: column; gap: 6px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-size: 11px; font-weight: 600; color: #ffffff;">System State & Voice</span>
-                    <button onclick="openVoiceModal()" style="font-size: 10px; background: var(--bg-layer1); border: 1px solid var(--border-subtle); color: var(--accent-sky); padding: 3px 8px; border-radius: 6px; cursor: pointer;">Voice: {{ state.voice_config.active_voice_name or state.voice_config.active_voice_id or 'Bella' }} ▾</button>
+                    <button onclick="openVoiceModal()" style="font-size: 10px; background: var(--bg-layer1); border: 1px solid var(--border-subtle); color: var(--accent-sky); padding: 3px 8px; border-radius: 6px; cursor: pointer;">Voice: {{ (state.voice_config is mapping and (state.voice_config.active_voice_name or state.voice_config.active_voice_id or state.voice_config.voice)) or 'Sarah' }} ▾</button>
                 </div>
                 <!-- Process Locks (If Active) -->
-                {% if state.locks %}
+                {% set active_locks_list = [] %}
+                {% if state.locks is mapping %}
+                    {% for lock_name, lock_info in state.locks.items() %}
+                        {% if lock_info is mapping and (lock_info.get('is_locked') or lock_info.get('active')) %}
+                            {% set _ = active_locks_list.append((lock_name, lock_info)) %}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% if active_locks_list %}
                 <div style="border-top: 1px solid var(--border-subtle); padding-top: 4px; display: flex; flex-direction: column; gap: 4px;">
                     <span class="text-dim" style="font-size: 9px; font-weight: 600;">ACTIVE PROCESS LOCKS</span>
-                    {% for lock_name, lock_info in state.locks.items() %}
+                    {% for lock_name, lock_info in active_locks_list %}
                     <div style="display: flex; align-items: center; justify-content: space-between; font-size: 10px;">
                         <span class="font-mono text-amber">{{ lock_name }} (PID {{ lock_info.get('pid', 'N/A') }})</span>
                         <button onclick="releaseLock('{{ lock_name }}')" style="font-size: 9px; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); color: var(--accent-rose); padding: 2px 5px; border-radius: 4px; cursor: pointer;">Release</button>
