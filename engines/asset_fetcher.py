@@ -179,6 +179,28 @@ class AssetFetcher:
     def __init__(self):
         self.cache_dir = ASSETS_CACHE_DIR
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Visual Intelligence Layer Components
+        from engines.visual_intelligence.scoring import VisualCandidateScorer
+        from engines.visual_intelligence.diversity import VisualDiversityController
+        from engines.visual_intelligence.overlay_engine import EvidenceOverlayEngine
+        from engines.visual_intelligence.source_router import SourceRouter
+        from engines.visual_intelligence.sources import (
+            PexelsAdapter, WikimediaAdapter, EditorialAdapter,
+            ContextualGraphicAdapter, ReactionMemeAdapter
+        )
+        self.vi_scorer = VisualCandidateScorer()
+        self.vi_diversity = VisualDiversityController()
+        self.vi_overlay = EvidenceOverlayEngine()
+        self.source_router = SourceRouter()
+        self.source_adapters = {
+            "SOURCE_A": PexelsAdapter(),
+            "SOURCE_B": EditorialAdapter(),
+            "SOURCE_C": WikimediaAdapter(),
+            "SOURCE_D_CTX": ContextualGraphicAdapter(),
+            "SOURCE_D_REACT": ReactionMemeAdapter()
+        }
+
 
     def crop_to_vertical_9_16(self, img_path: Path, output_path: Path) -> Path:
         """
@@ -560,8 +582,96 @@ class AssetFetcher:
         q_lower = query.lower()
 
         # ----------------------------------------------------
+        # VISUAL INTELLIGENCE MULTI-SOURCE ACQUISITION & RANKING
+        # ----------------------------------------------------
+        intent_dict = shot_data.get("visual_intent")
+        if intent_dict:
+            try:
+                from engines.visual_intelligence.intent_extractor import VisualIntent
+                from engines.visual_intelligence.provenance import VisualContentType
+                intent = VisualIntent(**intent_dict) if isinstance(intent_dict, dict) else intent_dict
+                
+                # Collect candidates across active source adapters
+                candidates = []
+                recent_history = self.vi_diversity.get_recent_usage_counts()
+                
+                # Query candidates through SourceRouter following Real-Footage-First hierarchy
+                try:
+                    candidates = self.source_router.acquire_candidates(
+                        intent=intent,
+                        count_per_tier=3,
+                        exclude_urls=exclude_set
+                    )
+                except Exception as router_err:
+                    logger.debug(f"SourceRouter acquisition notice: {router_err}")
+                    queries = intent.search_queries if intent.search_queries else [query]
+                    for adapter_key, adapter in self.source_adapters.items():
+                        try:
+                            cands = adapter.search(queries, intent, count=3, exclude_urls=exclude_set)
+                            candidates.extend(cands)
+                        except Exception as adapt_err:
+                            logger.debug(f"Source adapter {adapter_key} search notice: {adapt_err}")
+
+                # Deterministic multi-factor ranking
+                if candidates:
+                    ranked = self.vi_scorer.rank_candidates(
+                        candidates=candidates,
+                        intent=intent,
+                        recent_usage_counts=recent_history,
+                        job_used_urls=exclude_set
+                    )
+                    top_cand = ranked[0] if ranked else None
+                    if top_cand and top_cand.raw_score > 0.0:
+                        logger.info(
+                            f"[VISUAL_INTELLIGENCE] Selected {top_cand.source_name} candidate "
+                            f"'{top_cand.title}' (Score: {top_cand.raw_score:.2f}, Motion: {top_cand.motion_score}) "
+                            f"for beat {shot_data.get('shot_id')}"
+                        )
+                        exclude_set.add(top_cand.source_url)
+                        self.vi_diversity.record_job_assets([top_cand])
+                        
+                        # Handle local rendering / download
+                        chosen_path = cropped_img_path
+                        if top_cand.content_type == VisualContentType.SCREENSHOT_DOCUMENT and intent.evidence_overlay_requirements:
+                            # Generate factual evidence card
+                            ov = intent.evidence_overlay_requirements
+                            overlay_path = self.vi_overlay.generate_evidence_overlay(
+                                headline=ov.get("headline", query),
+                                attribution=ov.get("attribution", "Verified Report"),
+                                date_label=ov.get("date_label", "Context"),
+                                badge_type=ov.get("badge_type", "FACT_CHECKED")
+                            )
+                            chosen_path = overlay_path
+
+                        meta_dict = top_cand.to_dict()
+                        meta_dict["visual_intent"] = intent.to_dict()
+
+                        asset_rec = AssetRecord(
+                            id=asset_id,
+                            asset_type="video" if top_cand.is_video else "image",
+                            source=top_cand.source_name,
+                            source_url=top_cand.source_url,
+                            license=top_cand.license_name,
+                            commercial_use=True,
+                            attribution_required=bool(top_cand.creator),
+                            attribution_text=top_cand.creator,
+                            local_path=str(chosen_path),
+                            width=top_cand.width,
+                            height=top_cand.height,
+                            duration_sec=shot_duration,
+                            metadata_json=json.dumps(meta_dict)
+                        )
+                        db.add(asset_rec)
+                        db.commit()
+                        logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied via Visual Intelligence ({asset_id})")
+                        return asset_rec
+            except Exception as vi_err:
+                logger.warning(f"Visual Intelligence acquisition fallback: {vi_err}")
+
+        # ----------------------------------------------------
         # 0. TIER 1 & 2: Archival First (Wikimedia Commons)
         # ----------------------------------------------------
+
         is_explicit_archival = any(k in q_lower for k in [
             "engraving", "painting", "map", "document", "archival", "illustration",
             "1814", "1919", "1866", "1908", "1932", "1872", "vintage photograph", "antique"

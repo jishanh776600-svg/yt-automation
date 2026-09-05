@@ -3,19 +3,71 @@ Topic Discovery Engine.
 Generates, filters, and scores intriguing American and European historical stories.
 Avoids spam, balances categories, and scores via multi-factor retention model.
 """
+import os
 import uuid
 import random
 import logging
-from typing import List, Dict, Any, Optional
+from datetime import datetime, timezone, timedelta
+from typing import List, Dict, Any, Optional, Set
 import wikipediaapi
 from sqlalchemy.orm import Session
 from config.constants import HistoricalCategory
-from config.settings import GEMINI_API_KEY, AI_PROVIDER_AVAILABLE
-from core.models import Topic
+from config.settings import GEMINI_API_KEY, AI_PROVIDER_AVAILABLE, TEST_MODE
+from core.models import Topic, ArticleRecord, Job, UploadRecord, ClaimRecord, SourceRecord
+from intelligence.freshness import FreshnessTier
 
 logger = logging.getLogger(__name__)
 
 # Curated seed database of high-retention factual American & European historical events
+
+# Curated seed database of high-retention current geopolitics & world affairs topics
+from config.constants import CurrentAffairsCategory
+
+CURATED_GEOPOLITICAL_SEEDS = [
+    {
+        "title": "Red Sea Maritime Chokepoint Crisis",
+        "category": CurrentAffairsCategory.GEOPOLITICS.value,
+        "summary": "Commercial shipping through the Bab-el-Mandeb strait faces missile and drone strikes, forcing international naval escort operations across critical global maritime corridors.",
+        "curiosity": 9.8, "visual_potential": 9.9, "historical_interest": 9.2, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "Baltic Undersea Infrastructure Security",
+        "category": CurrentAffairsCategory.SECURITY.value,
+        "summary": "NATO naval patrols and maritime reconnaissance aircraft surge surveillance over undersea telecom cables and energy pipelines following suspected infrastructure sabotage.",
+        "curiosity": 9.7, "visual_potential": 9.8, "historical_interest": 9.1, "storytelling": 9.6, "uniqueness": 9.7
+    },
+    {
+        "title": "Strait of Hormuz Naval Interceptions",
+        "category": CurrentAffairsCategory.GLOBAL_CONFLICT.value,
+        "summary": "Fast-attack patrol craft and naval helicopter units intercept commercial oil tankers in the narrow 21-mile international transit corridor.",
+        "curiosity": 9.8, "visual_potential": 9.7, "historical_interest": 9.3, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "Taiwan Strait Freedom of Navigation Patrols",
+        "category": CurrentAffairsCategory.DIPLOMACY.value,
+        "summary": "Allied guided-missile destroyers transit the contested international maritime strait as reconnaissance aircraft track carrier strike group maneuvers.",
+        "curiosity": 9.9, "visual_potential": 9.8, "historical_interest": 9.4, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "Suwalki Gap NATO Rapid Deployment",
+        "category": CurrentAffairsCategory.SECURITY.value,
+        "summary": "Allied mechanized divisions reinforce the 65-mile land corridor connecting Poland and Lithuania amid heightened regional border security.",
+        "curiosity": 9.6, "visual_potential": 9.5, "historical_interest": 9.1, "storytelling": 9.5, "uniqueness": 9.6
+    },
+    {
+        "title": "Black Sea Maritime Corridor Operations",
+        "category": CurrentAffairsCategory.GLOBAL_CONFLICT.value,
+        "summary": "Unmanned naval surface vessels and coastal defense batteries patrol the western Black Sea export shipping routes.",
+        "curiosity": 9.7, "visual_potential": 9.8, "historical_interest": 9.2, "storytelling": 9.6, "uniqueness": 9.7
+    },
+    {
+        "title": "Arctic Maritime Arctic Defense Posture",
+        "category": CurrentAffairsCategory.GEOPOLITICS.value,
+        "summary": "Sub-zero icebreakers, strategic deepwater ports, and early warning radar stations expand monitoring across northern polar shipping corridors.",
+        "curiosity": 9.6, "visual_potential": 9.8, "historical_interest": 9.2, "storytelling": 9.5, "uniqueness": 9.6
+    }
+]
+
 CURATED_HISTORICAL_SEEDS = [
     {
         "title": "The Great Stink of London (1858)",
@@ -137,11 +189,19 @@ CURATED_HISTORICAL_SEEDS = [
 class TopicDiscoveryEngine:
     """Discovers, evaluates, and scores high-performing historical topics."""
 
-    def __init__(self):
+    def __init__(self, ingestion_service: Optional[Any] = None):
         self.wiki = wikipediaapi.Wikipedia(
             user_agent="HistoryShortsPipeline/1.0 (historical_research@shorts.ai)",
             language="en"
         )
+        if ingestion_service is not None:
+            self.ingestion_service = ingestion_service
+        else:
+            try:
+                from sources.news_ingestion import NewsIngestionService
+                self.ingestion_service = NewsIngestionService()
+            except Exception:
+                self.ingestion_service = None
 
     def calculate_topic_score(self, item: Dict[str, Any]) -> float:
         """
@@ -157,22 +217,37 @@ class TopicDiscoveryEngine:
         score = (curiosity * 1.3) + (visual_potential * 1.1) + (historical_interest * 1.0) + (storytelling * 1.4) + (uniqueness * 1.2)
         return round(score, 2)
 
-    def is_duplicate(self, db: Session, title: str, summary: str = "", script_text: str = "", exclude_topic_id: Optional[str] = None) -> bool:
+    def is_duplicate(
+        self,
+        db: Session,
+        title: str,
+        summary: str = "",
+        script_text: str = "",
+        exclude_topic_id: Optional[str] = None,
+        category: Optional[str] = None,
+        policy: Optional[str] = None
+    ) -> bool:
         """
         Evaluates candidate story against the complete published, ready, and database historical corpus
-        using the multi-layer StoryDeduplicationEngine.
+        using the policy-aware DeduplicationRouter.
         """
-        from engines.deduplication_engine import StoryDeduplicationEngine
-        dedup_engine = StoryDeduplicationEngine()
-        result = dedup_engine.evaluate_candidate(
+        from engines.deduplication_engine import DeduplicationRouter, is_current_affairs_category
+        effective_policy = policy
+        if not effective_policy and not (category and is_current_affairs_category(category)):
+            effective_policy = "historical_year_location"
+
+        router = DeduplicationRouter(policy=effective_policy)
+        result = router.evaluate_candidate(
             candidate_title=title,
             candidate_summary=summary,
             candidate_script=script_text,
             db=db,
-            exclude_topic_id=exclude_topic_id
+            exclude_topic_id=exclude_topic_id,
+            category=category,
+            policy=effective_policy
         )
         if not result.is_allowed:
-            logger.info(f"Topic '{title}' rejected by Semantic Deduplication Gate ({result.classification}): {result.reason}")
+            logger.info(f"Topic '{title}' rejected by Deduplication Gate ({result.classification}): {result.reason}")
             return True
         return False
 
@@ -282,7 +357,192 @@ class TopicDiscoveryEngine:
             logger.warning(f"[CURRENT_AFFAIRS_DISCOVERY] Discovery cycle noticed exception: {e}")
             return []
 
-    def discover_topics(self, db: Session, limit: int = 5, exclude_topic_ids: Optional[Any] = None) -> List[Topic]:
+    def discover_topics(
+        self,
+        db: Session,
+        limit: int = 5,
+        profile: Optional[Any] = None,
+        exclude_topic_ids: Optional[Any] = None,
+        allow_ai: bool = True
+    ) -> List[Topic]:
+        """
+        Primary topic discovery entry point.
+        Dispatches according to DiscoveryProfile:
+          - CURRENT_AFFAIRS: Live news ingestion (RSS + GDELT), recency filtering, zero historical fallback.
+          - HISTORICAL: Legacy mode for historicalShorts.
+        """
+        from core.discovery_profile import DiscoveryProfile, ProfileType
+        if profile is None:
+            profile = DiscoveryProfile(profile_type=ProfileType.CURRENT_AFFAIRS)
+
+        if getattr(profile, "profile_type", None) == ProfileType.CURRENT_AFFAIRS:
+            return self._discover_current_affairs_topics(db, limit, profile)
+        else:
+            return self._discover_historical_topics(db, limit=limit, exclude_topic_ids=exclude_topic_ids, allow_ai=allow_ai)
+
+    def _discover_current_affairs_topics(
+        self,
+        db: Session,
+        limit: int = 5,
+        profile: Optional[Any] = None
+    ) -> List[Topic]:
+        """
+        Discovers real-time geopolitical topics exclusively from live news feeds.
+        STRICT GUARANTEE:
+          1. Prioritizes real incoming events from live feeds (RSS + GDELT).
+          2. Strongly enforces 24-hour recency (TIER 1 & TIER 2).
+          3. Stale unproduced topics (>24h old) are strictly excluded.
+          4. Zero fallback to historical trivia prompt or curated historical seeds.
+        """
+        historical_cat_values = {c.value for c in HistoricalCategory}
+        now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        # 1. Prioritize real incoming live events via NewsIngestionService
+        if self.ingestion_service:
+            logger.info("Executing live news ingestion for current-affairs discovery...")
+            freshness_tiers = [FreshnessTier.TIER_1, FreshnessTier.TIER_2]
+            articles = self.ingestion_service.ingest_live_news(
+                db=db,
+                extract_body=False,
+                freshness_tiers=freshness_tiers,
+                limit_per_source=10
+            )
+
+            discovered = []
+            if articles:
+                from intelligence.clustering import EventClusterEngine
+                cluster_engine = EventClusterEngine(profile=profile)
+                clusters = cluster_engine.cluster_articles(articles)
+
+                # Sort clusters by confidence, independent publisher count, and recency
+                clusters.sort(
+                    key=lambda c: (
+                        c.confidence,
+                        c.independent_publisher_count,
+                        c.first_published_at or datetime.min
+                    ),
+                    reverse=True
+                )
+
+                for cluster in clusters:
+                    if self.is_duplicate(db, cluster.canonical_title):
+                        continue
+
+                    # Check cluster duplicate via CurrentAffairsDeduplicationEngine
+                    try:
+                        from intelligence.deduplication import CurrentAffairsDeduplicationEngine
+                        dedup = CurrentAffairsDeduplicationEngine(profile=profile)
+                        is_dup, _, _ = dedup.is_cluster_duplicate(cluster, db)
+                        if is_dup:
+                            continue
+                    except Exception as dedup_err:
+                        logger.debug(f"Dedup check notice: {dedup_err}")
+
+                    event_card = cluster.to_event_card()
+                    topic_id = f"top_{uuid.uuid4().hex[:12]}"
+                    topic = Topic(
+                        id=topic_id,
+                        title=cluster.canonical_title,
+                        summary=cluster.canonical_summary or cluster.canonical_title,
+                        category=cluster.primary_category or "Geopolitics",
+                        score=round(cluster.confidence * 100.0, 1),
+                        status="APPROVED",
+                        event_id=cluster.cluster_id,
+                        verification_state=cluster.verification_state,
+                        independent_sources_count=cluster.independent_publisher_count,
+                        event_card_json=event_card.to_json()
+                    )
+                    db.add(topic)
+
+                    # Link all articles in cluster and extract text for primary article
+                    for art in cluster.articles:
+                        norm_url = getattr(art, "normalized_url", None)
+                        if norm_url:
+                            db_art = db.query(ArticleRecord).filter(
+                                ArticleRecord.normalized_url == norm_url
+                            ).first()
+                            if db_art:
+                                db_art.topic_id = topic_id
+                                if not db_art.article_text or db_art.extraction_status == "PENDING":
+                                    try:
+                                        ext_res = self.ingestion_service.extractor.extract_from_url(db_art.url)
+                                        if ext_res.text:
+                                            db_art.article_text = ext_res.text
+                                            db_art.extraction_status = ext_res.extraction_status
+                                            db_art.retrieval_status = ext_res.retrieval_status
+                                            if ext_res.author and not db_art.author:
+                                                db_art.author = ext_res.author
+                                            if len(ext_res.text) > len(topic.summary):
+                                                topic.summary = ext_res.text[:350].rsplit(" ", 1)[0] + "..."
+                                    except Exception as ext_err:
+                                        logger.warning(f"On-demand extraction for topic {topic_id} failed: {ext_err}")
+
+                    # Persist claims with provenance into ClaimRecord
+                    for cl in cluster.claims:
+                        db_claim = ClaimRecord(
+                            topic_id=topic_id,
+                            claim_text=cl.claim_text,
+                            verification_status=cl.verification_state,
+                            supporting_sources=cl.publisher,
+                            confidence=cl.confidence,
+                            source_article_id=cl.source_article_id,
+                            publisher=cl.publisher,
+                            source_url=cl.source_url,
+                            evidence_excerpt=cl.evidence_excerpt
+                        )
+                        db.add(db_claim)
+
+                    # Persist sources into SourceRecord
+                    for src in event_card.sources:
+                        db_src = SourceRecord(
+                            topic_id=topic_id,
+                            source_name=src["publisher"],
+                            source_url=src.get("url"),
+                            source_type="news_report",
+                            confidence=0.90
+                        )
+                        db.add(db_src)
+
+                    discovered.append(topic)
+                    if len(discovered) >= limit:
+                        break
+
+                if discovered:
+                    db.commit()
+                    logger.info(f"Discovered {len(discovered)} verified current-affairs event clusters from live feeds.")
+                    return discovered
+
+        # 2. If live ingestion returned no candidates, check for fresh unproduced topics in DB (<24h old)
+        published_topic_ids = {
+            j.topic_id for j in db.query(Job).filter(Job.state == "PUBLISHED").all() if j.topic_id
+        }
+        cutoff_24h = now_utc - timedelta(hours=24)
+
+        unproduced_fresh = db.query(Topic).filter(
+            Topic.id.notin_(published_topic_ids),
+            Topic.category.notin_(historical_cat_values),
+            Topic.created_at >= cutoff_24h
+        ).all()
+
+        if unproduced_fresh:
+            random.shuffle(unproduced_fresh)
+            logger.info(f"Retrieved {len(unproduced_fresh[:limit])} fresh (<24h) unproduced current-affairs topics from DB.")
+            return unproduced_fresh[:limit]
+
+        # 3. Halt cleanly with empty list: ZERO historical fallback
+        logger.warning(
+            "No current event candidates available from live news feeds. "
+            "Data integrity preserved: halting topic discovery without historical fallback."
+        )
+        return []
+
+    def _discover_historical_topics(
+        self,
+        db: Session,
+        limit: int = 5,
+        exclude_topic_ids: Optional[Any] = None,
+        allow_ai: bool = True
+    ) -> List[Topic]:
         """Discovers new candidate topics or returns unproduced approved topics."""
         # 1. First check if we have approved topics in DB that have not been published or produced yet
         from core.models import Job, UploadRecord
@@ -371,8 +631,9 @@ class TopicDiscoveryEngine:
 
         discovered = []
 
-        # 2. If AI Provider is available, generate fresh unique historical stories online with strategy conditioning
-        if AI_PROVIDER_AVAILABLE:
+        # 2. If AI Provider is available and permitted, generate fresh stories online
+        is_test = TEST_MODE or os.environ.get("TEST_MODE", "").lower() in ("true", "1", "yes")
+        if allow_ai and AI_PROVIDER_AVAILABLE and not is_test:
             try:
                 from core.gemini_client import get_gemini_client
                 gemini_client = get_gemini_client()
@@ -418,8 +679,8 @@ class TopicDiscoveryEngine:
             except Exception as e:
                 logger.warning(f"Gemini live topic discovery fallback: {e}")
 
-        # 3. Evaluate curated seed topics
-        candidates = list(CURATED_HISTORICAL_SEEDS)
+        # 3. Evaluate curated seed topics (prioritize current geopolitics)
+        candidates = list(CURATED_GEOPOLITICAL_SEEDS) + list(CURATED_HISTORICAL_SEEDS)
         random.shuffle(candidates)
 
         for item in candidates:

@@ -7,6 +7,7 @@ Directly interfaces with live production components:
 - HealthChecker subsystem
 - Continuous Learning & Analytics Engine
 """
+import os
 import sys
 import logging
 from datetime import datetime, time as dtime, timedelta
@@ -123,6 +124,38 @@ class SystemDataProvider:
         """
         global _AUTHORITATIVE_YT_INVENTORY_CACHE, _AUTHORITATIVE_YT_INVENTORY_CACHE_TIME
         now = datetime.utcnow()
+
+        is_test = TEST_MODE or os.environ.get("TEST_MODE", "").lower() in ("true", "1", "yes")
+        if is_test:
+            public_shorts = []
+            scheduled_shorts = []
+            if db:
+                from core.models import UploadRecord
+                records = db.query(UploadRecord).all()
+                for r in records:
+                    if r.status in ("PUBLISHED", "SUCCESS"):
+                        public_shorts.append({
+                            "id": r.youtube_video_id or r.id,
+                            "title": r.title,
+                            "published_at": r.published_at.isoformat() + "Z" if r.published_at else datetime.utcnow().isoformat() + "Z",
+                            "duration_seconds": 24,
+                            "privacy_status": "public"
+                        })
+                    elif r.status in ("SCHEDULED", "TEST_VERIFIED"):
+                        scheduled_shorts.append({
+                            "id": r.youtube_video_id or r.id,
+                            "title": r.title,
+                            "publish_at": r.scheduled_publish_at.isoformat() + "Z" if r.scheduled_publish_at else datetime.utcnow().isoformat() + "Z",
+                            "duration_seconds": 24,
+                            "privacy_status": "private"
+                        })
+            return {
+                "public_shorts": public_shorts,
+                "scheduled_shorts": scheduled_shorts,
+                "private_unscheduled": [],
+                "legacy_public": [],
+                "status": "TEST_MODE_INVENTORY"
+            }
 
         if not force_refresh and _AUTHORITATIVE_YT_INVENTORY_CACHE and _AUTHORITATIVE_YT_INVENTORY_CACHE_TIME:
             if (now - _AUTHORITATIVE_YT_INVENTORY_CACHE_TIME).total_seconds() < _AUTHORITATIVE_YT_INVENTORY_CACHE_TTL_SEC:

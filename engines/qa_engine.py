@@ -310,6 +310,49 @@ class QAEngine:
         if not license_ok:
             reasons.extend(license_failures)
 
+        # 7. Editorial Visual Quality & Diversity Gate
+        from engines.visual_intelligence.visual_qa import VisualQAGate
+        from engines.visual_intelligence.sources.base import VisualCandidate
+        from engines.visual_intelligence.provenance import VisualContentType
+        
+        visual_assets = [a for a in assets_used if a.asset_type in ("video", "image")]
+        if visual_assets and len(visual_assets) > 2:
+            vi_cands = []
+            for va in visual_assets:
+                meta = {}
+                if getattr(va, "metadata_json", None):
+                    try:
+                        meta = json.loads(va.metadata_json)
+                    except Exception:
+                        meta = {}
+                
+                content_type_str = meta.get("content_type") or ("GENERIC_STOCK_VIDEO" if va.asset_type == "video" else "STATIC_PHOTO")
+                try:
+                    ct = VisualContentType(content_type_str)
+                except ValueError:
+                    ct = VisualContentType.REAL_VIDEO if va.asset_type == "video" else VisualContentType.STATIC_PHOTO
+                
+                vi_cands.append(VisualCandidate(
+                    candidate_id=va.id,
+                    source_class="SOURCE_A",
+                    source_name=va.source or "unknown",
+                    source_url=va.source_url or va.local_path,
+                    content_type=ct,
+                    is_video=(va.asset_type == "video"),
+                    motion_score=meta.get("motion_score", (0.75 if va.asset_type == "video" else 0.35)),
+                    width=getattr(va, "width", 1080) or 1080,
+                    height=getattr(va, "height", 1920) or 1920
+                ))
+            
+            vqa = VisualQAGate()
+            vqa_passed, vqa_reasons, vqa_metrics = vqa.audit_visual_composition(
+                selected_candidates=vi_cands,
+                claims_present=False
+            )
+            if not vqa_passed:
+                reasons.extend(vqa_reasons)
+
+
         captions_ok = True
         policy_ok = True
 

@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from config.constants import MIN_WORD_COUNT, MAX_WORD_COUNT, OPTIMAL_WORD_COUNT
 from config.settings import GEMINI_API_KEY, AI_PROVIDER_AVAILABLE
 from core.models import Topic, ScriptRecord
+from core.content_profile import ContentProfile, get_active_profile
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,34 @@ FORBIDDEN_CLICHES = [
 
 # High-Retention Curated Seed Scripts (Pre-verified for seed topics)
 CURATED_SCRIPTS = {
+    "Red Sea Maritime Chokepoint Crisis": {
+        "hook": "Twelve percent of global seaborne trade is being diverted around an entire continent.",
+        "context": "Commercial shipping through the Bab-el-Mandeb strait faced missile and drone swarms.",
+        "escalation": "Allied naval task forces deployed guided missile destroyers to shoot down inbound threats.",
+        "reveal": "Container freight rates tripled within weeks as giant freighters rerouted around Africa.",
+        "loop_twist": "A single chokepoint twenty miles wide exposed the fragile vulnerability of modern commerce."
+    },
+    "Baltic Undersea Infrastructure Security": {
+        "hook": "Beneath the Baltic Sea, severed data cables triggered an emergency naval response.",
+        "context": "Critical telecommunication lines and energy pipelines were severed in international waters.",
+        "escalation": "Maritime patrol aircraft and mine-countermeasure ships deployed sonar to inspect the seabed.",
+        "reveal": "Investigators tracked suspicious commercial vessels dragging anchors across undersea conduits.",
+        "loop_twist": "Modern hybrid warfare showed that cutting deep sea cables can paralyze nations without firing a shot."
+    },
+    "Strait of Hormuz Naval Interceptions": {
+        "hook": "One fifth of the world's petroleum supply passes through a single twenty-one-mile bottleneck.",
+        "context": "Armed gunboats and naval helicopters shadowed commercial oil tankers entering the Persian Gulf.",
+        "escalation": "Warships deployed electronic countermeasures as boarding teams attempted to seize merchant vessels.",
+        "reveal": "International maritime patrols established guarded transit corridors with continuous air cover.",
+        "loop_twist": "Any escalation in these narrow waters can destabilize global energy markets in minutes."
+    },
+    "Taiwan Strait Freedom of Navigation Patrols": {
+        "hook": "Guided-missile destroyers sailed straight through the world's most contested international waterway.",
+        "context": "Naval forces executed freedom of navigation transits through the hundred-mile-wide Taiwan Strait.",
+        "escalation": "Dozens of fighter aircraft and shadowing frigates tracked every nautical mile of the passage.",
+        "reveal": "High-resolution radar arrays locked coordinates while surveillance drones monitored flight paths.",
+        "loop_twist": "This narrow channel remains the central friction point shaping the global balance of power."
+    },
     "The Kettle War of 1784": {
         "hook": "In 1784, a European war ended with a shattered soup kettle.",
         "context": "The Holy Roman Empire sent warships to challenge Dutch ports.",
@@ -213,9 +242,38 @@ class CriticEvaluation:
 
 
 class ScriptCritic:
-    """Evaluates historical narration scripts against an 8-factor rubric (0-100 scale)."""
+    """Evaluates narration scripts against an 8-factor rubric (0-100 scale) using active ContentProfile."""
 
-    def evaluate(self, script_data: Dict[str, str], research_data: Optional[Dict[str, Any]] = None) -> CriticEvaluation:
+    def __init__(self, profile: Optional[ContentProfile] = None):
+        self.profile = profile
+
+    def evaluate_script(
+        self,
+        script: Any,
+        research_data: Optional[Dict[str, Any]] = None,
+        profile: Optional[ContentProfile] = None
+    ) -> Tuple[bool, List[str]]:
+        """Universal script evaluation accepting either a dict or a ScriptRecord."""
+        if isinstance(script, dict):
+            s_dict = script
+        else:
+            s_dict = {
+                "hook": getattr(script, "hook", ""),
+                "context": getattr(script, "context", ""),
+                "escalation": getattr(script, "escalation", ""),
+                "reveal": getattr(script, "reveal", ""),
+                "loop_twist": getattr(script, "loop_twist", "")
+            }
+        res = self.evaluate(s_dict, research_data, profile=profile)
+        return res.passed, res.feedback
+
+    def evaluate(
+        self,
+        script_data: Dict[str, str],
+        research_data: Optional[Dict[str, Any]] = None,
+        profile: Optional[ContentProfile] = None
+    ) -> CriticEvaluation:
+        active_profile = profile or self.profile or get_active_profile()
         hook = script_data.get("hook", "").strip()
         context = script_data.get("context", "").strip()
         escalation = script_data.get("escalation", "").strip()
@@ -231,7 +289,8 @@ class ScriptCritic:
 
         # 1. Check Forbidden Clichés (-50 penalty if found)
         full_lower = full_text.lower()
-        for cliche in FORBIDDEN_CLICHES:
+        cliches_to_check = active_profile.forbidden_cliches if (active_profile and active_profile.forbidden_cliches) else FORBIDDEN_CLICHES
+        for cliche in cliches_to_check:
             if cliche in full_lower:
                 cliches_detected.append(cliche)
                 feedback.append(f"Forbidden AI cliché detected: '{cliche}'. Must be rephrased naturally.")
@@ -244,8 +303,17 @@ class ScriptCritic:
         else:
             feedback.append(f"Hook length ({len(hook_words)} words) is outside optimal 6-14 word range.")
 
-        # High curiosity markers (dates, numbers, strong actions, visceral nouns)
-        if re.search(r"\b(1\d{3}|20\d{2}|thousands|hundreds|minutes|miles|tons|first|only|deadliest|disaster|war|king|crisis)\b", hook, re.IGNORECASE):
+        # High curiosity markers (dates, numbers, strong actions, visceral nouns from profile)
+        hook_marker_matched = False
+        markers = active_profile.hook_markers if (active_profile and active_profile.hook_markers) else [
+            r"\b(1\d{3}|20\d{2}|thousands|hundreds|minutes|miles|tons|first|only|deadliest|disaster|war|king|crisis)\b"
+        ]
+        for marker_pattern in markers:
+            if re.search(marker_pattern, hook, re.IGNORECASE):
+                hook_marker_matched = True
+                break
+
+        if hook_marker_matched:
             hook_score += 10.0
         elif len(hook_words) >= 5:
             hook_score += 5.0
@@ -274,10 +342,13 @@ class ScriptCritic:
         else:
             feedback.append(f"Average sentence length ({avg_sent_len:.1f} words) is suboptimal for spoken rhythm.")
 
-        if MIN_WORD_COUNT <= word_count <= (MAX_WORD_COUNT + 3):
+        min_words = active_profile.min_words if active_profile else MIN_WORD_COUNT
+        max_words = active_profile.max_words if active_profile else MAX_WORD_COUNT
+
+        if min_words <= word_count <= (max_words + 3):
             cadence_score += 5.0
         else:
-            feedback.append(f"Total word count ({word_count}) outside calibrated {MIN_WORD_COUNT}-{MAX_WORD_COUNT + 3} word target.")
+            feedback.append(f"Total word count ({word_count}) outside calibrated {min_words}-{max_words + 3} word target.")
 
         # 6. Concrete Specificity (10 pts)
         specificity_score = 0.0
@@ -317,7 +388,7 @@ class ScriptCritic:
         passed = (
             (total_score >= 80.0)
             and (len(cliches_detected) == 0)
-            and (MIN_WORD_COUNT <= word_count <= (MAX_WORD_COUNT + 3))
+            and (min_words <= word_count <= (max_words + 3))
             and fact_passed
         )
 
@@ -339,8 +410,9 @@ class ScriptCritic:
 class ScriptEngine:
     """Multi-stage Script Generation Engine with Critic Evaluation and Fact Grounding."""
 
-    def __init__(self):
-        self.critic = ScriptCritic()
+    def __init__(self, profile: Optional[ContentProfile] = None):
+        self.profile = profile or get_active_profile()
+        self.critic = ScriptCritic(profile=self.profile)
         self._script_cache: Dict[str, Dict[str, str]] = {}
 
     def cache_script(self, topic_id: str, script_data: Dict[str, str]) -> None:
@@ -355,8 +427,14 @@ class ScriptEngine:
         """Clears all cached pre-generated scripts."""
         self._script_cache.clear()
 
-    def generate_hook_candidates(self, topic: Topic, research_data: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def generate_hook_candidates(
+        self,
+        topic: Topic,
+        research_data: Optional[Dict[str, Any]] = None,
+        profile: Optional[ContentProfile] = None
+    ) -> List[Dict[str, Any]]:
         """Generates 3 distinct hook candidates (Date-Anchor, In-Medias-Res, Unexpected Consequence)."""
+        active_profile = profile or self.profile or get_active_profile()
         res_summary = research_data.get("summary", topic.summary) if research_data else topic.summary
 
         if not AI_PROVIDER_AVAILABLE:
@@ -371,13 +449,15 @@ class ScriptEngine:
             from core.gemini_client import get_gemini_client
             gemini_client = get_gemini_client()
             prompt = (
-                f"Generate 3 distinct, high-curiosity hook sentences (6-13 words each) for a historical YouTube Short about: '{topic.title}'.\n"
-                f"Historical Context: {res_summary}\n"
+                f"Generate 3 distinct, high-curiosity hook sentences (6-13 words each) for a YouTube Short about: '{topic.title}'.\n"
+                f"Context: {res_summary}\n"
+                f"Target Audience: {active_profile.target_audience}\n"
+                f"Tone: {active_profile.tone}\n"
                 f"Strict Rules:\n"
-                f"- No 'Did you know', No 'You won't believe', No 'The unbelievable true story', No clickbait tropes.\n"
-                f"- Hook 1: Date/Time Anchored (e.g. 'In July 1184, sixty European nobles met a bizarre fate.')\n"
-                f"- Hook 2: In-Medias-Res / Action First (e.g. 'Three Royal Navy cruisers opened fire on the palace at dawn.')\n"
-                f"- Hook 3: Unexpected Specific Consequence (e.g. 'A single potato-eating pig almost sparked an armed war.')\n"
+                f"- No clickbait tropes, no generic fillers (e.g. 'Did you know', 'You won't believe').\n"
+                f"- Hook 1: Date/Anchor (Primary event, clash, or timeframe)\n"
+                f"- Hook 2: In-Medias-Res / Action First (Immediate event or critical tension)\n"
+                f"- Hook 3: Unexpected Specific Consequence or Strategic Implication\n"
                 f"Output strictly valid JSON with key 'hooks' containing a list of 3 strings."
             )
             from config.settings import GEMINI_MODEL
@@ -394,7 +474,7 @@ class ScriptEngine:
             for i, h in enumerate(raw_hooks[:3]):
                 h_type = types[i] if i < len(types) else "Variant"
                 mock_script = {"hook": h, "context": "Context", "escalation": "Escalation", "reveal": "Reveal", "loop_twist": "Twist"}
-                eval_res = self.critic.evaluate(mock_script, research_data)
+                eval_res = self.critic.evaluate(mock_script, research_data, profile=active_profile)
                 candidates.append({
                     "type": h_type,
                     "hook": h,
@@ -419,9 +499,11 @@ class ScriptEngine:
         selected_hook: str,
         research_data: Optional[Dict[str, Any]],
         revision_feedback: Optional[List[str]] = None,
-        learned_guidance: str = ""
+        learned_guidance: str = "",
+        profile: Optional[ContentProfile] = None
     ) -> Dict[str, str]:
         """Executes a single draft/revision pass with configured AI Provider."""
+        active_profile = profile or self.profile or get_active_profile()
         from core.gemini_client import get_gemini_client
         gemini_client = get_gemini_client()
 
@@ -439,7 +521,7 @@ class ScriptEngine:
             formatted_fb = []
             for fb in revision_feedback:
                 if "outside calibrated" in fb.lower() or "word count" in fb.lower():
-                    formatted_fb.append(f"- WORD COUNT CORRECTION: {fb}. Target exactly 50-55 words across all 5 stages combined. Do not introduce new claims.")
+                    formatted_fb.append(f"- WORD COUNT CORRECTION: {fb}. Target exactly {active_profile.target_words} across all 5 stages combined. Do not introduce new claims.")
                 elif "unsupported claim" in fb.lower():
                     formatted_fb.append(f"- FACTUAL CORRECTION: {fb}. Remove or rewrite this claim strictly using provided research.")
                 else:
@@ -451,35 +533,38 @@ class ScriptEngine:
                 + "\n=======================================================\n"
             )
 
+        cliches_str = ", ".join(repr(c) for c in active_profile.forbidden_cliches[:5])
+        extra_inst = f"\n6. ADDITIONAL STRATEGY:\n   - {active_profile.additional_instructions}\n" if active_profile.additional_instructions else ""
+
         prompt = (
-            f"You are a master historical documentary scriptwriter for YouTube Shorts.\n"
+            f"{active_profile.system_role_instruction}\n"
             f"Topic: '{topic.title}'\n"
+            f"Target Audience: {active_profile.target_audience}\n"
+            f"Editorial Tone: {active_profile.tone}\n"
+            f"Objective: {active_profile.script_objective}\n"
             f"Selected Opening Hook (0-2s): \"{selected_hook}\"\n\n"
             f"{verified_facts_text}\n\n"
             f"{learned_guidance}\n"
             f"\nPRODUCTION CONTRACT & SPECIFICATION:\n"
             f"1. TARGET DURATION: 21–25 seconds spoken narration.\n"
             f"2. WORD COUNT SPECIFICATION (CRITICAL):\n"
-            f"   - HARD MINIMUM: 45 words\n"
-            f"   - HARD MAXIMUM: 68 words\n"
-            f"   - PREFERRED TARGET: 50–55 words total across all 5 stages combined.\n"
+            f"   - HARD MINIMUM: {active_profile.min_words} words\n"
+            f"   - HARD MAXIMUM: {active_profile.max_words} words\n"
+            f"   - PREFERRED TARGET: {active_profile.target_words} total across all 5 stages combined.\n"
             f"3. 5-STAGE NARRATIVE STRUCTURE:\n"
-            f"   - hook: (0-2s) Immediate curiosity/tension gap. No generic intros ('Did you know', 'Today we're looking at').\n"
-            f"   - context: Clear, rapid historical setting and grounding with forward momentum.\n"
-            f"   - escalation: Rising stakes, intensifying conflict or bizarre progression. Every claim MUST be supported by supplied research.\n"
-            f"   - reveal: The definitive, surprising historical payoff/climax.\n"
-            f"   - loop_twist: Complete final resolution and loop-compatible ending statement. No filler conclusions.\n"
-            f"4. STRICT FACTUAL RULES (CRITICAL QUALITY GATE):\n"
-            f"   - Use ONLY information explicitly supported by the supplied research.\n"
-            f"   - NEVER invent dates (e.g. do not guess specific calendar days if not in research).\n"
-            f"   - NEVER invent names, casualty counts, quotations, motives, or precise locations.\n"
-            f"   - NEVER convert historical uncertainty into certainty.\n"
-            f"   - Do NOT introduce dramatic claims absent from the research evidence.\n"
+            f"   - hook: {active_profile.beat_descriptions.get('hook', 'Immediate curiosity/tension gap (6-14 words).')}\n"
+            f"   - context: {active_profile.beat_descriptions.get('context', 'Rapid setting and background grounding.')}\n"
+            f"   - escalation: {active_profile.beat_descriptions.get('escalation', 'Rising stakes, intensifying conflict or progression.')}\n"
+            f"   - reveal: {active_profile.beat_descriptions.get('reveal', 'The definitive payoff/climax.')}\n"
+            f"   - loop_twist: {active_profile.beat_descriptions.get('loop_twist', 'Complete final resolution and loop-compatible ending statement.')}\n"
+            f"4. FACTUAL POLICY (CRITICAL QUALITY GATE):\n"
+            f"   - {active_profile.factual_policy}\n"
             f"5. STYLE & CADENCE:\n"
-            f"   - Natural spoken American English. Short, punchy sentences (6-12 words/sentence). Strong momentum. Zero filler.\n"
-            f"   - NO AI CLICHÉS: NEVER use 'will shock you', 'unbelievable true story', 'events spiraled', 'shocked historians', 'changed history forever'.\n"
-            f"6. SELF-CHECK BEFORE RETURNING JSON:\n"
-            f"   - Verify total word count is 45-68 words (aim for 50-55 words).\n"
+            f"   - {active_profile.preferred_cadence}\n"
+            f"   - NO AI CLICHÉS: NEVER use {cliches_str}.\n"
+            f"{extra_inst}"
+            f"SELF-CHECK BEFORE RETURNING JSON:\n"
+            f"   - Verify total word count is {active_profile.min_words}-{active_profile.max_words} words (aim for {active_profile.target_words}).\n"
             f"   - Verify all 5 narrative keys exist.\n"
             f"   - Verify all facts are 100% grounded in supplied research.\n"
             f"{feedback_instruction}\n"
@@ -520,14 +605,79 @@ class ScriptEngine:
         db: Session,
         topic: Topic,
         research_data: Optional[Dict[str, Any]] = None,
-        strategy: Optional[Dict[str, Any]] = None
+        strategy: Optional[Dict[str, Any]] = None,
+        profile: Optional[ContentProfile] = None
     ) -> ScriptRecord:
         """
         Produces an approved, fact-grounded script via multi-stage Critic evaluation and rewrite loop.
         Applies target hook archetype and duration strategy if supplied.
         """
+        active_profile = profile or self.profile or get_active_profile()
         target_hook_archetype = strategy.get("hook_archetype") if strategy else None
         target_duration = strategy.get("duration_target") if strategy else None
+
+        # 0. Primary Path for Phase 3 Current-Affairs EventCard-Grounded Scripting
+        card = None
+        if getattr(topic, "event_card_json", None):
+            from intelligence.event_card import EventCard
+            try:
+                card = EventCard.from_json(topic.event_card_json)
+            except Exception as e:
+                logger.warning(f"Could not parse topic.event_card_json: {e}")
+        elif research_data and research_data.get("event_card"):
+            from intelligence.event_card import EventCard
+            c_data = research_data["event_card"]
+            card = EventCard.from_dict(c_data) if isinstance(c_data, dict) else c_data
+
+        if card:
+            from intelligence.journalistic_script import JournalisticScriptEngine, ScriptBeatType
+            j_engine = JournalisticScriptEngine()
+            target_sec = 45.0
+            if target_duration == "ULTRA_TIGHT":
+                target_sec = 35.0
+            elif target_duration == "NARRATIVE_RICH":
+                target_sec = 55.0
+
+            script_doc = j_engine.generate_journalistic_script(
+                event_card=card,
+                target_duration_seconds=target_sec,
+                profile=active_profile
+            )
+
+            # Map beats into legacy 5-stage fields for downstream engine compatibility
+            hook_text = script_doc.hook
+            what_beats = [b.text for b in script_doc.beats if b.beat_type in [ScriptBeatType.WHAT_HAPPENED.value, ScriptBeatType.WHO.value, ScriptBeatType.WHERE.value]]
+            context_beats = [b.text for b in script_doc.beats if b.beat_type in [ScriptBeatType.CONTEXT.value, ScriptBeatType.KEY_DEVELOPMENT.value]]
+            reveal_beats = [b.text for b in script_doc.beats if b.beat_type in [ScriptBeatType.CONFLICT.value, ScriptBeatType.OFFICIAL_RESPONSE.value]]
+            closing_text = script_doc.closing or (script_doc.beats[-1].text if script_doc.beats else "")
+
+            context_str = " ".join(what_beats) if what_beats else (script_doc.beats[1].text if len(script_doc.beats) > 1 else card.what)
+            escalation_str = " ".join(context_beats) if context_beats else (script_doc.beats[2].text if len(script_doc.beats) > 2 else "")
+            reveal_str = " ".join(reveal_beats) if reveal_beats else (script_doc.beats[3].text if len(script_doc.beats) > 3 else "")
+
+            script_rec = ScriptRecord(
+                id=script_doc.script_id,
+                topic_id=topic.id,
+                event_id=card.event_id,
+                hook=hook_text,
+                context=context_str or "Context verified.",
+                escalation=escalation_str or "Details developing.",
+                reveal=reveal_str or "Reported by monitors.",
+                loop_twist=closing_text,
+                full_text=script_doc.full_text,
+                word_count=script_doc.word_count,
+                estimated_duration_sec=script_doc.estimated_duration_sec,
+                hook_archetype=target_hook_archetype or "DATE_TIME_ANCHOR",
+                duration_target=target_duration or "SWEET_SPOT",
+                status="APPROVED",
+                script_document_json=script_doc.to_json(),
+                provenance_complete=script_doc.provenance_complete,
+                validation_status="APPROVED" if script_doc.provenance_complete else "FLAGGED"
+            )
+            db.add(script_rec)
+            db.commit()
+            db.refresh(script_rec)
+            return script_rec
 
         data = None
         eval_res = None
@@ -535,7 +685,7 @@ class ScriptEngine:
         # 1. Check pre-generated batch script cache first
         if topic.id and topic.id in self._script_cache:
             cached_data = self._script_cache.pop(topic.id)
-            cached_eval = self.critic.evaluate(cached_data, research_data)
+            cached_eval = self.critic.evaluate(cached_data, research_data, profile=active_profile)
             if cached_eval.passed:
                 logger.info(f"[BATCH_CACHE_HIT] Using pre-generated batch script for '{topic.title}' (Score: {cached_eval.score}/100)")
                 data = cached_data
@@ -545,7 +695,12 @@ class ScriptEngine:
                 # data remains None -> falls through to curated/AI generation
 
         # 2. Check curated seed library for exact or normalized approved scripts
-        if not data:
+        # Only allow curated historical scripts if NOT in current-affairs mode
+        is_current_affairs = (
+            getattr(topic, "category", "") in ["Current Affairs", "Geopolitics", "Conflict", "Diplomacy"]
+            or bool(getattr(topic, "event_id", None))
+        )
+        if not data and not is_current_affairs:
             curated_match = None
             norm_title = re.sub(r"[^\w\s]", "", topic.title.lower()).strip()
             for k in CURATED_SCRIPTS:
@@ -557,11 +712,11 @@ class ScriptEngine:
             if curated_match:
                 logger.info(f"Using verified curated script for '{topic.title}' (matched: '{curated_match}')")
                 data = CURATED_SCRIPTS[curated_match]
-                eval_res = self.critic.evaluate(data, research_data)
+                eval_res = self.critic.evaluate(data, research_data, profile=active_profile)
 
         if not data and AI_PROVIDER_AVAILABLE:
             # 2. Multi-Candidate Hook Selection
-            hook_candidates = self.generate_hook_candidates(topic, research_data)
+            hook_candidates = self.generate_hook_candidates(topic, research_data, profile=active_profile)
             
             # If target archetype requested, search for matching candidate
             selected_hook = None
@@ -598,9 +753,10 @@ class ScriptEngine:
                         selected_hook=selected_hook,
                         research_data=research_data,
                         revision_feedback=current_feedback,
-                        learned_guidance=learned_guidance
+                        learned_guidance=learned_guidance,
+                        profile=active_profile
                     )
-                    eval_res = self.critic.evaluate(data, research_data)
+                    eval_res = self.critic.evaluate(data, research_data, profile=active_profile)
                     logger.info(f"Pass {attempt} Critic Score: {eval_res.score}/100 (Passed: {eval_res.passed})")
 
                     if eval_res.passed:
@@ -618,8 +774,8 @@ class ScriptEngine:
 
             # 4. Strict Quality Gate Check
             if not eval_res or not eval_res.passed:
-                # If quality gate failed after max attempts, check if curated script exists
-                if topic.title in CURATED_SCRIPTS:
+                # If quality gate failed after max attempts, check if curated script exists (historical only)
+                if not is_current_affairs and topic.title in CURATED_SCRIPTS:
                     logger.info(f"Fallback to curated seed script for '{topic.title}'")
                     data = CURATED_SCRIPTS[topic.title]
                 else:
@@ -627,7 +783,7 @@ class ScriptEngine:
                     logger.error(err_msg)
                     raise RuntimeError(err_msg)
         elif not data:
-            if topic.title in CURATED_SCRIPTS:
+            if not is_current_affairs and topic.title in CURATED_SCRIPTS:
                 data = CURATED_SCRIPTS[topic.title]
             else:
                 raise RuntimeError(f"Cannot generate script without active AI provider (GEMINI_API_KEY, GROQ_API_KEY, DEEPSEEK_API_KEY) or curated record for '{topic.title}'")
@@ -669,7 +825,8 @@ class ScriptEngine:
         db: Session,
         topics: List[Topic],
         research_data_map: Optional[Dict[str, Dict[str, Any]]] = None,
-        _mock_response: Optional[str] = None
+        _mock_response: Optional[str] = None,
+        profile: Optional[ContentProfile] = None
     ) -> Dict[str, Optional[Dict[str, str]]]:
         """
         Executes ONE AI generation call for a batch of topics (e.g. 3 topics)
@@ -678,7 +835,7 @@ class ScriptEngine:
         Strict Requirements Implemented:
         1. Return EXACTLY N scripts when N topics are supplied.
         2. Each script maps to exactly one supplied topic.
-        3. 45–68 words per script (MIN_WORD_COUNT to MAX_WORD_COUNT).
+        3. 45–68 words per script (active profile min_words to max_words).
         4. Do not combine topics.
         5. Do not reuse story, facts, angle, hook, or substantially similar narrative.
         6. Scripts must be meaningfully distinct.
@@ -694,6 +851,7 @@ class ScriptEngine:
         if not topics:
             return {}
 
+        active_profile = profile or self.profile or get_active_profile()
         n = len(topics)
         results: Dict[str, Optional[Dict[str, str]]] = {t.id: None for t in topics}
 
@@ -716,7 +874,7 @@ class ScriptEngine:
             elif rd.get("summary"):
                 facts_text = f"VERIFIED RESEARCH CONTEXT (USE ONLY THIS):\n{rd.get('summary')}"
             else:
-                facts_text = f"TOPIC SUMMARY:\n{topic.summary or 'Documented historical event.'}"
+                facts_text = f"TOPIC SUMMARY:\n{topic.summary or 'Documented event.'}"
 
             cat_text = f"Category: {topic.category}" if topic.category else ""
             topic_blocks.append(
@@ -738,8 +896,12 @@ class ScriptEngine:
         except Exception:
             pass
 
+        cliches_str = ", ".join(repr(c) for c in active_profile.forbidden_cliches[:6])
         batch_prompt = (
-            f"You are a master historical documentary scriptwriter for YouTube Shorts.\n"
+            f"{active_profile.system_role_instruction}\n"
+            f"Editorial Tone: {active_profile.tone}\n"
+            f"Target Audience: {active_profile.target_audience}\n"
+            f"Core Objective: {active_profile.script_objective}\n"
             f"Write EXACTLY {n} independent, fact-grounded documentary scripts — one per topic supplied below.\n\n"
             f"{'=' * 65}\n"
             f"{topics_section}\n"
@@ -753,27 +915,26 @@ class ScriptEngine:
             f"   - Each script must map to EXACTLY ONE topic using 'topic_index' (1 to {n}) and 'topic_id'.\n"
             f"   - Do NOT swap topics or assign one topic's narrative to another.\n"
             f"3. WORD COUNT SPECIFICATION (CRITICAL QUALITY GATE):\n"
-            f"   - HARD MINIMUM: 45 words per script.\n"
-            f"   - HARD MAXIMUM: 68 words per script.\n"
-            f"   - PREFERRED TARGET: 50–55 words total across all 5 narrative stages combined.\n"
-            f"   - Any script outside 45–68 words will be rejected.\n"
+            f"   - HARD MINIMUM: {active_profile.min_words} words per script.\n"
+            f"   - HARD MAXIMUM: {active_profile.max_words} words per script.\n"
+            f"   - PREFERRED TARGET: {active_profile.target_words} total across all 5 narrative stages combined.\n"
+            f"   - Any script outside {active_profile.min_words}–{active_profile.max_words} words will be rejected.\n"
             f"4. DO NOT COMBINE TOPICS: Each script must exclusively narrate its assigned topic.\n"
             f"5. MEANINGFULLY DISTINCT NARRATIVES:\n"
             f"   - Do NOT reuse the same story, facts, angle, hook structure, or opening phrase across scripts.\n"
             f"   - Each script must have a distinct hook archetype, unique dramatic tension, and different tone.\n"
             f"6. 5-STAGE NARRATIVE STRUCTURE (for each script):\n"
-            f"   - hook: (0-2s) Immediate curiosity/tension gap (6-14 words). No generic intros ('Did you know', 'You won't believe').\n"
-            f"   - context: Clear, rapid historical setting and grounding with forward momentum.\n"
-            f"   - escalation: Rising stakes, intensifying conflict or bizarre progression. Every claim MUST be supported by supplied research.\n"
-            f"   - reveal: The definitive, surprising historical payoff/climax.\n"
-            f"   - loop_twist: Complete final resolution and loop-compatible ending statement. No filler conclusions.\n"
+            f"   - hook: {active_profile.beat_descriptions.get('hook', 'Immediate curiosity/tension gap (6-14 words).')}\n"
+            f"   - context: {active_profile.beat_descriptions.get('context', 'Clear, rapid setting and grounding with forward momentum.')}\n"
+            f"   - escalation: {active_profile.beat_descriptions.get('escalation', 'Rising stakes, intensifying conflict or progression.')}\n"
+            f"   - reveal: {active_profile.beat_descriptions.get('reveal', 'The definitive payoff/climax.')}\n"
+            f"   - loop_twist: {active_profile.beat_descriptions.get('loop_twist', 'Complete final resolution and loop-compatible ending statement.')}\n"
             f"7. STRICT FACTUAL GROUNDING:\n"
-            f"   - Use ONLY facts explicitly supported by the supplied research for that topic.\n"
-            f"   - NEVER invent dates, names, casualty counts, or details.\n"
+            f"   - {active_profile.factual_policy}\n"
             f"8. FORBIDDEN AI CLICHÉS IN ALL SCRIPTS:\n"
-            f"   - NEVER use 'will shock you', 'unbelievable true story', 'events spiraled', 'shocked historians', 'changed history forever'.\n"
+            f"   - NEVER use {cliches_str}.\n"
             f"9. STYLE & CADENCE:\n"
-            f"   - Natural spoken American English. Short, punchy sentences (6-12 words/sentence). Zero filler.\n\n"
+            f"   - {active_profile.preferred_cadence}\n\n"
             f"OUTPUT FORMAT — strictly valid JSON object matching this exact schema:\n"
             f"{{\n"
             f"  \"scripts\": [\n"
@@ -791,7 +952,7 @@ class ScriptEngine:
             f"SELF-CHECK BEFORE RETURNING:\n"
             f"- Verify 'scripts' list has EXACTLY {n} elements.\n"
             f"- Verify each element has all 5 keys: hook, context, escalation, reveal, loop_twist.\n"
-            f"- Verify every script word count is between 45 and 68 words."
+            f"- Verify every script word count is between {active_profile.min_words} and {active_profile.max_words} words."
         )
 
         raw_text = ""
@@ -859,21 +1020,22 @@ class ScriptEngine:
                 failures.append(f"Missing required keys: {sorted(missing)}")
                 return False, failures
 
-            # Word count check (45 - 68 words)
+            # Word count check
             full_text = " ".join(str(script_dict.get(k, "")).strip() for k in ["hook", "context", "escalation", "reveal", "loop_twist"])
             wc = len(full_text.split())
-            if not (MIN_WORD_COUNT <= wc <= MAX_WORD_COUNT):
-                failures.append(f"Word count ({wc}) outside calibrated {MIN_WORD_COUNT}-{MAX_WORD_COUNT} range")
+            if not (active_profile.min_words <= wc <= active_profile.max_words):
+                failures.append(f"Word count ({wc}) outside calibrated {active_profile.min_words}-{active_profile.max_words} range")
 
             # Forbidden clichés check
             full_lower = full_text.lower()
-            for cliche in FORBIDDEN_CLICHES:
+            cliches_to_check = active_profile.forbidden_cliches if (active_profile and active_profile.forbidden_cliches) else FORBIDDEN_CLICHES
+            for cliche in cliches_to_check:
                 if cliche in full_lower:
                     failures.append(f"Forbidden AI cliché detected: '{cliche}'")
 
             # Critic evaluation
             rd = (research_data_map or {}).get(expected_topic.id)
-            eval_res = self.critic.evaluate(script_dict, rd)
+            eval_res = self.critic.evaluate(script_dict, rd, profile=active_profile)
             if not eval_res.passed:
                 failures.append(f"Critic rejected (Score {eval_res.score}/100): {eval_res.feedback}")
 

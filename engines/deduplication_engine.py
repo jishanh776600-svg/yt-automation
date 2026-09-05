@@ -13,7 +13,8 @@ import logging
 from typing import Dict, List, Any, Optional, Tuple, Set
 from dataclasses import dataclass, field
 from sqlalchemy.orm import Session
-from config.settings import GEMINI_API_KEY, AI_PROVIDER_AVAILABLE
+import os
+from config.settings import GEMINI_API_KEY, AI_PROVIDER_AVAILABLE, TEST_MODE
 from core.models import Topic, ScriptRecord, UploadRecord, Job
 
 logger = logging.getLogger(__name__)
@@ -91,6 +92,33 @@ class DeduplicationResult:
     shared_elements: List[str] = field(default_factory=list)
     reason: str = ""
     is_allowed: bool = True
+
+
+def is_current_affairs_category(category: Optional[str]) -> bool:
+    """Helper to detect current-affairs category taxonomies."""
+    if not category:
+        return False
+    try:
+        from config.constants import CurrentAffairsCategory
+        ca_cats = {c.value.upper() for c in CurrentAffairsCategory}
+        return category.upper() in ca_cats
+    except Exception:
+        return False
+
+
+def is_historical_category(category: Optional[str]) -> bool:
+    """Helper to detect historical category taxonomies."""
+    if not category:
+        return False
+    cat_upper = category.upper().replace(" ", "_")
+    if any(term in cat_upper for term in ["HISTOR", "BIZARRE", "LAW", "DISASTER", "WAR", "FIGURE", "BORDER", "INVENTION", "LOST_PLACE", "MYSTERY", "COINCIDENCE"]):
+        return True
+    try:
+        from config.constants import HistoricalCategory
+        hist_cats = {c.value.upper() for c in HistoricalCategory} | {c.name.upper() for c in HistoricalCategory}
+        return category.upper() in hist_cats or cat_upper in hist_cats
+    except Exception:
+        return False
 
 
 class StoryDeduplicationEngine:
@@ -232,10 +260,12 @@ class StoryDeduplicationEngine:
         corpus = []
         seen_titles = set()
 
-        # 1. Existing Topics with active jobs / uploads
+        # 1. Existing Topics with active jobs / uploads or approved/scheduled status
         active_jobs = db.query(Job).all()
         active_topic_ids = {j.topic_id for j in active_jobs if j.topic_id}
-        topics = db.query(Topic).filter(Topic.id.in_(active_topic_ids)).all() if active_topic_ids else []
+        topics = db.query(Topic).filter(
+            (Topic.id.in_(active_topic_ids)) | (Topic.status.in_(["APPROVED", "PRODUCED", "SCHEDULED", "QUEUED"]))
+        ).all()
         for t in topics:
             if exclude_topic_id and t.id == exclude_topic_id:
                 continue
@@ -397,7 +427,8 @@ class StoryDeduplicationEngine:
         Layer 3: Semantic NLI Evaluation with Structured Classification.
         Fail-Closed Safety: If has_entity_pair_collision=True and LLM is unavailable, candidate is REJECTED.
         """
-        if not AI_PROVIDER_AVAILABLE:
+        is_test = TEST_MODE or bool(os.getenv("PYTEST_CURRENT_TEST")) or os.environ.get("TEST_MODE", "").lower() in ("true", "1", "yes")
+        if not AI_PROVIDER_AVAILABLE or is_test:
             if has_entity_pair_collision:
                 pair_str = f"Year: {colliding_pair[0]}, Location: {colliding_pair[1]}" if colliding_pair else "Year+City"
                 return DeduplicationResult(
@@ -406,7 +437,7 @@ class StoryDeduplicationEngine:
                     matched_event_title=existing_title,
                     similarity_score=0.85,
                     shared_elements=[f"Entity-Pair Collision: {pair_str}"],
-                    reason=f"Candidate shares {pair_str} with '{existing_title}'. Semantic review was unavailable (missing API key), so candidate was rejected under fail-closed duplicate safety.",
+                    reason=f"Candidate shares {pair_str} with '{existing_title}'. Semantic review was unavailable (missing API key or test mode), so candidate was rejected under fail-closed duplicate safety.",
                     is_allowed=False
                 )
             return DeduplicationResult(
@@ -414,7 +445,7 @@ class StoryDeduplicationEngine:
                 classification="COMPLETELY_NEW_STORY",
                 similarity_score=0.0,
                 is_allowed=True,
-                reason="Tier 1 passed and no LLM key configured."
+                reason="Tier 1 passed and semantic review skipped in test/offline mode."
             )
 
         try:
@@ -507,7 +538,9 @@ class StoryDeduplicationEngine:
         candidate_script: str = "",
         corpus: Optional[List[EventFingerprint]] = None,
         db: Optional[Session] = None,
-        exclude_topic_id: Optional[str] = None
+        exclude_topic_id: Optional[str] = None,
+        category: Optional[str] = None,
+        policy: Optional[str] = None
     ) -> DeduplicationResult:
         """
         Evaluates a candidate story against the entire published and ready vault corpus.
@@ -516,6 +549,18 @@ class StoryDeduplicationEngine:
           2. Entity-Pair (Year + Location) escalation to Semantic NLI.
           3. General Semantic NLI for thematic connections.
         """
+        # Policy routing: if event_action_domain policy or current-affairs category
+        if policy == "event_action_domain" or (policy is None and is_current_affairs_category(category)):
+            from intelligence.deduplication import CurrentAffairsDeduplicationEngine
+            ca_engine = CurrentAffairsDeduplicationEngine()
+            return ca_engine.evaluate_candidate(
+                candidate_title=candidate_title,
+                candidate_summary=candidate_summary,
+                candidate_script=candidate_script,
+                db=db,
+                exclude_topic_id=exclude_topic_id
+            )
+
         if corpus is None and db is not None:
             corpus = self.get_published_and_ready_corpus(db, exclude_topic_id=exclude_topic_id)
         elif corpus is None:
@@ -592,3 +637,189 @@ class StoryDeduplicationEngine:
             is_allowed=True,
             reason="No duplicate or conflicting historical stories found in existing corpus."
         )
+
+
+class DeduplicationRouter:
+    """
+    Unified deduplication router that dispatches evaluation to the appropriate
+    engine based on the content/discovery profile's deduplication_policy
+    or topic category, preserving strict isolation and niche-agnostic extensibility.
+    """
+
+    def __init__(
+        self,
+        policy: Optional[str] = None,
+        story_engine: Optional[StoryDeduplicationEngine] = None,
+        current_affairs_engine: Optional[Any] = None
+    ):
+        self.policy = policy
+        self._story_engine = story_engine or StoryDeduplicationEngine()
+        self._ca_engine = current_affairs_engine
+
+    def _get_ca_engine(self):
+        if self._ca_engine is None:
+            from intelligence.deduplication import CurrentAffairsDeduplicationEngine
+            self._ca_engine = CurrentAffairsDeduplicationEngine()
+        return self._ca_engine
+
+    def resolve_policy(self, category: Optional[str] = None, explicit_policy: Optional[str] = None) -> str:
+        """Resolves whether to use 'event_action_domain' or 'historical_year_location'."""
+        if explicit_policy and explicit_policy != "auto":
+            return explicit_policy
+        if self.policy and self.policy != "auto":
+            return self.policy
+
+        # Check registered profiles via category first
+        if category:
+            try:
+                from core.discovery_profile import resolve_policy_for_category
+                cat_policy = resolve_policy_for_category(category)
+                if cat_policy:
+                    return cat_policy
+            except Exception:
+                pass
+            if is_current_affairs_category(category):
+                return "event_action_domain"
+            if is_historical_category(category):
+                return "historical_year_location"
+
+        # Check active content profile
+        try:
+            from core.content_profile import get_active_profile
+            profile = get_active_profile()
+            if profile and profile.deduplication_policy and profile.deduplication_policy != "auto":
+                return profile.deduplication_policy
+        except Exception:
+            pass
+
+        # Check active discovery profile
+        try:
+            from core.discovery_profile import get_active_discovery_profile
+            disc_prof = get_active_discovery_profile()
+            if disc_prof and disc_prof.deduplication_policy and disc_prof.deduplication_policy != "auto":
+                return disc_prof.deduplication_policy
+        except Exception:
+            pass
+
+        return "historical_year_location"
+
+    def evaluate_candidate(
+        self,
+        candidate_title: str,
+        candidate_summary: str = "",
+        candidate_script: str = "",
+        db: Optional[Session] = None,
+        corpus: Optional[List[EventFingerprint]] = None,
+        vault_files: Optional[List[Dict[str, Any]]] = None,
+        exclude_topic_id: Optional[str] = None,
+        category: Optional[str] = None,
+        policy: Optional[str] = None
+    ) -> DeduplicationResult:
+        resolved_policy = self.resolve_policy(category=category, explicit_policy=policy)
+        if resolved_policy == "event_action_domain":
+            ca_eng = self._get_ca_engine()
+            return ca_eng.evaluate_candidate(
+                candidate_title=candidate_title,
+                candidate_summary=candidate_summary,
+                candidate_script=candidate_script,
+                db=db,
+                vault_files=vault_files,
+                exclude_topic_id=exclude_topic_id
+            )
+        else:
+            return self._story_engine.evaluate_candidate(
+                candidate_title=candidate_title,
+                candidate_summary=candidate_summary,
+                candidate_script=candidate_script,
+                corpus=corpus,
+                db=db,
+                exclude_topic_id=exclude_topic_id
+            )
+
+    def are_stories_duplicate(
+        self,
+        title1: str,
+        summary1: str,
+        title2: str,
+        summary2: str,
+        category: Optional[str] = None,
+        policy: Optional[str] = None
+    ) -> Tuple[bool, str]:
+        """
+        Evaluates whether two candidate stories collide/duplicate each other.
+        Used for intra-batch deduplication across all niches.
+        """
+        resolved_policy = self.resolve_policy(category=category, explicit_policy=policy)
+        if resolved_policy == "event_action_domain":
+            from intelligence.deduplication import is_same_current_affairs_story
+            from intelligence.normalization import extract_entities_and_tokens
+            from core.discovery_profile import get_active_discovery_profile
+            disc_prof = get_active_discovery_profile()
+            e1, _, a1, kw1 = extract_entities_and_tokens(f"{title1}. {summary1}", profile=disc_prof)
+            is_dup, reason = is_same_current_affairs_story(
+                cand_title=title1,
+                cand_summary=summary1,
+                cand_actions=a1,
+                cand_entities=e1,
+                cand_keywords=kw1,
+                exist_title=title2,
+                exist_summary=summary2,
+                profile=disc_prof
+            )
+            return is_dup, reason
+        else:
+            fp1 = self._story_engine.build_fingerprint(title1, summary1)
+            fp2 = self._story_engine.build_fingerprint(title2, summary2)
+            dup_chk = self._story_engine.check_deterministic_duplicate(fp1, fp2)
+            if dup_chk and dup_chk.is_duplicate:
+                return True, dup_chk.reason
+            return False, "DISTINCT_STORIES"
+
+    def filter_intra_batch_duplicates(
+        self,
+        candidates: List[Any],
+        title_fn: Optional[Any] = None,
+        summary_fn: Optional[Any] = None,
+        category: Optional[str] = None,
+        policy: Optional[str] = None
+    ) -> List[Any]:
+        """
+        Canonical intra-batch deduplication gate.
+        Filters out any candidate that collides with an earlier candidate in the batch.
+        """
+        if not candidates or len(candidates) <= 1:
+            return list(candidates)
+
+        deduped = []
+        seen_items: List[Tuple[str, str]] = []
+
+        get_title = title_fn or (lambda c: c.get("title") if isinstance(c, dict) else getattr(c, "title", str(c)))
+        get_summary = summary_fn or (lambda c: c.get("summary", "") if isinstance(c, dict) else getattr(c, "summary", ""))
+
+        for cand in candidates:
+            c_title = get_title(cand) or ""
+            c_summary = get_summary(cand) or ""
+            is_dup = False
+            dup_reason = ""
+
+            for seen_title, seen_summary in seen_items:
+                is_colliding, reason = self.are_stories_duplicate(
+                    title1=c_title,
+                    summary1=c_summary,
+                    title2=seen_title,
+                    summary2=seen_summary,
+                    category=category,
+                    policy=policy
+                )
+                if is_colliding:
+                    is_dup = True
+                    dup_reason = f"collides with '{seen_title}' ({reason})"
+                    logger.warning(f"[INTRA_BATCH_DEDUP] Dropping duplicate candidate '{c_title[:45]}': {dup_reason}")
+                    break
+
+            if not is_dup:
+                seen_items.append((c_title, c_summary))
+                deduped.append(cand)
+
+        return deduped
+

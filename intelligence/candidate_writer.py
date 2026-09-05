@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from intelligence.models import EventCluster
 from intelligence.deduplication import CurrentAffairsDeduplicationEngine
 from core.models import Topic, SourceRecord, ClaimRecord
+from core.discovery_profile import DiscoveryProfile, get_active_discovery_profile
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +24,13 @@ class CandidateWriter:
         self,
         min_independent_domains: int = 2,
         min_opportunity_score: float = 40.0,
-        dedup_engine: Optional[CurrentAffairsDeduplicationEngine] = None
+        dedup_engine: Optional[CurrentAffairsDeduplicationEngine] = None,
+        profile: Optional[DiscoveryProfile] = None
     ):
+        self.profile = profile or get_active_discovery_profile()
         self.min_domains = min_independent_domains
         self.min_score = min_opportunity_score
-        self.dedup_engine = dedup_engine or CurrentAffairsDeduplicationEngine()
+        self.dedup_engine = dedup_engine or CurrentAffairsDeduplicationEngine(profile=self.profile)
 
     def evaluate_multi_source_evidence(self, cluster: EventCluster) -> Tuple[bool, str]:
         """

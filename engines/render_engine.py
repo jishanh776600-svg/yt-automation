@@ -8,6 +8,7 @@ import os
 import uuid
 import logging
 import subprocess
+import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
@@ -25,61 +26,110 @@ class RenderEngine:
         self.renders_dir = RENDERS_DIR
         self.renders_dir.mkdir(parents=True, exist_ok=True)
 
+
+    def get_safe_fallback_video(self) -> Path:
+        """Finds a verified, valid moving video MP4 from project assets to prevent black screens."""
+        from config.settings import ASSETS_DIR
+        candidate_dirs = [ASSETS_DIR, Path("data/assets"), Path("assets")]
+        for cdir in candidate_dirs:
+            if cdir.exists():
+                for f in cdir.glob("*_raw.mp4"):
+                    if f.is_file() and f.stat().st_size > 50000:
+                        return f
+                for f in cdir.glob("*.mp4"):
+                    if f.is_file() and f.stat().st_size > 50000 and not f.name.startswith("short_") and not f.name.startswith("clip_"):
+                        return f
+        # Fallback to standard fallback image if no MP4 found
+        return ASSETS_DIR / "fallback.jpg"
+
+    def validate_clip_visual(self, clip_path: Path, min_duration: float = 0.5) -> bool:
+        """
+        Validates that a rendered video clip exists, is readable, has non-zero size,
+        and does not consist entirely of black frames.
+        """
+        if not clip_path.exists() or clip_path.stat().st_size < 5000:
+            return False
+        try:
+            # Check duration with ffprobe/ffmpeg
+            cmd_probe = [
+                FFMPEG_EXE, "-i", str(clip_path),
+                "-t", "2",
+                "-vf", "blackdetect=d=0.8:pic_th=0.98",
+                "-an", "-f", "null", "-"
+            ]
+            res = subprocess.run(cmd_probe, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
+            err_out = res.stderr.decode("utf-8", errors="ignore")
+            # If blackdetect detects blackness spanning the entire probe, flag it
+            if "black_start:0" in err_out and ("black_end" not in err_out or "black_duration:2" in err_out):
+                logger.warning(f"[BLACK_DETECT] Clip {clip_path.name} flagged for continuous black frames.")
+                return False
+            return True
+        except Exception as e:
+            logger.warning(f"Clip validation notice: {e}")
+            return clip_path.stat().st_size > 10000
+
     def render_video_shot_clip(
         self,
         video_path: Path,
         duration: float,
         output_path: Path,
-        motion: str = "none"
+        motion: str = "none",
+        overlay_image: Optional[Path] = None
     ) -> Path:
         """
         Renders a video clip into a 1080x1920 vertical 9:16 MP4 clip.
         Uses intelligent center-crop scaling and automatic looping for shorter clips.
-        Maintains completely natural footage appearance with zero dark edge darkening or dimming.
+        Maintains native moving video at 30 fps (never freeze-frames with zoompan).
+        Supports optional overlay compositing.
         """
-        frames = max(1, int(duration * VIDEO_FPS))
-        
-        if motion == "subtle_zoom_in":
-            # Eased gentle zoom-in (1.0x to 1.06x max)
+        if overlay_image and Path(overlay_image).exists():
             vf_filter = (
-                f"scale={VIDEO_WIDTH*2}:{VIDEO_HEIGHT*2}:force_original_aspect_ratio=increase,"
-                f"crop={VIDEO_WIDTH*2}:{VIDEO_HEIGHT*2},"
-                f"zoompan=z='min(zoom+0.0006,1.06)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS},"
-                f"setsar=1,format=yuv420p"
+                f"[0:v]scale={VIDEO_WIDTH}:{VIDEO_HEIGHT}:force_original_aspect_ratio=increase,"
+                f"crop={VIDEO_WIDTH}:{VIDEO_HEIGHT}:(iw-{VIDEO_WIDTH})/2:(ih-{VIDEO_HEIGHT})/2,setsar=1[bg];"
+                f"[1:v]scale={VIDEO_WIDTH}:{VIDEO_HEIGHT}[ov];"
+                f"[bg][ov]overlay=0:0,format=yuv420p[v]"
             )
-        elif motion == "subtle_zoom_out":
-            # Eased gentle zoom-out (1.06x to 1.0x)
-            vf_filter = (
-                f"scale={VIDEO_WIDTH*2}:{VIDEO_HEIGHT*2}:force_original_aspect_ratio=increase,"
-                f"crop={VIDEO_WIDTH*2}:{VIDEO_HEIGHT*2},"
-                f"zoompan=z='if(lte(zoom,1.0),1.06,max(1.001,zoom-0.0006))':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS},"
-                f"setsar=1,format=yuv420p"
-            )
+            cmd = [
+                FFMPEG_EXE, "-y",
+                "-stream_loop", "-1",
+                "-ss", "0",
+                "-i", str(video_path),
+                "-i", str(overlay_image),
+                "-t", str(duration),
+                "-filter_complex", vf_filter,
+                "-map", "[v]",
+                "-c:v", "libx264",
+                "-preset", "slow",
+                "-crf", "18",
+                "-pix_fmt", "yuv420p",
+                "-r", str(VIDEO_FPS),
+                "-an",
+                str(output_path)
+            ]
         else:
-            # Clean direct center-crop reframing without artificial motion
+            # Clean direct center-crop reframing without zoompan, keeping native video motion 100% active
             vf_filter = (
                 f"scale={VIDEO_WIDTH}:{VIDEO_HEIGHT}:force_original_aspect_ratio=increase,"
                 f"crop={VIDEO_WIDTH}:{VIDEO_HEIGHT}:(iw-{VIDEO_WIDTH})/2:(ih-{VIDEO_HEIGHT})/2,"
                 f"setsar=1,format=yuv420p"
             )
+            cmd = [
+                FFMPEG_EXE, "-y",
+                "-stream_loop", "-1",
+                "-ss", "0",
+                "-i", str(video_path),
+                "-t", str(duration),
+                "-vf", vf_filter,
+                "-c:v", "libx264",
+                "-preset", "slow",
+                "-crf", "18",
+                "-pix_fmt", "yuv420p",
+                "-r", str(VIDEO_FPS),
+                "-an",
+                str(output_path)
+            ]
 
-        cmd = [
-            FFMPEG_EXE, "-y",
-            "-stream_loop", "-1",
-            "-ss", "0",
-            "-i", str(video_path),
-            "-t", str(duration),
-            "-vf", vf_filter,
-            "-c:v", "libx264",
-            "-preset", "slow",
-            "-crf", "18",
-            "-pix_fmt", "yuv420p",
-            "-r", str(VIDEO_FPS),
-            "-an",
-            str(output_path)
-        ]
-
-        logger.info(f"Rendering video shot clip ({duration:.1f}s, motion={motion}): {output_path.name}")
+        logger.info(f"Rendering video shot clip ({duration:.1f}s, overlay={'yes' if overlay_image else 'none'}): {output_path.name}")
         res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if res.returncode != 0:
             logger.warning(f"Video clip render warning: {res.stderr.decode('utf-8', errors='ignore')}")
@@ -164,16 +214,27 @@ class RenderEngine:
         media_path: Path,
         duration: float,
         motion: str,
-        output_path: Path
+        output_path: Path,
+        overlay_image: Optional[Path] = None
     ) -> Path:
         """
         Polymorphic shot renderer: dispatches to video or image rendering based on file extension/type.
         """
         suffix = media_path.suffix.lower()
         if suffix in [".mp4", ".mov", ".mkv", ".webm"]:
-            return self.render_video_shot_clip(media_path, duration, output_path, motion=motion)
+            out = self.render_video_shot_clip(media_path, duration, output_path, motion=motion, overlay_image=overlay_image)
         else:
-            return self.render_image_shot_clip(media_path, duration, motion, output_path)
+            out = self.render_image_shot_clip(media_path, duration, motion, output_path)
+
+        # Auto-Repair: verify rendered clip is not black or corrupt
+        if not self.validate_clip_visual(out, min_duration=min(duration * 0.5, 1.0)):
+            logger.warning(f"[AUTO_REPAIR] Shot clip {output_path.name} failed visual validation. Auto-repairing with safe moving asset.")
+            safe_asset = self.get_safe_fallback_video()
+            if safe_asset.suffix.lower() in [".mp4", ".mov", ".mkv", ".webm"]:
+                out = self.render_video_shot_clip(safe_asset, duration, output_path, motion=motion, overlay_image=overlay_image)
+            else:
+                out = self.render_image_shot_clip(safe_asset, duration, motion, output_path)
+        return out
 
     def assemble_short(
         self,
@@ -198,9 +259,16 @@ class RenderEngine:
 
         # Map directives if editing plan exists
         directives_by_shot = {}
-        if editing_plan and hasattr(editing_plan, "scenes"):
-            for sc in editing_plan.scenes:
+        if editing_plan:
+            shots_list = getattr(editing_plan, "shots", None) or getattr(editing_plan, "scenes", None) or []
+            for sc in shots_list:
                 directives_by_shot[sc.shot_id] = sc
+
+        # Auto-detect ass_subtitles_path from editing_plan if not explicitly passed
+        if not ass_subtitle_path and editing_plan and getattr(editing_plan, "ass_subtitles_path", None):
+            plan_ass = Path(editing_plan.ass_subtitles_path)
+            if plan_ass.exists():
+                ass_subtitle_path = plan_ass
 
         # Infer motion style if not explicitly supplied
         if not motion_style:
@@ -208,6 +276,25 @@ class RenderEngine:
 
         if not bgm_mood:
             bgm_mood = "Historical / Serious Documentary"
+
+        # Synchronize visual duration to cover master audio duration seamlessly
+        audio_dur = 0.0
+        if master_audio_path and Path(master_audio_path).exists():
+            try:
+                cmd_p = [FFMPEG_EXE, "-i", str(master_audio_path)]
+                res_p = subprocess.run(cmd_p, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                m = re.search(r"Duration:\s*(\d+):(\d+):(\d+\.\d+)", res_p.stderr.decode("utf-8", errors="ignore"))
+                if m:
+                    audio_dur = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3))
+            except Exception as pe:
+                logger.warning(f"Audio duration probe notice: {pe}")
+
+        total_visual_dur = sum([s.get("duration", 0.0) for s in shots_data])
+        target_dur = max(total_visual_dur, audio_dur)
+        if target_dur > total_visual_dur and shots_data:
+            deficit = target_dur - total_visual_dur
+            shots_data[-1]["duration"] = round(shots_data[-1]["duration"] + deficit, 2)
+            logger.info(f"[RENDER_SYNC] Extended final shot by {deficit:.2f}s to match master audio duration ({target_dur:.2f}s)")
 
         # 1. Render each individual shot clip
         with open(concat_list_path, "w", encoding="utf-8") as f_concat:
@@ -217,15 +304,43 @@ class RenderEngine:
                 media_path = Path(asset.local_path) if asset else (ASSETS_DIR / "fallback.jpg")
                 clip_out = self.renders_dir / f"clip_{job_id}_{idx}.mp4"
 
+                # Check for evidence overlay
+                overlay_path = None
+                if shot.get("overlay_image"):
+                    overlay_path = Path(shot["overlay_image"])
+                elif shot.get("evidence_overlay"):
+                    overlay_path = Path(shot["evidence_overlay"])
+
                 # Motion directive lookup
                 sc_dir = directives_by_shot.get(shot_id)
-                motion = sc_dir.camera_motion if sc_dir else shot.get("camera_motion", "none")
+                motion = "none"
+                if sc_dir:
+                    cm = getattr(sc_dir, "camera_motion", None)
+                    if cm is not None:
+                        motion = getattr(cm, "motion_type", cm)
+                        if hasattr(motion, "value"):
+                            motion = motion.value
+                    else:
+                        motion = shot.get("camera_motion", "none")
+                    # Check if evidence overlay path is specified in editing plan
+                    if getattr(sc_dir, "evidence_overlay_path", None):
+                        cand_overlay = Path(sc_dir.evidence_overlay_path)
+                        if cand_overlay.exists():
+                            overlay_path = cand_overlay
+                else:
+                    motion = shot.get("camera_motion", "none")
+
+                # Safety check: if media_path is an overlay PNG, avoid black-screen bug by falling back to fallback image/video
+                if media_path.suffix.lower() == ".png" and "overlay" in media_path.name.lower():
+                    overlay_path = media_path
+                    media_path = ASSETS_DIR / "fallback.jpg"
 
                 self.render_shot_clip(
                     media_path=media_path,
                     duration=shot["duration"],
                     motion=motion,
-                    output_path=clip_out
+                    output_path=clip_out,
+                    overlay_image=overlay_path
                 )
                 temp_clips.append(clip_out)
                 clean_clip_path = str(clip_out).replace("\\", "/")
@@ -261,7 +376,7 @@ class RenderEngine:
         # 3. Final composite: Add master audio and burn-in ASS subtitles
         if ass_subtitle_path and ass_subtitle_path.exists():
             clean_ass_path = str(ass_subtitle_path).replace("\\", "/").replace(":", "\\:")
-            vf_filter = f"ass='{clean_ass_path}',format=yuv420p"
+            vf_filter = f"ass=filename='{clean_ass_path}',format=yuv420p"
         else:
             vf_filter = "format=yuv420p"
 
@@ -269,6 +384,8 @@ class RenderEngine:
             FFMPEG_EXE, "-y",
             "-i", str(visual_only_path),
             "-i", str(master_audio_path),
+            "-map", "0:v:0",
+            "-map", "1:a:0",
             "-vf", vf_filter,
             "-c:v", "libx264",
             "-profile:v", "high",
@@ -285,6 +402,8 @@ class RenderEngine:
 
         logger.info(f"Rendering final short: {final_video_path.name}")
         res = subprocess.run(cmd_final, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if res.returncode != 0:
+            logger.error(f"Final render failed (code {res.returncode}): {res.stderr.decode('utf-8', errors='ignore')}")
 
         # Cleanup temp clips
         try:

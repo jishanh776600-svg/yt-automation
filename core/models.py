@@ -6,6 +6,7 @@ from sqlalchemy import (
     Column, String, Integer, Float, Boolean, DateTime, Text, ForeignKey
 )
 from sqlalchemy.orm import declarative_base, relationship
+from typing import Optional
 from config.constants import JobState, HistoricalCategory, LicenseType
 
 Base = declarative_base()
@@ -55,10 +56,59 @@ class Topic(Base):
     status = Column(String(32), default="DISCOVERED")
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # Phase 2 Event Intelligence Fields
+    event_id = Column(String(64), nullable=True, index=True)
+    verification_state = Column(String(64), default="SINGLE_CREDIBLE_SOURCE", nullable=True)
+    independent_sources_count = Column(Integer, default=1, nullable=True)
+    event_card_json = Column(Text, nullable=True)
+
     jobs = relationship("Job", back_populates="topic")
     sources = relationship("SourceRecord", back_populates="topic", cascade="all, delete-orphan")
     claims = relationship("ClaimRecord", back_populates="topic", cascade="all, delete-orphan")
     scripts = relationship("ScriptRecord", back_populates="topic", cascade="all, delete-orphan")
+    articles = relationship("ArticleRecord", back_populates="topic")
+
+
+class ArticleRecord(Base):
+    __tablename__ = "articles"
+
+    id = Column(String(64), primary_key=True)
+    title = Column(String(512), nullable=False)
+    source_name = Column(String(255), nullable=False)
+    source_type = Column(String(64), default="unknown", nullable=False)
+    source_tier = Column(String(32), default="TIER_4_UNKNOWN", nullable=False)
+    url = Column(Text, nullable=False)
+    normalized_url = Column(String(512), nullable=False, unique=True, index=True)
+    author = Column(String(255), nullable=True)
+    language = Column(String(32), default=None, nullable=True)
+    category = Column(String(64), default="Geopolitics", nullable=True)
+
+    published_utc = Column(DateTime, nullable=True, index=True)
+    discovered_utc = Column(DateTime, default=datetime.utcnow, nullable=False)
+    freshness_tier = Column(String(32), default="TIER_4", nullable=False)
+    freshness_score = Column(Float, default=0.0)
+    source_confidence = Column(Float, default=0.0)
+    composite_score = Column(Float, default=0.0)
+
+    summary = Column(Text, nullable=True)
+    raw_feed_text = Column(Text, nullable=True)
+    article_text = Column(Text, nullable=True)
+
+    extraction_status = Column(String(32), default="PENDING", nullable=False)
+    retrieval_status = Column(String(32), default="SUCCESS", nullable=False)
+
+    topic_id = Column(String(64), ForeignKey("topics.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    topic = relationship("Topic", back_populates="articles")
+
+    @property
+    def publisher(self) -> str:
+        return self.source_name
+
+    @property
+    def description(self) -> Optional[str]:
+        return self.summary
 
 
 class SourceRecord(Base):
@@ -86,6 +136,12 @@ class ClaimRecord(Base):
     confidence = Column(Float, default=1.0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # Phase 2 Provenance Fields
+    source_article_id = Column(String(64), nullable=True)
+    publisher = Column(String(255), nullable=True)
+    source_url = Column(Text, nullable=True)
+    evidence_excerpt = Column(Text, nullable=True)
+
     topic = relationship("Topic", back_populates="claims")
 
 
@@ -106,6 +162,12 @@ class ScriptRecord(Base):
     duration_target = Column(String(64), nullable=True)  # ULTRA_TIGHT, SWEET_SPOT, NARRATIVE_RICH
     status = Column(String(32), default="APPROVED")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Phase 3 Journalistic Scripting Fields
+    event_id = Column(String(64), nullable=True, index=True)
+    script_document_json = Column(Text, nullable=True)
+    provenance_complete = Column(Boolean, default=False)
+    validation_status = Column(String(32), default="PENDING")
 
     topic = relationship("Topic", back_populates="scripts")
 
@@ -401,4 +463,71 @@ class LearningEvent(Base):
     consumed_by_generation = Column(Boolean, default=False, nullable=False)
     consumed_by_job_id = Column(String(64), nullable=True, index=True)
     details_json = Column(Text, nullable=True)
+
+
+class VisualEvidenceRecord(Base):
+    """
+    Phase 4: Auditable persistent record of beat-level visual evidence retrieval
+    and coverage plan for a generated Short.
+    """
+    __tablename__ = "visual_evidence_records"
+
+    id = Column(String(64), primary_key=True)
+    event_id = Column(String(64), nullable=False, index=True)
+    script_id = Column(String(64), nullable=False, index=True)
+    overall_evidence_ratio = Column(Float, default=0.0, nullable=False)
+    direct_evidence_count = Column(Integer, default=0, nullable=False)
+    related_evidence_count = Column(Integer, default=0, nullable=False)
+    contextual_count = Column(Integer, default=0, nullable=False)
+    no_visual_count = Column(Integer, default=0, nullable=False)
+    plan_json = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class ProductionAssetManifestRecord(Base):
+    """
+    Phase 5: Auditable persistent record of the production asset manifest
+    connecting ScriptBeats, VisualEvidence, and Edit Decisions.
+    """
+    __tablename__ = "production_asset_manifest_records"
+
+    id = Column(String(64), primary_key=True)
+    manifest_id = Column(String(64), nullable=False, unique=True, index=True)
+    event_id = Column(String(64), nullable=False, index=True)
+    script_id = Column(String(64), nullable=False, index=True)
+    total_duration_seconds = Column(Float, nullable=False)
+    direct_evidence_ratio = Column(Float, default=0.0, nullable=False)
+    no_visual_ratio = Column(Float, default=0.0, nullable=False)
+    validation_status = Column(String(32), default="VALID", nullable=False)
+    manifest_json = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class RenderedVideoRecord(Base):
+    """
+    Phase 6: Auditable persistent record of headless rendered videos,
+    audio-visual synchronizations, QA verification results, and cloud vault buffer status.
+    """
+    __tablename__ = "rendered_video_records"
+
+    id = Column(String(64), primary_key=True)
+    manifest_id = Column(String(64), nullable=False, index=True)
+    event_id = Column(String(64), nullable=False, index=True)
+    script_id = Column(String(64), nullable=False, index=True)
+    video_path = Column(Text, nullable=False)
+    duration_seconds = Column(Float, nullable=False)
+    width = Column(Integer, default=1080, nullable=False)
+    height = Column(Integer, default=1920, nullable=False)
+    fps = Column(Float, default=30.0, nullable=False)
+    aspect_ratio = Column(String(32), default="9:16", nullable=False)
+    qa_status = Column(String(32), default="PENDING", nullable=False)  # PASSED, FAILED, PENDING
+    qa_report_json = Column(Text, nullable=True)
+    cloud_storage_path = Column(Text, nullable=True)
+    voice_id = Column(String(64), default="af_bella", nullable=False)
+    has_bgm = Column(Boolean, default=True, nullable=False)
+    has_sfx = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+
 

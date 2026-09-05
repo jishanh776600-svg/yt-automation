@@ -30,6 +30,10 @@ class MetricsCollector:
 
     def get_youtube_clients(self):
         """Initializes YouTube Data API and YouTube Analytics API clients."""
+        import os
+        if TEST_MODE or os.environ.get("TEST_MODE", "").lower() in ("true", "1", "yes"):
+            return None, None
+
         try:
             from googleapiclient.discovery import build
             from google.oauth2.credentials import Credentials

@@ -382,6 +382,7 @@ class TestIntelligenceLayer(unittest.TestCase):
 
     # 18. Historical topics unaffected
     def test_18_historical_topics_unaffected(self):
+        from core.discovery_profile import HISTORICAL_DISCOVERY_PROFILE
         hist_topic = Topic(
             id="top_hist_1",
             title="The Great Stink of London (1858)",
@@ -395,7 +396,7 @@ class TestIntelligenceLayer(unittest.TestCase):
 
         # Run historical discovery and verify it remains unaffected
         engine = TopicDiscoveryEngine()
-        results = engine.discover_topics(self.db, limit=1)
+        results = engine.discover_topics(self.db, limit=1, profile=HISTORICAL_DISCOVERY_PROFILE)
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].title, "The Great Stink of London (1858)")
         self.assertEqual(results[0].category, HistoricalCategory.DOCUMENTED_DISASTERS.value)
@@ -415,6 +416,7 @@ class TestIntelligenceLayer(unittest.TestCase):
 
     # 20. Intelligence failure does not break historical discovery
     def test_20_intelligence_failure_does_not_break_historical_discovery(self):
+        from core.discovery_profile import HISTORICAL_DISCOVERY_PROFILE
         engine = TopicDiscoveryEngine()
 
         # Even if current affairs discovery fails with an error
@@ -425,7 +427,7 @@ class TestIntelligenceLayer(unittest.TestCase):
         # Historical discovery continues running normally
         with patch.object(engine, "is_duplicate", return_value=False), \
              patch("engines.topic_discovery.AI_PROVIDER_AVAILABLE", False):
-            hist_results = engine.discover_topics(self.db, limit=1)
+            hist_results = engine.discover_topics(self.db, limit=1, profile=HISTORICAL_DISCOVERY_PROFILE)
             self.assertGreaterEqual(len(hist_results), 1)
             self.assertIn(hist_results[0].category, [c.value for c in HistoricalCategory])
 

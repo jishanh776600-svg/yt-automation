@@ -190,8 +190,8 @@ class UploadEngine:
 
         # Semantic Deduplication Gate: verifies candidate story is not a semantic duplicate of existing catalog
         try:
-            from engines.deduplication_engine import StoryDeduplicationEngine
-            dedup_engine = StoryDeduplicationEngine()
+            from engines.deduplication_engine import DeduplicationRouter
+            dedup_engine = DeduplicationRouter()
             desc = metadata.get("description", "") or ""
             dedup_res = dedup_engine.evaluate_candidate(
                 candidate_title=metadata.get("title", ""),
@@ -275,6 +275,17 @@ class UploadEngine:
         except Exception as e:
             logger.warning(f"[ORPHAN_RECOVERY] Pre-upload orphan search error: {e}")
             return None, f"ORPHAN_CHECK_ERROR:{e}"
+
+    def upload_and_schedule_short(
+        self,
+        db: Session,
+        job: Job,
+        render: RenderOutput,
+        metadata: Dict[str, Any],
+        scheduled_publish_at: datetime
+    ) -> UploadRecord:
+        """Alias for schedule_short."""
+        return self.schedule_short(db, job, render, metadata, scheduled_publish_at)
 
     def schedule_short(
         self,

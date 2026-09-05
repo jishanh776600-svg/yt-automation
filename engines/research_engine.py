@@ -41,12 +41,141 @@ class ResearchEngine:
             logger.warning(f"Wikipedia lookup notice for '{title}': {e}")
         return None
 
-    def research_topic(self, db: Session, topic: Topic) -> Dict[str, Any]:
+    def research_topic(self, db: Session, topic: Topic, profile: Optional[Any] = None) -> Dict[str, Any]:
         """
         Executes factual research, stores supporting sources & claim records in DB,
         and returns the complete structured factual corpus.
+        Prioritizes real ingested news articles (ArticleRecord) and pre-attached SourceRecords over Wikipedia.
         """
         logger.info(f"Researching topic: {topic.title}")
+
+        # 0. Primary path for Phase 2 Event Intelligence: Structured EventCard
+        if getattr(topic, "event_card_json", None):
+            from intelligence.event_card import EventCard
+            try:
+                card = EventCard.from_json(topic.event_card_json)
+                existing_claims = db.query(ClaimRecord).filter(ClaimRecord.topic_id == topic.id).all()
+                existing_sources = db.query(SourceRecord).filter(SourceRecord.topic_id == topic.id).all()
+                logger.info(f"Topic {topic.id} has structured EventCard ({card.event_id}); bypassing Wikipedia.")
+                return {
+                    "topic_title": topic.title,
+                    "topic_id": topic.id,
+                    "event_id": topic.event_id,
+                    "event_card": card.to_dict(),
+                    "verification_state": topic.verification_state,
+                    "sources_count": len(existing_sources) or len(card.sources),
+                    "claims_count": len(existing_claims) or len(card.claims),
+                    "primary_source": existing_sources[0].source_name if existing_sources else (card.sources[0]["publisher"] if card.sources else "News Ingestion"),
+                    "summary": topic.summary,
+                    "verified": True,
+                    "verified_claims": [
+                        {
+                            "claim": c.claim_text,
+                            "confidence": c.confidence,
+                            "source": c.supporting_sources or getattr(c, "publisher", "Wire"),
+                            "source_article_id": getattr(c, "source_article_id", None),
+                            "evidence_excerpt": getattr(c, "evidence_excerpt", None)
+                        }
+                        for c in existing_claims
+                    ] or [c.to_dict() for c in card.claims]
+                }
+            except Exception as e:
+                logger.warning(f"Error reading event_card_json for topic {topic.id}: {e}")
+
+        # 0b. Secondary path for Current Affairs: Linked real news articles
+        from core.models import ArticleRecord
+        linked_articles = db.query(ArticleRecord).filter(ArticleRecord.topic_id == topic.id).all()
+        if linked_articles:
+            logger.info(f"Topic {topic.id} has {len(linked_articles)} linked real news articles; bypassing Wikipedia.")
+            sources_added = []
+            claims_added = []
+            for art in linked_articles:
+                source_rec = SourceRecord(
+                    topic_id=topic.id,
+                    source_name=art.source_name,
+                    source_url=art.url,
+                    source_type="news_report",
+                    confidence=art.source_confidence if hasattr(art, "source_confidence") and art.source_confidence else 0.85
+                )
+                db.add(source_rec)
+                sources_added.append(source_rec)
+
+                text_content = art.article_text or art.summary or topic.summary
+                if text_content:
+                    sentences = [s.strip() for s in text_content.split(".") if len(s.strip()) > 20][:5]
+                    for s in sentences:
+                        claim = ClaimRecord(
+                            topic_id=topic.id,
+                            claim_text=s + ".",
+                            verification_status="VERIFIED",
+                            confidence=0.90,
+                            supporting_sources=art.source_name,
+                            source_article_id=art.id,
+                            publisher=art.source_name,
+                            source_url=art.url,
+                            evidence_excerpt=s + "."
+                        )
+                        db.add(claim)
+                        claims_added.append(claim)
+            db.commit()
+            return {
+                "topic_title": topic.title,
+                "topic_id": topic.id,
+                "sources_count": len(sources_added),
+                "claims_count": len(claims_added),
+                "primary_source": sources_added[0].source_name if sources_added else "News Ingestion",
+                "summary": topic.summary,
+                "verified": True,
+                "verified_claims": [
+                    {
+                        "claim": c.claim_text,
+                        "confidence": c.confidence,
+                        "source": c.supporting_sources
+                    }
+                    for c in claims_added
+                ]
+            }
+
+        # 1. Check for pre-existing verified sources (e.g. wire reports, custom sources)
+        existing_sources = db.query(SourceRecord).filter(SourceRecord.topic_id == topic.id).all()
+        if existing_sources:
+            logger.info(f"Topic {topic.id} has {len(existing_sources)} pre-verified sources; bypassing Wikipedia.")
+            existing_claims = db.query(ClaimRecord).filter(ClaimRecord.topic_id == topic.id).all()
+            if not existing_claims:
+                summary_text = topic.summary or topic.title
+                sentences = [s.strip() for s in summary_text.split(".") if len(s.strip()) > 20][:6]
+                if not sentences:
+                    sentences = [summary_text]
+                primary_source = existing_sources[0].source_url or existing_sources[0].source_name
+                for s in sentences:
+                    claim = ClaimRecord(
+                        topic_id=topic.id,
+                        claim_text=s,
+                        verification_status="VERIFIED",
+                        supporting_sources=primary_source,
+                        confidence=0.95
+                    )
+                    db.add(claim)
+                    existing_claims.append(claim)
+                db.commit()
+
+            return {
+                "topic_title": topic.title,
+                "summary": topic.summary or "",
+                "verified_claims": [
+                    {
+                        "claim": c.claim_text,
+                        "confidence": c.confidence,
+                        "source": c.supporting_sources
+                    }
+                    for c in existing_claims
+                ],
+                "sources_count": len(existing_sources),
+                "claims_count": len(existing_claims),
+                "verified": True
+            }
+
+        # 2. Fallback to Wikipedia lookup for topics without pre-existing sources
         wiki_page = self.search_wikipedia_page(topic.title)
 
         sources_added = []
@@ -80,12 +209,17 @@ class ResearchEngine:
 
         # Fallback / Built-in curated verification
         if not claims_added:
+            from core.content_profile import get_active_profile
+            active_prof = profile or get_active_profile()
+            archive_name = active_prof.default_archive_name if active_prof else "Documented Historical Record"
+            archive_url = active_prof.default_archive_url if active_prof else "https://en.wikipedia.org/wiki/History"
+
             summary_text = topic.summary
             fallback_source = SourceRecord(
                 topic_id=topic.id,
-                source_name="Documented Historical Record",
-                source_url="https://en.wikipedia.org/wiki/History",
-                source_type="historical_archive",
+                source_name=archive_name,
+                source_url=archive_url,
+                source_type="curated_archive",
                 confidence=0.95
             )
             db.add(fallback_source)

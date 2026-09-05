@@ -153,8 +153,13 @@ VIDEO_HEIGHT = 1920
 VIDEO_FPS = 30
 VIDEO_ASPECT_RATIO = "9:16"
 
+class ContentNiche(str, Enum):
+    MYSTERY_BIZARRE = "Mystery / Bizarre"
+    WEIRD_SCIENCE = "Weird Science"
+
+
 # Duration targets (Seconds)
-MIN_DURATION_SEC = 21.0
+MIN_DURATION_SEC = 22.0
 MAX_DURATION_SEC = 25.0
 TARGET_DURATION_SEC = 23.0
 

@@ -12,12 +12,14 @@ Slot Rules:
 - Never schedule into a past slot or a slot less than min_lead_minutes in the future.
 - If today's remaining slots are full or passed, rolls over to the next UTC day starting at 06:00 UTC.
 """
+import os
 import logging
 from datetime import datetime, date, time as dtime, timedelta
 from typing import Dict, Any, List, Set, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from config.constants import DAILY_SHORTS_LIMIT, PUBLISHING_SLOTS_UTC
+from config.settings import TEST_MODE
 from core.models import UploadRecord
 
 logger = logging.getLogger(__name__)
@@ -66,48 +68,50 @@ class PublicationScheduler:
         day_counts = {}
         slot_details = {}
 
-        try:
-            from dashboard.data_provider import SystemDataProvider
-            dp = SystemDataProvider()
-            inventory = dp.fetch_authoritative_youtube_inventory(db=db)
-            public_shorts = inventory.get("public_shorts", [])
-            scheduled_shorts = inventory.get("scheduled_shorts", [])
+        is_test = TEST_MODE or os.environ.get("TEST_MODE", "").lower() in ("true", "1", "yes")
+        if not is_test:
+            try:
+                from dashboard.data_provider import SystemDataProvider
+                dp = SystemDataProvider()
+                inventory = dp.fetch_authoritative_youtube_inventory(db=db)
+                public_shorts = inventory.get("public_shorts", [])
+                scheduled_shorts = inventory.get("scheduled_shorts", [])
 
-            for p in public_shorts:
-                pub_iso = p.get("published_at")
-                if pub_iso:
-                    p_dt = _parse_yt_iso(pub_iso)
-                    cal_date = p_dt.date()
-                    day_counts[cal_date] = day_counts.get(cal_date, 0) + 1
-                    # Associate to nearest canonical slot
-                    for hour, minute in self.get_canonical_slot_times():
-                        slot_cand = p_dt.replace(hour=hour, minute=minute, second=0, microsecond=0)
-                        if abs((p_dt - slot_cand).total_seconds()) <= 3600:
-                            occupied.add(slot_cand)
-                            slot_details.setdefault(slot_cand, []).append({
-                                "id": p["id"],
-                                "title": p["title"],
-                                "type": "PUBLISHED",
-                                "time": p_dt.isoformat() + "Z"
-                            })
+                for p in public_shorts:
+                    pub_iso = p.get("published_at")
+                    if pub_iso:
+                        p_dt = _parse_yt_iso(pub_iso)
+                        cal_date = p_dt.date()
+                        day_counts[cal_date] = day_counts.get(cal_date, 0) + 1
+                        # Associate to nearest canonical slot
+                        for hour, minute in self.get_canonical_slot_times():
+                            slot_cand = p_dt.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                            if abs((p_dt - slot_cand).total_seconds()) <= 3600:
+                                occupied.add(slot_cand)
+                                slot_details.setdefault(slot_cand, []).append({
+                                    "id": p["id"],
+                                    "title": p["title"],
+                                    "type": "PUBLISHED",
+                                    "time": p_dt.isoformat() + "Z"
+                                })
 
-            for s in scheduled_shorts:
-                sch_iso = s.get("publish_at")
-                if sch_iso:
-                    s_dt = _parse_yt_iso(sch_iso)
-                    cal_date = s_dt.date()
-                    day_counts[cal_date] = day_counts.get(cal_date, 0) + 1
-                    slot_dt = s_dt.replace(second=0, microsecond=0)
-                    occupied.add(slot_dt)
-                    slot_details.setdefault(slot_dt, []).append({
-                        "id": s["id"],
-                        "title": s["title"],
-                        "type": "SCHEDULED",
-                        "time": sch_iso
-                    })
+                for s in scheduled_shorts:
+                    sch_iso = s.get("publish_at")
+                    if sch_iso:
+                        s_dt = _parse_yt_iso(sch_iso)
+                        cal_date = s_dt.date()
+                        day_counts[cal_date] = day_counts.get(cal_date, 0) + 1
+                        slot_dt = s_dt.replace(second=0, microsecond=0)
+                        occupied.add(slot_dt)
+                        slot_details.setdefault(slot_dt, []).append({
+                            "id": s["id"],
+                            "title": s["title"],
+                            "type": "SCHEDULED",
+                            "time": sch_iso
+                        })
 
-        except Exception as e:
-            logger.warning(f"[SCHEDULER] Authoritative YouTube fetch notice: {e}")
+            except Exception as e:
+                logger.warning(f"[SCHEDULER] Authoritative YouTube fetch notice: {e}")
 
         # Reconcile with any SQLite records not caught above
         db_records = db.query(UploadRecord).filter(
@@ -152,6 +156,15 @@ class PublicationScheduler:
             datetime.combine(target_date, dtime(hour=hour, minute=minute))
             for hour, minute in self.get_canonical_slot_times()
         ]
+
+    def get_vacant_slots(
+        self,
+        db: Session,
+        days_horizon: int = 2,
+        reference_time: Optional[datetime] = None
+    ) -> List[datetime]:
+        """Convenience alias for get_vacant_slots_in_horizon."""
+        return self.get_vacant_slots_in_horizon(db=db, reference_time=reference_time)
 
     def get_vacant_slots_in_horizon(
         self,

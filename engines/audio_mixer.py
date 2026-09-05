@@ -104,6 +104,9 @@ class AudioMixer:
         self.music_dir.mkdir(parents=True, exist_ok=True)
         self.sfx_dir.mkdir(parents=True, exist_ok=True)
         self.renders_dir.mkdir(parents=True, exist_ok=True)
+        from engines.visual_intelligence.bgm_selector import BGMSelector
+        self.bgm_selector = BGMSelector()
+
 
     def classify_story_mood_ai(
         self,
@@ -204,16 +207,17 @@ class AudioMixer:
                 score_str = ", ".join(f"{k}:{v}" for k, v in scores.items())
                 reason = f"Keyword matching ({selected_key} with {scores[selected_key]} pts [{score_str}])"
             else:
-                # Deterministic balanced rotation across the 4 valid tracks
-                import hashlib
-                hash_input = f"{title}_{category}_{summary}_{script_text[:50]}"
-                hash_int = int(hashlib.md5(hash_input.encode("utf-8")).hexdigest(), 16)
-                keys_list = list(BGM_LIBRARY.keys())
-                selected_key = keys_list[hash_int % len(keys_list)]
+                # Intelligent BGMSelector profile matching and anti-repetition rotation
+                selected_key = self.bgm_selector.select_track(
+                    category=category,
+                    title=title,
+                    script_text=f"{summary} {script_text}"
+                )
                 detected_intensity = BGM_LIBRARY[selected_key]["default_intensity"]
-                reason = f"Deterministic balanced rotation across 4 BGM tracks (Hash index: {hash_int % len(keys_list)})"
+                reason = f"BGMSelector profile matching & rotation (Track: {selected_key})"
 
             detected_mood = BGM_LIBRARY[selected_key]["mood"]
+
 
         # Resolve physical file on disk (dynamically from self.music_dir)
         track_info = BGM_LIBRARY[selected_key]
@@ -347,51 +351,73 @@ class AudioMixer:
     def mix_audio(
         self,
         voice_path: Path,
-        music_path: Path,
+        music_path: Optional[Path],
         output_path: Path,
         duration: float,
         bgm_volume_db: float = BGM_MIX_VOLUME_DB,
         job_id: str = "",
         sfx_layer_path: Optional[Path] = None,
-        target_bgm_lufs: float = TARGET_BGM_LUFS
-    ) -> Tuple[Path, Path]:
+        target_bgm_lufs: float = TARGET_BGM_LUFS,
+        bgm_policy: str = "NONE"
+    ) -> Tuple[Path, Optional[Path]]:
         """
-        Produces Stage B (BGM-only) and Stage C (Master mixed audio normalized to -14.0 LUFS)
-        incorporating Voice (dominant), SFX layer (ducked accents), and BGM (ducked bed).
+        Produces Stage B (BGM-only, if enabled) and Stage C (Master mixed audio normalized to -14.0 LUFS)
+        incorporating Voice (dominant), SFX layer (ducked accents), and optional BGM (ducked bed).
+        When bgm_policy == 'NONE', operates in high-clarity voice-first mode without continuous music.
         Returns: (master_audio_path, bgm_only_path)
         """
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
         job_tag = job_id if job_id else uuid.uuid4().hex[:8]
-        bgm_only_path = self.renders_dir / f"bgm_only_{job_tag}.wav"
-        self.generate_stage_b_bgm_only(
-            source_music_path=music_path,
-            output_bgm_only_path=bgm_only_path,
-            duration=duration,
-            bgm_volume_db=bgm_volume_db,
-            target_bgm_lufs=target_bgm_lufs
-        )
 
         has_sfx = bool(sfx_layer_path and sfx_layer_path.exists() and sfx_layer_path.stat().st_size > 1000)
+        use_bgm = (bgm_policy != "NONE" and music_path is not None and music_path.exists())
 
-        if has_sfx:
-            filter_complex = (
-                f"[0:a]aresample={AUDIO_SAMPLE_RATE},apad=whole_dur={duration},aformat=channel_layouts=stereo[v];"
-                f"[1:a]aresample={AUDIO_SAMPLE_RATE},atrim=0:{duration},aformat=channel_layouts=stereo[bgm];"
-                f"[2:a]aresample={AUDIO_SAMPLE_RATE},atrim=0:{duration},apad=whole_dur={duration},aformat=channel_layouts=stereo[sfx];"
-                f"[v][bgm][sfx]amix=inputs=3:duration=first:dropout_transition=2:normalize=0[mixed];"
-                f"[mixed]loudnorm=I={TARGET_LUFS}:LRA=7:tp=-1.0[outa]"
+        bgm_only_path: Optional[Path] = None
+        if use_bgm:
+            bgm_only_path = self.renders_dir / f"bgm_only_{job_tag}.wav"
+            self.generate_stage_b_bgm_only(
+                source_music_path=music_path,
+                output_bgm_only_path=bgm_only_path,
+                duration=duration,
+                bgm_volume_db=bgm_volume_db,
+                target_bgm_lufs=target_bgm_lufs
             )
-            cmd_inputs = ["-i", str(voice_path), "-i", str(bgm_only_path), "-i", str(sfx_layer_path)]
+
+            if has_sfx:
+                filter_complex = (
+                    f"[0:a]aresample={AUDIO_SAMPLE_RATE},apad=whole_dur={duration},aformat=channel_layouts=stereo[v];"
+                    f"[1:a]aresample={AUDIO_SAMPLE_RATE},atrim=0:{duration},aformat=channel_layouts=stereo[bgm];"
+                    f"[2:a]aresample={AUDIO_SAMPLE_RATE},atrim=0:{duration},apad=whole_dur={duration},aformat=channel_layouts=stereo[sfx];"
+                    f"[v][bgm][sfx]amix=inputs=3:duration=first:dropout_transition=2:normalize=0[mixed];"
+                    f"[mixed]loudnorm=I={TARGET_LUFS}:LRA=7:tp=-1.0[outa]"
+                )
+                cmd_inputs = ["-i", str(voice_path), "-i", str(bgm_only_path), "-i", str(sfx_layer_path)]
+            else:
+                filter_complex = (
+                    f"[0:a]aresample={AUDIO_SAMPLE_RATE},apad=whole_dur={duration},aformat=channel_layouts=stereo[v];"
+                    f"[1:a]atrim=0:{duration},aformat=channel_layouts=stereo[bgm];"
+                    f"[v][bgm]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[mixed];"
+                    f"[mixed]loudnorm=I={TARGET_LUFS}:LRA=7:tp=-1.0[outa]"
+                )
+                cmd_inputs = ["-i", str(voice_path), "-i", str(bgm_only_path)]
         else:
-            filter_complex = (
-                f"[0:a]aresample={AUDIO_SAMPLE_RATE},apad=whole_dur={duration},aformat=channel_layouts=stereo[v];"
-                f"[1:a]atrim=0:{duration},aformat=channel_layouts=stereo[bgm];"
-                f"[v][bgm]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[mixed];"
-                f"[mixed]loudnorm=I={TARGET_LUFS}:LRA=7:tp=-1.0[outa]"
-            )
-            cmd_inputs = ["-i", str(voice_path), "-i", str(bgm_only_path)]
+            # NO-BGM Policy: Voice + optional SFX only, normalized cleanly
+            if has_sfx:
+                filter_complex = (
+                    f"[0:a]aresample={AUDIO_SAMPLE_RATE},apad=whole_dur={duration},aformat=channel_layouts=stereo[v];"
+                    f"[1:a]aresample={AUDIO_SAMPLE_RATE},atrim=0:{duration},apad=whole_dur={duration},aformat=channel_layouts=stereo[sfx];"
+                    f"[v][sfx]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[mixed];"
+                    f"[mixed]loudnorm=I={TARGET_LUFS}:LRA=7:tp=-1.0[outa]"
+                )
+                cmd_inputs = ["-i", str(voice_path), "-i", str(sfx_layer_path)]
+            else:
+                filter_complex = (
+                    f"[0:a]aresample={AUDIO_SAMPLE_RATE},apad=whole_dur={duration},aformat=channel_layouts=stereo,"
+                    f"loudnorm=I={TARGET_LUFS}:LRA=7:tp=-1.0[outa]"
+                )
+                cmd_inputs = ["-i", str(voice_path)]
 
+        codec_args = ["-c:a", "pcm_s16le"] if output_path.suffix.lower() == ".wav" else ["-c:a", "aac", "-b:a", "256k"]
         cmd = [
             FFMPEG_EXE, "-y",
             *cmd_inputs,
@@ -399,13 +425,13 @@ class AudioMixer:
             "-map", "[outa]",
             "-ac", "2",
             "-ar", str(AUDIO_SAMPLE_RATE),
-            "-c:a", "aac",
-            "-b:a", "256k",
+            *codec_args,
             str(output_path)
         ]
 
+        bgm_label = music_path.name if music_path else "NONE"
         logger.info(
-            f"Mixing master audio (Voice: {voice_path.name} + BGM: {music_path.name} at {bgm_volume_db}dB "
+            f"Mixing master audio (Voice: {voice_path.name} + BGM: {bgm_label} at {bgm_volume_db}dB "
             f"+ SFX: {'YES' if has_sfx else 'NONE'}, Master Target: {TARGET_LUFS} LUFS, Duration: {duration:.2f}s)"
         )
         res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -413,27 +439,39 @@ class AudioMixer:
         if res.returncode != 0 or not output_path.exists() or output_path.stat().st_size < 1000:
             err_msg = res.stderr.decode("utf-8", errors="ignore")
             logger.warning(f"Audio mixing warning ({err_msg}). Executing direct repair remix...")
-            repair_filter = (
-                f"[0:a]aresample={AUDIO_SAMPLE_RATE},aformat=channel_layouts=stereo[v];"
-                f"[1:a]aformat=channel_layouts=stereo[bgm];"
-                f"[v][bgm]amix=inputs=2:duration=first:normalize=0[outa]"
-            )
-            cmd_repair = [
-                FFMPEG_EXE, "-y",
-                "-i", str(voice_path),
-                "-i", str(bgm_only_path),
-                "-filter_complex", repair_filter,
-                "-map", "[outa]",
-                "-ac", "2",
-                "-ar", str(AUDIO_SAMPLE_RATE),
-                "-c:a", "aac",
-                "-b:a", "192k",
-                str(output_path)
-            ]
+            repair_codec_args = ["-c:a", "pcm_s16le"] if output_path.suffix.lower() == ".wav" else ["-c:a", "aac", "-b:a", "192k"]
+            if bgm_only_path and bgm_only_path.exists():
+                repair_filter = (
+                    f"[0:a]aresample={AUDIO_SAMPLE_RATE},aformat=channel_layouts=stereo[v];"
+                    f"[1:a]aformat=channel_layouts=stereo[bgm];"
+                    f"[v][bgm]amix=inputs=2:duration=first:normalize=0[outa]"
+                )
+                cmd_repair = [
+                    FFMPEG_EXE, "-y",
+                    "-i", str(voice_path),
+                    "-i", str(bgm_only_path),
+                    "-filter_complex", repair_filter,
+                    "-map", "[outa]",
+                    "-ac", "2",
+                    "-ar", str(AUDIO_SAMPLE_RATE),
+                    *repair_codec_args,
+                    str(output_path)
+                ]
+            else:
+                repair_filter = f"aresample={AUDIO_SAMPLE_RATE},aformat=channel_layouts=stereo"
+                cmd_repair = [
+                    FFMPEG_EXE, "-y",
+                    "-i", str(voice_path),
+                    "-af", repair_filter,
+                    "-ac", "2",
+                    "-ar", str(AUDIO_SAMPLE_RATE),
+                    *repair_codec_args,
+                    str(output_path)
+                ]
             subprocess.run(cmd_repair, check=True)
 
         if not output_path.exists() or output_path.stat().st_size < 1000:
             raise RuntimeError(f"Master audio mixing failed: Output file {output_path} is missing or empty.")
 
-        logger.info(f"[+] Master audio successfully mixed with BGM: {output_path.name} ({output_path.stat().st_size} bytes)")
+        logger.info(f"[+] Master audio successfully mixed (Policy: {bgm_policy}): {output_path.name} ({output_path.stat().st_size} bytes)")
         return output_path, bgm_only_path

@@ -1,302 +1,258 @@
-# 📘 AI Handoff & Project Context: Autonomous YouTube Shorts Production Pipeline
+# 📘 AI Handoff & Project Context: AL-AMR Autonomous Geopolitical YouTube Shorts Pipeline
 
-> **Document Version**: 2.0  
-> **Last Updated**: 2026-08-28  
+> **Document Version**: 3.0  
+> **Last Updated**: 2026-09-05  
 > **Repository**: `https://github.com/jishanh776600-svg/yt-automation.git`  
-> **Purpose**: Durable, comprehensive project handoff document for AI coding assistants and developers maintaining, diagnosing, and expanding this autonomous YouTube channel pipeline.
+> **Branch**: `main`  
+> **Purpose**: Durable, comprehensive project architecture, operations, and handoff document for AI coding assistants and developers maintaining, diagnosing, and expanding AL-AMR — the 100% cloud-autonomous, headless, zero-local-dependency YouTube Shorts production and publishing pipeline.
 
 ---
 
-## 1. Project Purpose
+## 1. Executive Summary & Core Mission
 
-This project is an **autonomous, 24/7 $0-cost YouTube Shorts creation, QA, publishing, and self-learning pipeline** focused on high-retention historical documentaries and bizarre true events.
+AL-AMR is a **100% cloud-autonomous, headless, 24/7 current-affairs and geopolitics YouTube Shorts production engine**. It transforms real-time global news into verified, high-retention vertical documentary videos (1080x1920, 30fps) without requiring a human operator, local PC, local browser, GUI automation, or home internet connection.
 
-### End-to-End Objective:
-1. Discover high-engagement, factual historical topics across curated categories.
-2. Fact-check claims against historical archives (Wikipedia API).
-3. Script 21–25 second viral documentary narratives with 5 hook variations.
-4. Plan 5 visual scenes and fetch unique 1080x1920 portrait imagery (Pexels API + anti-duplication tracking).
-5. Synthesize voiceover using an offline ONNX TTS engine (Kokoro-v1.0).
-6. Transcribe word-level golden karaoke subtitle overlays (`.ass`) using local Faster-Whisper.
-7. Select an authentic background music track from a 4-track local library using Gemini AI mood classification + deterministic keyword fallbacks.
-8. Render 1080x1920 60fps MP4 vertical video with Ken Burns dynamic motion (FFmpeg).
-9. Perform a 12-point quality assurance (QA) inspection including FFT cross-correlation BGM identity verification extracted directly from the final MP4.
-10. Automatically upload and publicly publish to YouTube (OAuth 2.0 YouTube Data API v3).
-11. Collect view retention/engagement metrics, compute rolling baselines, and persist self-learning patterns across independent cloud runs.
+### Channel Focus:
+* **Current Geopolitics & World Affairs**: Real-time breaking developments, diplomatic tensions, international security, defense developments, and high-interest global events.
+* **Recency Hierarchy**: Strict focus on the last 0–24 hours (Tier 1 & Tier 2), falling back to 24–72 hours (Tier 3) only when breaking story density is low.
+* **Journalistic Standard**: Factual claims grounded with 5W1H entity extraction and natural language inference (NLI) claim verification. Zero historical trivia fallbacks in current-affairs mode.
+* **Production Aesthetics**: Pure voice narration (Sarah / `af_sarah`), word-level golden karaoke subtitle overlays (`.ass`), dynamic Ken Burns pan/zoom on real visual evidence, zero SFX, and clean documentary audio.
 
 ---
 
-## 2. Current Architecture & Directory Structure
-
-```
-yt-automation/
-├── .github/
-│   └── workflows/
-│       └── autopilot.yml          # GitHub Actions 24/7 cron runner (4 runs/day)
-├── assets/
-│   ├── fonts/                     # Montserrat-Bold & other ASS subtitle fonts
-│   ├── music/                     # 4 approved BGM tracks (.mp3 & .wav)
-│   │   ├── Empty - Emotional Sad Background.mp3 / .wav
-│   │   ├── No Copyright Background Music.mp3 / .wav
-│   │   ├── No copyright Best Historical.mp3 / .wav
-│   │   └── The Flux Beneath It All.mp3 / .wav
-│   └── sfx/                       # Whooshes, risers, and transition sound effects
-├── config/
-│   ├── __init__.py
-│   ├── constants.py               # Enums, video specs, duration constraints, daily limits
-│   └── settings.py                # Environment loading, dynamic paths, provider configs
-├── core/
-│   ├── __init__.py
-│   ├── database.py                # SQLite database session and connection setup
-│   ├── license_tracker.py         # Commercial CC0 / Pexels license compliance verification
-│   ├── models.py                  # SQLAlchemy ORM schemas (Job, Topic, Render, Upload, etc.)
-│   └── state_machine.py           # 20-state pipeline lifecycle and transitions
-├── dashboard/
-│   ├── __init__.py
-│   ├── app.py                     # FastAPI web dashboard for monitoring jobs and analytics
-│   ├── static/                    # Dashboard CSS/JS assets
-│   └── templates/                 # Jinja2 HTML templates
-├── data/                          # Runtime data directory (ephemeral in cloud, persisted locally)
-│   ├── database/
-│   │   └── pipeline.db            # SQLite relational database
-│   ├── captions/                  # Generated .ass karaoke subtitle files
-│   ├── LEARNING_LOG.md            # Markdown performance intelligence log
-│   ├── renders/                   # Generated 1080x1920 MP4s and master audio mixes
-│   └── voice/                     # Synthesized .wav voiceover narrations
-├── engines/
-│   ├── __init__.py
-│   ├── analytics_engine.py        # Orchestrates the feedback loop
-│   ├── asset_fetcher.py           # Pexels API photo search + anti-duplication database tracking
-│   ├── audio_mixer.py             # 3-stage audio pipeline (Voice, BGM-only, Master Mix)
-│   ├── caption_engine.py          # Faster-Whisper word-level subtitle generation
-│   ├── experiment_manager.py      # 60/30/10 content formula and A/B hypothesis engine
-│   ├── learning_engine.py         # Extracts winning patterns and updates confidence scores
-│   ├── metrics_collector.py       # Queries YouTube Data API v3 and Analytics API
-│   ├── qa_engine.py               # 12-point QA battery + FFT BGM cross-correlation audit
-│   ├── render_engine.py           # FFmpeg video compositing with Ken Burns zoom/pan effects
-│   ├── report_generator.py        # Generates structured performance intelligence summaries
-│   ├── research_engine.py         # Wikipedia-API factual archive retrieval
-│   ├── script_engine.py           # Gemini 3.6 Flash 5-hook scriptwriter
-│   ├── seo_engine.py              # Gemini 3.6 Flash high-CTR title, description & tag creator
-│   ├── storyboard_engine.py       # Gemini 3.6 Flash 5-scene visual storyboard planner
-│   ├── topic_discovery.py         # Curated + dynamic topic generation
-│   ├── tts_engine.py              # Kokoro ONNX offline voice synthesis
-│   ├── upload_engine.py           # YouTube Data API v3 upload & status verification
-│   └── video_analyzer.py          # Classifies videos (Breakout/Solid/Underperforming)
-├── tests/
-│   ├── test_all_4_bgm_tracks.py   # Unit test verifying discovery, mix, render of all 4 tracks
-│   ├── test_bgm_qa_rejection.py   # Verifies BGM QA passes genuine music and rejects noise
-│   ├── test_bgm_system.py         # Tests mood selection rules and loudness normalization
-│   ├── test_database.py           # Database CRUD test suite
-│   ├── test_end_to_end_render.py  # Full pipeline integration render test
-│   └── test_learning_feedback_loop.py # Performance intelligence loop verification
-├── .env.example                   # Template of required environment variables
-├── AI_PROJECT_CONTEXT.md          # THIS FILE (Permanent handoff guide)
-├── client_secret.json             # Google Cloud OAuth 2.0 Client credentials
-├── main.py                        # Master CLI and orchestrator entrypoint
-├── requirements.txt               # Complete Python package dependencies
-└── token.json                     # Permanent Google Cloud OAuth 2.0 authorized user token
-```
-
----
-
-## 3. Automation Flow
-
-Every scheduled run follows this exact sequence:
-
-```mermaid
-graph TD
-    A[GitHub Actions / Scheduler Trigger] --> B[Continuous Learning Feedback Loop]
-    B --> C[Topic Selection & Wikipedia Fact-Checking]
-    C --> D[Script Generation: 5 Hook Variants + Narrative Body]
-    D --> E[Storyboard Planning: 5 Visual Search Queries]
-    E --> F[Asset Fetcher: Pexels API + Anti-Duplication Check]
-    F --> G[Voiceover Synthesis: Kokoro-v1.0 ONNX CPU]
-    G --> H[Subtitle Generation: Faster-Whisper Word Timing ASS]
-    H --> I[BGM Selection: Gemini AI Mood Matcher / Fallback]
-    I --> J[Audio Mixing: 3-Stage Mix at -13dB & -14 LUFS]
-    J --> K[Video Rendering: FFmpeg 1080x1920 Ken Burns Composite]
-    K --> L[QA Engine: 12-Point Inspection + FFT BGM Verification]
-    L -->|QA Failed| M[Auto-Repair Loop: Re-mix & Re-render Once]
-    M --> L
-    L -->|QA Passed| N{Production Mode?}
-    N -->|TEST_MODE=true| O[Save MP4 Locally / Desktop & Stop]
-    N -->|TEST_MODE=false| P[Upload to YouTube via Data API v3]
-    P --> Q[Two-Step Verification: Confirm PUBLIC Status]
-    Q --> R[Commit Learning Log & Database [skip ci]]
-```
-
----
-
-## 4. Current GitHub Actions Cloud Setup
-
-* **Workflow File**: `.github/workflows/autopilot.yml`
-* **Workflow Name**: `YouTube Shorts Cloud Autopilot`
-* **Cron Expression**: `0 6,10,15,20 * * *` (Runs strictly 4 times daily)
-* **Schedule Windows**:
-  * `06:00 UTC` = **11:30 AM IST** (Morning audience window)
-  * `10:00 UTC` = **03:30 PM IST** (European morning / India afternoon break)
-  * `15:00 UTC` = **08:30 PM IST** (Major Peak: US East Coast morning & India evening)
-  * `20:00 UTC` = **01:30 AM IST** (Major Peak: US West Coast afternoon & US East Coast evening)
-* **Manual Dispatch**: Enabled via `workflow_dispatch` for on-demand testing.
-* **Runner Environment**: `ubuntu-latest` (Python 3.11).
-* **Concurrency Lock**: `concurrency.group: youtube-autopilot` (`cancel-in-progress: false`) ensures jobs never overlap or generate duplicate videos.
-
-### Required GitHub Repository Secrets:
-1. `GEMINI_API_KEY`: Google Gemini API key for script, storyboard, BGM, and SEO generation.
-2. `PEXELS_API_KEY`: Pexels stock photo API key for visual retrieval.
-3. `TOKEN_JSON`: Full JSON content of the permanent `token.json` OAuth credential.
-4. `CLIENT_SECRET_JSON`: Full JSON content of `client_secret.json`.
-
----
-
-## 5. Authentication & Credentials Architecture
-
-All credentials operate at **$0 cost** within free tiers. **Never commit raw credentials to Git.**
-
-| Credential Name | Storage Location | Loaded By | Purpose | Cloud Requirement |
-| :--- | :--- | :--- | :--- | :--- |
-| `GEMINI_API_KEY` | `.env` / GitHub Secret | `config/settings.py` | Google GenAI SDK (`gemini-3.6-flash`) | **Mandatory** |
-| `PEXELS_API_KEY` | `.env` / GitHub Secret | `config/settings.py` | Pexels REST API (Photo search) | **Mandatory** |
-| `token.json` | Project root / GitHub Secret | `upload_engine.py`, `metrics_collector.py` | YouTube Data API v3 OAuth 2.0 User Token | **Mandatory** |
-| `client_secret.json`| Project root / GitHub Secret | `config/settings.py` | Google Cloud OAuth App Client Secret | **Mandatory** |
-
-> [!IMPORTANT]
-> **Token Permanence Note**: The Google Cloud OAuth Consent Screen is set to **"In production"** mode. Therefore, the OAuth refresh token in `token.json` **never expires** unless manually revoked.
-
----
-
-## 6. Current Production Configuration
-
-* **Daily Output Limit**: Exactly **`4 Shorts/day`** (`DAILY_SHORTS_LIMIT = 4` in `config/constants.py`).
-* **Target Video Specs**: `1080x1920` (9:16 vertical), 30 fps, H.264 video, AAC stereo audio.
-* **Duration Limits**: Strict `21.0s` to `25.5s` (Optimized for YouTube Shorts loop retention).
-* **Audio Mixing Standard**:
-  * Voiceover: Primary and dominant.
-  * BGM Level: `-13.0 dB` relative to narration (`normalize=0` in `amix` to prevent volume halving).
-  * Fade Transitions: `0.8s` fade-in, `1.5s` fade-out.
-  * Master Loudness: `-14.0 LUFS` ($\pm 1.5$ dB) via `loudnorm`.
-* **Visibility**: Strictly `PUBLIC` on upload.
-
----
-
-## 7. The 4 Approved Background Music Tracks
-
-The pipeline operates strictly with the 4 local audio files in `assets/music/`. **Do NOT generate synthetic AI audio.**
-
-| Track File | Key | Targeted Mood & Atmosphere | Prioritized Niches |
-| :--- | :--- | :--- | :--- |
-| **`No copyright Best Historical.wav / .mp3`** | `best_historical` | Historical / Serious Documentary / War / Disaster / Bizarre Events | Military battles, historic riots, bizarre laws, royal court drama. |
-| **`Empty - Emotional Sad Background.mp3 / .wav`** | `emotional_sad` | Emotional / Sad / Mournful / Poignant / Human Tragedy | Tragic sacrifices, catastrophic losses, poignant farewells, grief. |
-| **`The Flux Beneath It All.mp3 / .wav`** | `flux_ambient` | Dark / Mysterious / Curious / Scientific Wonder / Intrigue | Lost civilizations, ancient ciphers, strange inventions, riddles. |
-| **`No Copyright Background Music.wav / .mp3`** | `suspense_climax` | High Tension / Suspense / Dramatic Build-Up / Thriller | Heists, manhunts, high-stakes escapes, urgent races against time. |
-
----
-
-## 8. Continuous Self-Learning & State Persistence
-
-The pipeline contains a closed feedback loop (`MEASURE -> ANALYZE -> LEARN -> TEST -> REPORT`):
-1. **Metrics Collection**: `MetricsCollector` queries YouTube Data API v3 and Analytics API for all uploaded Shorts (Views, APV, AVD, Engagement).
-2. **Analysis**: `VideoAnalyzer` classifies uploads as *Breakout* ($>1.25\times$ median), *Solid* ($0.75\times - 1.25\times$), or *Underperforming* ($<0.75\times$).
-3. **Knowledge Base**: `LearningEngine` extracts root-cause hypotheses and updates the `ContentPattern` table in SQLite with confidence scores.
-4. **Cloud Persistence**: After every cloud run, step 60 of `.github/workflows/autopilot.yml` automatically commits `data/LEARNING_LOG.md` and `data/database/pipeline.db` back to the GitHub repository using `[skip ci]`.
-5. **Continuous Optimization**: Subsequent cloud runs check out this updated database and condition topic/hook generation on learned winning patterns using the 60/30/10 content formula.
-
----
-
-## 9. Quality Assurance (QA) & FFT Acoustic Verification
-
-The QA engine (`engines/qa_engine.py`) inspects the **final rendered MP4 file** directly before upload:
-1. **Video Stream**: 1080x1920 resolution, H.264 codec, 21.0–25.5s duration.
-2. **Audio Integrity**: AAC audio stream present, not silent (peak $> -30$ dB, mean $> -45$ dB), no clipping (peak $\le 0.0$ dBTP).
-3. **Master Loudness**: Broadcast standard `-22.0` to `-10.0` LUFS (centered at `-14.0` LUFS).
-4. **FFT Cross-Correlation BGM Verification**: Extracts audio from the rendered MP4 and computes cross-spectral FFT correlation against the reference Stage B BGM.
-   * **Score $\ge 0.65$**: Confirms the genuine BGM track is physically present underneath narration $\to$ **PASS**.
-   * **Score $< 0.65$**: Flags missing BGM or synthetic noise $\to$ **STRICT FAIL**.
-5. **Fail-Safe Auto-Repair**: If QA fails, the system automatically remixes with `No copyright Best Historical.wav` and re-renders once before evaluating upload.
-
----
-
-## 10. Quota, Rate Limit & Resource Ledger
-
-| Resource | Actual Code Usage / Short | Projected 4/Day Usage | Official Free Tier Allowance | Remaining Daily Buffer | Status |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **YouTube Data API v3** | `1,602 units` | **`6,408 units/day`** | `10,000 units/day` | **`3,592 units/day`** (35.9%) | ✅ **SAFE** |
-| **Gemini 3.6 Flash** | `5 requests` | **`20 requests/day`** | `1,500 requests/day` (15 RPM) | **`1,480 requests/day`** (98.7%) | ✅ **SAFE** |
-| **Pexels Photo API** | `5 requests` | **`20 requests/day`** (~600/mo) | `20,000 requests/month` | **`19,400 requests/mo`** (97.0%) | ✅ **SAFE** |
-| **GitHub Actions Compute** | `~2.5 - 3.0 min` | **`~12 min/day`** (~360 min/mo) | `2,000 min/month` (Private Repo) | **`1,640 min/month`** (82.0%) | ✅ **SAFE** |
-| **Kokoro-ONNX Voice** | `~2.5s local CPU` | `0 external calls / $0.00` | **Unlimited** (Local Engine) | **100% Free** | ✅ **SAFE** |
-| **Faster-Whisper** | `~2.0s local CPU` | `0 external calls / $0.00` | **Unlimited** (Local Engine) | **100% Free** | ✅ **SAFE** |
-
----
-
-## 11. Maintenance Guide for Future AI Agents
-
-### Diagnosing Cloud Failures
-1. Check GitHub Actions run logs under the **Actions** tab in the repository.
-2. Check `data/LEARNING_LOG.md` and `pipeline.db` for the failed job's state history and QA report reasons.
-3. Common error resolutions:
-   * **Gemini 429 Quota Exceeded**: The pipeline has automatic semantic fallbacks. If persistent, verify the API key has available requests in Google AI Studio.
-   * **YouTube Upload 401 Unauthorized**: Re-verify `token.json` secrets in GitHub Secrets.
-
-### Running Local Test Pipeline
-To run a safe local test that verifies the full pipeline (rendering, BGM mixing, QA) **WITHOUT publishing to YouTube**:
-```bash
-python main.py --test --force
-```
-* The final verified MP4 will be saved to your Desktop / `data/renders/VERIFIED_SHORT_TEST_OUTPUT.mp4`.
-* YouTube upload is 100% bypassed in test mode.
-
-### Running Test Suites
-```bash
-# Run all unit and integration tests
-python -m unittest discover -s tests -p "test_*.py"
-
-# Test specific BGM verification suite
-python -m unittest tests/test_all_4_bgm_tracks.py
-python -m unittest tests/test_bgm_qa_rejection.py
-```
-
----
-
-## 12. Important Architectural Decisions & Rationale
-
-1. **Why Kokoro-ONNX & Faster-Whisper?**  
-   Running TTS and transcription locally on CPU removes external API rate limits and paid per-character fees, ensuring 100% $0-cost predictability.
-2. **Why 4 Specific BGM Tracks Instead of Synthetic Generation?**  
-   Synthetic procedural wave generation sounded artificial and produced noise. High-quality converted royalty-free tracks provide broadcast documentary quality.
-3. **Why FFT Cross-Correlation in QA?**  
-   Simple volume/energy checks caused false positives when noise existed. FFT cross-correlation mathematically verifies that the exact chosen BGM track is inside the MP4 container.
-4. **Why Commit SQLite Database to Git in GitHub Actions?**  
-   GitHub Actions runners are ephemeral. Committing `pipeline.db` and `LEARNING_LOG.md` with `[skip ci]` provides serverless persistent state across scheduled runs.
-
----
-
-## 13. Critical Rules: DO NOT BREAK
+## 2. Absolute System Invariants (DO NOT VIOLATE)
 
 > [!CAUTION]
-> **DO NOT VIOLATE THE FOLLOWING CONSTRAINTS:**
-> 1. **Do NOT generate synthetic AI audio**: Only use the 4 genuine tracks in `assets/music/`.
-> 2. **Do NOT remove `normalize=0` from FFmpeg `amix`**: FFmpeg default behavior halves audio volume when mixing 2 inputs; `normalize=0` maintains audible BGM level.
-> 3. **Do NOT hardcode laptop absolute paths**: Always use `PROJECT_ROOT` and `Path` objects.
-> 4. **Do NOT bypass the daily limit check**: `DAILY_SHORTS_LIMIT = 4` prevents exceeding the 10,000-unit YouTube quota.
-> 5. **Do NOT upload in `TEST_MODE=true`**: Maintain absolute test isolation.
+> **CRITICAL ARCHITECTURAL CONSTRAINTS**:
+> 1. **100% Cloud-Autonomous & Headless Runtime**:
+>    * Production executes entirely on ephemeral cloud runners (`ubuntu-latest` on GitHub Actions) and Google Drive cloud storage.
+>    * **Zero Local Dependencies**: No dependency on the user's PC, Windows OS, local filesystem, or local internet connection.
+>    * **Zero GUI / Browser Dependencies**: Absolute prohibition of Chrome, Chromium, Selenium, Playwright, Puppeteer, Antigravity CLI, Antigravity `/browser`, `webbrowser.open()`, localhost callback servers, and Windows Task Scheduler.
+>    * **Dev vs Prod Boundary**: Antigravity and `/browser` are development-only diagnostic tools. They are strictly prohibited from runtime production workflows.
+> 2. **Buffer Replenishment Decoupled from Publishing**:
+>    * Buffer production (`.github/workflows/produce_buffer.yml` via `main.py --cloud-produce`) ONLY produces verified MP4s to Google Drive `01_READY`. It **NEVER** calls YouTube upload or publishing APIs.
+>    * Publishing (`.github/workflows/autopilot.yml` via `main.py --schedule-ready`) runs on an independent cron gate, claims the oldest ready video from `01_READY`, uploads to YouTube Data API v3, verifies public status, and moves it to `03_PUBLISHED`.
+> 3. **Voice Permanently Locked to Sarah**:
+>    * All voiceover synthesis is strictly locked to Kokoro-v1.0 ONNX `af_sarah` (`SARAH_MAX_CREATOR`). No other voice models are permitted in production.
+> 4. **SFX Permanently Disabled & BGM Policy None**:
+>    * Sound effects (`has_sfx=False`) are permanently disabled across all production manifests.
+>    * BGM policy is strictly set to `NONE` (`has_bgm=False`) for clean, authoritative documentary voiceover.
+> 5. **Fail-Closed Video QA Gate**:
+>    * Videos must pass all 12 automated QA inspection checks before moving to Google Drive `01_READY`.
+>    * Flawed, corrupted, or unverified videos fail closed into `04_FAILED` or local quarantine; they are never published.
 
 ---
 
-## 14. Future Work & Planned Enhancements
+## 3. End-to-End Modular Pipeline Architecture (Phases 1–7)
 
-* [ ] Add automated multi-language translation and subtitle localization.
-* [ ] Integrate YouTube Community tab automated polling based on high-performing Short topics.
-* [ ] Implement automated A/B thumbnail title experiment tracking when YouTube Shorts natively supports custom thumbnail A/B testing.
+The production pipeline is organized into 7 clean, decoupled architectural layers:
+
+```
+[ LIVE NEWS INGESTION (Phase 1) ]
+  ├── GDELT 2.0 Global Event API
+  ├── Top Global Wire RSS Feeds (BBC, Al Jazeera, DW, France 24)
+  └── Trafilatura Article Body & Metadata Extraction
+            ↓
+[ CLUSTERING & 5W1H EVENT CARDS (Phase 2) ]
+  ├── FastEmbed Dense Semantic Embeddings (BAAI/bge-small-en-v1.5) with O(N) Cache
+  ├── Pairwise Cosine + Entity Overlap Graph Clustering
+  └── Gemini 5W1H Structured Entity & EventCard Extraction
+            ↓
+[ JOURNALISTIC SCRIPT SYNTHESIS (Phase 3) ]
+  ├── 4-Beat Strict Narrative Arc (Hook, Context, Escalation, Climax/Resolution)
+  ├── 21.0s – 25.5s Duration Budget (55–75 spoken words)
+  ├── 5 Hook Candidates (Curiosity, Escalation, Contrast, Impact, Insider)
+  └── NLI Claim Grounding against Source Articles
+            ↓
+[ DUAL-ROUTE VISUAL EVIDENCE RETRIEVAL (Phase 4) ]
+  ├── Route A (Primary): Real Visual Evidence (Wikimedia Commons, Internet Archive, Wikidata)
+  ├── Route B (Fallback): High-Relevance Thematic Stock (Pexels REST API)
+  └── Beat-Level 5W1H Query Planning & Spatial Resolution Validation
+            ↓
+[ PRODUCTION ASSET MANIFEST (Phase 5) ]
+  ├── ProductionAssetManifest Specification (JSON Schema)
+  ├── 4 Timed Visual Beats with Exact Timecodes
+  └── Locked Audio Spec (Voice: Sarah, SFX: Disabled, BGM: None)
+            ↓
+[ MEDIA CACHE, HEADLESS COMPOSITION & QA (Phase 6) ]
+  ├── Local Multi-Tier Disk Cache (SHA-256 Verified, LRU Eviction)
+  ├── Kokoro-v1.0 ONNX Offline Voice Synthesis + Faster-Whisper Word-Level .ass Captions
+  ├── Headless FFmpeg 1080x1920 30fps Ken Burns Pan/Zoom Dynamic Video Composition
+  └── Automated 12-Point QA Battery (Resolution, Audio Levels, Duration, Corruption)
+            ↓
+[ CLOUD ORCHESTRATION & VAULT SYNC (Phase 7) ]
+  ├── CloudProductionOrchestrator (Distributed Locking, Idempotency, Deficit Calculation)
+  ├── Canonical SQLite Database Sync (`00_SYSTEM/pipeline.db`)
+  ├── Google Drive Vault Delivery (`01_READY`)
+  └── Decoupled Publishing Gate (`.github/workflows/autopilot.yml`)
+```
 
 ---
 
-## 15. Handoff Checklist for New AI Agent
+## 4. Phase-by-Phase Component Details
 
-If you are a new AI agent taking over this repository:
-1. **Read this document thoroughly**: Understand the 20-state machine, audio mixing standards, and GitHub Actions cron schedule.
-2. **Inspect `config/settings.py` and `config/constants.py`**: Understand the dynamic path setup and rate limit constants.
-3. **Never alter working audio mixing or QA algorithms without running `tests/test_all_4_bgm_tracks.py` and `tests/test_bgm_qa_rejection.py`**.
-4. **When modifying cloud workflows**, remember that environment variables are populated from GitHub Secrets.
-5. **The system is fully autonomous**: 4 Shorts per day at `06:00`, `10:00`, `15:00`, and `20:00` UTC (`11:30 AM`, `3:30 PM`, `8:30 PM`, `1:30 AM` IST). Maintain the schedule and zero-cost integrity.
+### Phase 1: Real-Time News Ingestion & Normalization
+* **Module**: `sources/news_ingestion.py`
+* **Sources**: Multi-feed RSS ingestion (BBC World, Al Jazeera, Deutsche Welle, France 24) + GDELT 2.0 API.
+* **Data Contract**: `NormalizedArticle` (title, URL, publisher, UTC timestamp, full text, author, source type, language).
+* **Extraction**: Trafilatura clean article body extraction with non-blocking error isolation.
+* **Recency Classification**: Tier 1 (0–6h), Tier 2 (6–24h), Tier 3 (24–72h), Tier 4 (72h+ background).
+* **Guarantees**: Complete removal of historical trivia seeds in current-affairs mode. Network failures on single feeds do not crash the run.
+
+### Phase 2: High-Density Event Clustering & 5W1H EventCards
+* **Module**: `intelligence/clustering.py`
+* **Embedding Model**: FastEmbed ONNX `BAAI/bge-small-en-v1.5` running locally on CPU.
+* **Performance Optimization**: Dense embeddings cached directly on `NormalizedArticle.embedding` ($O(N)$ inference rather than $O(N^2)$).
+* **Clustering**: Connected components over graph edges satisfying semantic similarity $>0.78$ and entity token Jaccard overlap $>0.15$.
+* **EventCard Extraction**: Google GenAI model (`gemini-2.5-flash` / `gemma-4-26b-a4b-it`) extracts structured 5W1H (Who, What, Where, When, Why, How, Core Conflict, Geopolitical Significance).
+
+### Phase 3: Journalistic Script Synthesis & Fact Grounding
+* **Module**: `intelligence/journalistic_script.py`
+* **Format**: Exactly 4 narrative beats:
+  1. `BEAT_1_HOOK` (0.0s – 5.0s, high-impact hook)
+  2. `BEAT_2_CONTEXT` (5.0s – 11.5s, 5W1H factual foundation)
+  3. `BEAT_3_ESCALATION` (11.5s – 18.0s, geopolitical tension/stakes)
+  4. `BEAT_4_RESOLUTION` (18.0s – 24.5s, forward-looking impact)
+* **Word Count**: Strictly 55–75 words for natural 21–25.5s delivery.
+* **Verification**: Sentence-level NLI grounding against source article snippets with citation mapping.
+* **Voice Invariant**: Permanently set to Sarah (`af_sarah`).
+
+### Phase 4: Dual-Route Visual Evidence Retrieval
+* **Modules**: `retrieval/visual_sources.py`, `retrieval/visual_evidence.py`
+* **Route A (Primary)**: Real visual evidence search via Wikimedia Commons REST API, Internet Archive, and Wikidata SPARQL.
+* **Route B (Fallback)**: Pexels API semantic search when public domain real footage is unavailable.
+* **Query Planning**: Specific entity, location, and event queries derived from the 5W1H EventCard.
+
+### Phase 5: Production Asset Manifest
+* **Module**: `core/asset_manifest.py`
+* **Model**: `ProductionAssetManifest`
+* **Structure**: Manifest ID, EventCard ID, 4 Visual Beats (timecodes, primary visual URL, fallback URLs, visual description, caption text), Audio Spec (voice: `af_sarah`, speed: 1.05, `has_sfx=False`, `has_bgm=False`), SEO metadata (title, description, tags).
+* **Storage**: Persisted to SQLite table `production_asset_manifests`.
+
+### Phase 6: Media Cache, Headless Composition & Video QA
+* **Modules**: `storage/media_cache.py`, `retrieval/asset_fetcher.py`, `composition/headless_renderer.py`, `qa/video_qa.py`
+* **Media Cache**: Multi-tier local disk cache under `data/cache/` with SHA-256 URL hashing and LRU size pruning.
+* **Headless Composition**: Pure headless FFmpeg invocation generating 1080x1920 30fps vertical MP4s with Ken Burns dynamic motion and burn-in golden karaoke subtitles.
+* **Automated QA Battery**:
+  1. Video stream present and encoded with H.264.
+  2. Resolution exactly 1080x1920 (9:16 vertical).
+  3. Frame rate 25–60 fps (target 30 fps).
+  4. Duration strictly between 20.0s and 26.5s.
+  5. Audio stream present and encoded with AAC.
+  6. Voiceover loudness normalized (-14 to -18 LUFS).
+  7. Audio peak below 0.0 dBTP (no clipping).
+  8. Audio stream audible (not silent, mean > -45 dB).
+  9. File size healthy (2 MB to 100 MB).
+  10. Container integrity verified (no MOOV atom corruption).
+  11. Subtitle rendering verified.
+  12. Zero SFX and zero unauthorized BGM presence.
+
+### Phase 7: Cloud Production Orchestration & Drive Vault Integration
+* **Modules**: `core/pipeline_state.py`, `intelligence/cloud_orchestrator.py`
+* **Entrypoints**:
+  * `python main.py --cloud-produce <count>`: Executes headless buffer replenishment.
+  * `python main.py --cloud-produce <count> --dry-run`: Runs end-to-end intelligence and verification without persistent side effects.
+* **Cloud Lock**: Distributed lock `00_SYSTEM/cloud_production.lock` on Google Drive prevents concurrent producer overlap.
+* **Canonical DB Sync**: Downloads `00_SYSTEM/pipeline.db` from Drive, executes idempotent production, verifies QA, uploads new verified MP4s to `01_READY`, and uploads the updated database back to `00_SYSTEM/pipeline.db`.
+* **Telemetry**: Emits structured JSON summary to `data/production_summary.json` with stage-by-stage timings, buffer counts, and manifest IDs.
+
+---
+
+## 5. Google Drive Vault Hierarchy
+
+Google Drive serves as the central serverless persistence store and state coordination layer between independent GitHub Actions runner instances:
+
+```
+AL-AMR Vault/
+├── 00_SYSTEM/
+│   ├── pipeline.db              # Canonical SQLite production database
+│   └── cloud_production.lock    # Distributed JSON lock (lease expiry 2 hours)
+├── 01_READY/                    # Buffer of 100% QA-verified MP4 shorts awaiting publication
+│   ├── SHORT_20260905_120000.mp4
+│   └── SHORT_20260905_120000.json
+├── 02_PROCESSING/               # Short currently being uploaded by autopilot.yml
+├── 03_PUBLISHED/                # Successfully published shorts archive
+│   └── SHORT_20260905_060000.mp4
+└── 04_FAILED/                   # Quarantined shorts that failed upload or QA
+```
+
+* **Target Buffer**: 6 verified Shorts (`TARGET_BUFFER = 6`).
+* **Deficit Rule**: `produce_buffer.yml` audits `01_READY` and synthesizes only `to_produce = min(requested_count, max(0, 6 - count(01_READY)))` videos. When `count(01_READY) >= 6`, production is skipped to conserve compute and API calls.
+
+---
+
+## 6. GitHub Actions Automation & Decoupled Schedules
+
+### Workflow 1: Buffer Replenishment (`produce_buffer.yml`)
+* **File**: `.github/workflows/produce_buffer.yml`
+* **Trigger**: Scheduled cron runs + manual `workflow_dispatch`.
+* **Action**:
+  ```bash
+  python main.py --cloud-produce 2
+  ```
+* **Strict Gate**: Produces exclusively to Drive `01_READY`. Contains **NO** publishing or YouTube upload commands.
+
+### Workflow 2: YouTube Publishing Gate (`autopilot.yml`)
+* **File**: `.github/workflows/autopilot.yml`
+* **Trigger**: 4 daily windows: `06:00`, `10:00`, `15:00`, `20:00` UTC (`11:30 AM`, `3:30 PM`, `8:30 PM`, `1:30 AM` IST).
+* **Action**:
+  ```bash
+  python main.py --schedule-ready
+  ```
+* **Protocol**:
+  1. Inspects Drive `01_READY` for the oldest verified Short.
+  2. Moves file to `02_PROCESSING`.
+  3. Uploads to YouTube Data API v3 as `PUBLIC`.
+  4. Verifies public status via YouTube Data API call.
+  5. Moves file to `03_PUBLISHED`.
+
+---
+
+## 7. Authentication & Credentials Matrix
+
+All production credentials operate within free-tier quotas and are injected via GitHub Actions Repository Secrets:
+
+| Secret Name | Loaded By | Purpose | Required in Cloud |
+| :--- | :--- | :--- | :---: |
+| `GEMINI_API_KEY` | `config/settings.py` | Google GenAI API (Script, 5W1H, SEO) | **Yes** |
+| `PEXELS_API_KEY` | `config/settings.py` | Pexels REST API (Visual fallback) | **Yes** |
+| `GDRIVE_SERVICE_ACCOUNT_JSON` | `engines/drive_engine.py` | Google Drive Vault Storage API | **Yes** |
+| `TOKEN_JSON` | `engines/upload_engine.py` | YouTube Data API v3 OAuth User Token | **Yes** (Publishing only) |
+| `CLIENT_SECRET_JSON` | `config/settings.py` | Google Cloud OAuth App Client Secret | **Yes** (Publishing only) |
+
+---
+
+## 8. Verification & Test Suite Reference
+
+The codebase maintains a 100% passing test suite across all 7 phases:
+
+```bash
+# Execute complete Phase 1–7 test suite (194 tests)
+pytest tests/test_phase1_news_ingestion.py \
+       tests/test_phase2_event_clustering.py \
+       tests/test_phase3_journalistic_script.py \
+       tests/test_phase4_visual_evidence.py \
+       tests/test_phase5_asset_manifest.py \
+       tests/test_phase6_asset_fetcher.py \
+       tests/test_phase6_media_cache.py \
+       tests/test_phase6_video_qa.py \
+       tests/test_phase6_rendering.py \
+       tests/test_phase7_cloud_orchestration.py -v
+```
+
+### Dry-Run Verification Command
+To verify the complete cloud pipeline end-to-end headlessly without uploading or writing to Drive:
+```bash
+python main.py --dry-run --cloud-produce 1
+```
+
+---
+
+## 9. Handoff Maintenance Checklist for Future AI Agents
+
+When diagnosing, maintaining, or expanding AL-AMR:
+1. **Preserve Cloud Autonomy**: Never introduce dependencies on GUI tools, local browsers, Antigravity CLI, or Windows-specific paths.
+2. **Preserve Editorial Invariants**: Voice is permanently Sarah (`af_sarah`); SFX is permanently disabled (`has_sfx=False`); BGM is `NONE`.
+3. **Preserve Decoupled Publishing**: Never call YouTube upload or publishing code inside `produce_buffer.yml` or `intelligence/cloud_orchestrator.py`.
+4. **Preserve FastEmbed Caching**: Always ensure `NormalizedArticle.embedding` is cached during clustering to avoid $O(N^2)$ inference latency.
+5. **Preserve Schema Upgrades**: When syncing canonical `pipeline.db` from Drive, call `init_db()` immediately after download to guarantee all tables exist.

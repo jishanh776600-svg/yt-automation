@@ -243,7 +243,7 @@ class TestMetricsHarvester(unittest.TestCase):
 
     def test_09_github_actions_workflow_syntax(self):
         """Test 9: Verify .github/workflows/harvest_analytics.yml is valid YAML and has 03:00 UTC schedule."""
-        workflow_path = Path(r"C:\Users\jisha\OneDrive\Desktop\yt automation\.github\workflows\harvest_analytics.yml")
+        workflow_path = Path(__file__).resolve().parent.parent / ".github" / "workflows" / "harvest_analytics.yml"
         self.assertTrue(workflow_path.exists(), "harvest_analytics.yml workflow must exist.")
         
         with open(workflow_path, "r", encoding="utf-8") as f:

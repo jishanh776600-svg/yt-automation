@@ -48,9 +48,9 @@ for d in [DATABASE_DIR, TOPICS_DIR, RESEARCH_DIR, SCRIPTS_DIR, STORYBOARDS_DIR,
 TEST_MODE = os.getenv("TEST_MODE", "true").lower() == "true"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_API_KEY_SECONDARY = os.getenv("GEMINI_API_KEY_SECONDARY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemma-4-26b-a4b-it")
 GEMINI_MODEL_SECONDARY = os.getenv("GEMINI_MODEL_SECONDARY", "")
-GEMINI_FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "")
+GEMINI_FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemma-4-31b-it")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")  # llama-3.3-70b-versatile was retired (HTTP 404)
 GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1/chat/completions")
@@ -77,11 +77,16 @@ YOUTUBE_CLIENT_SECRET = os.getenv("YOUTUBE_CLIENT_SECRET", "")
 YOUTUBE_REFRESH_TOKEN = os.getenv("YOUTUBE_REFRESH_TOKEN", "")
 CLIENT_SECRETS_FILE = os.getenv("CLIENT_SECRETS_FILE", str(PROJECT_ROOT / "client_secret.json"))
 
-# TTS Settings
+# TTS Settings — Authoritative Production Lock: Bella Only (af_bella)
 TTS_PROVIDER = os.getenv("TTS_PROVIDER", "kokoro")  # kokoro, edge, piper
 KOKORO_VOICE = "af_bella"
+APPROVED_PRODUCTION_VOICES = ["af_bella"]
 KOKORO_MODEL_PATH = DATA_DIR / "kokoro-v1.0.onnx"
 KOKORO_VOICES_PATH = DATA_DIR / "voices-v1.0.bin"
+
+# Background Music (BGM) Settings
+BGM_ENABLED = True
+BGM_VOLUME = float(os.getenv("BGM_VOLUME", "0.14"))  # -17 dB ducking relative to speech
 
 # Image Generation Fallback Provider
 IMAGE_PROVIDER = os.getenv("IMAGE_PROVIDER", "pollinations")

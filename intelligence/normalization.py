@@ -6,7 +6,7 @@ URL canonicalization, and geopolitical entity/action extraction without LLM over
 import re
 import html
 from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
-from typing import Set, Tuple, List
+from typing import Set, Tuple, List, Optional
 from intelligence.models import RawArticle
 
 # Publisher boilerplate prefixes and suffixes
@@ -34,46 +34,16 @@ STOPWORDS = {
     "may", "might", "must", "also", "new", "first", "one", "two", "three", "first"
 }
 
-# Major geopolitical entities, countries, capitals, institutions, and leaders
-RECOGNIZED_GEOPOLITICAL_ENTITIES = {
-    # Countries & Regions
-    "united states", "us", "usa", "america", "united kingdom", "uk", "britain", "russia",
-    "china", "ukraine", "taiwan", "israel", "gaza", "palestine", "iran", "iraq",
-    "germany", "france", "poland", "japan", "south korea", "north korea", "india",
-    "pakistan", "saudi arabia", "turkey", "egypt", "syria", "yemen", "canada",
-    "australia", "mexico", "brazil", "argentina", "south africa", "philippines",
-    "european union", "eu", "middle east", "indo-pacific", "baltics", "arctic",
-    # Cities / Capitals
-    "washington", "moscow", "beijing", "kyiv", "london", "brussels", "tehran", "tel aviv",
-    "jerusalem", "taipei", "tokyo", "seoul", "pyongyang", "berlin", "paris", "warsaw",
-    "riyadh", "ankara", "cairo", "new delhi", "ottawa", "canberra",
-    # Organizations / Alliances
-    "nato", "united nations", "un", "g7", "g20", "brics", "opec", "iaea", "pentagon",
-    "kremlin", "white house", "congress", "downing street", "bundestag", "elysee",
-    "world bank", "imf", "central bank", "federal reserve",
-    # Titles & Roles
-    "president", "prime minister", "foreign minister", "defense minister", "chancellor",
-    "secretary of state", "ambassador", "general", "admiral"
-}
+from core.discovery_profile import (
+    DiscoveryProfile,
+    get_active_discovery_profile,
+    DEFAULT_GEOPOLITICAL_ENTITIES,
+    DEFAULT_ACTION_STEMS
+)
 
-# Distinct action and event stems for differentiating events occurring in the same location
-ACTION_STEMS = {
-    # Military / Conflict
-    "military", "strike", "attack", "bombing", "missile", "drone", "invasion", "deploy",
-    "deployment", "troops", "casualty", "ceasefire", "truce", "combat", "clash",
-    "intercept", "airspace", "warfare", "offensive", "retaliation", "mobilize",
-    # Diplomatic / Political
-    "treaty", "summit", "envoy", "ambassador", "negotiation", "veto", "sanction",
-    "election", "vote", "resign", "impeach", "cabinet", "parliament", "protest",
-    "demonstration", "dissolve", "coup", "bilateral", "pact", "accord", "treaty",
-    # Economic / Trade
-    "tariff", "trade", "embargo", "inflation", "debt", "interest rate", "currency",
-    "export", "import", "supply chain", "energy", "pipeline", "oil", "gas", "sanctions",
-    "deficit", "bailout", "stimulus",
-    # Crisis / Security
-    "hostage", "cyberattack", "espionage", "intelligence", "border", "refugee",
-    "blockade", "evacuation", "emergency", "treaty"
-}
+# Backward-compatible aliases pointing to default geopolitical dictionaries
+RECOGNIZED_GEOPOLITICAL_ENTITIES = DEFAULT_GEOPOLITICAL_ENTITIES
+ACTION_STEMS = DEFAULT_ACTION_STEMS
 
 
 def normalize_url(raw_url: str) -> str:
@@ -134,16 +104,23 @@ def clean_text_for_tokens(text: str) -> str:
     return re.sub(r"\s+", " ", clean).strip()
 
 
-def extract_entities_and_tokens(text: str) -> Tuple[Set[str], Set[str], Set[str], Set[str]]:
+def extract_entities_and_tokens(
+    text: str,
+    profile: Optional[DiscoveryProfile] = None
+) -> Tuple[Set[str], Set[str], Set[str], Set[str]]:
     """
     Deterministically extracts:
-      - entities: Recognized geopolitical entities & capitalized names
+      - entities: Recognized entities from DiscoveryProfile & capitalized names
       - countries: Matched nation/region names
-      - action_tokens: Matched action stems
+      - action_tokens: Matched action stems from DiscoveryProfile
       - keywords: Content words excluding stopwords
     """
     if not text:
         return set(), set(), set(), set()
+
+    prof = profile or get_active_discovery_profile()
+    entities_to_match = prof.recognized_entities if (prof and prof.recognized_entities) else RECOGNIZED_GEOPOLITICAL_ENTITIES
+    actions_to_match = prof.action_stems if (prof and prof.action_stems) else ACTION_STEMS
 
     clean_lower = clean_text_for_tokens(text)
     words = clean_lower.split()
@@ -153,8 +130,8 @@ def extract_entities_and_tokens(text: str) -> Tuple[Set[str], Set[str], Set[str]
     countries: Set[str] = set()
     action_tokens: Set[str] = set()
 
-    # Match multi-word or single-word recognized entities
-    for ent in RECOGNIZED_GEOPOLITICAL_ENTITIES:
+    # Match multi-word or single-word recognized entities from profile
+    for ent in entities_to_match:
         pattern = r"\b" + re.escape(ent) + r"\b"
         if re.search(pattern, clean_lower):
             entities.add(ent)
@@ -167,8 +144,8 @@ def extract_entities_and_tokens(text: str) -> Tuple[Set[str], Set[str], Set[str]
             }:
                 countries.add(ent)
 
-    # Match action tokens
-    for act in ACTION_STEMS:
+    # Match action tokens from profile
+    for act in actions_to_match:
         pattern = r"\b" + re.escape(act) + r"\b"
         if re.search(pattern, clean_lower):
             action_tokens.add(act)
@@ -183,10 +160,10 @@ def extract_entities_and_tokens(text: str) -> Tuple[Set[str], Set[str], Set[str]
     return entities, countries, action_tokens, keywords
 
 
-def normalize_article(article: RawArticle) -> RawArticle:
+def normalize_article(article: RawArticle, profile: Optional[DiscoveryProfile] = None) -> RawArticle:
     """
     Populates normalized text, cleaned URL, entities, countries, action tokens,
-    and keywords on a RawArticle instance.
+    and keywords on a RawArticle instance using active DiscoveryProfile.
     """
     # 1. Canonicalize URL
     article.url = normalize_url(article.url)
@@ -200,7 +177,7 @@ def normalize_article(article: RawArticle) -> RawArticle:
 
     # 3. Extract tokens and entities across title and summary
     combined_text = f"{clean_title}. {clean_summary}"
-    entities, countries, action_tokens, keywords = extract_entities_and_tokens(combined_text)
+    entities, countries, action_tokens, keywords = extract_entities_and_tokens(combined_text, profile=profile)
 
     article.entities = entities
     article.countries = countries

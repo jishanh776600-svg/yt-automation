@@ -63,6 +63,14 @@ def init_db(target_engine=None):
                 conn.execute(text("ALTER TABLE scripts ADD COLUMN hook_archetype VARCHAR(64)"))
             if "duration_target" not in script_cols:
                 conn.execute(text("ALTER TABLE scripts ADD COLUMN duration_target VARCHAR(64)"))
+            if "event_id" not in script_cols:
+                conn.execute(text("ALTER TABLE scripts ADD COLUMN event_id VARCHAR(64)"))
+            if "script_document_json" not in script_cols:
+                conn.execute(text("ALTER TABLE scripts ADD COLUMN script_document_json TEXT"))
+            if "provenance_complete" not in script_cols:
+                conn.execute(text("ALTER TABLE scripts ADD COLUMN provenance_complete BOOLEAN DEFAULT 0"))
+            if "validation_status" not in script_cols:
+                conn.execute(text("ALTER TABLE scripts ADD COLUMN validation_status VARCHAR(32) DEFAULT 'PENDING'"))
 
             # 2. renders table
             render_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(renders)")).fetchall()]
@@ -127,6 +135,42 @@ def init_db(target_engine=None):
             perf_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(performance_snapshots)")).fetchall()]
             if "validation_status" not in perf_cols:
                 conn.execute(text("ALTER TABLE performance_snapshots ADD COLUMN validation_status VARCHAR(32) DEFAULT 'VALID_REAL'"))
+
+            # 8. articles table
+            art_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(articles)")).fetchall()]
+            if art_cols:
+                if "category" not in art_cols:
+                    conn.execute(text("ALTER TABLE articles ADD COLUMN category VARCHAR(64) DEFAULT 'Geopolitics'"))
+                if "freshness_score" not in art_cols:
+                    conn.execute(text("ALTER TABLE articles ADD COLUMN freshness_score FLOAT DEFAULT 0.0"))
+                if "source_confidence" not in art_cols:
+                    conn.execute(text("ALTER TABLE articles ADD COLUMN source_confidence FLOAT DEFAULT 0.0"))
+                if "composite_score" not in art_cols:
+                    conn.execute(text("ALTER TABLE articles ADD COLUMN composite_score FLOAT DEFAULT 0.0"))
+
+            # 9. topics table (Phase 2 Event Intelligence)
+            topic_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(topics)")).fetchall()]
+            if topic_cols:
+                if "event_id" not in topic_cols:
+                    conn.execute(text("ALTER TABLE topics ADD COLUMN event_id VARCHAR(64)"))
+                if "verification_state" not in topic_cols:
+                    conn.execute(text("ALTER TABLE topics ADD COLUMN verification_state VARCHAR(64) DEFAULT 'SINGLE_CREDIBLE_SOURCE'"))
+                if "independent_sources_count" not in topic_cols:
+                    conn.execute(text("ALTER TABLE topics ADD COLUMN independent_sources_count INTEGER DEFAULT 1"))
+                if "event_card_json" not in topic_cols:
+                    conn.execute(text("ALTER TABLE topics ADD COLUMN event_card_json TEXT"))
+
+            # 10. claims table (Phase 2 Provenance)
+            claim_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(claims)")).fetchall()]
+            if claim_cols:
+                if "source_article_id" not in claim_cols:
+                    conn.execute(text("ALTER TABLE claims ADD COLUMN source_article_id VARCHAR(64)"))
+                if "publisher" not in claim_cols:
+                    conn.execute(text("ALTER TABLE claims ADD COLUMN publisher VARCHAR(255)"))
+                if "source_url" not in claim_cols:
+                    conn.execute(text("ALTER TABLE claims ADD COLUMN source_url TEXT"))
+                if "evidence_excerpt" not in claim_cols:
+                    conn.execute(text("ALTER TABLE claims ADD COLUMN evidence_excerpt TEXT"))
 
             conn.commit()
         except Exception:

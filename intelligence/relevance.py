@@ -5,82 +5,56 @@ for English-speaking Western audiences and categorizes stories into CurrentAffai
 """
 import re
 import logging
-from typing import Tuple, Set, Dict, Any
+from typing import Tuple, Set, Dict, Any, Optional
 from config.constants import CurrentAffairsCategory
 from intelligence.models import EventCluster
+from core.discovery_profile import (
+    DEFAULT_CATEGORY_THEME_RULES,
+    DEFAULT_HIGH_IMPACT_ENTITIES,
+    DEFAULT_LOW_RELEVANCE_NOISE,
+    DiscoveryProfile,
+    get_active_discovery_profile
+)
 
 logger = logging.getLogger(__name__)
 
-# Primary domain keyword mappings to category taxonomies
-CATEGORY_THEME_RULES = [
-    (
-        CurrentAffairsCategory.GLOBAL_CONFLICT.value,
-        {"strike", "attack", "bombing", "missile", "drone", "invasion", "troops", "casualty", "combat", "offensive", "warfare", "ceasefire", "airspace", "retaliation"}
-    ),
-    (
-        CurrentAffairsCategory.DIPLOMACY.value,
-        {"summit", "treaty", "envoy", "ambassador", "negotiation", "bilateral", "pact", "accord", "dialogue", "peace talks", "normalization"}
-    ),
-    (
-        CurrentAffairsCategory.GLOBAL_ECONOMY.value,
-        {"tariff", "trade", "embargo", "inflation", "debt", "interest rate", "currency", "export", "import", "supply chain", "energy", "pipeline", "oil", "gas", "sanctions", "deficit"}
-    ),
-    (
-        CurrentAffairsCategory.SECURITY.value,
-        {"hostage", "cyberattack", "espionage", "intelligence", "border", "refugee", "blockade", "evacuation", "emergency", "defense", "military"}
-    ),
-    (
-        CurrentAffairsCategory.US_POLITICS.value,
-        {"congress", "white house", "senate", "supreme court", "democrat", "republican", "biden", "trump", "pentagon", "state department"}
-    ),
-    (
-        CurrentAffairsCategory.EUROPE_POLITICS.value,
-        {"european union", "eu", "brussels", "bundestag", "downing street", "elysee", "parliament", "chancellor", "macron", "starmer", "scholz"}
-    ),
-    (
-        CurrentAffairsCategory.WORLD_POLITICS.value,
-        {"election", "vote", "resign", "impeach", "cabinet", "protest", "dissolve", "coup", "prime minister", "president"}
-    )
-]
-
-# High-priority entities that elevate relevance for Western geopolitical analysis
-HIGH_IMPACT_ENTITIES = {
-    "united states", "us", "usa", "america", "united kingdom", "uk", "britain",
-    "nato", "european union", "eu", "russia", "china", "ukraine", "taiwan",
-    "israel", "iran", "pentagon", "white house", "kremlin", "united nations",
-    "g7", "brics", "opec", "federal reserve", "imf"
-}
-
-# Low-relevance noise terms that indicate domestic municipal news, lifestyle, sports, or gossip
-LOW_RELEVANCE_NOISE = {
-    "celebrity", "hollywood", "actor", "actress", "box office", "nfl", "nba",
-    "premier league", "football", "soccer", "tennis", "recipe", "horoscope",
-    "lottery", "weather forecast", "traffic jam", "zoo", "festival"
-}
+# Primary domain keyword mappings to category taxonomies (backwards compatible defaults)
+CATEGORY_THEME_RULES = DEFAULT_CATEGORY_THEME_RULES
+HIGH_IMPACT_ENTITIES = DEFAULT_HIGH_IMPACT_ENTITIES
+LOW_RELEVANCE_NOISE = DEFAULT_LOW_RELEVANCE_NOISE
 
 
 class RelevanceScorer:
-    """Evaluates geopolitical relevance and maps stories to CurrentAffairsCategory."""
+    """Evaluates niche relevance and maps stories to appropriate category taxonomy."""
+
+    def __init__(self, profile: Optional[DiscoveryProfile] = None):
+        self.profile = profile or get_active_discovery_profile()
 
     def evaluate_relevance(self, cluster: EventCluster) -> Tuple[float, str]:
         """
         Calculates a deterministic relevance score (0.0 to 100.0) and determines
-        the best-matching CurrentAffairsCategory.
+        the best-matching category using the active DiscoveryProfile.
         """
         combined_text = f"{cluster.canonical_title} {cluster.canonical_summary}".lower()
         all_tokens = cluster.entities.union(cluster.action_tokens).union(cluster.countries)
 
+        theme_rules = self.profile.category_theme_rules if self.profile else CATEGORY_THEME_RULES
+        high_impact = self.profile.high_impact_entities if self.profile else HIGH_IMPACT_ENTITIES
+        low_noise = self.profile.low_relevance_noise if self.profile else LOW_RELEVANCE_NOISE
+        default_cat = self.profile.default_category if self.profile else CurrentAffairsCategory.GEOPOLITICS.value
+        fallback_cat = self.profile.fallback_category if self.profile else CurrentAffairsCategory.MAJOR_WORLD_EVENT.value
+
         # 1. Check for immediate low-relevance exclusion
-        for noise in LOW_RELEVANCE_NOISE:
+        for noise in low_noise:
             if re.search(r"\b" + re.escape(noise) + r"\b", combined_text):
                 cluster.relevance_score = 15.0
-                cluster.primary_category = CurrentAffairsCategory.MAJOR_WORLD_EVENT.value
+                cluster.primary_category = fallback_cat
                 return 15.0, cluster.primary_category
 
         base_relevance = 50.0
 
         # 2. Entity Significance Boost (up to +25 pts)
-        shared_high_impact = cluster.entities.intersection(HIGH_IMPACT_ENTITIES)
+        shared_high_impact = cluster.entities.intersection(high_impact)
         if len(shared_high_impact) >= 3:
             base_relevance += 25.0
         elif len(shared_high_impact) >= 2:
@@ -95,10 +69,10 @@ class RelevanceScorer:
             base_relevance += 12.0
 
         # 4. Determine Category by Matching Themes
-        matched_category = CurrentAffairsCategory.GEOPOLITICS.value
+        matched_category = default_cat
         highest_match_count = 0
 
-        for cat_name, theme_words in CATEGORY_THEME_RULES:
+        for cat_name, theme_words in theme_rules:
             matches = len(all_tokens.intersection(theme_words))
             # Also check text containment
             for tw in theme_words:
@@ -109,12 +83,12 @@ class RelevanceScorer:
                 highest_match_count = matches
                 matched_category = cat_name
 
-        # Default to GEOPOLITICS if global actors present, otherwise MAJOR_WORLD_EVENT
+        # Default to default_cat if global/key actors present, otherwise fallback_cat
         if highest_match_count == 0:
-            if cluster.countries or cluster.entities.intersection(HIGH_IMPACT_ENTITIES):
-                matched_category = CurrentAffairsCategory.GEOPOLITICS.value
+            if cluster.countries or cluster.entities.intersection(high_impact):
+                matched_category = default_cat
             else:
-                matched_category = CurrentAffairsCategory.MAJOR_WORLD_EVENT.value
+                matched_category = fallback_cat
 
         final_score = round(min(100.0, max(0.0, base_relevance)), 2)
         cluster.relevance_score = final_score

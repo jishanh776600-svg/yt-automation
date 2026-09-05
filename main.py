@@ -98,18 +98,15 @@ class ShortsPipeline:
         self.editing_director = EditingDirector()
         self.sfx_manager = SFXManager()
 
-        from engines.tts_engine import get_active_voice, AVAILABLE_VOICES
+        from engines.tts_engine import get_active_voice, APPROVED_PRODUCTION_VOICES
         db = SessionLocal()
         try:
             authoritative_db_voice = get_active_voice(db)
-            if authoritative_db_voice == "am_adam":
+            if authoritative_db_voice not in APPROVED_PRODUCTION_VOICES:
                 authoritative_db_voice = "af_bella"
             chosen_voice = voice or authoritative_db_voice or os.getenv("KOKORO_VOICE") or "af_bella"
-            if chosen_voice == "am_adam" and voice is None:
-                chosen_voice = "af_bella"
-            valid_voice_ids = [v["id"] for v in AVAILABLE_VOICES]
-            if chosen_voice not in valid_voice_ids:
-                logger.warning(f"Voice '{chosen_voice}' not in AVAILABLE_VOICES. Defaulting to 'af_bella'.")
+            if chosen_voice not in APPROVED_PRODUCTION_VOICES:
+                logger.warning(f"Voice '{chosen_voice}' not in APPROVED_PRODUCTION_VOICES. Defaulting to 'af_bella'.")
                 chosen_voice = "af_bella"
             self.run_voice = chosen_voice
         finally:
@@ -941,8 +938,8 @@ class ShortsPipeline:
                     dup_proc_status = "PUBLISHED"
                     if cand_title:
                         try:
-                            from engines.deduplication_engine import StoryDeduplicationEngine
-                            p_dedup = StoryDeduplicationEngine()
+                            from engines.deduplication_engine import DeduplicationRouter
+                            p_dedup = DeduplicationRouter()
                             p_res = p_dedup.evaluate_candidate(candidate_title=cand_title, candidate_summary=props.get("description", ""), db=db)
                             if not p_res.is_allowed:
                                 is_dup_proc = True
@@ -989,8 +986,8 @@ class ShortsPipeline:
                 matched_event = None
                 matched_is_published = False
                 try:
-                    from engines.deduplication_engine import StoryDeduplicationEngine
-                    dedup_eng = StoryDeduplicationEngine()
+                    from engines.deduplication_engine import DeduplicationRouter
+                    dedup_eng = DeduplicationRouter()
                     dedup_res = dedup_eng.evaluate_candidate(
                         candidate_title=c_title,
                         candidate_summary=c_props.get("description", ""),
@@ -1026,26 +1023,14 @@ class ShortsPipeline:
 
             # Intra-batch deduplication: prevent scheduling two videos for the same story in the same run
             if len(all_eligible_candidates) > 1:
-                deduped_candidates = []
-                seen_candidate_fps = []
                 try:
-                    from engines.deduplication_engine import StoryDeduplicationEngine
-                    b_dedup = StoryDeduplicationEngine()
-                    for cand in all_eligible_candidates:
-                        c_p = cand.get("properties", {}) or {}
-                        c_t = c_p.get("title") or cand.get("name", "").replace(".mp4", "")
-                        c_fp = b_dedup.build_fingerprint(c_t, c_p.get("description", ""))
-                        is_dup_in_batch = False
-                        for prev_fp in seen_candidate_fps:
-                            dup_chk = b_dedup.check_deterministic_duplicate(c_fp, prev_fp)
-                            if dup_chk and dup_chk.is_duplicate:
-                                is_dup_in_batch = True
-                                logger.warning(f"[INTRA_BATCH_DEDUP] Skipping duplicate candidate {cand['id']} ('{c_t}') matching '{prev_fp.title}' in current batch.")
-                                break
-                        if not is_dup_in_batch:
-                            seen_candidate_fps.append(c_fp)
-                            deduped_candidates.append(cand)
-                    all_eligible_candidates = deduped_candidates
+                    from engines.deduplication_engine import DeduplicationRouter
+                    b_dedup = DeduplicationRouter()
+                    all_eligible_candidates = b_dedup.filter_intra_batch_duplicates(
+                        all_eligible_candidates,
+                        title_fn=lambda cand: (cand.get("properties", {}) or {}).get("title") or cand.get("name", "").replace(".mp4", ""),
+                        summary_fn=lambda cand: (cand.get("properties", {}) or {}).get("description", "")
+                    )
                 except Exception as b_err:
                     logger.warning(f"[INTRA_BATCH_DEDUP] Error during intra-batch dedup: {b_err}")
 
@@ -1065,6 +1050,7 @@ class ShortsPipeline:
                     "scheduled_jobs": [],
                     "published_today": published_count_today,
                     "scheduled_today": scheduled_count_today,
+                    "remaining_capacity": max(0, 4 - (published_count_today + scheduled_count_today)),
                     "vacant_horizon_slots": len(vacant_horizon_slots),
                     "ready_stock": ready_stock_count,
                     "status": "NO_ACTION_REQUIRED"
@@ -1098,6 +1084,7 @@ class ShortsPipeline:
                 "scheduled_jobs": scheduled_results,
                 "published_today": published_count_today,
                 "scheduled_today": scheduled_count_today + len(scheduled_results),
+                "remaining_capacity": max(0, 4 - (published_count_today + scheduled_count_today + len(scheduled_results))),
                 "vacant_horizon_slots": max(0, len(vacant_horizon_slots) - len(scheduled_results)),
                 "ready_stock": max(0, ready_stock_count - len(scheduled_results)),
                 "status": "SUCCESS"
@@ -1240,6 +1227,10 @@ def main():
     parser.add_argument("--voice", type=str, default=None, help="Explicit active voice identifier to use for this run (overrides default/DB)")
     parser.add_argument("--dashboard", action="store_true", help="Launch FastAPI web dashboard")
     parser.add_argument("--daemon", action="store_true", help="Run continuous scheduler (Strictly 3 Shorts/day)")
+    parser.add_argument("--runtime", action="store_true", help="Launch persistent autonomous runtime worker")
+    parser.add_argument("--canary", action="store_true", help="Execute single controlled live-cloud canary production and exit")
+    parser.add_argument("--cloud-produce", type=int, default=0, help="Run Phase 7 CloudProductionOrchestrator to produce N shorts")
+    parser.add_argument("--dry-run", action="store_true", help="Execute in dry-run mode without external mutations")
     args = parser.parse_args()
 
     pipeline = ShortsPipeline(voice=args.voice)
@@ -1357,6 +1348,46 @@ def main():
         while True:
             schedule.run_pending()
             time.sleep(60)
+    elif args.runtime:
+        from runtime.service import autonomous_runtime_service
+        console.print("[bold green]Starting persistent AL-AMR Autonomous Runtime Service...[/bold green]")
+        autonomous_runtime_service.start()
+    elif args.canary:
+        from runtime.service import AutonomousRuntimeService
+        from runtime.config import RuntimeConfig
+        console.print("[bold cyan]Starting controlled live-cloud canary production...[/bold cyan]")
+        cfg = RuntimeConfig.from_env()
+        cfg.canary_mode = True
+        service = AutonomousRuntimeService(config=cfg)
+        result = service.run_canary()
+        if result.get("status") == "SUCCESS":
+            console.print(f"[bold green][+] Canary Succeeded: Job {result.get('job_id')} verified in 01_READY (Reserve: {result.get('post_canary_reserve')}/6)[/bold green]")
+        else:
+            console.print(f"[bold red][!] Canary Failed: {result.get('status')} - {result.get('error')}[/bold red]")
+            sys.exit(1)
+    elif args.cloud_produce > 0 or getattr(args, "dry_run", False) and not args.run_once:
+        from intelligence.cloud_orchestrator import CloudProductionOrchestrator
+        orchestrator = CloudProductionOrchestrator(
+            drive_engine=pipeline.drive_engine,
+            is_dry_run=args.dry_run,
+            voice_id=args.voice or "af_bella"
+        )
+        telemetry = orchestrator.run_production_cycle(
+            target_buffer=args.maintain_buffer if args.maintain_buffer > 0 else 6,
+            force_batch_count=args.cloud_produce
+        )
+        console.print(Panel.fit(
+            f"[bold green]=== Phase 7 Cloud Production Run Complete ===[/bold green]\n"
+            f"Run ID: [bold white]{telemetry.run_id}[/bold white]\n"
+            f"Status: [bold]{telemetry.status}[/bold]\n"
+            f"Videos Deposited: [bold cyan]{telemetry.videos_deposited}[/bold cyan]\n"
+            f"QA Passed: [bold green]{telemetry.videos_qa_passed}[/bold green]\n"
+            f"Ready Stock: [bold]{telemetry.final_ready_stock}[/bold]\n"
+            f"Dry Run: [yellow]{telemetry.is_dry_run}[/yellow]",
+            border_style="green" if telemetry.status == "SUCCEEDED" else "yellow"
+        ))
+        if telemetry.status in ("FAILED", "BLOCKED"):
+            sys.exit(2)
     else:
         parser.print_help()
 

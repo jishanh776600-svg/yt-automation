@@ -32,7 +32,7 @@ class StateMachine:
         JobState.AUDIO_READY: [JobState.EDITING, JobState.FAILED, JobState.NEEDS_REVIEW],
         JobState.EDITING: [JobState.QA, JobState.FAILED, JobState.NEEDS_REVIEW],
         JobState.QA: [JobState.READY_TO_UPLOAD, JobState.NEEDS_REVIEW, JobState.FAILED],
-        JobState.READY_TO_UPLOAD: [JobState.UPLOADING, JobState.NEEDS_REVIEW, JobState.FAILED],
+        JobState.READY_TO_UPLOAD: [JobState.UPLOADING, JobState.SCHEDULED, JobState.NEEDS_REVIEW, JobState.FAILED],
         JobState.UPLOADING: [JobState.SCHEDULED, JobState.PUBLISHED, JobState.FAILED, JobState.NEEDS_REVIEW],
         JobState.SCHEDULED: [JobState.PUBLISHED, JobState.FAILED, JobState.NEEDS_REVIEW],
         JobState.PUBLISHED: [],

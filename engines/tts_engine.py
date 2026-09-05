@@ -8,11 +8,13 @@ import uuid
 import wave
 import asyncio
 import logging
+import subprocess
 import urllib.request
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Any
 from datetime import datetime
 import soundfile as sf
+import numpy as np
 from sqlalchemy.orm import Session
 from config.settings import VOICE_DIR, KOKORO_MODEL_PATH, KOKORO_VOICES_PATH, KOKORO_VOICE, TTS_PROVIDER
 from config.constants import MIN_DURATION_SEC, MAX_DURATION_SEC, TARGET_DURATION_SEC, LicenseType
@@ -22,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 KOKORO_MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx"
 KOKORO_VOICES_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin"
+
+APPROVED_PRODUCTION_VOICES = ["af_bella"]
 
 AVAILABLE_VOICES = [
     {
@@ -34,66 +38,7 @@ AVAILABLE_VOICES = [
         "accent": "American",
         "kokoro_voice": "af_bella",
         "edge_voice": "en-US-JennyNeural",
-        "available": True
-    },
-    {
-        "id": "am_adam",
-        "display_name": "Adam (US Male)",
-        "engine": "Kokoro-82M ONNX / Edge-TTS",
-        "description": "Deep documentary tone with confident, steady pacing. Best for serious historical events and unusual wars.",
-        "style": "Deep Documentary",
-        "gender": "Male",
-        "accent": "American",
-        "kokoro_voice": "am_adam",
-        "edge_voice": "en-US-GuyNeural",
-        "available": True
-    },
-    {
-        "id": "am_michael",
-        "display_name": "Michael (US Male)",
-        "engine": "Kokoro-82M ONNX / Edge-TTS",
-        "description": "Natural conversational storytelling with engaging inflection. Best for mysteries and historical oddities.",
-        "style": "Storyteller / Natural",
-        "gender": "Male",
-        "accent": "American",
-        "kokoro_voice": "am_michael",
-        "edge_voice": "en-US-EricNeural",
-        "available": True
-    },
-    {
-        "id": "af_sarah",
-        "display_name": "Sarah (US Female)",
-        "engine": "Kokoro-82M ONNX / Edge-TTS",
-        "description": "Warm, measured, and authoritative documentary delivery. Best for poignant human stories.",
-        "style": "Warm / Professional",
-        "gender": "Female",
-        "accent": "American",
-        "kokoro_voice": "af_sarah",
-        "edge_voice": "en-US-AriaNeural",
-        "available": True
-    },
-    {
-        "id": "bm_george",
-        "display_name": "George (UK Male)",
-        "engine": "Kokoro-82M ONNX / Edge-TTS",
-        "description": "BBC-style classical British narrator with stately cadence. Best for medieval, monarchies, and ancient empires.",
-        "style": "BBC Classical / Royal",
-        "gender": "Male",
-        "accent": "British",
-        "kokoro_voice": "bm_george",
-        "edge_voice": "en-GB-RyanNeural",
-        "available": True
-    },
-    {
-        "id": "en-US-ChristopherNeural",
-        "display_name": "Christopher (US Male)",
-        "engine": "Edge-TTS Neural / Kokoro",
-        "description": "Deep cinematic broadcast narration with neural clarity.",
-        "style": "Deep Cinematic",
-        "gender": "Male",
-        "accent": "American",
-        "kokoro_voice": "am_fenrir",
-        "edge_voice": "en-US-ChristopherNeural",
+        "delivery_profile": "BELLA_MAX_CREATOR",
         "available": True
     }
 ]
@@ -104,30 +49,36 @@ def resolve_voice_config(voice_id: str) -> dict:
     Authoritative voice configuration resolver.
     Returns the canonical voice entry for any supported voice_id, ensuring
     both Kokoro and Edge-TTS providers resolve to the exact intended voice profile.
+    Restricted strictly to APPROVED_PRODUCTION_VOICES (af_bella).
     """
     for v in AVAILABLE_VOICES:
         if v["id"] == voice_id:
             return v
-    # Fallback to default canonical voice (Bella)
+    # Safe fallback to approved production voice (Bella)
     return AVAILABLE_VOICES[0]
 
 
 def get_active_voice(db: Optional[Session] = None) -> str:
-    """Retrieves active production voice preference, preserving canonical system invariant (af_bella)."""
+    """Retrieves active production voice preference, restricted strictly to APPROVED_PRODUCTION_VOICES."""
     if db:
         try:
             cfg = db.query(SystemConfig).filter(SystemConfig.key == "active_voice").first()
-            if cfg and cfg.value:
-                # Invariant: Adam cannot be selected accidentally through stale DB default
-                if cfg.value == "am_adam":
-                    return "af_bella"
+            if cfg and cfg.value and cfg.value in APPROVED_PRODUCTION_VOICES:
                 return cfg.value
         except Exception:
             pass
     return "af_bella"
 
 
+def select_voice_by_policy(category: str = "", title: str = "", script_text: str = "") -> str:
+    """Selects approved voice according to VoiceVariationPolicy rotation."""
+    from engines.visual_intelligence.voice_policy import VoiceVariationPolicy
+    return VoiceVariationPolicy().select_voice(category, title, script_text)
+
+
+select_voice_for_job = select_voice_by_policy
 get_authoritative_voice = get_active_voice
+
 
 
 def set_active_voice(db: Session, voice_id: str) -> bool:
@@ -184,13 +135,28 @@ class TTSEngine:
                 logger.warning(f"Failed to load Kokoro ONNX: {e}")
         return None
 
-    def generate_kokoro_audio(self, text: str, output_path: Path, voice: str = "af_bella", speed: float = 1.0) -> Tuple[bool, float]:
-        """Synthesizes speech using Kokoro ONNX model."""
+    def generate_kokoro_audio(
+        self,
+        text: str,
+        output_path: Path,
+        voice: str = "af_bella",
+        speed: float = 1.05,
+        sentence_pause: float = 0.12,
+        clause_pause: float = 0.04
+    ) -> Tuple[bool, float]:
+        """Synthesizes speech using Kokoro ONNX model with calibrated pause controls."""
         kokoro = self._get_kokoro()
         if not kokoro:
             return False, 0.0
         try:
-            samples, sample_rate = kokoro.create(text, voice=voice, speed=speed, lang="en-us")
+            samples, sample_rate = kokoro.create(
+                text,
+                voice=voice,
+                speed=speed,
+                sentence_pause=sentence_pause,
+                clause_pause=clause_pause,
+                lang="en-us"
+            )
             sf.write(str(output_path), samples, sample_rate)
             duration = len(samples) / float(sample_rate)
             return True, round(duration, 2)
@@ -286,27 +252,110 @@ class TTSEngine:
 
         return False, None, ""
 
+    def apply_presence_mastering(
+        self,
+        input_wav: Path,
+        output_wav: Path,
+        presence_boost_db: float = 2.2,
+        eq_freq_hz: int = 3000,
+        target_lufs: float = -15.5,
+        true_peak_ceiling: float = -1.2
+    ) -> bool:
+        """
+        Applies creator vocal presence EQ (+2.2 dB @ 3.0 kHz), highpass rumble filter (80 Hz),
+        and ITU-R BS.1770 broadcast loudnorm (-15.5 LUFS, true peak ceiling -1.2 dBFS).
+        """
+        try:
+            from config.settings import FFMPEG_EXE
+            af_filter = (
+                f"highpass=f=80,"
+                f"equalizer=f={eq_freq_hz}:t=q:w=1.2:g={presence_boost_db},"
+                f"loudnorm=I={target_lufs}:tp={true_peak_ceiling}:LRA=9,"
+                f"aformat=sample_rates=24000:channel_layouts=mono"
+            )
+            cmd = [
+                FFMPEG_EXE, "-y",
+                "-i", str(input_wav),
+                "-af", af_filter,
+                "-c:a", "pcm_s16le",
+                str(output_wav)
+            ]
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            return res.returncode == 0 and output_wav.exists() and output_wav.stat().st_size > 1000
+        except Exception as e:
+            logger.warning(f"Voice presence mastering error: {e}")
+            return False
+
+    @staticmethod
+    def compress_silence_gaps(input_wav: Path, output_wav: Path, max_pause_sec: float = 0.14) -> Tuple[bool, float]:
+        """
+        Compresses dead air and excessive pauses between spoken phrases/sentences down to max_pause_sec.
+        Preserves natural breathing pauses (80-120ms) without clipping words or phonemes.
+        """
+        try:
+            data, sr = sf.read(str(input_wav))
+            if len(data) == 0:
+                return False, 0.0
+
+            # 10ms frame analysis
+            frame_len = max(1, int(0.01 * sr))
+            frames = [data[i : i + frame_len] for i in range(0, len(data), frame_len)]
+            rms = [float(np.sqrt(np.mean(f**2))) if len(f) > 0 else 0.0 for f in frames]
+            silence_thresh = 0.012  # RMS threshold for acoustic silence
+            is_silence = [r < silence_thresh for r in rms]
+
+            max_silence_frames = max(2, int(max_pause_sec / 0.01))
+            new_frames = []
+            cur_silence = 0
+            for f, is_sil in zip(frames, is_silence):
+                if is_sil:
+                    cur_silence += 1
+                    if cur_silence <= max_silence_frames:
+                        new_frames.append(f)
+                else:
+                    cur_silence = 0
+                    new_frames.append(f)
+
+            if new_frames:
+                compressed = np.concatenate(new_frames, axis=0)
+                sf.write(str(output_wav), compressed, sr)
+                new_dur = round(len(compressed) / float(sr), 2)
+                return True, new_dur
+            return False, 0.0
+        except Exception as e:
+            logger.warning(f"Silence compression notice: {e}")
+            return False, 0.0
+
     def generate_narration(
         self,
         db: Session,
         text: str,
-        speed_multiplier: float = 1.0,
-        voice: Optional[str] = None
+        speed_multiplier: float = 1.05,
+        voice: Optional[str] = None,
+        delivery_spec: Optional[Any] = None
     ) -> Tuple[AssetRecord, float]:
         """
         Generates full narration audio using the persistent active voice setting (or explicit run voice),
-        adjusts speed if needed to fit 21-25s, and saves AssetRecord with verified license.
+        adjusts speed if needed to fit 22-25s, and saves AssetRecord with verified license.
         Guarantees that active voice resolution is 100% identical to the preview path.
+        Enforces APPROVED_PRODUCTION_VOICES lock (af_bella).
         """
         asset_id = f"aud_{uuid.uuid4().hex[:12]}"
         wav_path = self.voice_dir / f"{asset_id}.wav"
 
         active_voice = voice or get_active_voice(db)
-        if active_voice == "am_adam" and voice is None:
+        if active_voice not in APPROVED_PRODUCTION_VOICES:
+            logger.warning(f"[TTS_ENGINE] Voice '{active_voice}' not approved for production. Defaulting to 'af_bella'.")
             active_voice = "af_bella"
         v_cfg = resolve_voice_config(active_voice)
         kokoro_v = v_cfg.get("kokoro_voice", active_voice)
         edge_v = v_cfg.get("edge_voice", "en-US-JennyNeural")
+
+        # Extract delivery parameters if delivery_spec is provided
+        synthesize_text = delivery_spec.prepared_text if (delivery_spec and getattr(delivery_spec, "prepared_text", None)) else text
+        eff_speed = delivery_spec.speed_multiplier if (delivery_spec and speed_multiplier == 1.0) else speed_multiplier
+        sentence_pause = getattr(delivery_spec, "sentence_pause_sec", 0.12) if delivery_spec else 0.12
+        clause_pause = getattr(delivery_spec, "clause_pause_sec", 0.04) if delivery_spec else 0.04
 
         success = False
         duration = 0.0
@@ -324,14 +373,21 @@ class TTSEngine:
             except RuntimeError:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-            success, duration = loop.run_until_complete(self._generate_edge_tts_async(text, mp3_path, voice=edge_v))
+            success, duration = loop.run_until_complete(self._generate_edge_tts_async(synthesize_text, mp3_path, voice=edge_v))
             if success:
                 wav_path = mp3_path
                 tts_source = "edge_tts"
                 license_type = LicenseType.AI_GENERATED_OPEN.value
         else:
-            # 2. Kokoro TTS route
-            success, duration = self.generate_kokoro_audio(text, wav_path, voice=kokoro_v, speed=speed_multiplier)
+            # 2. Kokoro TTS route with calibrated tight pauses
+            success, duration = self.generate_kokoro_audio(
+                text=synthesize_text,
+                output_path=wav_path,
+                voice=kokoro_v,
+                speed=eff_speed,
+                sentence_pause=sentence_pause,
+                clause_pause=clause_pause
+            )
 
         # 3. Fallback to Edge-TTS using the EXACT SAME voice profile if Kokoro is unavailable / fails
         if not success or duration == 0.0:
@@ -345,21 +401,50 @@ class TTSEngine:
             except RuntimeError:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-            success, duration = loop.run_until_complete(self._generate_edge_tts_async(text, mp3_path, voice=edge_v))
+            success, duration = loop.run_until_complete(self._generate_edge_tts_async(synthesize_text, mp3_path, voice=edge_v))
             if success:
                 wav_path = mp3_path
                 tts_source = "edge_tts"
                 license_type = LicenseType.AI_GENERATED_OPEN.value
 
-        # 4. Check Duration Sanity & Calibrate
+        # 3b. Apply silence gap tightening to eliminate awkward dead air between phrases
+        if wav_path.exists():
+            tightened_wav = self.voice_dir / f"{asset_id}_tightened.wav"
+            t_ok, t_dur = self.compress_silence_gaps(wav_path, tightened_wav, max_pause_sec=0.14)
+            if t_ok and t_dur > 0:
+                wav_path = tightened_wav
+                duration = t_dur
+
+        # 4. Check Duration Sanity & Calibrate toward ~23s (22-25s)
         if duration < MIN_DURATION_SEC and duration > 16.0:
-            logger.info(f"Duration {duration}s slightly short; re-synthesizing at 0.92x speed...")
+            logger.info(f"Duration {duration}s slightly short; re-synthesizing at 0.95x speed...")
             if tts_source == "kokoro":
-                success, duration = self.generate_kokoro_audio(text, wav_path, voice=kokoro_v, speed=0.92)
-        elif duration > MAX_DURATION_SEC and duration < 30.0:
+                s_ok, s_dur = self.generate_kokoro_audio(text, wav_path, voice=kokoro_v, speed=0.95, sentence_pause=0.14, clause_pause=0.05)
+                if s_ok:
+                    duration = s_dur
+        elif duration > MAX_DURATION_SEC and duration < 32.0:
             logger.info(f"Duration {duration}s slightly long; re-synthesizing at 1.08x speed...")
             if tts_source == "kokoro":
-                success, duration = self.generate_kokoro_audio(text, wav_path, voice=kokoro_v, speed=1.08)
+                s_ok, s_dur = self.generate_kokoro_audio(text, wav_path, voice=kokoro_v, speed=1.08, sentence_pause=0.10, clause_pause=0.03)
+                if s_ok:
+                    duration = s_dur
+
+        # 5. Apply Studio Presence Mastering Chain
+        mastered_wav = self.voice_dir / f"{asset_id}_mastered.wav"
+        p_boost = getattr(delivery_spec, "presence_boost_db", 2.2) if delivery_spec else 2.2
+        eq_hz = getattr(delivery_spec, "eq_freq_hz", 3000) if delivery_spec else 3000
+        t_lufs = getattr(delivery_spec, "target_lufs", -15.5) if delivery_spec else -15.5
+        tp_ceil = getattr(delivery_spec, "true_peak_ceiling", -1.2) if delivery_spec else -1.2
+
+        if self.apply_presence_mastering(
+            input_wav=wav_path,
+            output_wav=mastered_wav,
+            presence_boost_db=p_boost,
+            eq_freq_hz=eq_hz,
+            target_lufs=t_lufs,
+            true_peak_ceiling=tp_ceil
+        ):
+            wav_path = mastered_wav
 
         asset = AssetRecord(
             id=asset_id,
@@ -374,5 +459,5 @@ class TTSEngine:
         )
         db.add(asset)
         db.commit()
-        logger.info(f"Generated narration {asset.id} ({duration}s, engine={tts_source})")
+        logger.info(f"Generated narration {asset.id} ({duration}s, engine={tts_source}, voice={active_voice})")
         return asset, duration

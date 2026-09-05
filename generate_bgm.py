@@ -92,4 +92,4 @@ def generate_all_bgm_tracks(music_dir: Path):
 
 
 if __name__ == "__main__":
-    generate_all_bgm_tracks(Path(r"C:\Users\jisha\OneDrive\Desktop\yt automation\assets\music"))
+    generate_all_bgm_tracks(Path(__file__).resolve().parent / "assets" / "music")

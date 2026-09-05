@@ -208,8 +208,20 @@ class GeminiClient:
             self._exhausted_providers.clear()
             self.active_provider = "primary"
 
-    def _get_configured_providers(self, requested_model: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Returns ordered list of configured, non-empty provider credentials: Primary -> Secondary -> Groq -> OpenRouter -> DeepSeek -> NVIDIA."""
+    def get_available_providers(self) -> List[Dict[str, Any]]:
+        """Returns list of configured providers that are not currently marked quota-exhausted."""
+        return [p for p in self._get_configured_providers() if not self.is_provider_exhausted(p["name"])]
+
+    def _get_configured_providers(
+        self,
+        requested_model: Optional[str] = None,
+        allow_experimental_providers: bool = False
+    ) -> List[Dict[str, Any]]:
+        """
+        Returns ordered list of configured, non-empty provider credentials:
+        Primary -> Secondary -> Groq -> OpenRouter -> Clean Failure.
+        Preserves the deterministic cascade without DeepSeek unless explicitly enabled.
+        """
         providers = []
         if self.api_key:
             providers.append({
@@ -239,20 +251,21 @@ class GeminiClient:
                 "api_key": self.openrouter_api_key,
                 "model": self.openrouter_model
             })
-        if self.deepseek_api_key:
-            providers.append({
-                "name": "deepseek",
-                "type": "deepseek",
-                "api_key": self.deepseek_api_key,
-                "model": self.deepseek_model
-            })
-        if self.nvidia_api_key:
-            providers.append({
-                "name": "nvidia",
-                "type": "nvidia",
-                "api_key": self.nvidia_api_key,
-                "model": self.nvidia_model
-            })
+        if allow_experimental_providers:
+            if self.deepseek_api_key:
+                providers.append({
+                    "name": "deepseek",
+                    "type": "deepseek",
+                    "api_key": self.deepseek_api_key,
+                    "model": self.deepseek_model
+                })
+            if self.nvidia_api_key:
+                providers.append({
+                    "name": "nvidia",
+                    "type": "nvidia",
+                    "api_key": self.nvidia_api_key,
+                    "model": self.nvidia_model
+                })
         return providers
 
     def _execute_request(

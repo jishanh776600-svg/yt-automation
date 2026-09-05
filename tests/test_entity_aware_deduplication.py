@@ -95,19 +95,20 @@ class TestEntityAwareDeduplication(unittest.TestCase):
     def test_F_fail_closed_on_semantic_api_error(self):
         """TEST F: Semantic API unavailable during Year + City collision -> FAIL CLOSED -> REJECTED."""
         # Force LLM error during entity-pair collision without shared anchor stems
-        res = self.engine.check_semantic_llm(
-            candidate_title="The Mysterious Erfurt Assembly",
-            candidate_summary="An enigmatic diplomatic gathering in Erfurt in 1184.",
-            candidate_script="",
-            existing_title=self.erfurt_fp.title,
-            existing_summary=self.erfurt_fp.summary_text,
-            existing_script="",
-            has_entity_pair_collision=True,
-            colliding_pair=(1184, "erfurt")
-        )
-        self.assertFalse(res.is_allowed, "Must fail closed when semantic API is down during entity collision.")
-        self.assertIn(res.classification, ["REJECTED_POTENTIAL_EVENT_COLLISION", "SEMANTIC_DUPLICATE", "EXACT_DUPLICATE"])
-        self.assertIn("fail-closed", res.reason.lower())
+        with patch("engines.deduplication_engine.AI_PROVIDER_AVAILABLE", False):
+            res = self.engine.check_semantic_llm(
+                candidate_title="The Mysterious Erfurt Assembly",
+                candidate_summary="An enigmatic diplomatic gathering in Erfurt in 1184.",
+                candidate_script="",
+                existing_title=self.erfurt_fp.title,
+                existing_summary=self.erfurt_fp.summary_text,
+                existing_script="",
+                has_entity_pair_collision=True,
+                colliding_pair=(1184, "erfurt")
+            )
+            self.assertFalse(res.is_allowed, "Must fail closed when semantic API is down during entity collision.")
+            self.assertIn(res.classification, ["REJECTED_POTENTIAL_EVENT_COLLISION", "SEMANTIC_DUPLICATE", "EXACT_DUPLICATE"])
+            self.assertIn("fail-closed", res.reason.lower())
 
     def test_G_legitimate_unique_historical_stories_pass(self):
         """TEST G: Existing legitimate unique historical stories continue to pass."""
