@@ -1271,11 +1271,11 @@ def test_f20_t5_full_day_rolls_over_to_next_utc_day_06_00():
 # ==============================================================================
 
 def test_f21_t1_produce_buffer_workflow_has_daily_cron_schedule():
-    """F21-1: produce_buffer.yml defines off-peak cron replenishment schedule at 02:00 UTC."""
+    """F21-1: produce_buffer.yml defines automated cron replenishment schedule every 3 hours."""
     wf_path = PROJECT_ROOT / ".github" / "workflows" / "produce_buffer.yml"
     assert wf_path.exists()
     content = wf_path.read_text(encoding="utf-8")
-    assert "0 2 * * *" in content
+    assert "0 */3 * * *" in content
 
 
 def test_f21_t2_autopilot_workflow_contains_publication_schedule():

@@ -32,7 +32,7 @@ class TestCloudAutonomyAndFailover:
 
     def test_02_cron_schedules_utc_alignment(self):
         p_wf = (PROJECT_ROOT / ".github" / "workflows" / "produce_buffer.yml").read_text(encoding="utf-8")
-        assert "0 2 * * *" in p_wf
+        assert "0 */3 * * *" in p_wf
 
         a_wf = (PROJECT_ROOT / ".github" / "workflows" / "autopilot.yml").read_text(encoding="utf-8")
         assert "0 6,11,15 * * *" in a_wf

@@ -1221,10 +1221,12 @@ def test_f21_b4_workflows_do_not_commit_database_to_git():
 
 
 def test_f21_b5_produce_buffer_cron_runs_before_first_autopilot_slot():
-    """F21-B5: Buffer refill cron (02:00 UTC) executes prior to the first release slot (06:00 UTC)."""
-    refill_hour = 2
+    """F21-B5: Buffer refill cron runs every 3 hours (00, 03, 06, 09, 12, 15, 18, 21 UTC), with cycles executing prior to 06:00 UTC slot."""
+    from config.constants import BUFFER_AUDIT_HOURS_UTC
     first_slot_hour = 6
-    assert refill_hour < first_slot_hour
+    early_audits = [h for h in BUFFER_AUDIT_HOURS_UTC if h < first_slot_hour]
+    assert len(early_audits) >= 2  # 00:00 and 03:00 UTC
+    assert 3 in early_audits
 
 
 # ==============================================================================

@@ -482,7 +482,12 @@ class MissionControlService:
         feed_health = self._get_intelligence_feed_health(db)
 
         # Drive Vault & Reserve Inventory
-        from config.constants import TARGET_RESERVE_BUFFER
+        from config.constants import (
+            TARGET_RESERVE_BUFFER,
+            BUFFER_AUDIT_INTERVAL_HOURS,
+            BUFFER_AUDIT_CRON,
+            get_next_buffer_audit_time
+        )
         from engines.drive_engine import DriveVaultEngine
         drive_eng = DriveVaultEngine()
         try:
@@ -492,6 +497,13 @@ class MissionControlService:
         target_reserve = TARGET_RESERVE_BUFFER  # 6
         refill_deficit = max(0, target_reserve - ready_stock)
         scheduled_count = db.query(UploadRecord).filter(UploadRecord.status.in_(["SCHEDULED", "TEST_VERIFIED"])).count()
+
+        now_utc = datetime.utcnow()
+        next_audit = get_next_buffer_audit_time(now_utc)
+        diff_sec = max(0, int((next_audit - now_utc).total_seconds()))
+        h_until = diff_sec // 3600
+        m_until = (diff_sec % 3600) // 60
+        next_audit_display = f"in {h_until}h {m_until}m ({next_audit.strftime('%H:%M UTC')})"
 
         return {
             "active_niche": {
@@ -521,6 +533,11 @@ class MissionControlService:
             "target_reserve": target_reserve,
             "refill_deficit": refill_deficit,
             "scheduled_count": scheduled_count,
+            "audit_interval_hours": BUFFER_AUDIT_INTERVAL_HOURS,
+            "audit_cron": BUFFER_AUDIT_CRON,
+            "next_audit_utc": next_audit.strftime("%Y-%m-%d %H:%M UTC"),
+            "next_audit_display": next_audit_display,
+            "automation_status": "ACTIVE",
             "provider_status": provider_status,
             "feed_health": feed_health,
             "worker": self.get_runtime_status(),

@@ -211,6 +211,36 @@ YOUTUBE_UPLOAD_COST = 1600
 DAILY_SHORTS_LIMIT = 3
 TARGET_RESERVE_BUFFER = 6
 
+# Canonical Buffer Audit & Replenishment Automation (Every 3 Hours, 24/7)
+BUFFER_AUDIT_INTERVAL_HOURS = 3
+BUFFER_AUDIT_CRON = "0 */3 * * *"
+BUFFER_AUDIT_HOURS_UTC = [0, 3, 6, 9, 12, 15, 18, 21]
+
+
+def get_next_buffer_audit_time(reference_dt: Optional[datetime] = None) -> datetime:
+    """
+    Computes the exact next upcoming 3-hour audit slot:
+    00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00, 21:00 UTC.
+    Returns naive UTC datetime suitable for ISO formatting and countdowns.
+    """
+    from datetime import time as dtime
+    if reference_dt is None:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+    elif reference_dt.tzinfo is not None:
+        now = reference_dt.astimezone(timezone.utc).replace(tzinfo=None)
+    else:
+        now = reference_dt
+
+    for hour in BUFFER_AUDIT_HOURS_UTC:
+        slot = datetime.combine(now.date(), dtime(hour=hour, minute=0))
+        if slot > now:
+            return slot
+
+    # If all slots for today have elapsed, next slot is 00:00 UTC tomorrow
+    tomorrow = now.date() + timedelta(days=1)
+    return datetime.combine(tomorrow, dtime(hour=0, minute=0))
+
+
 # Recovery & Self-Healing Thresholds (Phase 6)
 MAX_JOB_RETRIES = 3
 MAX_UPLOAD_RETRIES = 2
@@ -219,3 +249,4 @@ STALE_PROCESSING_TIMEOUT_SEC = 7200 # 2 hours
 BACKOFF_BASE_SECONDS = 2.0
 RETRY_BACKOFF_FACTOR = 2.0
 MAX_BACKOFF_SECONDS = 60.0
+

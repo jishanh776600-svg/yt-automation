@@ -369,8 +369,8 @@
                 <!-- Card 4: Storage & Publication -->
                 <div class="rounded-xl bg-space-900/80 border border-white/[0.06] p-4 space-y-3">
                     <div class="flex items-center justify-between text-xs font-mono text-zinc-400">
-                        <span>STORAGE & PUBLISHING</span>
-                        <span class="text-emerald-400 font-bold">NOMINAL</span>
+                        <span>RESERVE & AUTOMATION</span>
+                        <span class="text-emerald-400 font-bold">3H REFILL</span>
                     </div>
                     <div class="space-y-1.5 text-xs font-mono">
                         <div class="flex justify-between py-1 border-b border-white/[0.04]">
@@ -380,6 +380,14 @@
                         <div class="flex justify-between py-1 border-b border-white/[0.04]">
                             <span class="text-zinc-400">Refill Deficit</span>
                             <span class="text-amber-400 font-bold"><span id="telemetry-refill-deficit">{{ telemetry.refill_deficit or 0 }}</span> Shorts</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-white/[0.04]">
+                            <span class="text-zinc-400">Refill Interval</span>
+                            <span class="text-cyan-400 font-bold">Every 3 Hours</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-white/[0.04]">
+                            <span class="text-zinc-400">Next Audit</span>
+                            <span class="text-sky-300 font-bold"><span id="telemetry-next-audit">{{ telemetry.next_audit_display or 'In 3h' }}</span></span>
                         </div>
                         <div class="flex justify-between py-1 border-b border-white/[0.04]">
                             <span class="text-zinc-400">Scheduled Queue</span>

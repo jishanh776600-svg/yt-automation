@@ -294,7 +294,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] pb-3">
                     <div class="flex items-center gap-2">
                         <span class="w-2.5 h-2.5 rounded-full {{ 'bg-amber-400 animate-pulse' if state.refill.is_running else ('bg-emerald-400' if state.refill.status == 'IDLE' else 'bg-sky-400') }}"></span>
-                        <span class="text-xs font-bold text-white tracking-wide uppercase">Reserve Refill Telemetry</span>
+                        <span class="text-xs font-bold text-white tracking-wide uppercase">Automatic Refill Telemetry (Every 3 Hours)</span>
                         <span id="refill-status-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold {{ state.refill.status_badge_class }}">{{ state.refill.status }}</span>
                     </div>
                     <div class="flex items-center gap-3 text-xs font-mono">
@@ -305,17 +305,17 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
                     <div class="p-3 rounded-xl bg-layer1 border border-white/[0.04] space-y-1">
-                        <div class="text-zinc-400 text-[11px]">Trigger Rule</div>
-                        <div class="text-white font-medium text-[11px] truncate" title="{{ state.refill.trigger }}">{{ state.refill.trigger }}</div>
-                        <div class="text-zinc-500 text-[10px]">{{ state.refill.trigger_schedule }}</div>
+                        <div class="text-zinc-400 text-[11px]">Audit Cadence</div>
+                        <div class="text-white font-medium text-[11px] truncate">Every 3 Hours (Cloud Cron)</div>
+                        <div class="text-zinc-500 text-[10px]">{{ state.refill.trigger }}</div>
                     </div>
                     <div class="p-3 rounded-xl bg-layer1 border border-white/[0.04] space-y-1">
-                        <div class="text-zinc-400 text-[11px]">Next Scheduled Check</div>
+                        <div class="text-zinc-400 text-[11px]">Next Automatic Audit</div>
                         <div id="refill-next-check" class="text-sky-300 font-mono font-medium text-[11px]">{{ state.refill.next_check_display }}</div>
-                        <div class="text-zinc-500 text-[10px]">Upcoming 02:00 UTC batch</div>
+                        <div class="text-zinc-500 text-[10px]">Upcoming {{ state.refill.next_audit_utc_display or '3-hour' }} batch</div>
                     </div>
                     <div class="p-3 rounded-xl bg-layer1 border border-white/[0.04] space-y-1">
-                        <div class="text-zinc-400 text-[11px]">Last Refill Run</div>
+                        <div class="text-zinc-400 text-[11px]">Last Refill Audit</div>
                         <div id="refill-last-run" class="text-white font-mono text-[11px]">{{ state.refill.last_refill_display }}</div>
                         <div id="refill-last-result" class="text-zinc-400 text-[10px] truncate" title="{{ state.refill.last_refill_result }}">{{ state.refill.last_refill_result }}</div>
                     </div>

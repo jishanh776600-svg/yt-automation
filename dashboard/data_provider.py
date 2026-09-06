@@ -880,13 +880,17 @@ class SystemDataProvider:
         except Exception:
             pass
 
-        # 2. Next scheduled run (02:00 UTC daily)
-        next_refill_time = datetime.combine(now.date(), dtime(hour=2, minute=0))
-        if next_refill_time <= now:
-            next_refill_time += timedelta(days=1)
+        # 2. Next scheduled 3-hour audit run (00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00, 21:00 UTC)
+        from config.constants import (
+            BUFFER_AUDIT_INTERVAL_HOURS,
+            BUFFER_AUDIT_CRON,
+            get_next_buffer_audit_time
+        )
+        next_refill_time = get_next_buffer_audit_time(now)
         diff_sec = max(0, int((next_refill_time - now).total_seconds()))
         h_until = diff_sec // 3600
         m_until = (diff_sec % 3600) // 60
+        next_audit_display = f"in {h_until}h {m_until}m ({next_refill_time.strftime('%H:%M UTC')})"
 
         # 3. Last refill execution & result
         last_refill_start = None
@@ -894,6 +898,7 @@ class SystemDataProvider:
         last_refill_result = "Standing by (Reserve healthy)" if deficit == 0 else "Standing by (Deficit detected)"
         last_refill_display = "NEVER"
         last_error = None
+        last_produced_count = 0
 
         prod_summary_file = PROJECT_ROOT / "data" / "production_summary.json"
         if prod_summary_file.exists():
@@ -905,8 +910,9 @@ class SystemDataProvider:
                         last_refill_result = sdata.get("outcome_message") or sdata.get("outcome") or "COMPLETED"
                         last_refill_completion = sdata.get("timestamp")
                         last_refill_start = sdata.get("start_timestamp") or last_refill_completion
-                        if sdata.get("error"):
-                            last_error = sdata["error"]
+                        last_produced_count = sdata.get("produced_count", 0)
+                        if sdata.get("error") or sdata.get("block_reason"):
+                            last_error = sdata.get("error") or sdata.get("block_reason")
             except Exception:
                 pass
 
@@ -954,23 +960,28 @@ class SystemDataProvider:
         # Status: IDLE / NEEDED / RUNNING / SUCCESS / FAILED
         if is_running:
             status = "RUNNING"
+            automation_status = "RUNNING"
             status_message = f"Refill in progress: {running_reason}"
             status_badge_class = "bg-amber-950 text-amber-300 border border-amber-800"
-        elif last_error and deficit > 0:
+        elif last_error and deficit > 0 and last_refill_result in ("FAILED", "BLOCKED"):
             status = "FAILED"
-            status_message = f"Last refill failed: {last_error}"
+            automation_status = "DEGRADED"
+            status_message = f"Last refill notice: {last_error}"
             status_badge_class = "bg-rose-950 text-rose-300 border border-rose-800"
         elif deficit > 0:
             status = "NEEDED"
-            status_message = f"Deficit of {deficit} Shorts detected. Scheduled for next 02:00 UTC refill window."
+            automation_status = "ACTIVE"
+            status_message = f"Deficit of {deficit} Shorts detected. Scheduled for next {next_refill_time.strftime('%H:%M UTC')} 3-hour refill audit window."
             status_badge_class = "bg-sky-950 text-sky-300 border border-sky-800"
         else:
             status = "IDLE"
+            automation_status = "ACTIVE"
             status_message = f"Reserve buffer healthy ({ready_stock}/{target} Shorts in 01_READY)."
             status_badge_class = "bg-emerald-950 text-emerald-300 border border-emerald-800"
 
         return {
             "status": status,
+            "automation_status": automation_status,
             "status_message": status_message,
             "status_badge_class": status_badge_class,
             "is_running": is_running,
@@ -980,14 +991,24 @@ class SystemDataProvider:
             "target_reserve": target,
             "deficit": deficit,
             "trigger": f"Reserve buffer < {target} Shorts in 01_READY",
-            "trigger_schedule": "Daily at 02:00 UTC (07:30 AM IST) or operator dispatch",
+            "trigger_schedule": "Every 3 hours (00, 03, 06, 09, 12, 15, 18, 21 UTC) or manual dispatch",
+            "audit_interval_hours": BUFFER_AUDIT_INTERVAL_HOURS,
+            "audit_cron": BUFFER_AUDIT_CRON,
+            "last_audit_timestamp": last_refill_completion,
+            "last_audit_result": last_refill_result,
+            "ready_count_observed": ready_stock,
+            "deficit_calculated": deficit,
+            "shorts_produced": last_produced_count,
             "last_refill_start": last_refill_start,
             "last_refill_completion": last_refill_completion,
             "last_refill_display": last_refill_display,
             "last_refill_result": last_refill_result,
+            "next_expected_audit": next_refill_time.strftime("%Y-%m-%d %H:%M UTC"),
             "next_check_utc": next_refill_time.strftime("%Y-%m-%d %H:%M UTC"),
             "next_check_iso": next_refill_time.isoformat() + "Z",
-            "next_check_display": f"in {h_until}h {m_until}m (02:00 UTC)",
+            "next_check_display": next_audit_display,
+            "next_audit_display": next_audit_display,
+            "next_audit_utc_display": next_refill_time.strftime("%H:%M UTC"),
             "last_scheduler_run": last_scheduler_run_display,
             "last_scheduler_result": last_scheduler_result,
             "last_error": last_error
@@ -1365,12 +1386,12 @@ class SystemDataProvider:
         """
         now = datetime.utcnow()
         
-        # Calculate next buffer cron run (Daily at 03:00 UTC)
-        today_3am = now.replace(hour=3, minute=0, second=0, microsecond=0)
-        next_buffer = today_3am if now < today_3am else today_3am + timedelta(days=1)
+        # Calculate next buffer cron run (Every 3 hours: 00, 03, 06, 09, 12, 15, 18, 21 UTC)
+        from config.constants import get_next_buffer_audit_time
+        next_buffer = get_next_buffer_audit_time(now)
 
-        # Calculate next autopilot run (06:00, 10:00, 15:00, 20:00 UTC)
-        autopilot_hours = [6, 10, 15, 20]
+        # Calculate next autopilot run (06:00, 11:00, 15:00 UTC)
+        autopilot_hours = [6, 11, 15]
         next_autopilot = None
         for h in autopilot_hours:
             candidate = now.replace(hour=h, minute=0, second=0, microsecond=0)
@@ -1396,7 +1417,7 @@ class SystemDataProvider:
                 "id": "produce_buffer",
                 "name": "01 Buffer Producer",
                 "filename": "produce_buffer.yml",
-                "cron": "0 3 * * * (03:00 UTC daily)",
+                "cron": "0 */3 * * * (Every 3 hours: 00, 03, 06, 09, 12, 15, 18, 21 UTC)",
                 "target": "Replenish 01_READY reserve to 6 Shorts",
                 "concurrency_group": "buffer-producer",
                 "live_status": "STATUS_UNAVAILABLE (Cloud Runner)",
@@ -1408,7 +1429,7 @@ class SystemDataProvider:
                 "id": "autopilot",
                 "name": "02 YouTube Autopilot Publisher",
                 "filename": "autopilot.yml",
-                "cron": "0 6,10,15,20 * * * (4x daily)",
+                "cron": "0 6,11,15 * * * (3x daily: 06:00, 11:00, 15:00 UTC)",
                 "target": "Claim from 01_READY and schedule next YouTube slot",
                 "concurrency_group": "youtube-publisher",
                 "live_status": "STATUS_UNAVAILABLE (Cloud Runner)",

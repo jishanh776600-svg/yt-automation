@@ -661,9 +661,9 @@ class CloudProductionOrchestrator:
                                     claim_id=f"cl_{uuid.uuid4().hex[:8]}",
                                     claim_text=s["summary"],
                                     publisher="Historical Archives",
-                                    url="https://archive.org",
+                                    source_url="https://archive.org",
                                     published_utc=datetime.now(timezone.utc),
-                                    verification_status="VERIFIED"
+                                    verification_state="VERIFIED"
                                 )
                             ],
                             important_objects=["evidence", "historical record"],
