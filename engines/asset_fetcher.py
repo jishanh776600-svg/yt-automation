@@ -627,44 +627,59 @@ class AssetFetcher:
                             f"'{top_cand.title}' (Score: {top_cand.raw_score:.2f}, Motion: {top_cand.motion_score}) "
                             f"for beat {shot_data.get('shot_id')}"
                         )
-                        exclude_set.add(top_cand.source_url)
-                        self.vi_diversity.record_job_assets([top_cand])
-                        
                         # Handle local rendering / download
                         chosen_path = cropped_img_path
-                        if top_cand.content_type == VisualContentType.SCREENSHOT_DOCUMENT and intent.evidence_overlay_requirements:
-                            # Generate factual evidence card
-                            ov = intent.evidence_overlay_requirements
-                            overlay_path = self.vi_overlay.generate_evidence_overlay(
-                                headline=ov.get("headline", query),
-                                attribution=ov.get("attribution", "Verified Report"),
-                                date_label=ov.get("date_label", "Context"),
-                                badge_type=ov.get("badge_type", "FACT_CHECKED")
+                        download_success = False
+                        if top_cand.local_path and Path(top_cand.local_path).exists():
+                            chosen_path = Path(top_cand.local_path)
+                            download_success = True
+                        elif top_cand.media_url:
+                            try:
+                                if top_cand.is_video:
+                                    target_p = raw_video_path
+                                    r = requests.get(top_cand.media_url, timeout=20, stream=True)
+                                    with open(target_p, "wb") as f:
+                                        for chunk in r.iter_content(chunk_size=1024*1024):
+                                            f.write(chunk)
+                                    if target_p.exists() and target_p.stat().st_size > 100000:
+                                        chosen_path = target_p
+                                        download_success = True
+                                else:
+                                    img_data = requests.get(top_cand.media_url, timeout=15).content
+                                    with open(raw_img_path, "wb") as f:
+                                        f.write(img_data)
+                                    self.crop_to_vertical_9_16(raw_img_path, cropped_img_path)
+                                    if cropped_img_path.exists() and cropped_img_path.stat().st_size > 5000:
+                                        chosen_path = cropped_img_path
+                                        download_success = True
+                            except Exception as dl_err:
+                                logger.warning(f"Failed downloading top_cand {top_cand.media_url}: {dl_err}")
+
+                        if download_success:
+                            exclude_set.add(top_cand.source_url)
+                            self.vi_diversity.record_job_assets([top_cand])
+                            meta_dict = top_cand.to_dict()
+                            meta_dict["visual_intent"] = intent.to_dict()
+
+                            asset_rec = AssetRecord(
+                                id=asset_id,
+                                asset_type="video" if top_cand.is_video else "image",
+                                source=top_cand.source_name,
+                                source_url=top_cand.source_url,
+                                license=top_cand.license_name,
+                                commercial_use=True,
+                                attribution_required=bool(top_cand.creator),
+                                attribution_text=top_cand.creator,
+                                local_path=str(chosen_path),
+                                width=top_cand.width,
+                                height=top_cand.height,
+                                duration_sec=shot_duration,
+                                metadata_json=json.dumps(meta_dict)
                             )
-                            chosen_path = overlay_path
-
-                        meta_dict = top_cand.to_dict()
-                        meta_dict["visual_intent"] = intent.to_dict()
-
-                        asset_rec = AssetRecord(
-                            id=asset_id,
-                            asset_type="video" if top_cand.is_video else "image",
-                            source=top_cand.source_name,
-                            source_url=top_cand.source_url,
-                            license=top_cand.license_name,
-                            commercial_use=True,
-                            attribution_required=bool(top_cand.creator),
-                            attribution_text=top_cand.creator,
-                            local_path=str(chosen_path),
-                            width=top_cand.width,
-                            height=top_cand.height,
-                            duration_sec=shot_duration,
-                            metadata_json=json.dumps(meta_dict)
-                        )
-                        db.add(asset_rec)
-                        db.commit()
-                        logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied via Visual Intelligence ({asset_id})")
-                        return asset_rec
+                            db.add(asset_rec)
+                            db.commit()
+                            logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied via Visual Intelligence ({asset_id})")
+                            return asset_rec
             except Exception as vi_err:
                 logger.warning(f"Visual Intelligence acquisition fallback: {vi_err}")
 
@@ -812,16 +827,53 @@ class AssetFetcher:
             return asset_rec
 
         # ----------------------------------------------------
-        # 4. FINAL RESILIENT FALLBACK: Procedural Canvas
+        # 4. FINAL RESILIENT FALLBACK: Broad Mystery Photographic Search (Pexels)
         # ----------------------------------------------------
+        fallback_queries = [
+            "mysterious ancient ruins", "ancient artifact excavation", "dark fog landscape",
+            "historical archive document", "deep ocean mystery", "starry sky anomaly", "unsolved investigation"
+        ]
+        import random
+        for fb_q in random.sample(fallback_queries, len(fallback_queries)):
+            fb_url = self.search_pexels_photo(db, fb_q, exclude_urls=exclude_set)
+            if fb_url:
+                try:
+                    img_data = requests.get(fb_url, timeout=15).content
+                    with open(raw_img_path, "wb") as f:
+                        f.write(img_data)
+                    self.crop_to_vertical_9_16(raw_img_path, cropped_img_path)
+                    exclude_set.add(fb_url)
+                    prov = classify_visual_provenance(query, prompt, "pexels_fallback", is_video=False)
+                    asset_rec = AssetRecord(
+                        id=asset_id,
+                        asset_type="image",
+                        source="pexels_fallback",
+                        source_url=fb_url,
+                        license=LicenseType.PEXELS_LICENSE.value,
+                        commercial_use=True,
+                        attribution_required=False,
+                        local_path=str(cropped_img_path),
+                        width=VIDEO_WIDTH,
+                        height=VIDEO_HEIGHT,
+                        duration_sec=shot_duration,
+                        metadata_json=json.dumps(prov)
+                    )
+                    db.add(asset_rec)
+                    db.commit()
+                    logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied with real photographic Pexels visual ({asset_id})")
+                    return asset_rec
+                except Exception as fb_err:
+                    logger.warning(f"Failed downloading fallback Pexels image {fb_url}: {fb_err}")
+
+        # Emergency fallback if all network APIs fail
         im = Image.new("RGB", (VIDEO_WIDTH, VIDEO_HEIGHT), color=(20, 24, 32))
         im.save(cropped_img_path, "JPEG", quality=95)
-        prov = classify_visual_provenance(query, prompt, "procedural_canvas", is_video=False)
+        prov = classify_visual_provenance(query, prompt, "emergency_canvas", is_video=False)
         asset_rec = AssetRecord(
             id=asset_id,
             asset_type="image",
-            source="procedural_canvas",
-            source_url="local://procedural",
+            source="emergency_canvas",
+            source_url="local://emergency",
             license=LicenseType.PUBLIC_DOMAIN_CC0.value,
             commercial_use=True,
             attribution_required=False,
@@ -833,7 +885,7 @@ class AssetFetcher:
         )
         db.add(asset_rec)
         db.commit()
-        logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied with procedural canvas ({asset_id})")
+        logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied with emergency canvas ({asset_id})")
         return asset_rec
 
 

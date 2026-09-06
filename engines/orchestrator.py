@@ -788,7 +788,7 @@ class ProductionOrchestrator:
                         overlays_map[sid] = asset.local_path
 
             total_dur = sum([s.get("duration", 0.0) for s in shots])
-            script_rec = db.query(ScriptRecord).filter(ScriptRecord.job_id == job.id).first()
+            script_rec = db.query(ScriptRecord).filter(ScriptRecord.topic_id == job.topic_id).first() if (job and job.topic_id) else None
             topic_rec = db.query(Topic).filter(Topic.id == job.topic_id).first() if job.topic_id else None
 
             editing_plan = self.editorial_engine.build_editing_plan(

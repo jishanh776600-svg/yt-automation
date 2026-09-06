@@ -35,6 +35,7 @@ from intelligence.visual_models import (
     VisualLicensingStatus,
     VisualEvidenceCandidate,
 )
+from config.settings import PEXELS_API_KEY
 
 logger = logging.getLogger("alamr.visual_sources")
 
@@ -188,8 +189,8 @@ class BaseVisualAdapter(ABC):
                 logger.warning(f"[{self.name}] HTTP response status {resp.status} for {url}")
                 return None
         except urllib.error.HTTPError as he:
-            if he.code == 403:
-                logger.warning(f"[{self.name}] HTTP 403 Forbidden for {url}. Tripping circuit breaker to fail fast.")
+            if he.code in (403, 429):
+                logger.warning(f"[{self.name}] HTTP {he.code} {he.reason} for {url}. Tripping circuit breaker to fail fast.")
                 if hasattr(self, "_circuit_broken"):
                     self._circuit_broken = True
             else:
@@ -319,24 +320,26 @@ class OfficialDefenseAdapter(BaseVisualAdapter):
 
 
 # ---------------------------------------------------------------------------
-# Tier 2: Reputable News Wire / Newsroom Multimedia Adapter
+# Tier 2: Primary Archival & Wikimedia Commons Media Adapter
 # ---------------------------------------------------------------------------
 
-class NewsWireAdapter(BaseVisualAdapter):
+class WikimediaCommonsAdapter(BaseVisualAdapter):
     """
-    Tier 2 Reputable News Wire Multimedia Adapter.
-    Retrieves visual assets from verified wire agencies and public news feeds:
-    Reuters, Associated Press, BBC, Deutsche Welle, Al Jazeera.
-    
-    Categorized as RESTRICTED rights (requires attribution / fair dealing or rights clearance).
+    Tier 1/2 Primary Archival Visual Adapter.
+    Searches Wikimedia Commons API for real historical photographs, engravings, documents,
+    relics, museum scans, and archival media.
+    All Wikimedia Commons media is public domain or CC-BY / CC-SA (free commercial use).
+    Authenticity is classified as EVENT_SPECIFIC or EVENT_RELATED.
     """
+    COMMONS_API_ENDPOINT = "https://commons.wikimedia.org/w/api.php"
 
     def __init__(self, timeout_seconds: float = 6.0):
         super().__init__(
-            name="NewsWireAdapter",
-            source_type="WIRE_SERVICE",
+            name="WikimediaCommonsAdapter",
+            source_type="ARCHIVE",
             timeout_seconds=timeout_seconds,
         )
+        self._circuit_broken = False
 
     def search(
         self,
@@ -349,8 +352,75 @@ class NewsWireAdapter(BaseVisualAdapter):
         max_results: int = 5,
     ) -> List[VisualEvidenceCandidate]:
         candidates: List[VisualEvidenceCandidate] = []
-        if not query or not query.strip():
+        if not query or not query.strip() or self._circuit_broken:
             return candidates
+
+        clean_q = re.sub(r"[^\w\s\-\.]", " ", query).strip()
+        params = {
+            "action": "query",
+            "generator": "search",
+            "gsrsearch": clean_q,
+            "gsrnamespace": "6",
+            "gsrlimit": str(min(max_results * 2, 10)),
+            "prop": "imageinfo",
+            "iiprop": "url|size|mime",
+            "format": "json"
+        }
+        url = f"{self.COMMONS_API_ENDPOINT}?{urllib.parse.urlencode(params)}"
+        headers = {"User-Agent": "ALAMR-Production/2.0 (https://alamr-media.org; contact@alamr-media.org)"}
+        data = self._http_get_json(url, headers=headers)
+
+        if not data or not isinstance(data, dict):
+            return candidates
+
+        pages = data.get("query", {}).get("pages", {})
+        for page_id, page in pages.items():
+            if len(candidates) >= max_results:
+                break
+            try:
+                title = page.get("title", "")
+                imageinfo = page.get("imageinfo", [])
+                if not imageinfo:
+                    continue
+                info = imageinfo[0]
+                media_url = info.get("url")
+                if not media_url:
+                    continue
+
+                lower_url = media_url.lower()
+                if lower_url.endswith(".pdf") or lower_url.endswith(".ogg") or lower_url.endswith(".mp3"):
+                    continue
+
+                is_video = lower_url.endswith(".webm") or lower_url.endswith(".mp4") or lower_url.endswith(".ogv")
+                visual_type = "VIDEO" if is_video else "PHOTO"
+
+                cand = VisualEvidenceCandidate(
+                    visual_id=f"commons_{page_id}",
+                    event_id=event_id,
+                    beat_id=beat_id,
+                    source_type=self.source_type,
+                    source_publisher="Wikimedia Commons Archive",
+                    source_url=page.get("fullurl", media_url),
+                    media_url=media_url,
+                    thumbnail_url=info.get("thumburl", media_url),
+                    visual_type=visual_type,
+                    title=title.replace("File:", ""),
+                    description=f"Wikimedia Commons archival evidence: {title}",
+                    published_at=None,
+                    authenticity=VisualAuthenticity.EVENT_RELATED.value,
+                    licensing_status=VisualLicensingStatus.PUBLIC_DOMAIN.value,
+                    source_reliability_score=0.95,
+                    confidence=0.9,
+                    provenance={
+                        "source": "wikimedia_commons",
+                        "credit": f"Wikimedia Commons Archive ({title})",
+                    },
+                )
+                candidates.append(cand)
+            except Exception as e:
+                logger.debug(f"[WikimediaCommonsAdapter] Parsing error: {e}")
+                continue
+
         return candidates
 
 
@@ -379,7 +449,7 @@ class PexelsFallbackAdapter(BaseVisualAdapter):
             source_type="STOCK_API",
             timeout_seconds=timeout_seconds,
         )
-        self.api_key = api_key or os.environ.get("PEXELS_API_KEY", "")
+        self.api_key = api_key or PEXELS_API_KEY or os.environ.get("PEXELS_API_KEY", "")
         self._query_cache: Dict[str, List[VisualEvidenceCandidate]] = {}
 
     def search(
@@ -396,7 +466,15 @@ class PexelsFallbackAdapter(BaseVisualAdapter):
         if not self.api_key or not query or not query.strip():
             return candidates
 
-        clean_q = re.sub(r"[^\w\s]", " ", query).strip()
+        tokens = [
+            w for w in re.sub(r"[^\w\s]", " ", query).split()
+            if len(w) > 2 and w.lower() not in (
+                "the", "and", "with", "from", "this", "that", "they", "inside",
+                "about", "can", "exist", "helps", "where", "when", "what", "which",
+                "into", "over", "than", "more", "most", "some", "only", "were", "been"
+            )
+        ]
+        clean_q = " ".join(tokens[:3]) if tokens else query[:30].strip()
         cache_key = f"{clean_q}:{max_results}"
 
         if cache_key in self._query_cache:
@@ -430,8 +508,12 @@ class PexelsFallbackAdapter(BaseVisualAdapter):
             "per_page": str(min(max_results, 10)),
             "orientation": "portrait",
         }
-        headers = {"Authorization": self.api_key}
+        headers = {
+            "Authorization": self.api_key,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
 
+        # 1. Search videos
         video_url = f"{self.PEXELS_VIDEO_API}?{urllib.parse.urlencode(params)}"
         data = self._http_get_json(video_url, headers=headers)
 
@@ -459,11 +541,9 @@ class PexelsFallbackAdapter(BaseVisualAdapter):
                         if (vf.get("height") or 0) > (vf.get("width") or 0)
                     ]
                     if portrait_files:
-                        # Pick highest vertical resolution
                         portrait_files.sort(key=lambda x: x.get("height") or 0, reverse=True)
                         chosen_file = portrait_files[0]
                     elif candidate_files:
-                        # Landscape/square: pick highest resolution
                         candidate_files.sort(
                             key=lambda x: (x.get("width") or 0) * (x.get("height") or 0),
                             reverse=True
@@ -486,7 +566,7 @@ class PexelsFallbackAdapter(BaseVisualAdapter):
                         visual_type="VIDEO",
                         title=f"Stock Footage: {clean_q}",
                         description=f"Pexels stock video asset ID {item.get('id')}",
-                        authenticity=VisualAuthenticity.GENERIC.value,  # Invariant: Never event-specific
+                        authenticity=VisualAuthenticity.GENERIC.value,
                         licensing_status=VisualLicensingStatus.STOCK_API_LICENSE.value,
                         source_reliability_score=0.7,
                         confidence=0.8,
@@ -498,6 +578,55 @@ class PexelsFallbackAdapter(BaseVisualAdapter):
                     candidates.append(cand)
                 except Exception as ve:
                     logger.debug(f"[PexelsFallbackAdapter] Error parsing video item: {ve}")
+
+        # 2. If videos return fewer than max_results, query high-res portrait photos
+        if len(candidates) < max_results:
+            needed_photos = max_results - len(candidates)
+            photo_params = {
+                "query": clean_q,
+                "per_page": str(min(needed_photos, 10)),
+                "orientation": "portrait",
+            }
+            photo_url = f"{self.PEXELS_PHOTO_API}?{urllib.parse.urlencode(photo_params)}"
+            photo_data = self._http_get_json(photo_url, headers=headers)
+            if not photo_data or not photo_data.get("photos"):
+                # Fallback to any orientation (headless renderer handles 9:16 crop)
+                photo_params.pop("orientation", None)
+                photo_url = f"{self.PEXELS_PHOTO_API}?{urllib.parse.urlencode(photo_params)}"
+                photo_data = self._http_get_json(photo_url, headers=headers)
+
+            if photo_data and isinstance(photo_data, dict) and "photos" in photo_data:
+                for p_item in photo_data.get("photos", [])[:needed_photos]:
+                    try:
+                        p_id = f"pexels_img_{p_item.get('id')}"
+                        src = p_item.get("src", {})
+                        p_url = src.get("large2x") or src.get("original") or src.get("large")
+                        if not p_url:
+                            continue
+                        cand = VisualEvidenceCandidate(
+                            visual_id=p_id,
+                            event_id=event_id,
+                            beat_id=beat_id,
+                            source_type=self.source_type,
+                            source_publisher="Pexels Stock",
+                            source_url=p_item.get("url", ""),
+                            media_url=p_url,
+                            thumbnail_url=src.get("medium") or src.get("small", ""),
+                            visual_type="IMAGE",
+                            title=f"Stock Image: {clean_q}",
+                            description=f"Pexels stock photo asset ID {p_item.get('id')}",
+                            authenticity=VisualAuthenticity.GENERIC.value,
+                            licensing_status=VisualLicensingStatus.STOCK_API_LICENSE.value,
+                            source_reliability_score=0.7,
+                            confidence=0.8,
+                            provenance={
+                                "pexels_id": p_item.get("id"),
+                                "credit": f"Photo by {p_item.get('photographer', 'Creator')} via Pexels",
+                            },
+                        )
+                        candidates.append(cand)
+                    except Exception as pe:
+                        logger.debug(f"[PexelsFallbackAdapter] Error parsing photo item: {pe}")
 
         # Cache candidates for this query
         if candidates:
@@ -524,8 +653,7 @@ class VisualSourceManager:
 
     def __init__(self, adapters: Optional[List[BaseVisualAdapter]] = None):
         self.adapters = adapters if adapters is not None else [
-            OfficialDefenseAdapter(),
-            NewsWireAdapter(),
+            WikimediaCommonsAdapter(),
             PexelsFallbackAdapter(),
         ]
         self.provider_durations: Dict[str, float] = {a.name: 0.0 for a in self.adapters}

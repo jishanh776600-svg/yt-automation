@@ -187,31 +187,12 @@ class HeadlessComposer:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         dur = max(0.5, beat.duration_seconds)
 
-        # 1. Handle NO_VISUAL or missing asset -> Render clean neutral card
-        if not asset_path or not Path(asset_path).exists() or beat.coverage_type == "NO_VISUAL":
-            card_img = output_path.parent / f"neutral_card_{beat.beat_id}.jpg"
-            NeutralCardGenerator.create_card(
-                topic_title=topic_title or "VERIFIED REPORTING",
-                output_path=card_img,
-                width=self.config.width,
-                height=self.config.height,
+        # 1. Handle missing asset -> Script card fallback is strictly prohibited
+        if not asset_path or not Path(asset_path).exists():
+            raise RuntimeError(
+                f"Visual asset missing for beat {beat.beat_id}: '{asset_path}'. "
+                f"Script card and neutral card fallbacks are strictly prohibited."
             )
-            cmd = [
-                self.config.ffmpeg_exe, "-y",
-                "-loop", "1",
-                "-i", str(card_img),
-                "-t", str(dur),
-                "-vf", f"scale={self.config.width}:{self.config.height},format=yuv420p",
-                "-c:v", "libx264",
-                "-preset", "ultrafast",
-                "-crf", "18",
-                "-pix_fmt", "yuv420p",
-                "-r", str(self.config.fps),
-                "-an",
-                str(output_path)
-            ]
-            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            return output_path
 
         asset_path = Path(asset_path)
         suffix = asset_path.suffix.lower()
@@ -381,16 +362,36 @@ class HeadlessComposer:
         # 1. Fetch visual assets for manifest
         fetch_summary = self.asset_fetcher.fetch_manifest_assets(manifest)
 
+        # Build candidate pool of all successfully retrieved visual assets
+        valid_pool: List[Path] = [
+            Path(res.local_path)
+            for res in fetch_summary.results.values()
+            if res.local_path and Path(res.local_path).exists()
+        ]
+
         # 2. Render each beat clip in parallel
         t_render0 = time.perf_counter()
         beat_asset_map: Dict[str, Optional[Path]] = {}
         last_asset_path: Optional[Path] = None
 
+        fallback_idx = 0
         for beat in manifest.beats:
             if beat.transition == EditTransitionType.HOLD.value and last_asset_path:
                 asset_p = last_asset_path
             else:
                 asset_p = fetch_summary.asset_path_by_beat.get(beat.beat_id)
+                if not asset_p or not Path(asset_p).exists():
+                    if valid_pool:
+                        asset_p = valid_pool[fallback_idx % len(valid_pool)]
+                        fallback_idx += 1
+                        logger.warning(
+                            f"Beat '{beat.beat_id}' had missing asset; assigned pool fallback visual: {asset_p}"
+                        )
+                    else:
+                        raise RuntimeError(
+                            f"Visual asset missing for beat '{beat.beat_id}' and no visual assets available in manifest pool. "
+                            f"Script card fallback is strictly prohibited."
+                        )
                 last_asset_path = asset_p
             beat_asset_map[beat.beat_id] = asset_p
 

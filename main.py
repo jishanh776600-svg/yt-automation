@@ -71,6 +71,126 @@ logging.basicConfig(
 logger = logging.getLogger("HistoriaPipeline")
 console = Console(force_terminal=False)
 
+KNOWN_EVENT_METADATA: Dict[str, Dict[str, Any]] = {
+    "evt_dancing_plague_1518": {
+        "title": "The Bizarre Dancing Plague of 1518",
+        "description": "In July 1518, hundreds of citizens in Strasbourg began dancing uncontrollably for days without music. Here is the true bizarre story.\n\n#mystery #history #shorts #bizarre",
+        "tags": ["dancing plague", "strasbourg", "mystery", "history", "bizarre", "shorts", "unexplained"]
+    },
+    "evt_roman_dodecahedron_puzzle": {
+        "title": "The Roman Dodecahedron Enigma",
+        "description": "Mysterious hollow bronze 12-sided objects found across Roman ruins in Europe with no mention in ancient texts. What were they used for?\n\n#mystery #ancient #archaeology #shorts #history",
+        "tags": ["roman dodecahedron", "ancient artifact", "archaeology", "mystery", "history", "shorts"]
+    },
+    "evt_the_bloop_pacific_anomaly": {
+        "title": "The Bloop: Pacific Acoustic Anomaly",
+        "description": "In 1997, deep ocean underwater sensors detected an ultra-low frequency sound louder than any known creature. The mystery of the Bloop.\n\n#mystery #deepsea #ocean #shorts #thebloop",
+        "tags": ["the bloop", "ocean mystery", "deep sea", "acoustic anomaly", "shorts", "unexplained"]
+    },
+    "evt_man_from_taured_1954": {
+        "title": "The Man from Taured Mystery",
+        "description": "In July 1954, a man arrived at Tokyo Airport carrying a valid passport from a country that did not exist. Then he vanished from a locked room.\n\n#mystery #paralleluniverse #shorts #tokyo #unexplained",
+        "tags": ["man from taured", "mystery", "parallel universe", "tokyo airport", "shorts", "strange"]
+    },
+    "evt_atomic_survivor_yamaguchi": {
+        "title": "Yamaguchi: The Double Atomic Survivor",
+        "description": "Tsutomu Yamaguchi was in Hiroshima when the atomic bomb detonated, survived, returned home to Nagasaki, and survived the second bomb three days later.\n\n#history #survival #shorts #incredible #truestory",
+        "tags": ["tsutomu yamaguchi", "atomic survivor", "hiroshima", "nagasaki", "history", "shorts"]
+    },
+    "evt_mary_celeste_1872": {
+        "title": "The Ghost Ship Mary Celeste Disappearance",
+        "description": "Found floating silently in the Atlantic in 1872 with all cargo completely intact, meals prepared, and every crew member vanished without a trace.\n\n#mystery #ghostship #maryceleste #shorts #maritime",
+        "tags": ["mary celeste", "ghost ship", "maritime mystery", "disappearance", "history", "shorts"]
+    }
+}
+
+
+def resolve_vault_file_metadata(candidate: Dict[str, Any], db: Optional[Session] = None) -> Dict[str, Any]:
+    """
+    Authoritative metadata resolver for Drive Vault files.
+    Ensures real story titles, descriptions, and tags are extracted from:
+    1. Event ID mapping (KNOWN_EVENT_METADATA)
+    2. Local SQLite DB (RenderedVideoRecord -> Topic)
+    3. Explicit Drive file properties (if not short_man_ / short_job_)
+    4. Drive description field
+    5. Clean sanitized filename
+    """
+    props = candidate.get("properties", {}) or {}
+    name = candidate.get("name", "")
+    event_id = props.get("event_id")
+    if not event_id:
+        import re
+        m = re.search(r"evt_[a-z0-9_]+", name)
+        if m:
+            event_id = m.group(0)
+
+    # 1. Check known event metadata dictionary
+    if event_id and event_id in KNOWN_EVENT_METADATA:
+        return dict(KNOWN_EVENT_METADATA[event_id])
+
+    # 2. Check DB (RenderedVideoRecord -> Topic)
+    if db:
+        try:
+            from core.models import Topic, RenderedVideoRecord, Job
+            man_id = props.get("manifest_id")
+            if man_id:
+                rec = db.query(RenderedVideoRecord).filter(RenderedVideoRecord.manifest_id == man_id).first()
+                if rec and rec.topic_id:
+                    top = db.query(Topic).filter(Topic.id == rec.topic_id).first()
+                    if top and top.title and not top.title.startswith("short_man_"):
+                        return {
+                            "title": top.title,
+                            "description": top.summary or f"Documentary Short: {top.title}\n\n#history #shorts #mystery",
+                            "tags": ["history", "mystery", "shorts", "documentary"]
+                        }
+            job_id = props.get("job_id")
+            if job_id:
+                j = db.query(Job).filter(Job.id == job_id).first()
+                if j and j.topic_id:
+                    top = db.query(Topic).filter(Topic.id == j.topic_id).first()
+                    if top and top.title and not top.title.startswith("short_man_"):
+                        return {
+                            "title": top.title,
+                            "description": top.summary or f"Documentary Short: {top.title}\n\n#history #shorts #mystery",
+                            "tags": ["history", "mystery", "shorts", "documentary"]
+                        }
+        except Exception:
+            pass
+
+    # 3. Explicit properties if clean (not short_man_ placeholder)
+    p_title = props.get("title")
+    if p_title and not p_title.startswith("short_man_") and not p_title.startswith("short_job_") and len(p_title) > 5:
+        return {
+            "title": p_title,
+            "description": props.get("description") or f"Historical Short: {p_title}\n\n#history #shorts #documentary",
+            "tags": [t.strip() for t in props.get("tags", "history,shorts,documentary,facts").split(",") if t.strip()]
+        }
+
+    # 4. Drive file description if set
+    d_desc = candidate.get("description", "")
+    if d_desc and not d_desc.startswith("short_man_") and len(d_desc) > 5:
+        first_line = d_desc.split("\n")[0].strip()
+        return {
+            "title": first_line,
+            "description": d_desc,
+            "tags": ["history", "mystery", "shorts", "documentary"]
+        }
+
+    # 5. Clean filename if it's descriptive (not short_man_ / short_job_)
+    clean_name = name.replace(".mp4", "").replace("_", " ").title()
+    if not clean_name.lower().startswith("short man") and not clean_name.lower().startswith("short job"):
+        return {
+            "title": clean_name,
+            "description": f"Historical Short: {clean_name}\n\n#history #shorts #documentary",
+            "tags": ["history", "mystery", "shorts", "documentary"]
+        }
+
+    return {
+        "title": "Bizarre Real-World Mystery",
+        "description": "An unbelievable true real-world mystery from the archives.\n\n#mystery #shorts #history",
+        "tags": ["mystery", "history", "shorts", "documentary"]
+    }
+
 
 class ShortsPipeline:
     """End-to-end production and publishing orchestrator."""
@@ -640,9 +760,10 @@ class ShortsPipeline:
             if m:
                 extracted_job_id = m.group(1)
         job_id = extracted_job_id or f"job_vault_{file_id[:8]}"
-        title = props.get("title") or target_file.get("name", "Documentary Short").replace(".mp4", "")
-        description = props.get("description") or f"Historical Short: {title}\n\n#history #shorts #documentary"
-        tags = [t.strip() for t in props.get("tags", "history,shorts,documentary,facts").split(",") if t.strip()]
+        resolved_meta = resolve_vault_file_metadata(target_file, db=db)
+        title = resolved_meta["title"]
+        description = resolved_meta["description"]
+        tags = resolved_meta["tags"]
 
         metadata = {
             "title": title,
@@ -905,6 +1026,7 @@ class ShortsPipeline:
 
             # 5. Check 01_READY for fresh unscheduled inventory
             from engines.drive_engine import is_valid_ready_short
+            from intelligence.clustering import is_niche_compliant
             ready_files = self.drive_engine.list_files_in_folder("01_READY")
             import re
             fresh_ready_files = []
@@ -915,12 +1037,33 @@ class ShortsPipeline:
                     continue
 
                 c_props = candidate.get("properties", {}) or {}
+                c_meta = resolve_vault_file_metadata(candidate, db=db)
+                c_title = c_meta["title"]
+                c_desc = c_meta["description"]
+
+                # Strict Niche Compliance Gate (Mystery / Bizarre Real-World Stories ONLY)
+                # Files produced by our own pipeline (short_man_ prefix) have already passed
+                # the full AI Council + niche checks during production; trust them.
+                filename = candidate.get("name", "")
+                is_our_output = filename.startswith("short_man_") or filename.startswith("short_job_")
+                if is_our_output:
+                    is_comp, comp_reason = True, "APPROVED: AL-AMR pipeline output (pre-validated)"
+                else:
+                    is_comp, comp_reason = is_niche_compliant(title=c_title, text=c_desc)
+
+                if not is_comp:
+                    logger.warning(f"[PRE-CLAIM NICHE REJECT] File {candidate['id']} ('{c_title}') violates editorial policy ({comp_reason}). Quarantining to 04_FAILED.")
+                    try:
+                        self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="04_FAILED")
+                    except Exception as q_err:
+                        logger.error(f"Failed to quarantine non-compliant file {candidate['id']}: {q_err}")
+                    continue
+
                 c_job_id = c_props.get("job_id")
                 if not c_job_id:
                     m = re.search(r"short_(job_[a-f0-9]+)", candidate.get("name", ""))
                     if m:
                         c_job_id = m.group(1)
-                c_title = c_props.get("title") or candidate.get("name", "").replace(".mp4", "")
                 # 1. Direct DB lookup by job_id or exact title
                 existing_upl = None
                 if c_job_id:
@@ -975,8 +1118,8 @@ class ShortsPipeline:
                     b_dedup = DeduplicationRouter()
                     all_eligible_candidates = b_dedup.filter_intra_batch_duplicates(
                         all_eligible_candidates,
-                        title_fn=lambda cand: (cand.get("properties", {}) or {}).get("title") or cand.get("name", "").replace(".mp4", ""),
-                        summary_fn=lambda cand: (cand.get("properties", {}) or {}).get("description", "")
+                        title_fn=lambda cand: resolve_vault_file_metadata(cand, db=db)["title"],
+                        summary_fn=lambda cand: resolve_vault_file_metadata(cand, db=db)["description"]
                     )
                 except Exception as b_err:
                     logger.warning(f"[INTRA_BATCH_DEDUP] Error during intra-batch dedup: {b_err}")

@@ -421,6 +421,41 @@ class DriveVaultEngine:
             logger.error(f"Error listing files in vault folder '{folder_name}': {e}")
             raise
 
+    def move_vault_file(
+        self,
+        file_id: str,
+        from_folder: str = "01_READY",
+        to_folder: str = "04_FAILED"
+    ) -> bool:
+        """
+        Moves a file between Drive vault folders (e.g. from 01_READY to 04_FAILED quarantine)
+        by updating parent folder relationships.
+        """
+        if self._is_test_mode() or not self.token_path.exists():
+            import shutil
+            from_dir = PROJECT_ROOT / "data" / "vault_ready" if from_folder == "01_READY" else (PROJECT_ROOT / "data" / "vault" / from_folder)
+            to_dir = PROJECT_ROOT / "data" / "vault" / to_folder
+            to_dir.mkdir(parents=True, exist_ok=True)
+            for f in from_dir.glob(f"*{file_id}*"):
+                shutil.move(str(f), str(to_dir / f.name))
+            return True
+
+        drive = self.get_drive_service()
+        try:
+            from_id = self.get_folder_id(from_folder, create_if_missing=False)
+            to_id = self.get_folder_id(to_folder, create_if_missing=True)
+            drive.files().update(
+                fileId=file_id,
+                addParents=to_id,
+                removeParents=from_id,
+                fields="id, parents"
+            ).execute()
+            logger.info(f"Successfully moved vault file {file_id} from '{from_folder}' to '{to_folder}'")
+            return True
+        except Exception as e:
+            logger.error(f"Error moving vault file {file_id} from '{from_folder}' to '{to_folder}': {e}")
+            return False
+
     def upload_to_vault(
         self,
         local_path: Any,
@@ -609,6 +644,21 @@ class DriveVaultEngine:
             return retry_call(req.execute, max_retries=3, base_delay=1.5, max_delay=8.0)
         except Exception as e:
             logger.error(f"Error fetching metadata for Drive file {file_id}: {e}")
+            raise
+
+    def set_file_properties(self, file_id: str, properties: Dict[str, str]) -> Dict[str, Any]:
+        """Updates custom properties of a Drive file."""
+        if self._is_test_mode():
+            return {"id": file_id, "properties": properties}
+        drive = self.get_drive_service()
+        try:
+            body = {
+                "properties": {str(k): str(v)[:100] for k, v in properties.items()}
+            }
+            req = drive.files().update(fileId=file_id, body=body, fields="id, properties")
+            return retry_call(req.execute, max_retries=3, base_delay=1.5, max_delay=8.0)
+        except Exception as e:
+            logger.error(f"Error setting properties for Drive file {file_id}: {e}")
             raise
 
     def get_ready_stock_count(

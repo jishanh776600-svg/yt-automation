@@ -86,6 +86,7 @@ class AICouncilEngine:
         self.openrouter_key = os.getenv("OPENROUTER_API_KEY") or ""
         self.deepseek_key = os.getenv("DEEPSEEK_API_KEY") or os.getenv("AI_COUNCIL_DEEPSEEK_KEY_1") or ""
         self.kimi_key = os.getenv("AI_COUNCIL_DEEPSEEK_KEY_2") or self.openrouter_key or self.nvidia_key
+        self.groq_key = os.getenv("GROQ_API_KEY") or ""
 
     def _call_llm(
         self,
@@ -96,7 +97,7 @@ class AICouncilEngine:
         prompt: str,
         temperature: float = 0.7,
         max_tokens: int = 800,
-        timeout: float = 35.0
+        timeout: float = 5.0
     ) -> str:
         """Executes a robust HTTP request to an OpenAI-compatible endpoint."""
         if not key:
@@ -136,21 +137,35 @@ class AICouncilEngine:
         """
         t0 = time.time()
         prompt = (
-            "You are DEEPSEEK, Story Ideation & Hook Architect on the AI Council.\n"
-            "Your task is to analyze the following verified facts and discover the MOST SURPRISING, "
-            "jaw-dropping, and viral narrative angles for a 23-second YouTube Short.\n\n"
-            f"TOPIC TITLE: {event_card.canonical_title}\n"
+            "You are DEEPSEEK, Story Ideation & Hook Architect on the AL-AMR AI Council.\n"
+            "Channel niche: MYSTERY / BIZARRE REAL-WORLD STORIES.\n"
+            "Task: Find the most surprising narrative angle for a 23-second YouTube Short.\n\n"
+            "MANDATE — Hooks must:\n"
+            "✅ Sound like a friend WHISPERING a wild secret\n"
+            "✅ Start with a SPECIFIC CONCRETE DETAIL (name, place, number, object)\n"
+            "✅ Create INSTANT cognitive dissonance — something contradictory or uncanny\n"
+            "✅ End with an implicit 'wait, how is that possible?'\n\n"
+            "❌ HARD FORBIDDEN:\n"
+            "  'Researchers discovered...' 'Scientists found...' 'A new study...'\n"
+            "  'In a surprising turn...' 'Breaking news:' 'Officials say...'\n"
+            "  Generic superlatives: 'incredible', 'shocking', 'amazing', 'unbelievable'\n\n"
+            f"TOPIC: {event_card.canonical_title}\n"
             f"WHAT HAPPENED: {event_card.what}\n"
             f"ENTITIES: {', '.join(event_card.entities)}\n"
             f"OBJECTS: {', '.join(event_card.important_objects)}\n"
             f"WHERE: {event_card.where.to_dict()}\n"
             f"CLAIMS: {json.dumps([c.claim_text for c in event_card.claims])}\n\n"
-            "Provide your response in JSON format with:\n"
+            "RETURN JSON ONLY:\n"
             "{\n"
-            "  \"top_3_killer_hooks\": [\"Hook 1 (first 2s)\", \"Hook 2\", \"Hook 3\"],\n"
-            "  \"surprising_framing\": \"Why this is completely counterintuitive or bizarre\",\n"
-            "  \"narrative_angle\": \"The core story spine that hooks viewers immediately\",\n"
-            "  \"suggested_payoff\": \"The twist or lingering thought for the final 3s\"\n"
+            "  \"top_3_killer_hooks\": [\n"
+            "    \"Hook 1 — starts with a specific detail, creates instant question\",\n"
+            "    \"Hook 2 — alternative angle or framing\",\n"
+            "    \"Hook 3 — most bizarre or counterintuitive version\"\n"
+            "  ],\n"
+            "  \"surprising_framing\": \"Why this story defies expectations — one specific reason\",\n"
+            "  \"narrative_angle\": \"The spine of the story: what the viewer learns by the end\",\n"
+            "  \"curiosity_question\": \"The exact unresolved question viewers carry after watching\",\n"
+            "  \"suggested_payoff\": \"The twist or realization in the final 2-3 seconds\"\n"
             "}"
         )
 
@@ -169,7 +184,7 @@ class AICouncilEngine:
                     prompt=prompt,
                     temperature=0.7,
                     max_tokens=600,
-                    timeout=20.0
+                    timeout=4.0
                 )
         except Exception as e:
             logger.warning(f"DeepSeek via OpenRouter failed: {e}. Trying fallback...")
@@ -186,7 +201,7 @@ class AICouncilEngine:
                     prompt=prompt,
                     temperature=0.7,
                     max_tokens=600,
-                    timeout=25.0
+                    timeout=4.0
                 )
             except Exception as e:
                 logger.warning(f"DeepSeek via NVIDIA failed: {e}.")
@@ -223,17 +238,32 @@ class AICouncilEngine:
         hooks_str = json.dumps(hooks) if hooks else deepseek_review.output_text[:300]
 
         prompt = (
-            "You are KIMI K3, Head of Audience Retention & Storytelling Critic on the AI Council.\n"
-            "Your job is to ruthlessly critique the proposed angles and prevent viewers from swiping.\n\n"
+            "You are KIMI K3, Retention Critic & Storytelling Editor on the AL-AMR AI Council.\n"
+            "Channel niche: MYSTERY / BIZARRE REAL-WORLD STORIES.\n"
+            "Your job: ruthlessly audit the hooks and angle. Reject anything that sounds like text being read aloud.\n\n"
+            "WHAT 'ARTICLE-LIKE' MEANS — reject immediately if you see:\n"
+            "  - 'According to researchers...' / 'Scientists discovered...'\n"
+            "  - 'This discovery suggests...' / 'It is believed that...'\n"
+            "  - Passive voice reporting ('it was found that', 'it has been determined')\n"
+            "  - Sentences that list facts without emotional momentum\n"
+            "  - Generic openers that could apply to any topic ('In recent years...', 'Over time...')\n\n"
+            "WHAT MAKES A GREAT HOOK FOR THIS CHANNEL:\n"
+            "  - Starts mid-action or with a concrete, surprising detail\n"
+            "  - Creates a question the viewer MUST answer ('But why?', 'How?', 'Who?')\n"
+            "  - Sounds like something you'd text a friend at 2am\n"
+            "  - Short sentences + rhythm variation\n\n"
             f"TOPIC: {event_card.canonical_title}\n"
-            f"DEEPSEEK PROPOSALS:\n{hooks_str}\n\n"
-            "EVALUATE AND RETURN JSON:\n"
+            f"DEEPSEEK'S PROPOSED HOOKS:\n{hooks_str}\n\n"
+            "RETURN JSON ONLY:\n"
             "{\n"
-            "  \"best_hook\": \"The single best hook that prevents immediate scroll (or rewrite it to be punchier)\",\n"
-            "  \"swipe_risk_assessment\": \"Where viewers will get bored if we explain too much\",\n"
-            "  \"pacing_guidelines\": \"Exactly how to keep narrative momentum across 23 seconds\",\n"
-            "  \"boring_exposition_to_cut\": [\"Facts or details that slow down the story\"],\n"
-            "  \"climax_payoff_advice\": \"How to make the ending stick in the viewer's memory\"\n"
+            "  \"best_hook\": \"The single hook that best prevents immediate swipe (must be conversational)\",\n"
+            "  \"naturalness_score\": 0.0,\n"
+            "  \"sounds_like_article_critique\": \"Specific phrases from the hooks/angle that sound like written text\",\n"
+            "  \"specific_phrases_to_rewrite\": [\"exact phrase 1 to avoid\", \"exact phrase 2 to avoid\"],\n"
+            "  \"swipe_risk\": \"Specific moment where viewers will lose interest (be precise)\",\n"
+            "  \"pacing_guidelines\": \"How to maintain momentum: which beats need to be shorter/longer\",\n"
+            "  \"dead_weight_to_cut\": [\"Any fact or detail that slows the story without adding mystery\"],\n"
+            "  \"payoff_advice\": \"Exactly what the final beat must do to stick in the viewer's memory\"\n"
             "}"
         )
 
@@ -252,7 +282,7 @@ class AICouncilEngine:
                     prompt=prompt,
                     temperature=0.6,
                     max_tokens=600,
-                    timeout=25.0
+                    timeout=4.0
                 )
         except Exception as e:
             logger.warning(f"Kimi via OpenRouter failed: {e}. Trying fallback...")
@@ -269,10 +299,28 @@ class AICouncilEngine:
                     prompt=prompt,
                     temperature=0.6,
                     max_tokens=600,
-                    timeout=25.0
+                    timeout=4.0
                 )
             except Exception as e:
                 logger.warning(f"Kimi via NVIDIA failed: {e}.")
+
+        if not output_text and self.groq_key:
+            try:
+                provider_used = "groq"
+                model_used = "qwen/qwen3.6-27b"
+                raw_groq = self._call_llm(
+                    provider="groq",
+                    url="https://api.groq.com/openai/v1/chat/completions",
+                    key=self.groq_key,
+                    model="qwen/qwen3.6-27b",
+                    prompt=prompt,
+                    temperature=0.6,
+                    max_tokens=600,
+                    timeout=8.0
+                )
+                output_text = re.sub(r"<think>.*?</think>", "", raw_groq, flags=re.DOTALL).strip()
+            except Exception as e:
+                logger.warning(f"Kimi via Groq failed: {e}.")
 
         if not output_text:
             from core.gemini_client import get_gemini_client
@@ -333,27 +381,30 @@ class AICouncilEngine:
             "  \"recommended_narrative_structure\": \"Mystery | Historical anomaly | Weird science | Scientific discovery | Bizarre real-world event\"\n"
             "}"
         )
-
         output_text = ""
-        provider_used = "nvidia"
-        model_used = "nvidia/nemotron-3.5-lightning-30b-a3b"
+        provider_used = "groq"
+        model_used = "qwen/qwen3.6-27b"
 
-        # Try NVIDIA NIM Nemotron 3.5 Lightning (verified high-speed)
-        try:
-            if self.nvidia_key:
-                output_text = self._call_llm(
-                    provider="nvidia",
-                    url="https://integrate.api.nvidia.com/v1/chat/completions",
-                    key=self.nvidia_key,
-                    model="nvidia/nemotron-3.5-lightning-30b-a3b",
+        # 1. Try Groq Qwen (ultra-fast, high reliability)
+        if not output_text and self.groq_key:
+            try:
+                provider_used = "groq"
+                model_used = "qwen/qwen3.6-27b"
+                raw_groq = self._call_llm(
+                    provider="groq",
+                    url="https://api.groq.com/openai/v1/chat/completions",
+                    key=self.groq_key,
+                    model="qwen/qwen3.6-27b",
                     prompt=prompt,
                     temperature=0.5,
                     max_tokens=600,
-                    timeout=20.0
+                    timeout=8.0
                 )
-        except Exception as e:
-            logger.warning(f"Nemotron via NVIDIA NIM failed: {e}. Trying fallback...")
+                output_text = re.sub(r"<think>.*?</think>", "", raw_groq, flags=re.DOTALL).strip()
+            except Exception as e:
+                logger.warning(f"Nemotron via Groq failed: {e}. Trying fallback...")
 
+        # 2. Try OpenRouter fallback
         if not output_text and self.openrouter_key:
             try:
                 provider_used = "openrouter"
@@ -366,11 +417,12 @@ class AICouncilEngine:
                     prompt=prompt,
                     temperature=0.5,
                     max_tokens=600,
-                    timeout=20.0
+                    timeout=4.0
                 )
             except Exception as e:
                 logger.warning(f"Nemotron fallback via OpenRouter failed: {e}.")
 
+        # 3. Try Gemini fallback
         if not output_text:
             from core.gemini_client import get_gemini_client
             client = get_gemini_client()
@@ -401,149 +453,276 @@ class AICouncilEngine:
         word_count: int
     ) -> CouncilQualityScore:
         """
-        COUNCIL QUALITY GATE
-        Evaluates the generated script on 9 strict production dimensions
-        combined with hard qualitative deterministic rules.
+        COUNCIL QUALITY GATE — HARD CREATIVE ENFORCEMENT
+        Evaluates the generated script on 10 strict production dimensions.
+        Applies DETERMINISTIC HARD REJECTIONS for article-like language BEFORE any LLM scoring.
+        A technically-correct but boring/article-like script must be REJECTED.
         """
-        # 1. Deterministic Rule Checks
         critique_notes = []
         rule_violations = 0
         hard_reject = False
 
-        # Niche Purity Check: Primary Niches ONLY (Mystery, Weird Science)
+        # ── NICHE PURITY ──────────────────────────────────────────────────────
         is_niche_ok, niche_reason = is_niche_compliant(
             title=event_card.canonical_title,
             text=script_text,
             entities=event_card.entities
         )
         if not is_niche_ok:
-            critique_notes.append(f"Hard Niche Violation: {niche_reason}")
+            critique_notes.append(f"HARD NICHE VIOLATION: {niche_reason}")
             hard_reject = True
 
-        # Word Count Check: Strictly 62 to 70 words
-        if word_count < 62 or word_count > 70:
-            critique_notes.append(f"Word count violation: {word_count} words (strictly 62-70 required).")
+        # ── WORD COUNT GATE ───────────────────────────────────────────────────
+        # Acceptable range: 50-75 words for a 22-27s Short
+        if word_count < 45:
+            critique_notes.append(f"Word count {word_count} far too low (minimum 45). Script is incomplete.")
+            rule_violations += 2
+        elif word_count > 80:
+            critique_notes.append(f"Word count {word_count} too high (maximum 80). Script will run long.")
             rule_violations += 1
 
-        # Hook Stopping Power Check: No generic news opening
-        lower_hook = hook.lower().strip()
-        generic_hook_starters = [
-            "today,", "today ", "in recent developments", "breaking news",
-            "recently,", "recently ", "officials announced", "authorities said",
-            "in a surprising turn of events", "in world news", "as reported by"
+        # ── HARD REJECT: FORBIDDEN OPENERS ───────────────────────────────────
+        # A script that opens like a news article or academic paper is ALWAYS rejected.
+        lower_script = script_text.lower().strip()
+        lower_hook = hook.lower().strip() if hook else lower_script[:80].lower()
+
+        FORBIDDEN_OPENERS = [
+            "researchers discovered", "researchers found", "researchers have",
+            "scientists discovered", "scientists found", "scientists have",
+            "a new study", "according to a study", "according to scientists",
+            "according to researchers", "according to experts", "experts say",
+            "a team of researchers", "a team of scientists", "archaeologists discovered",
+            "archaeologists have found", "geologists found", "historians believe",
+            "in a recent study", "in a surprising turn of events", "in world news",
+            "breaking:", "breaking news", "officials announced", "authorities said",
+            "it was recently discovered", "it has been found that", "it was found that",
+            "it has been reported", "reports indicate", "as reported by",
         ]
-        for gh in generic_hook_starters:
+        for opener in FORBIDDEN_OPENERS:
+            if lower_script.startswith(opener) or lower_hook.startswith(opener):
+                critique_notes.append(f"HARD REJECT — Forbidden article opener: '{opener}'")
+                hard_reject = True
+                break
+
+        # ── HARD REJECT: ARTICLE-LANGUAGE DENSITY ────────────────────────────
+        # If 2+ "article patterns" appear in the script body, force REWRITE minimum.
+        ARTICLE_BODY_PATTERNS = [
+            "this suggests that", "this demonstrates", "this indicates",
+            "this discovery suggests", "was discovered to be", "was found to be",
+            "studies show", "evidence indicates", "data suggests",
+            "this phenomenon demonstrates", "researchers noted", "scientists noted",
+            "the findings show", "the study reveals", "results indicate",
+            "it is believed that", "it is thought that", "it is estimated that",
+            "this represents", "this marks", "this is significant because",
+            "in conclusion", "to summarize", "in summary",
+            "only time will tell", "the world is watching", "here is what you need to know",
+            "it remains to be seen", "as it turns out", "could change everything",
+        ]
+        article_pattern_count = sum(1 for p in ARTICLE_BODY_PATTERNS if p in lower_script)
+        if article_pattern_count >= 3:
+            critique_notes.append(
+                f"HARD REJECT — Script reads like an article ({article_pattern_count} article patterns detected). "
+                "Rewrite as human creator storytelling."
+            )
+            hard_reject = True
+        elif article_pattern_count >= 2:
+            critique_notes.append(
+                f"Article-language density warning: {article_pattern_count} patterns found. "
+                "Script may sound like text being read aloud."
+            )
+            rule_violations += 2
+
+        # ── STRUCTURAL QUALITY CHECKS ─────────────────────────────────────────
+        # Check for banned AI clichés
+        BANNED_CLICHES = [
+            "tensions are rising", "shocking truth", "mind-blowing fact",
+            "you won't believe", "this one weird", "number one reason",
+            "top ten", "here's the thing", "let that sink in",
+            "at the end of the day", "game changer", "paradigm shift",
+        ]
+        for bc in BANNED_CLICHES:
+            if bc in lower_script:
+                critique_notes.append(f"Banned AI cliché detected: '{bc}'")
+                rule_violations += 1
+
+        # Check hook quality
+        GENERIC_HOOK_STARTERS = [
+            "today,", "today ", "in recent developments", "recently,", "recently ",
+            "in a surprising turn", "in world news", "as reported by",
+        ]
+        for gh in GENERIC_HOOK_STARTERS:
             if lower_hook.startswith(gh):
-                critique_notes.append(f"Generic news hook detected: starts with '{gh}'")
+                critique_notes.append(f"Generic hook opener: starts with '{gh}'")
                 rule_violations += 1
+                break
 
-        # Banned AI Clichés Check
-        banned_phrases = [
-            "in a surprising turn of events", "tensions are rising", "only time will tell",
-            "the world is watching", "here is what you need to know", "it remains to be seen",
-            "experts say", "experts are watching", "as it turns out", "could change everything",
-            "shocking truth", "mind-blowing fact"
-        ]
-        lower_script = script_text.lower()
-        for bp in banned_phrases:
-            if bp in lower_script:
-                critique_notes.append(f"Banned AI cliché detected: '{bp}'")
-                rule_violations += 1
-
+        # ── LLM QUALITY SCORING ───────────────────────────────────────────────
         prompt = (
-            "You are the AI Council Quality Gate Reviewer for YouTube Shorts.\n"
-            "Score the following script objectively from 1.0 to 10.0 on these 9 dimensions:\n"
-            "1. hook_strength: Does the first 1-2s stop the scroll with an unanswered question, surprise, or contradiction?\n"
-            "2. curiosity: Does the story create an irresistible itch to find out what happened?\n"
-            "3. story_progression: Does every single sentence advance the plot with NO filler?\n"
-            "4. originality: Does this feel like fresh, unique human storytelling rather than AI explainer cliché?\n"
-            "5. payoff: Does the ending deliver a twist, reveal, or memorable consequence?\n"
-            "6. spoken_naturalness: Is it written for spoken voice (short sentences, natural rhythm, strong verbs)?\n"
-            "7. factual_confidence: Are all claims strictly grounded in the EventCard?\n"
-            "8. visual_potential: Can this script naturally drive 9-12 visually distinct footage scenes?\n"
-            "9. duration_suitability: Is the word count (strictly 62-70 words) appropriate for ~23 seconds?\n\n"
-            f"EVENT: {event_card.canonical_title}\n"
+            "You are the AL-AMR Council Quality Gate. Score this YouTube Shorts script with brutal honesty.\n"
+            "The channel is MYSTERY / BIZARRE REAL-WORLD STORIES. The target viewer is scrolling fast.\n"
+            "A script that sounds like Wikipedia, a news article, or a school essay MUST score below 6 "
+            "on spoken_naturalness and originality.\n\n"
+            f"TOPIC: {event_card.canonical_title}\n"
             f"HOOK: {hook}\n"
-            f"FULL SCRIPT ({word_count} words):\n{script_text}\n\n"
-            "RETURN JSON:\n"
+            f"SCRIPT ({word_count} words):\n{script_text}\n\n"
+            "Score each dimension 1.0–10.0 with NO inflation. Be specific in your critique.\n"
+            "Scoring thresholds for PASS: overall ≥ 7.5, hook_strength ≥ 7.5, spoken_naturalness ≥ 7.5\n\n"
+            "RETURN JSON ONLY:\n"
             "{\n"
-            "  \"hook_strength\": 8.5,\n"
-            "  \"curiosity\": 9.0,\n"
-            "  \"story_progression\": 8.0,\n"
-            "  \"originality\": 8.5,\n"
-            "  \"payoff\": 8.0,\n"
-            "  \"spoken_naturalness\": 8.5,\n"
-            "  \"factual_confidence\": 9.5,\n"
-            "  \"visual_potential\": 8.5,\n"
-            "  \"duration_suitability\": 9.0,\n"
-            "  \"overall_score\": 8.6,\n"
+            "  \"hook_strength\": 0.0,\n"
+            "  \"curiosity\": 0.0,\n"
+            "  \"narrative_momentum\": 0.0,\n"
+            "  \"spoken_naturalness\": 0.0,\n"
+            "  \"specificity\": 0.0,\n"
+            "  \"escalation\": 0.0,\n"
+            "  \"originality\": 0.0,\n"
+            "  \"payoff\": 0.0,\n"
+            "  \"factual_confidence\": 0.0,\n"
+            "  \"visual_storytelling_potential\": 0.0,\n"
+            "  \"overall_score\": 0.0,\n"
             "  \"verdict\": \"PASS | REWRITE | REJECT\",\n"
-            "  \"critique\": \"Brief explanation of what works and what must improve\"\n"
+            "  \"critique\": \"Specific, actionable critique. Identify exact phrases that sound like an article. "
+            "Identify missing escalation. Identify weak payoff.\"\n"
             "}"
         )
 
+        raw = ""
         try:
-            if self.openrouter_key:
-                raw = self._call_llm(
-                    provider="openrouter",
-                    url="https://openrouter.ai/api/v1/chat/completions",
-                    key=self.openrouter_key,
-                    model="meta-llama/llama-3.3-70b-instruct",
-                    prompt=prompt,
-                    temperature=0.2,
-                    max_tokens=400,
-                    timeout=15.0
-                )
-            else:
+            # Try Groq first (fast, reliable for structured JSON)
+            if self.groq_key:
+                try:
+                    raw_g = self._call_llm(
+                        provider="groq",
+                        url="https://api.groq.com/openai/v1/chat/completions",
+                        key=self.groq_key,
+                        model="qwen/qwen3.6-27b",
+                        prompt=prompt,
+                        temperature=0.15,
+                        max_tokens=500,
+                        timeout=10.0
+                    )
+                    raw = re.sub(r"<think>.*?</think>", "", raw_g, flags=re.DOTALL).strip()
+                except Exception as e:
+                    logger.warning(f"Groq Quality Gate failed: {e}. Trying OpenRouter fallback...")
+
+            if not raw and self.openrouter_key:
+                try:
+                    raw = self._call_llm(
+                        provider="openrouter",
+                        url="https://openrouter.ai/api/v1/chat/completions",
+                        key=self.openrouter_key,
+                        model="meta-llama/llama-3.3-70b-instruct",
+                        prompt=prompt,
+                        temperature=0.15,
+                        max_tokens=500,
+                        timeout=15.0
+                    )
+                except Exception as e:
+                    logger.warning(f"OpenRouter Quality Gate failed: {e}. Trying Gemini fallback...")
+
+            if not raw:
                 from core.gemini_client import get_gemini_client
                 client = get_gemini_client()
                 resp = client.generate_content(model=GEMINI_MODEL, contents=prompt)
                 raw = resp.text.strip()
 
             data = self._parse_json_from_response(raw)
+
+            # Support both old 9-dim and new 10-dim responses
+            story_prog = float(data.get("narrative_momentum", data.get("story_progression", 0.0)))
             score = CouncilQualityScore(
-                hook_strength=float(data.get("hook_strength", 8.0)),
-                curiosity=float(data.get("curiosity", 8.0)),
-                story_progression=float(data.get("story_progression", 8.0)),
-                originality=float(data.get("originality", 8.0)),
-                payoff=float(data.get("payoff", 8.0)),
-                spoken_naturalness=float(data.get("spoken_naturalness", 8.0)),
-                factual_confidence=float(data.get("factual_confidence", 8.5)),
-                visual_potential=float(data.get("visual_potential", 8.0)),
-                duration_suitability=float(data.get("duration_suitability", 8.5)),
-                overall_score=float(data.get("overall_score", 8.2)),
-                verdict=data.get("verdict", "PASS").upper(),
+                hook_strength=float(data.get("hook_strength", 0.0)),
+                curiosity=float(data.get("curiosity", 0.0)),
+                story_progression=story_prog,
+                originality=float(data.get("originality", 0.0)),
+                payoff=float(data.get("payoff", 0.0)),
+                spoken_naturalness=float(data.get("spoken_naturalness", 0.0)),
+                factual_confidence=float(data.get("factual_confidence", 0.0)),
+                visual_potential=float(data.get("visual_storytelling_potential", data.get("visual_potential", 0.0))),
+                duration_suitability=float(data.get("duration_suitability", 8.0)),
+                overall_score=float(data.get("overall_score", 0.0)),
+                verdict=data.get("verdict", "REWRITE").upper(),
                 critique=data.get("critique", "")
             )
+
+            # Recompute overall if LLM inflated it
+            computed = (
+                score.hook_strength + score.curiosity + score.story_progression +
+                score.originality + score.payoff + score.spoken_naturalness +
+                score.factual_confidence + score.visual_potential
+            ) / 8.0
+            # Accept LLM's overall only if within 1.0 of computed
+            if abs(score.overall_score - computed) > 1.0:
+                score.overall_score = round(computed, 2)
+
         except Exception as e:
-            logger.warning(f"CouncilQualityScore evaluation failed: {e}. Defaulting to safe PASS.")
+            logger.warning(f"CouncilQualityScore LLM evaluation failed: {e}. Using conservative fallback.")
+            # Conservative fallback — does NOT rubber-stamp; forces REWRITE
             score = CouncilQualityScore(
-                hook_strength=8.0,
-                curiosity=8.0,
-                story_progression=8.0,
-                originality=8.0,
-                payoff=8.0,
-                spoken_naturalness=8.0,
-                factual_confidence=9.0,
-                visual_potential=8.0,
-                duration_suitability=8.5,
-                overall_score=8.2,
-                verdict="PASS",
-                critique="Automated fallback pass."
+                hook_strength=6.5,
+                curiosity=6.5,
+                story_progression=6.5,
+                originality=6.5,
+                payoff=6.5,
+                spoken_naturalness=6.5,
+                factual_confidence=7.5,
+                visual_potential=6.5,
+                duration_suitability=7.0,
+                overall_score=6.6,
+                verdict="REWRITE",
+                critique="Quality evaluation failed — conservative REWRITE assigned. Manual review recommended."
             )
 
-        # Enforce hard deterministic overrides
+        # ── APPLY DETERMINISTIC OVERRIDES ─────────────────────────────────────
         if hard_reject:
             score.verdict = "REJECT"
             score.overall_score = min(score.overall_score, 3.5)
-            score.critique = "; ".join(critique_notes) + (" | " + score.critique if score.critique else "")
-        elif rule_violations > 0:
+            score.hook_strength = min(score.hook_strength, 4.0)
+            score.spoken_naturalness = min(score.spoken_naturalness, 3.0)
+            score.critique = "[HARD REJECT] " + "; ".join(critique_notes) + (
+                " | LLM: " + score.critique if score.critique else ""
+            )
+        elif rule_violations >= 2:
             score.verdict = "REWRITE"
-            score.overall_score = min(score.overall_score, 6.8)
-            if word_count < 62 or word_count > 70:
-                score.duration_suitability = min(score.duration_suitability, 6.0)
-            score.critique = "; ".join(critique_notes) + (" | " + score.critique if score.critique else "")
+            score.overall_score = min(score.overall_score, 6.5)
+            score.critique = "[RULE VIOLATIONS] " + "; ".join(critique_notes) + (
+                " | " + score.critique if score.critique else ""
+            )
+        else:
+            # Dimensional quality gates — explicit rejection reasons
+            dimension_failures = []
+            if score.hook_strength < 7.5:
+                dimension_failures.append(f"Weak hook ({score.hook_strength:.1f} < 7.5)")
+            if score.spoken_naturalness < 7.5:
+                dimension_failures.append(f"Sounds like article not human ({score.spoken_naturalness:.1f} < 7.5)")
+            if score.story_progression < 7.0:
+                dimension_failures.append(f"Weak narrative momentum ({score.story_progression:.1f} < 7.0)")
+            if score.payoff < 6.5:
+                dimension_failures.append(f"No meaningful payoff ({score.payoff:.1f} < 6.5)")
+            if score.overall_score < 7.5:
+                dimension_failures.append(f"Overall quality insufficient ({score.overall_score:.1f} < 7.5)")
 
+            if dimension_failures:
+                score.verdict = "REWRITE"
+                score.overall_score = min(score.overall_score, 7.0)
+                score.critique = (
+                    f"[QUALITY GATE FAILED] {', '.join(dimension_failures)}"
+                    + (" | " + score.critique if score.critique else "")
+                )
+                if critique_notes:
+                    score.critique = "; ".join(critique_notes) + " | " + score.critique
+            else:
+                score.verdict = "PASS"
+                if critique_notes:
+                    score.critique = "[MINOR WARNINGS] " + "; ".join(critique_notes) + (
+                        " | " + score.critique if score.critique else ""
+                    )
+
+        logger.info(
+            f"[QUALITY_GATE] Verdict={score.verdict} | Score={score.overall_score:.1f} | "
+            f"Hook={score.hook_strength:.1f} | Natural={score.spoken_naturalness:.1f} | "
+            f"HardReject={hard_reject} | RuleViolations={rule_violations}"
+        )
         return score
 
     def _parse_json_from_response(self, text: str) -> Dict[str, Any]:

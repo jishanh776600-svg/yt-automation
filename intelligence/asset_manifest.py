@@ -522,7 +522,7 @@ class AssetManifestEngine:
     """
 
     DEFAULT_WORDS_PER_SECOND = 2.3     # Standard broadcast narration rate (~138 WPM)
-    MIN_BEAT_DURATION = 1.5            # Minimum duration for visual cut stability
+    MIN_BEAT_DURATION = 2.0            # Minimum duration for visual cut stability (no rapid 1s flashes)
     MAX_CONSECUTIVE_REUSE = 2          # Maximum times the exact same visual can repeat consecutively
 
     def __init__(
@@ -574,6 +574,12 @@ class AssetManifestEngine:
         manifest_used_visual_ids: Set[str] = set()
         last_selected_visual_id: Optional[str] = None
         consecutive_reuse_count = 0
+        all_package_candidates: List[VisualEvidenceCandidate] = [
+            cand
+            for bp in plan_by_beat.values()
+            for cand in bp.candidate_pool
+            if cand.retrieval_status == "AVAILABLE"
+        ]
 
         for idx, beat in enumerate(script_doc.beats):
             # 1. Temporal Planning: Calculate deterministic duration from word count
@@ -641,6 +647,17 @@ class AssetManifestEngine:
                         selected_cand = available[0]
                         selection_reason = f"Pool candidate {selected_cand.visual_id} selected"
 
+            # Fallback across entire evidence package to eliminate NO_VISUAL
+            if not selected_cand and all_package_candidates:
+                selected_cand = all_package_candidates[idx % len(all_package_candidates)]
+                selection_reason = f"Package candidate {selected_cand.visual_id} selected to avoid NO_VISUAL"
+
+            # If selected candidate was already used in this Short, prefer a fresh unused candidate
+            if selected_cand and selected_cand.visual_id in used_visual_counts:
+                unused_from_pkg = [c for c in all_package_candidates if c.visual_id not in used_visual_counts]
+                if unused_from_pkg:
+                    selected_cand = unused_from_pkg[0]
+                    selection_reason = f"Selected fresh package candidate {selected_cand.visual_id} to ensure visual uniqueness"
 
             # 3. Licensing & Eligibility Classification
             eligibility = ManifestLicensingEligibility.UNKNOWN.value

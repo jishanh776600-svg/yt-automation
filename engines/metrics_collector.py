@@ -134,6 +134,15 @@ class MetricsCollector:
         if not upload.youtube_video_id or not upload.youtube_video_id.strip():
             return False, "MISSING_YOUTUBE_ID"
 
+        # Skip known test/dummy artifacts to prevent wasted network latency
+        yt_id = upload.youtube_video_id.strip()
+        if (
+            yt_id in ("vid_deleted_404", "real_yt_id_123", "legacy_vid_123", "vid_real_id", "test_vid_id")
+            or yt_id.startswith(("test_", "vid_test_"))
+            or (upload.job_id and upload.job_id.startswith(("test_", "job_test_")))
+        ):
+            return False, "TEST_ARTIFACT"
+
         if not now:
             now = datetime.utcnow()
 

@@ -389,7 +389,7 @@ class CloudProductionOrchestrator:
                 id=f"top_{uuid.uuid4().hex[:12]}",
                 title=getattr(event_card, "canonical_title", getattr(event_card, "headline", "Event")),
                 summary=getattr(event_card, "what", getattr(event_card, "summary", "")),
-                category=getattr(event_card, "category", "Weird Science & Mystery"),
+                category=getattr(event_card, "category", "Mystery / Bizarre Real-World Stories"),
                 event_id=event_id,
                 verification_state=event_card.verification_state,
                 independent_sources_count=len(event_card.sources),
@@ -583,8 +583,8 @@ class CloudProductionOrchestrator:
                 clust_dur = time.perf_counter() - t_clust0
                 telemetry.stage_durations["3_embedding_clustering"] = clust_dur
 
-                # Hard Niche Purity Gate: Primary Niches ONLY (Mystery / Bizarre real-world, Weird Science)
-                # Strictly reject all politics, geopolitics, elections, military, diplomacy
+                # Hard Niche Purity Gate: Mystery / Bizarre real-world stories ONLY (Weird Science purged)
+                # Strictly reject all politics, geopolitics, elections, military, diplomacy, science explainers
                 compliant_cards: List[EventCard] = []
                 for card in event_cards:
                     is_ok, reason = is_niche_compliant(
@@ -600,37 +600,42 @@ class CloudProductionOrchestrator:
                         )
                         telemetry.events_rejected += 1
 
-                # Rank event cards by curiosity & weird science / mystery potential
+                # Rank event cards by Mystery / Bizarre real-world storytelling potential
                 def _score_niche_curiosity(card: EventCard) -> float:
                     t = f"{card.canonical_title} {card.what} {' '.join(card.entities)}".lower()
                     high_interest = [
-                        "discover", "bizarre", "mysterious", "unexplained", "strange", "ancient",
-                        "secret", "anomaly", "underwater", "trench", "deep sea", "fossil", "archaeolog",
-                        "quantum", "astronom", "telescope", "creature", "brain", "mutation", "dna",
-                        "skeleton", "tomb", "pyramid", "spider", "ocean", "space", "planet", "galaxy",
-                        "unusual", "odd", "popping", "sound", "signal", "radio", "stone age"
+                        "bizarre", "mysterious", "mystery", "unexplained", "strange", "ancient",
+                        "secret", "anomaly", "skeleton", "tomb", "pyramid", "creature", "cryptid",
+                        "unusual", "odd", "oddity", "stone age", "disappearance", "disappeared",
+                        "vanished", "unsolved", "ghost ship", "abandoned", "curse", "cursed",
+                        "buried", "excavation", "coincidence", "survival", "catacomb", "labyrinth",
+                        "mummy", "mummified", "haunted", "cryptic", "lost civilization", "forbidden",
+                        "eccentric", "macabre", "historical incident", "secret chamber", "hoax",
+                        "voynich", "strangest", "creepy", "eerily", "relic", "phenomenon"
                     ]
-                    dry_political = [
+                    dry_academic_or_political = [
                         "bilateral", "diplomat", "press briefing", "parliament", "treaty",
-                        "ground forces", "national security", "spokesman", "memorandum", "tariffs"
+                        "ground forces", "national security", "spokesman", "memorandum", "tariffs",
+                        "quantum computer", "particle physics", "gene editing", "crispr", "clinical trial",
+                        "synthetic biology", "materials science", "semiconductor", "battery technology"
                     ]
                     score = 0.0
                     for hi in high_interest:
                         if hi in t:
-                            score += 2.0
-                    for dp in dry_political:
+                            score += 2.5
+                    for dp in dry_academic_or_political:
                         if dp in t:
-                            score -= 3.0
+                            score -= 4.0
                     return score
 
                 compliant_cards.sort(key=_score_niche_curiosity, reverse=True)
                 if compliant_cards:
                     logger.info(
                         f"Top ranked niche-compliant card: '{compliant_cards[0].canonical_title}' "
-                        f"(Curiosity score: {_score_niche_curiosity(compliant_cards[0]):.1f})"
+                        f"(Mystery/Bizarre score: {_score_niche_curiosity(compliant_cards[0]):.1f})"
                     )
                 else:
-                    logger.warning("[NICHE_GATE] Zero event cards passed the strict Mystery / Weird Science purity gate.")
+                    logger.warning("[NICHE_GATE] Zero event cards passed the strict Mystery / Bizarre purity gate.")
 
                 # 7. Produce Up to Deficit
                 produced_this_run = 0

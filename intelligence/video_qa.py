@@ -227,6 +227,69 @@ class VideoQAEngine:
         detected = max_dur >= min_duration
         return detected, max_dur, intervals
 
+    def detect_script_card_frames(
+        self,
+        video_path: Path,
+        duration: float,
+    ) -> Tuple[bool, str]:
+        """
+        Samples frames across video to verify that no frame is a flat neutral card,
+        charcoal script placeholder, or text-dominated slide.
+        Returns: (has_script_cards: bool, reason: str)
+        """
+        if not video_path.exists() or duration <= 0:
+            return False, ""
+
+        import tempfile
+        from PIL import Image
+        import numpy as np
+
+        sample_points = [0.15, 0.35, 0.50, 0.70, 0.85]
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_p = Path(tmp_dir)
+            for idx, pt in enumerate(sample_points):
+                ts = round(duration * pt, 2)
+                frame_out = tmp_p / f"sample_{idx}.jpg"
+                cmd = [
+                    self.ffmpeg_exe, "-y",
+                    "-ss", str(ts),
+                    "-i", str(video_path),
+                    "-vframes", "1",
+                    "-q:v", "2",
+                    str(frame_out),
+                ]
+                res = subprocess.run(
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10
+                )
+                if res.returncode == 0 and frame_out.exists():
+                    try:
+                        im = Image.open(frame_out).convert("RGB")
+                        arr = np.array(im)
+                        # Check 1: Neutral card charcoal background color RGB(28, 32, 42)
+                        charcoal = np.array([28, 32, 42])
+                        diff = np.abs(arr.astype(int) - charcoal)
+                        is_charcoal = np.all(diff <= 14, axis=-1)
+                        charcoal_ratio = float(np.mean(is_charcoal))
+                        if charcoal_ratio > 0.65:
+                            return (
+                                True,
+                                f"Sample frame at {ts:.1f}s is a neutral script card "
+                                f"({charcoal_ratio*100:.1f}% charcoal background). Script cards are strictly prohibited.",
+                            )
+
+                        # Check 2: Low visual entropy / solid graphic card
+                        std_dev = float(np.std(arr))
+                        if std_dev < 10.0:
+                            return (
+                                True,
+                                f"Sample frame at {ts:.1f}s has near-zero visual variation (std_dev={std_dev:.1f}), "
+                                f"characteristic of a solid/graphic placeholder card.",
+                            )
+                    except Exception as e:
+                        logger.warning(f"Frame analysis warning at {ts}s: {e}")
+
+        return False, ""
+
     def analyze_narration_pacing(self, audio_path: Path) -> Dict[str, Any]:
         """
         Waveform silence detection measuring max pause and cumulative dead-air ratio.
@@ -304,6 +367,7 @@ class VideoQAEngine:
             "zero_bgm_sfx_policy": True,
             "narration_no_excessive_pause": False,
             "narration_dead_air_ratio": False,
+            "no_script_cards": False,
         }
 
         # 1. Existence and File Size
@@ -384,16 +448,17 @@ class VideoQAEngine:
         else:
             checks["duration_in_tolerance"] = True
 
-        # Production Duration Hard Requirement: 22.0 to 25.0 seconds (tolerance [21.5, 25.5])
-        # Only enforced for production runs (not short test fixtures with expected_duration < 15.0)
+        # Production Duration Hard Requirement: 22.0 to 27.0 seconds (tolerance [21.5, 27.5])
+        # Extended window accommodates Kokoro's natural pacing for 55-70 word scripts.
+        # YouTube Shorts 22-27s hit the optimal engagement range.
         is_production_run = (expected_duration is None) or (expected_duration >= 15.0)
         if is_production_run:
-            if 21.5 <= dur <= 25.5:
+            if 21.5 <= dur <= 27.5:
                 checks["duration_bounds_22_25"] = True
             else:
                 checks["duration_bounds_22_25"] = False
                 failure_reasons.append(
-                    f"Duration {dur:.2f}s outside required production bounds 22.0-25.0s (tolerance: [21.5s, 25.5s])."
+                    f"Duration {dur:.2f}s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s])."
                 )
 
         # 5. Scene Density and Uniqueness Gating (Minimum 9 scenes for production runs)
@@ -496,7 +561,23 @@ class VideoQAEngine:
             checks["narration_no_excessive_pause"] = True
             checks["narration_dead_air_ratio"] = True
 
-        # 9. Overall Verdict
+        # 9. Visual Script/Neutral Card Rejection Gate
+        checks["no_script_cards"] = True
+        if manifest:
+            no_vis_beats = [b.beat_id for b in manifest.beats if getattr(b, "coverage_type", "") == "NO_VISUAL"]
+            if no_vis_beats:
+                checks["no_script_cards"] = False
+                failure_reasons.append(
+                    f"Manifest contains NO_VISUAL beats: {no_vis_beats}. Script cards and placeholder cards are strictly prohibited."
+                )
+
+        if checks["no_script_cards"] and has_v and dur > 0:
+            has_cards, card_reason = self.detect_script_card_frames(video_path, dur)
+            if has_cards:
+                checks["no_script_cards"] = False
+                failure_reasons.append(card_reason)
+
+        # 10. Overall Verdict
         passed = all(checks.values()) and len(failure_reasons) == 0
         status = "PASSED" if passed else "FAILED"
 

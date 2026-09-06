@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from config.settings import TEST_MODE, CLIENT_SECRETS_FILE, PROJECT_ROOT
-from core.models import Job, RenderOutput, UploadRecord
+from core.models import Job, RenderOutput, UploadRecord, ScriptRecord
 from config.constants import JobState
 
 logger = logging.getLogger(__name__)
@@ -204,7 +204,21 @@ class UploadEngine:
         except Exception as dedup_err:
             logger.warning(f"[GATE 15] Dedup evaluation notice: {dedup_err}")
 
-        return True, "All 15 publication safety gates passed successfully"
+        # 16. Strict Niche Compliance Gate (Mystery / Bizarre Real-World Stories ONLY)
+        from intelligence.clustering import is_niche_compliant
+        cand_title = metadata.get("title", "")
+        cand_desc = metadata.get("description", "")
+        cand_script = ""
+        script_rec = db.query(ScriptRecord).filter(ScriptRecord.topic_id == job.topic_id).first() if (job and getattr(job, "topic_id", None)) else None
+        if script_rec and getattr(script_rec, "full_text", None):
+            cand_script = script_rec.full_text
+        elif script_rec and getattr(script_rec, "script_text", None):
+            cand_script = script_rec.script_text
+        is_niche, niche_reason = is_niche_compliant(title=cand_title, text=f"{cand_desc} {cand_script}")
+        if not is_niche:
+            return False, f"Gate 16 Failed: Asset violates editorial policy (Mystery / Bizarre Real-World Stories ONLY): {niche_reason}"
+
+        return True, "All 16 publication safety gates passed successfully"
 
     def recover_orphaned_upload(
         self,

@@ -168,7 +168,9 @@ class VisualEvidenceRetrievalEngine:
 
         # 2. Retrieve candidates across tiers
         raw_candidates: List[VisualEvidenceCandidate] = []
-        for q in query_candidates[:2]:
+        for q in query_candidates[:3]:
+            if not q or not q.strip():
+                continue
             results = self.source_manager.retrieve_candidates(
                 query=q,
                 event_id=event_id,
@@ -179,6 +181,46 @@ class VisualEvidenceRetrievalEngine:
                 max_candidates_per_tier=max_candidates_per_tier,
             )
             raw_candidates.extend(results)
+
+        # Fallback query expansion if no visual candidates found for specific beat query
+        if not raw_candidates:
+            fallback_queries = []
+            if hasattr(event_card, "future_footage_queries") and event_card.future_footage_queries:
+                fallback_queries.extend(event_card.future_footage_queries)
+            if hasattr(event_card, "visual_entities") and event_card.visual_entities:
+                fallback_queries.extend(event_card.visual_entities)
+            beat_words = [
+                w for w in re.sub(r"[^\w\s]", " ", beat.text).split()
+                if len(w) > 3 and w.lower() not in (
+                    "that", "this", "they", "there", "what", "when", "where", "with",
+                    "from", "could", "would", "about", "their", "which", "after", "before"
+                )
+            ]
+            if beat_words:
+                fallback_queries.append(" ".join(beat_words[:2]))
+            title = getattr(event_card, "canonical_title", getattr(event_card, "title", ""))
+            if title:
+                fallback_queries.append(title[:40])
+
+            # Rotate fallback queries based on beat sequence so each beat searches a distinct scene!
+            offset = (sequence - 1) % len(fallback_queries) if fallback_queries else 0
+            ordered_fallback = fallback_queries[offset:] + fallback_queries[:offset]
+
+            for fb_q in ordered_fallback:
+                if not fb_q or not fb_q.strip():
+                    continue
+                results = self.source_manager.retrieve_candidates(
+                    query=fb_q,
+                    event_id=event_id,
+                    beat_id=beat.beat_id,
+                    target_entities=beat_entities,
+                    target_locations=event_locations,
+                    event_date_hint=event_time.isoformat() if event_time else None,
+                    max_candidates_per_tier=max_candidates_per_tier,
+                )
+                raw_candidates.extend(results)
+                if raw_candidates:
+                    break
 
         # 3. Score all retrieved candidates
         scored_candidates: List[VisualEvidenceCandidate] = []

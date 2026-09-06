@@ -57,18 +57,47 @@ BANNED_POLITICAL_KEYWORDS = [
 ]
 
 APPROVED_NICHE_KEYWORDS = [
+    # Core mystery/bizarre descriptors
     "anomaly", "anomalies", "bizarre", "mysterious", "mystery", "unexplained", "strange",
-    "ancient", "discovery", "discovered", "discoveries", "deep sea", "fossil", "fossils",
-    "archaeolog", "quantum", "astronom", "telescope", "creature", "creatures", "species",
-    "mutation", "dna", "skeleton", "tomb", "tombs", "pyramid", "pyramids", "space",
-    "planet", "planets", "galaxy", "galaxies", "ocean", "oceans", "sound", "signal",
-    "signals", "physics", "biology", "geology", "microscopic", "organism", "meteor",
-    "meteorite", "asteroid", "laboratory", "experiment", "phenomenon", "phenomena",
-    "radio burst", "submersible", "trench", "oddity", "peculiar", "unusual", "baffling",
-    "puzzle", "enigma", "stone age", "cosmic", "deep ocean", "antarctica", "glacier",
-    "ruins", "artifact", "artifacts", "monolith", "extraterrestrial", "supernova", "black hole",
-    "cryptid", "megalith", "underwater city", "fossilized", "evolutionary", "bizarre fact",
-    "weird science"
+    "peculiar", "unusual", "baffling", "puzzle", "enigma", "unsolved", "cryptic", "uncanny",
+    "eerie", "eerily", "creepy", "macabre", "disturbing", "haunted", "haunting", "weird",
+    "strangest", "oddity", "odd", "perplexing", "inexplicable", "unidentified", "unknown",
+    # Archaeological / historical discovery
+    "ancient", "skeleton", "tomb", "tombs", "pyramid", "pyramids", "megalith", "monolith",
+    "ruins", "artifact", "artifacts", "relic", "relics", "excavation", "buried", "catacomb",
+    "mummy", "mummified", "fossil", "stone age", "iron age", "bronze age", "prehistoric",
+    "archaeological", "archaeology", "lost civilization", "ancient rome", "roman", "medieval",
+    "secret chamber", "hidden chamber", "underground", "burial", "crypt", "sarcophagus",
+    "dodecahedron", "voynich", "nazca", "stonehenge", "gobekli", "moai", "easter island",
+    # Disappearances and ghost events
+    "disappearance", "disappeared", "vanished", "missing", "ghost ship", "abandoned",
+    "bermuda", "mary celeste", "lost", "phantom", "wreck", "shipwreck", "wreckage",
+    # Survival and extreme events
+    "survivor", "survival", "survived", "atomic", "nuclear", "explosion", "disaster",
+    "catastrophe", "unbelievable", "incredible", "miracle", "miraculous",
+    # Curses, legends, folklore
+    "curse", "cursed", "legend", "legends", "folklore", "myth", "ritual", "occult",
+    "superstition", "forbidden", "taboo", "dark ritual", "sacrifice",
+    # Strange phenomena
+    "phenomenon", "phenomena", "paranormal", "unexplained event", "historic incident",
+    "historical incident", "unbelievable event", "plague", "mania", "hysteria",
+    "mass hysteria", "dancing plague", "bloop", "acoustic anomaly", "deep sea", "abyss",
+    "abyssal", "deep sea creature", "cryptid", "sea monster", "creature",
+    # Coincidences and strange facts
+    "coincidence", "coincidences", "hoax", "conspiracy", "eccentric", "forbidden",
+    # Unsolved crimes and mysteries
+    "unsolved case", "cold case", "unexplained death", "mysterious death",
+    "jack the ripper", "zodiac", "taured", "man from taured",
+    # Underwater and space
+    "underwater city", "submerged", "labyrinth", "time capsule",
+]
+
+BANNED_SCIENCE_EXPLAINER_KEYWORDS = [
+    "quantum computing", "quantum computer", "dark matter", "particle physics",
+    "particle accelerator", "hadron collider", "gene editing", "crispr", "exoplanet atmosphere",
+    "synthetic biology", "dna alphabet", "hachimoji", "mrna", "clinical trial",
+    "materials science", "semiconductor", "battery technology", "black hole as light",
+    "narwhals grow nature's", "levitated magnet"
 ]
 
 
@@ -79,12 +108,12 @@ def is_niche_compliant(
     allow_political: bool = False
 ) -> Tuple[bool, str]:
     """
-    STRICT NICHE PURITY GATE.
-    Authoritatively enforces the channel's sole target niches:
-    1. Mystery / Bizarre real-world stories
-    2. Weird Science / unbelievable-but-real facts
+    STRICT NICHE PURITY GATE (PHASE 0).
+    Authoritatively enforces the channel's SOLE target niche:
+    MYSTERY / BIZARRE REAL-WORLD STORIES ONLY.
+    Weird Science and pure academic/science explainers are completely removed.
     Strictly rejects conventional politics, geopolitics, elections,
-    military conflicts, diplomacy, and government commentary.
+    military conflicts, diplomacy, and science explainers.
     """
     combined = f"{title} {text} {' '.join(entities or [])}".lower()
 
@@ -99,16 +128,25 @@ def is_niche_compliant(
         if matched_political:
             return False, f"REJECTED_POLITICAL_CONTENT: matched {matched_political[:3]}"
 
-    # 2. Check for positive mystery / weird science alignment
+    # 2. Hard check for banned science explainer topics (Weird Science purged)
+    matched_science = []
+    for kw in BANNED_SCIENCE_EXPLAINER_KEYWORDS:
+        if kw in combined:
+            matched_science.append(kw)
+
+    if matched_science:
+        return False, f"REJECTED_SCIENCE_EXPLAINER: Weird Science removed; matched {matched_science[:2]}"
+
+    # 3. Check for positive mystery / bizarre real-world story alignment
     matched_niche = []
     for kw in APPROVED_NICHE_KEYWORDS:
         if kw in combined:
             matched_niche.append(kw)
 
     if matched_niche:
-        return True, f"APPROVED_NICHE: matched {matched_niche[:3]}"
+        return True, f"APPROVED_MYSTERY_BIZARRE: matched {matched_niche[:3]}"
 
-    return False, "REJECTED_OUT_OF_NICHE: Lacks mystery, archaeological, or weird science indicators"
+    return False, "REJECTED_OUT_OF_NICHE: Lacks mystery, bizarre, or unexplained real-world indicators"
 
 
 
@@ -124,6 +162,7 @@ class SemanticEmbeddingService:
         self._model = None
         self._model_load_attempted = False
         self._is_available = False
+        self._cache: Dict[str, np.ndarray] = {}
 
     @classmethod
     def get_instance(cls) -> "SemanticEmbeddingService":
@@ -146,9 +185,12 @@ class SemanticEmbeddingService:
             self._is_available = False
 
     def embed_text(self, text: str) -> np.ndarray:
-        """Embeds single text into a unit-normalized vector."""
+        """Embeds single text into a unit-normalized vector with in-memory caching."""
         if not text:
             return np.zeros(384, dtype=np.float32)
+
+        if text in self._cache:
+            return self._cache[text]
 
         self._init_model()
         if self._is_available and self._model is not None:
@@ -156,7 +198,9 @@ class SemanticEmbeddingService:
                 embeddings = list(self._model.embed([text]))
                 vec = np.array(embeddings[0], dtype=np.float32)
                 norm = np.linalg.norm(vec)
-                return vec / norm if norm > 1e-6 else vec
+                res = vec / norm if norm > 1e-6 else vec
+                self._cache[text] = res
+                return res
             except Exception as e:
                 logger.debug(f"FastEmbed inference notice: {e}")
 
@@ -168,7 +212,9 @@ class SemanticEmbeddingService:
             h = hash(t) % 384
             vec[h] += 1.0 / (1.0 + 0.1 * i)
         norm = np.linalg.norm(vec)
-        return vec / norm if norm > 1e-6 else vec
+        res = vec / norm if norm > 1e-6 else vec
+        self._cache[text] = res
+        return res
 
     def compute_cosine_similarity(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
         """Computes cosine similarity between two normalized vectors."""

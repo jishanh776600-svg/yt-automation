@@ -144,7 +144,7 @@ class TTSEngine:
         text: str,
         output_path: Path,
         voice: str = "af_sarah",
-        speed: float = 1.05,
+        speed: float = 1.00,
         sentence_pause: float = EFFECTIVE_SENTENCE_PAUSE_SEC,
         clause_pause: float = EFFECTIVE_CLAUSE_PAUSE_SEC
     ) -> Tuple[bool, float]:
@@ -334,7 +334,7 @@ class TTSEngine:
         self,
         db: Session,
         text: str,
-        speed_multiplier: float = 1.05,
+        speed_multiplier: float = 1.00,   # 1.0x = native Kokoro speed; let pause config drive rhythm
         voice: Optional[str] = None,
         delivery_spec: Optional[Any] = None
     ) -> Tuple[AssetRecord, float]:
@@ -411,41 +411,16 @@ class TTSEngine:
                 tts_source = "edge_tts"
                 license_type = LicenseType.AI_GENERATED_OPEN.value
 
-        # 3b. Apply silence gap tightening to eliminate awkward dead air between phrases (preserving calibrated breathing room)
+        # 3b. Eliminate obvious dead air while preserving natural sentence pauses (up to 0.35s)
         if wav_path.exists():
             tightened_wav = self.voice_dir / f"{asset_id}_tightened.wav"
-            max_pause_cap = round(max(EFFECTIVE_MAX_SILENCE_CAP_SEC, min(0.30, sentence_pause * 1.05)), 2)
-            t_ok, t_dur = self.compress_silence_gaps(wav_path, tightened_wav, max_pause_sec=max_pause_cap)
+            t_ok, t_dur = self.compress_silence_gaps(wav_path, tightened_wav, max_pause_sec=EFFECTIVE_MAX_SILENCE_CAP_SEC)
             if t_ok and t_dur > 0:
                 wav_path = tightened_wav
                 duration = t_dur
 
-        # 4. Check Duration Sanity & Calibrate toward ~23.2s (22.0 - 25.0s)
-        # Re-synthesizes at calibrated speed while STILL enforcing silence gap compression (max 140ms or sentence_pause)
-        if (duration < MIN_DURATION_SEC and duration > 14.0) or (duration > MAX_DURATION_SEC and duration < 32.0):
-            target_dur = 23.2
-            cal_speed = round(max(0.88, min(1.15, eff_speed * (duration / target_dur))), 2)
-            logger.info(f"Duration {duration}s outside [{MIN_DURATION_SEC}, {MAX_DURATION_SEC}]s; re-synthesizing at calibrated speed {cal_speed}x with silence compression...")
-            if tts_source == "kokoro":
-                raw_cal = self.voice_dir / f"{asset_id}_cal_raw.wav"
-                s_ok, s_dur = self.generate_kokoro_audio(
-                    synthesize_text,
-                    raw_cal,
-                    voice=kokoro_v,
-                    speed=cal_speed,
-                    sentence_pause=sentence_pause,
-                    clause_pause=clause_pause
-                )
-                if s_ok and raw_cal.exists():
-                    cal_tight = self.voice_dir / f"{asset_id}_cal_tight.wav"
-                    max_pause_cap = round(max(EFFECTIVE_MAX_SILENCE_CAP_SEC, min(0.30, sentence_pause * 1.05)), 2)
-                    t_ok, t_dur = self.compress_silence_gaps(raw_cal, cal_tight, max_pause_sec=max_pause_cap)
-                    if t_ok and t_dur > 0:
-                        wav_path = cal_tight
-                        duration = t_dur
-                    else:
-                        wav_path = raw_cal
-                        duration = s_dur
+        # 4. Duration sanity logging (Do not alter playback speed; duration is driven by script length)
+        logger.info(f"[TTS_PACING] Sarah narration duration: {duration:.2f}s at native 1.00x speed (dead-air cap: {EFFECTIVE_MAX_SILENCE_CAP_SEC}s).")
 
         # 5. Apply Studio Presence Mastering Chain
         mastered_wav = self.voice_dir / f"{asset_id}_mastered.wav"

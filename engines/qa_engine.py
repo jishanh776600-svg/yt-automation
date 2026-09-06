@@ -310,12 +310,20 @@ class QAEngine:
         if not license_ok:
             reasons.extend(license_failures)
 
-        # 7. Editorial Visual Quality & Diversity Gate
+        # 7. Editorial Visual Quality & Diversity Gate (Minimum 9 distinct visual scenes)
         from engines.visual_intelligence.visual_qa import VisualQAGate
         from engines.visual_intelligence.sources.base import VisualCandidate
         from engines.visual_intelligence.provenance import VisualContentType
         
         visual_assets = [a for a in assets_used if a.asset_type in ("video", "image")]
+        if len(visual_assets) < 9:
+            reasons.append(f"Visual Beat Count Failure: {len(visual_assets)} visual scenes found (minimum 9 required)")
+
+        for va in visual_assets:
+            if va.source in ("procedural_canvas", "emergency_canvas"):
+                reasons.append("Visual Quality Failure: static blank/canvas filler detected in visual assets")
+                break
+
         if visual_assets and len(visual_assets) > 2:
             vi_cands = []
             for va in visual_assets:

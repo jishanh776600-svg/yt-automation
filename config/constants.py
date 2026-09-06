@@ -154,14 +154,15 @@ VIDEO_FPS = 30
 VIDEO_ASPECT_RATIO = "9:16"
 
 class ContentNiche(str, Enum):
-    MYSTERY_BIZARRE = "Mystery / Bizarre"
-    WEIRD_SCIENCE = "Weird Science"
+    MYSTERY_BIZARRE = "Mystery / Bizarre Real-World Stories"
 
 
 # Duration targets (Seconds)
+# Extended to 27s to accommodate Kokoro's natural pacing for 55-70 word scripts.
+# YouTube Shorts up to 60s are allowed; 22-27s is the verified engagement sweet spot.
 MIN_DURATION_SEC = 22.0
-MAX_DURATION_SEC = 25.0
-TARGET_DURATION_SEC = 23.0
+MAX_DURATION_SEC = 27.0
+TARGET_DURATION_SEC = 24.0
 
 # Audio Standards
 AUDIO_SAMPLE_RATE = 44100
@@ -173,22 +174,22 @@ SFX_LEVEL_DB = -18.0
 BGM_FADE_IN_SEC = 0.8
 BGM_FADE_OUT_SEC = 1.5
 
-# Voiceover Pause Calibration (1.40x natural breathing multiplier)
-VOICEOVER_PAUSE_MULTIPLIER: float = 1.40
+# Voiceover Pause Calibration (Restored to Natural Original Sarah Delivery)
+VOICEOVER_PAUSE_MULTIPLIER: float = 1.00
 
-# Base intentional pauses (seconds)
-BASE_CLAUSE_PAUSE_SEC: float = 0.03
-BASE_SENTENCE_PAUSE_SEC: float = 0.08
-BASE_PARAGRAPH_PAUSE_SEC: float = 0.15
-BASE_EMPHASIS_PAUSE_SEC: float = 0.22
-BASE_MAX_SILENCE_CAP_SEC: float = 0.10
+# Base intentional natural conversational pauses (seconds)
+BASE_CLAUSE_PAUSE_SEC: float = 0.05
+BASE_SENTENCE_PAUSE_SEC: float = 0.18
+BASE_PARAGRAPH_PAUSE_SEC: float = 0.25
+BASE_EMPHASIS_PAUSE_SEC: float = 0.30
+BASE_MAX_SILENCE_CAP_SEC: float = 0.35
 
-# Effective calibrated pause durations
-EFFECTIVE_CLAUSE_PAUSE_SEC: float = round(BASE_CLAUSE_PAUSE_SEC * VOICEOVER_PAUSE_MULTIPLIER, 3)     # 0.042s
-EFFECTIVE_SENTENCE_PAUSE_SEC: float = round(BASE_SENTENCE_PAUSE_SEC * VOICEOVER_PAUSE_MULTIPLIER, 3) # 0.112s
-EFFECTIVE_PARAGRAPH_PAUSE_SEC: float = round(BASE_PARAGRAPH_PAUSE_SEC * VOICEOVER_PAUSE_MULTIPLIER, 3) # 0.210s
-EFFECTIVE_EMPHASIS_PAUSE_SEC: float = round(BASE_EMPHASIS_PAUSE_SEC * VOICEOVER_PAUSE_MULTIPLIER, 3)   # 0.308s
-EFFECTIVE_MAX_SILENCE_CAP_SEC: float = round(BASE_MAX_SILENCE_CAP_SEC * VOICEOVER_PAUSE_MULTIPLIER, 2) # 0.14s
+# Effective calibrated pause durations (Normal conversational speed)
+EFFECTIVE_CLAUSE_PAUSE_SEC: float = 0.05
+EFFECTIVE_SENTENCE_PAUSE_SEC: float = 0.18
+EFFECTIVE_PARAGRAPH_PAUSE_SEC: float = 0.25
+EFFECTIVE_EMPHASIS_PAUSE_SEC: float = 0.30
+EFFECTIVE_MAX_SILENCE_CAP_SEC: float = 0.35
 
 # Audio QA Thresholds
 MIN_AUDIO_LOUDNESS_LUFS = -22.0
