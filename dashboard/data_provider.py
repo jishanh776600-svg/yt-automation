@@ -394,9 +394,9 @@ class SystemDataProvider:
         total_views = 0
         total_likes = 0
         total_comments = 0
-        est_minutes_watched = 1224.0
-        avg_view_duration_sec = 18.0
-        avg_view_percentage = 78.3
+        est_minutes_watched = 0.0
+        avg_view_duration_sec = 0.0
+        avg_view_percentage = 0.0
 
         for p in public_shorts:
             v_id = p.get("id") or p.get("youtube_video_id")
@@ -492,11 +492,11 @@ class SystemDataProvider:
             "total_likes_display": format_compact_number(total_likes),
             "total_comments": total_comments,
             "watch_time_minutes": round(est_minutes_watched, 1),
-            "watch_time_display": f"{int(est_minutes_watched):,} min",
+            "watch_time_display": f"{int(est_minutes_watched):,} min" if est_minutes_watched > 0 else "0 min",
             "avg_view_duration_sec": avg_view_duration_sec,
-            "avg_view_duration_display": f"{avg_view_duration_sec:.1f}s",
+            "avg_view_duration_display": f"{avg_view_duration_sec:.1f}s" if avg_view_duration_sec > 0 else "0.0s",
             "avg_view_percentage": avg_view_percentage,
-            "avg_view_percentage_display": f"{avg_view_percentage:.1f}% APV",
+            "avg_view_percentage_display": f"{avg_view_percentage:.1f}% APV" if avg_view_percentage > 0 else "0.0% APV",
             "per_video": per_video_stats,
             "verified_count": len(public_shorts),
             "scheduled_count": len(inventory.get("scheduled_shorts", []))
@@ -2211,16 +2211,16 @@ class SystemDataProvider:
         review_queue_data = action_mgr.get_review_queue(db)
 
         telemetry = {
-            "views": live_metrics.get("total_views", 12753),
-            "views_display": live_metrics.get("total_views_display", "12.8K"),
-            "likes": live_metrics.get("total_likes", 200),
-            "likes_display": live_metrics.get("total_likes_display", "200"),
-            "comments": live_metrics.get("total_comments", 1),
-            "watch_time": live_metrics.get("watch_time_display", "1,224 min"),
-            "avd": live_metrics.get("avg_view_duration_display", "19.3s"),
-            "apv": live_metrics.get("avg_view_percentage_display", "75.5% APV"),
-            "strategy_boost": learning.get("top_strategy_lift", "+18% APV"),
-            "strategy_name": learning.get("top_strategy_name", "Documented Disasters"),
+            "views": live_metrics.get("total_views", 0),
+            "views_display": live_metrics.get("total_views_display", "0"),
+            "likes": live_metrics.get("total_likes", 0),
+            "likes_display": live_metrics.get("total_likes_display", "0"),
+            "comments": live_metrics.get("total_comments", 0),
+            "watch_time": live_metrics.get("watch_time_display", "0 min"),
+            "avd": live_metrics.get("avg_view_duration_display", "0.0s"),
+            "apv": live_metrics.get("avg_view_percentage_display", "0.0% APV"),
+            "strategy_boost": learning.get("top_strategy_lift", "N/A"),
+            "strategy_name": learning.get("top_strategy_name", "Historical Mysteries"),
             "status": live_metrics.get("status", "LIVE_API")
         }
 

@@ -113,7 +113,7 @@ class TestDashboardPhase113(unittest.TestCase):
         # 3. Valid CSRF header succeeds
         res_valid = self.client.post(
             "/api/config/voice",
-            json={"voice_id": "am_adam"},
+            json={"voice_id": "af_bella"},
             headers={"X-CSRF-Token": self.csrf_token}
         )
         self.assertEqual(res_valid.status_code, 200)

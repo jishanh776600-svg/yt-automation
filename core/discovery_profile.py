@@ -227,7 +227,7 @@ HISTORICAL_DISCOVERY_PROFILE = DiscoveryProfile(
     allow_historical_seeds=True,
     allow_historical_trivia_fallback=True,
     require_live_news=False,
-    description="Historical curiosities, bizarre events, documented disasters, and unusual wars.",
+    description="History / Historical Mysteries / Bizarre True Historical Events / Unexplained Historical Stories / Strange Real-World Events from the Past.",
     recognized_entities=set(),
     action_stems=set(),
     action_domain_map={},
@@ -235,8 +235,8 @@ HISTORICAL_DISCOVERY_PROFILE = DiscoveryProfile(
     high_impact_entities=set(),
     low_relevance_noise=set(),
     tension_keywords=set(),
-    default_category="Historical Documentaries",
-    fallback_category="Historical Documentaries",
+    default_category="Historical Mysteries",
+    fallback_category="Bizarre True Historical Events",
     deduplication_policy="historical_year_location",
     enable_gdelt=False
 )
@@ -345,7 +345,7 @@ def get_active_discovery_profile() -> DiscoveryProfile:
         if dp:
             return dp
 
-    return CURRENT_AFFAIRS_DISCOVERY_PROFILE
+    return HISTORICAL_DISCOVERY_PROFILE
 
 
 def set_active_discovery_profile(profile: Optional[DiscoveryProfile]) -> None:

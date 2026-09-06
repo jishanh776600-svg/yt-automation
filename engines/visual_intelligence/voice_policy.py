@@ -30,21 +30,31 @@ class VoiceVariationPolicy:
     """
 
     APPROVED_PERSONAS: Dict[str, Dict[str, Any]] = {
+        "af_bella": {
+            "id": "af_bella",
+            "name": "Bella (US Female)",
+            "gender": "FEMALE",
+            "style": "Natural / Expressive / Creator Delivery",
+            "persona": "Natural Female Creator",
+            "best_for": ["history", "mystery", "bizarre", "culture", "curiosity"],
+            "profile": DeliveryProfile.CONVERSATIONAL,
+            "supported_profiles": [DeliveryProfile.CONVERSATIONAL, DeliveryProfile.URGENT]
+        },
         "af_sarah": {
             "id": "af_sarah",
             "name": "Sarah (US Female)",
             "gender": "FEMALE",
             "style": "High-Presence / Slightly-Fast / Creator Delivery",
             "persona": "Energetic Female Creator",
-            "best_for": ["culture", "human", "history", "mystery", "science", "global", "poignant", "curiosity", "geopolitics", "update", "breaking", "conflict", "diplomacy"],
+            "best_for": ["history", "mystery"],
             "profile": DeliveryProfile.SARAH_MAX_CREATOR,
-            "supported_profiles": [DeliveryProfile.SARAH_MAX_CREATOR, DeliveryProfile.CREATOR_HIGH_PRESENCE_SLIGHT_FAST, DeliveryProfile.URGENT, DeliveryProfile.CONVERSATIONAL]
+            "supported_profiles": [DeliveryProfile.SARAH_MAX_CREATOR]
         }
     }
 
     # Backward compatibility alias
     AVAILABLE_VOICES = list(APPROVED_PERSONAS.keys())
-    APPROVED_PRODUCTION_VOICES = ["af_sarah"]
+    APPROVED_PRODUCTION_VOICES = ["af_bella"]
 
     MAX_CONSECUTIVE_VOICE = 2
     MAX_CONSECUTIVE_PROFILE = 2
@@ -119,11 +129,13 @@ class VoiceVariationPolicy:
 
         chosen_voice = max(voice_scores.items(), key=lambda x: x[1])[0]
         if chosen_voice not in self.APPROVED_PRODUCTION_VOICES:
-            chosen_voice = "af_sarah"
+            chosen_voice = "af_bella"
 
         # 2. Select Delivery Profile coupled directly to the chosen voice
         if chosen_voice == "am_liam":
             profile = DeliveryProfile.LIAM_MAX_CREATOR
+        elif chosen_voice == "af_bella":
+            profile = DeliveryProfile.CONVERSATIONAL
         else:
             profile = DeliveryProfile.SARAH_MAX_CREATOR
 

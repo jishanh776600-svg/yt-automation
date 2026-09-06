@@ -68,7 +68,7 @@ class EventCluster:
     event_occurred_at: Optional[datetime] = None  # Distinct from publication timestamp
 
     primary_category: str = CurrentAffairsCategory.GEOPOLITICS.value
-    event_type: str = "geopolitical_incident"
+    event_type: str = "historical_incident"
     entities: Set[str] = field(default_factory=set)
     countries: Set[str] = field(default_factory=set)
     actors: Set[str] = field(default_factory=set)

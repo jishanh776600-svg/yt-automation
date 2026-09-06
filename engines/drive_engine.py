@@ -1029,6 +1029,61 @@ class DriveVaultEngine:
                 pass
         return False, "Unable to verify af_sarah voice property"
 
+    def verify_bella_voice(self, item_or_path: Any, db: Optional[Any] = None) -> Tuple[bool, str]:
+        """Verifies that an asset strictly utilizes the approved af_bella voice."""
+        if isinstance(item_or_path, dict):
+            props = item_or_path.get("properties", {}) or {}
+            v = props.get("voice") or props.get("voice_id")
+            if v in ("af_bella", "bella"):
+                return True, "Voice verified as af_bella"
+            name = item_or_path.get("name", "")
+            try:
+                from core.models import RenderedVideoRecord
+                from core.database import SessionLocal
+                session = db or SessionLocal()
+                try:
+                    r = session.query(RenderedVideoRecord).filter(
+                        (RenderedVideoRecord.video_path.ilike(f"%{name}%")) |
+                        (RenderedVideoRecord.cloud_storage_path.ilike(f"%{name}%"))
+                    ).first()
+                    if r and r.voice_id in ("af_bella", "bella"):
+                        return True, "Voice verified as af_bella in RenderedVideoRecord"
+                finally:
+                    if not db:
+                        session.close()
+            except Exception:
+                pass
+            return False, f"Non-authoritative voice '{v}' (af_bella required)"
+
+        p = Path(item_or_path)
+        meta_p = p.with_suffix(".meta.json")
+        if meta_p.exists():
+            try:
+                data = json.loads(meta_p.read_text(encoding="utf-8"))
+                v = data.get("voice") or data.get("voice_id")
+                if v in ("af_bella", "bella"):
+                    return True, "Voice verified as af_bella in metadata"
+            except Exception:
+                pass
+        name = p.name
+        try:
+            from core.models import RenderedVideoRecord
+            from core.database import SessionLocal
+            session = db or SessionLocal()
+            try:
+                r = session.query(RenderedVideoRecord).filter(
+                    (RenderedVideoRecord.video_path.ilike(f"%{name}%")) |
+                    (RenderedVideoRecord.cloud_storage_path.ilike(f"%{name}%"))
+                ).first()
+                if r and r.voice_id in ("af_bella", "bella"):
+                    return True, "Voice verified as af_bella in RenderedVideoRecord"
+            finally:
+                if not db:
+                    session.close()
+        except Exception:
+            pass
+        return False, "Unable to verify af_bella voice property"
+
 
 # Canonical class alias
 DriveEngine = DriveVaultEngine

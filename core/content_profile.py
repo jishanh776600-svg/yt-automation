@@ -141,7 +141,7 @@ CURRENT_AFFAIRS_PROFILE = ContentProfile(
 # Historical / Legacy Niche
 HISTORICAL_PROFILE = ContentProfile(
     name="HISTORICAL",
-    description="Little-known, bizarre, or shocking documented true historical events.",
+    description="History / Historical Mysteries / Bizarre True Historical Events / Unexplained Historical Stories / Strange Real-World Events from the Past.",
     target_audience="General history enthusiasts, curious learners, short-form video audience.",
     tone="Curious, dramatic, factual, paced, immersive.",
     script_objective="Hook the viewer with a bizarre historical premise and resolve it factually in under 60 seconds.",
@@ -280,7 +280,7 @@ def get_active_profile() -> ContentProfile:
     Priority:
       1. Explicit runtime override via set_active_profile()
       2. Environment variable CONTENT_PROFILE or ACTIVE_NICHE
-      3. Default profile (CURRENT_AFFAIRS_PROFILE)
+      3. Default profile (HISTORICAL_PROFILE)
     """
     global _ACTIVE_PROFILE
     if _ACTIVE_PROFILE is not None:
@@ -293,7 +293,7 @@ def get_active_profile() -> ContentProfile:
         if prof:
             return prof
 
-    return CURRENT_AFFAIRS_PROFILE
+    return HISTORICAL_PROFILE
 
 
 def set_active_profile(profile: Optional[ContentProfile]) -> None:

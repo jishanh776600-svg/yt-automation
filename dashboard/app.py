@@ -351,7 +351,51 @@ def _get_safe_system_state(db: Session) -> Dict[str, Any]:
             "runway_display": "2.0 days (48 hours)",
             "refill": {}
         },
-        "learning": {"patterns": [], "weights": {}},
+        "refill": {
+            "is_running": False,
+            "status": "IDLE",
+            "automation_status": "ACTIVE",
+            "status_message": "Reserve buffer healthy (6/6 Shorts in 01_READY).",
+            "status_badge_class": "bg-emerald-950 text-emerald-300 border border-emerald-800",
+            "current_ready": 6,
+            "target_reserve": 6,
+            "deficit": 0,
+            "deficit_calculated": 0,
+            "ready_count_observed": 6,
+            "shorts_produced": 0,
+            "last_refill_at": None,
+            "last_refill_display": "Never",
+            "last_refill_result": "Standing by (Reserve healthy)",
+            "last_audit_timestamp": None,
+            "last_audit_result": "Standing by (Reserve healthy)",
+            "next_check_at": "00:00 UTC",
+            "next_check_utc": "00:00 UTC",
+            "next_check_display": "in 3h",
+            "next_audit_display": "in 3h",
+            "next_audit_utc_display": "00:00 UTC",
+            "interval_hours": 3,
+            "audit_interval_hours": 3,
+            "audit_cron": "0 */3 * * *",
+            "trigger": "Reserve buffer < 6 Shorts in 01_READY",
+            "trigger_schedule": "Every 3 hours (00, 03, 06, 09, 12, 15, 18, 21 UTC) or manual dispatch",
+            "last_scheduler_run": "Never",
+            "last_scheduler_result": "STANDBY",
+            "last_error": None
+        },
+        "telemetry": {
+            "views": 0,
+            "views_display": "0",
+            "likes": 0,
+            "likes_display": "0",
+            "comments": 0,
+            "watch_time": "0 min",
+            "avd": "0.0s",
+            "apv": "0.0% APV",
+            "strategy_boost": "N/A",
+            "strategy_name": "Historical Mysteries",
+            "status": "LIVE_API"
+        },
+        "learning": {"patterns": [], "weights": {}, "strategy_weights": {}},
         "database_summary": {"total_jobs": 0, "needs_review": 0, "failed_jobs": 0, "recent_jobs": []},
         "scheduled_queue": [],
         "voice_config": {
@@ -367,8 +411,6 @@ def _get_safe_system_state(db: Session) -> Dict[str, Any]:
         "service_quotas": {},
         "performance_leaderboard": []
     }
-    if is_test_env:
-        return fallback_state
     try:
         return data_provider.get_full_system_state(db)
     except Exception as e:
@@ -438,11 +480,7 @@ def index(request: Request, db: Session = Depends(get_db)):
         login_target = "/login?mobile=true" if is_mobile else "/login"
         return RedirectResponse(url=login_target, status_code=status.HTTP_303_SEE_OTHER)
 
-    # Target template selection
-    if request.query_params.get("legacy") == "true":
-        target_template = "mobile.html" if (is_mobile and request.query_params.get("desktop") != "true") else "index.html"
-    else:
-        target_template = "mission_control.html"
+    target_template = "mobile.html" if (is_mobile and request.query_params.get("desktop") != "true") else "index.html"
 
     state = _get_safe_system_state(db)
     review_queue = action_manager.get_review_queue(db)

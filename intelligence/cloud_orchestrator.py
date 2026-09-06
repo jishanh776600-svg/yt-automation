@@ -528,7 +528,7 @@ class CloudProductionOrchestrator:
             )
 
             # 5. News Ingestion (Phase 1)
-            telemetry.transition_stage(PipelineStage.INGESTING, "Ingesting current geopolitical news")
+            telemetry.transition_stage(PipelineStage.INGESTING, "Ingesting verified historical event records")
             t_ingest0 = time.perf_counter()
             db = SessionLocal()
             try:
@@ -565,7 +565,7 @@ class CloudProductionOrchestrator:
                 telemetry.stage_durations["2_article_extraction"] = 0.0
 
                 # 6. Event Clustering & EventCards (Phase 2)
-                telemetry.transition_stage(PipelineStage.CLUSTERING, "Clustering articles into geopolitical events")
+                telemetry.transition_stage(PipelineStage.CLUSTERING, "Clustering records into historical event units")
                 t_clust0 = time.perf_counter()
                 clusters = self.cluster_engine.cluster_articles(raw_articles)
 

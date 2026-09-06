@@ -245,11 +245,11 @@ class ShortsPipeline:
         try:
             authoritative_db_voice = get_active_voice(db)
             if authoritative_db_voice not in APPROVED_PRODUCTION_VOICES:
-                authoritative_db_voice = "af_sarah"
-            chosen_voice = voice or authoritative_db_voice or os.getenv("KOKORO_VOICE") or "af_sarah"
+                authoritative_db_voice = "af_bella"
+            chosen_voice = voice or authoritative_db_voice or os.getenv("KOKORO_VOICE") or "af_bella"
             if chosen_voice not in APPROVED_PRODUCTION_VOICES:
-                logger.warning(f"Voice '{chosen_voice}' not in APPROVED_PRODUCTION_VOICES. Defaulting to 'af_sarah'.")
-                chosen_voice = "af_sarah"
+                logger.warning(f"Voice '{chosen_voice}' not in APPROVED_PRODUCTION_VOICES. Defaulting to 'af_bella'.")
+                chosen_voice = "af_bella"
             self.run_voice = chosen_voice
         finally:
             db.close()
@@ -1151,7 +1151,7 @@ class ShortsPipeline:
         console.print(Panel.fit(
             f"[bold green]=== AL-AMR 100% Autonomous Production & Scheduling Daemon ===[/bold green]\n"
             f"Reserve Buffer Target: [bold cyan]{target_stock} Verified Shorts[/bold cyan]\n"
-            f"Voice Lock: [bold green]af_sarah[/bold green]\n"
+            f"Voice Lock: [bold green]af_bella[/bold green]\n"
             f"Publishing Limit: [bold]3 Shorts/day (06:00, 11:00, 15:00 UTC)[/bold]\n"
             f"Horizon: [bold]Rolling 48-Hour Forward Horizon[/bold]\n"
             f"Convergence Interval: [bold yellow]{check_interval_sec // 60} minutes[/bold yellow]",

@@ -197,7 +197,7 @@ class EventCard:
     why: Optional[str] = None
     how: Optional[str] = None
 
-    event_type: str = "geopolitical_incident"
+    event_type: str = "historical_incident"
     actions: List[str] = field(default_factory=list)
     entities: List[str] = field(default_factory=list)
     important_objects: List[str] = field(default_factory=list)
@@ -303,7 +303,7 @@ class EventCard:
             when=when,
             why=data.get("why"),
             how=data.get("how"),
-            event_type=data.get("event_type", "geopolitical_incident"),
+            event_type=data.get("event_type", "historical_incident"),
             actions=data.get("actions", []),
             entities=data.get("entities", []),
             important_objects=data.get("important_objects", []),

@@ -474,6 +474,16 @@
         </div>
     </header>
 
+    <!-- MOBILE CLOUD WORKFLOW BANNER -->
+    <div id="mobile-cloud-banner" class="hidden" style="background: rgba(8, 47, 73, 0.95); border-bottom: 1px solid rgba(14, 116, 144, 0.5); padding: 8px 12px; font-size: 11px; font-family: monospace; color: #bae6fd; display: none; justify-content: space-between; align-items: center; z-index: 20;">
+        <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+            <span id="mobile-cloud-badge" style="padding: 1px 4px; border-radius: 4px; background: #075985; color: #7dd3fc; font-size: 9px; font-weight: 700;">IN-FLIGHT</span>
+            <span id="mobile-cloud-workflow" style="font-weight: 600; color: #7dd3fc; white-space: nowrap;">produce_buffer.yml</span>
+            <span id="mobile-cloud-msg" style="color: #e0f2fe; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Active...</span>
+        </div>
+        <button onclick="dismissMobileCloudBanner()" style="background: none; border: none; color: #94a3b8; font-size: 12px; cursor: pointer; padding: 0 4px;">✕</button>
+    </div>
+
     <!-- MAIN CONTAINER -->
     <main class="mob-container">
 
@@ -514,18 +524,18 @@
             <div class="telemetry-grid">
                 <div class="telemetry-pill">
                     <span class="text-dim" style="font-size: 9px;">AVD Retention</span>
-                    <span id="mob-avd-val" class="font-mono" style="font-size: 13px; font-weight: 400; color: #ffffff;">{{ state.telemetry.avd if state.telemetry else '18.0s' }}</span>
-                    <span id="mob-apv-val" class="text-emerald font-mono" style="font-size: 9px; font-weight: 600;">{{ state.telemetry.apv if state.telemetry else '78.3% APV' }}</span>
+                    <span id="mob-avd-val" class="font-mono" style="font-size: 13px; font-weight: 400; color: #ffffff;">{{ state.telemetry.avd if state.telemetry else '0.0s' }}</span>
+                    <span id="mob-apv-val" class="text-emerald font-mono" style="font-size: 9px; font-weight: 600;">{{ state.telemetry.apv if state.telemetry else '0.0% APV' }}</span>
                 </div>
                 <div class="telemetry-pill">
                     <span class="text-dim" style="font-size: 9px;">Watch Time</span>
-                    <span id="mob-wt-val" class="font-mono" style="font-size: 13px; font-weight: 400; color: #ffffff;">{{ state.telemetry.watch_time if state.telemetry else '1,224 min' }}</span>
-                    <span id="mob-views-val" class="text-dim font-mono" style="font-size: 9px;">{{ state.telemetry.views_display if state.telemetry else '12.8K' }} views</span>
+                    <span id="mob-wt-val" class="font-mono" style="font-size: 13px; font-weight: 400; color: #ffffff;">{{ state.telemetry.watch_time if state.telemetry else '0 min' }}</span>
+                    <span id="mob-views-val" class="text-dim font-mono" style="font-size: 9px;">{{ state.telemetry.views_display if state.telemetry else '0' }} views</span>
                 </div>
                 <div class="telemetry-pill">
                     <span class="text-dim" style="font-size: 9px;">Strategy Boost</span>
-                    <span id="mob-strat-boost" class="font-mono text-emerald" style="font-size: 13px; font-weight: 700;">{{ state.telemetry.strategy_boost if state.telemetry else '+18% APV' }}</span>
-                    <span id="mob-strat-name" class="text-dim font-mono truncate" style="font-size: 9px; max-width: 90px;">{{ state.telemetry.strategy_name if state.telemetry else 'Disasters' }}</span>
+                    <span id="mob-strat-boost" class="font-mono text-emerald" style="font-size: 13px; font-weight: 700;">{{ state.telemetry.strategy_boost if state.telemetry else 'N/A' }}</span>
+                    <span id="mob-strat-name" class="text-dim font-mono truncate" style="font-size: 9px; max-width: 90px;">{{ state.telemetry.strategy_name if state.telemetry else 'Historical Mysteries' }}</span>
                 </div>
             </div>
 
@@ -916,29 +926,9 @@
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto;">
-                <button onclick="setVoice('af_bella')" class="btn-secondary" style="justify-content: space-between; padding: 0 10px; min-height: 38px; height: 38px;">
-                    <span>Bella (American Female)</span>
-                    <span class="font-mono text-emerald" style="font-size: 9px;">Default</span>
-                </button>
-                <button onclick="setVoice('af_sarah')" class="btn-secondary" style="justify-content: space-between; padding: 0 10px; min-height: 38px; height: 38px;">
-                    <span>Sarah (American Female)</span>
-                    <span class="font-mono text-dim" style="font-size: 9px;">Calm</span>
-                </button>
-                <button onclick="setVoice('am_adam')" class="btn-secondary" style="justify-content: space-between; padding: 0 10px; min-height: 38px; height: 38px;">
-                    <span>Adam (American Male)</span>
-                    <span class="font-mono text-dim" style="font-size: 9px;">Deep</span>
-                </button>
-                <button onclick="setVoice('am_michael')" class="btn-secondary" style="justify-content: space-between; padding: 0 10px; min-height: 38px; height: 38px;">
-                    <span>Michael (American Male)</span>
-                    <span class="font-mono text-dim" style="font-size: 9px;">Authoritative</span>
-                </button>
-                <button onclick="setVoice('bf_emma')" class="btn-secondary" style="justify-content: space-between; padding: 0 10px; min-height: 38px; height: 38px;">
-                    <span>Emma (British Female)</span>
-                    <span class="font-mono text-dim" style="font-size: 9px;">Narrative</span>
-                </button>
-                <button onclick="setVoice('bm_george')" class="btn-secondary" style="justify-content: space-between; padding: 0 10px; min-height: 38px; height: 38px;">
-                    <span>George (British Male)</span>
-                    <span class="font-mono text-dim" style="font-size: 9px;">Classic</span>
+                <button onclick="setVoice('af_bella')" class="btn-secondary" style="justify-content: space-between; padding: 0 10px; min-height: 38px; height: 38px; border-color: rgba(16, 185, 129, 0.5);">
+                    <span>Bella (af_bella / Kokoro-82M ONNX)</span>
+                    <span class="font-mono text-emerald" style="font-size: 9px; font-weight: 600;">Canonical Active</span>
                 </button>
             </div>
 
@@ -1252,6 +1242,11 @@
             }
         }
         setInterval(pollLiveTelemetry, 10000);
+
+        function dismissMobileCloudBanner() {
+            const b = document.getElementById('mobile-cloud-banner');
+            if (b) b.style.display = 'none';
+        }
     </script>
 </body>
 </html>

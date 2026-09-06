@@ -250,17 +250,17 @@
             <div class="magnetic-stage p-4 sm:p-6 rounded-2xl bg-layer2 border border-white/[0.05] space-y-1 shadow-lg shadow-black/60 cursor-pointer">
                 <div class="text-xs text-zinc-400 font-medium">Average view duration</div>
                 <div class="text-2xl sm:text-3xl font-light text-white mt-1">
-                    <span id="telemetry-avd-val">{{ state.telemetry.avd if state.telemetry else '18.0s' }}</span>
-                    <span id="telemetry-apv-val" class="text-xs text-emerald-400 font-normal ml-1">{{ state.telemetry.apv if state.telemetry else '78.3% APV' }}</span>
+                    <span id="telemetry-avd-val">{{ state.telemetry.avd if state.telemetry else '0.0s' }}</span>
+                    <span id="telemetry-apv-val" class="text-xs text-emerald-400 font-normal ml-1">{{ state.telemetry.apv if state.telemetry else '0.0% APV' }}</span>
                 </div>
-                <div class="text-[11px] text-zinc-500 pt-1">+14.2% vs historical baseline (YouTube Analytics API)</div>
+                <div class="text-[11px] text-zinc-500 pt-1">Authoritative YouTube Analytics API</div>
             </div>
 
             <div class="magnetic-stage p-4 sm:p-6 rounded-2xl bg-layer2 border border-white/[0.05] space-y-1 shadow-lg shadow-black/60 cursor-pointer">
                 <div class="text-xs text-zinc-400 font-medium">30-day watch time</div>
                 <div class="text-2xl sm:text-3xl font-light text-white mt-1">
-                    <span id="telemetry-watchtime-val">{{ state.telemetry.watch_time if state.telemetry else '1,224 min' }}</span>
-                    <span id="telemetry-views-val" class="text-xs text-zinc-400 font-normal ml-1">{{ state.telemetry.views_display if state.telemetry else '12.8K' }} views</span>
+                    <span id="telemetry-watchtime-val">{{ state.telemetry.watch_time if state.telemetry else '0 min' }}</span>
+                    <span id="telemetry-views-val" class="text-xs text-zinc-400 font-normal ml-1">{{ state.telemetry.views_display if state.telemetry else '0' }} views</span>
                 </div>
                 <div class="text-[11px] text-zinc-500 pt-1">Organic channel playback across published Shorts</div>
             </div>
@@ -268,9 +268,9 @@
             <div class="magnetic-stage p-4 sm:p-6 rounded-2xl bg-layer2 border border-white/[0.05] space-y-1 shadow-lg shadow-black/60 cursor-pointer">
                 <div class="text-xs text-zinc-400 font-medium">Strategy optimization</div>
                 <div class="text-2xl sm:text-3xl font-light text-white mt-1">
-                    <span id="telemetry-strategy-boost" class="text-emerald-400 font-bold">{{ state.telemetry.strategy_boost if state.telemetry else '+18% APV' }}</span>
+                    <span id="telemetry-strategy-boost" class="text-emerald-400 font-bold">{{ state.telemetry.strategy_boost if state.telemetry else 'N/A' }}</span>
                 </div>
-                <div id="telemetry-strategy-name" class="text-[11px] text-zinc-500 pt-1">{{ state.telemetry.strategy_name if state.telemetry else 'Documented Disasters' }} · Active UCB1 policy</div>
+                <div id="telemetry-strategy-name" class="text-[11px] text-zinc-500 pt-1">{{ state.telemetry.strategy_name if state.telemetry else 'Historical Mysteries' }} · Active UCB1 policy</div>
             </div>
 
         </div>

@@ -403,7 +403,7 @@ class EventClusterEngine:
             candidate_titles.sort(key=lambda x: x[0], reverse=True)
             return candidate_titles[0][1]
 
-        return cluster.canonical_title or "Verified Geopolitical Event"
+        return cluster.canonical_title or "Verified Historical Event"
 
     def _extract_claims(self, cluster: EventCluster) -> List[ClaimEvidence]:
         """Extracts claim-level provenance from cluster articles."""

@@ -96,7 +96,7 @@ class MissionControlService:
         # Seed initial operational event
         self.log_event(
             category="SYSTEM",
-            message="Mission Control Operations Center initialized",
+            message="AL-AMR Operations Center initialized",
             severity="INFO",
             metadata={"mode": self._mode, "queue_paused": self._queue_paused}
         )
