@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "PARTIAL",
-  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.69 >= 0.65) with Short man_dbdc2333a02a; Render error: Visual asset missing or invalid for beat 'beat_087f1819' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 9 beats.']; Render error: Visual asset missing or invalid for beat 'beat_c80dc2ae' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Duplicate Short rejected: Duplicate script content (similarity 0.68 >= 0.65) with Short man_dbdc2333a02a; Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_dbdc2333a02a",
+  "outcome": "FAILED",
+  "block_reason": "Render error: Visual asset missing or invalid for beat 'beat_dd749b18' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 9 beats.']; Render error: Visual asset missing or invalid for beat 'beat_dc4d6d6c' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 9 beats.']; Render error: Visual asset missing or invalid for beat 'beat_d873ab50' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Duplicate Short rejected: Duplicate script content (similarity 0.68 >= 0.65) with Short man_dbdc2333a02a; Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_dbdc2333a02a; Duplicate Short rejected: Duplicate script content (similarity 0.69 >= 0.65) with Short man_dbdc2333a02a",
   "requested_deficit": 6,
-  "produced_count": 2,
+  "produced_count": 0,
   "initial_stock": 0,
-  "final_stock": 1,
+  "final_stock": 0,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-06T20:19:40.741180Z"
+  "timestamp": "2026-09-06T22:56:05.080598Z"
 }
