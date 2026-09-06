@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "SUCCEEDED",
-  "block_reason": null,
-  "requested_deficit": 2,
+  "outcome": "PARTIAL",
+  "block_reason": "QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 9 beats.']; Duplicate Short rejected: Duplicate script content (similarity 0.69 >= 0.65) with Short man_dbdc2333a02a; QA Failed: ['Duration 17.50s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).', 'Insufficient visual uniqueness: 3 unique assets across 9 beats.']; Render error: Visual asset missing or invalid for beat 'beat_67c7967a' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Duration 30.67s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).']; Duplicate Short rejected: Duplicate script content (similarity 0.71 >= 0.65) with Short man_dbdc2333a02a",
+  "requested_deficit": 6,
   "produced_count": 2,
-  "initial_stock": 4,
-  "final_stock": 6,
+  "initial_stock": 0,
+  "final_stock": 1,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-06T19:15:41.737561Z"
+  "timestamp": "2026-09-06T19:31:49.783204Z"
 }
