@@ -178,7 +178,14 @@ class PublicationScheduler:
         Returns a chronologically ordered list of genuinely vacant slots that can be scheduled immediately,
         strictly respecting the DAILY_SHORTS_LIMIT = 3 ceiling per calendar day.
         """
-        now = reference_time or datetime.utcnow()
+        from datetime import timezone
+        if reference_time is not None:
+            if reference_time.tzinfo is not None:
+                now = reference_time.astimezone(timezone.utc).replace(tzinfo=None)
+            else:
+                now = reference_time
+        else:
+            now = datetime.utcnow()
         now = now.replace(microsecond=0)
         earliest_allowed = now + timedelta(minutes=self.min_lead_minutes)
         horizon_end = now + timedelta(hours=horizon_hours)
@@ -230,7 +237,14 @@ class PublicationScheduler:
         Finds the next valid, unoccupied publication slot in UTC.
         Enforces DAILY_SHORTS_LIMIT = 3 ceiling per UTC calendar day.
         """
-        now = reference_time or datetime.utcnow()
+        from datetime import timezone
+        if reference_time is not None:
+            if reference_time.tzinfo is not None:
+                now = reference_time.astimezone(timezone.utc).replace(tzinfo=None)
+            else:
+                now = reference_time
+        else:
+            now = datetime.utcnow()
         now = now.replace(microsecond=0)
         earliest_allowed = now + timedelta(minutes=self.min_lead_minutes)
 

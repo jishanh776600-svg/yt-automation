@@ -101,6 +101,26 @@ KNOWN_EVENT_METADATA: Dict[str, Dict[str, Any]] = {
         "title": "The Ghost Ship Mary Celeste Disappearance",
         "description": "Found floating silently in the Atlantic in 1872 with all cargo completely intact, meals prepared, and every crew member vanished without a trace.\n\n#mystery #ghostship #maryceleste #shorts #maritime",
         "tags": ["mary celeste", "ghost ship", "maritime mystery", "disappearance", "history", "shorts"]
+    },
+    "evt_balloon_duel_1808": {
+        "title": "The Paris Hot Air Balloon Duel of 1808",
+        "description": "In 1808, two French gentlemen settled a duel not with swords on the ground, but in hot air balloons over Paris with blunderbusses.\n\n#history #shorts #bizarre #duel #paris",
+        "tags": ["balloon duel", "paris", "history", "bizarre", "shorts", "true story"]
+    },
+    "evt_devon_footprints_1855": {
+        "title": "The Devil's Footprints of Devon (1855)",
+        "description": "In February 1855, mysterious cloven hoofprints appeared overnight across Devon snow, traversing 100 miles over high rooftops and 14-foot walls.\n\n#mystery #history #shorts #bizarre #unexplained",
+        "tags": ["devon footprints", "mystery", "history", "bizarre", "shorts", "unexplained"]
+    },
+    "evt_antikythera_mechanism_1901": {
+        "title": "The Antikythera Mechanism: Ancient Greek Computer",
+        "description": "In 1901, divers discovered an ancient corroded bronze lump that proved to be an impossibly complex 30-gear astronomical computer built 2,000 years ago.\n\n#mystery #ancient #history #archaeology #shorts #computer",
+        "tags": ["antikythera mechanism", "ancient computer", "history", "mystery", "archaeology", "shorts"]
+    },
+    "evt_voynich_manuscript_1912": {
+        "title": "The Voynich Manuscript: History's Most Mysterious Book",
+        "description": "A 15th-century codex written in an unbreakable cipher with bizarre botanical drawings that no cryptographer or supercomputer has ever solved.\n\n#mystery #history #cryptography #shorts #unexplained",
+        "tags": ["voynich manuscript", "mystery", "history", "cryptography", "shorts", "unexplained"]
     }
 }
 
@@ -159,7 +179,7 @@ def resolve_vault_file_metadata(candidate: Dict[str, Any], db: Optional[Session]
 
     # 3. Explicit properties if clean (not short_man_ placeholder)
     p_title = props.get("title")
-    if p_title and not p_title.startswith("short_man_") and not p_title.startswith("short_job_") and len(p_title) > 5:
+    if p_title and not p_title.startswith("short_man_") and not p_title.startswith("short_job_") and not p_title.lower().startswith("al-amr ready short") and len(p_title) > 5:
         return {
             "title": p_title,
             "description": props.get("description") or f"Historical Short: {p_title}\n\n#history #shorts #documentary",
@@ -168,7 +188,7 @@ def resolve_vault_file_metadata(candidate: Dict[str, Any], db: Optional[Session]
 
     # 4. Drive file description if set
     d_desc = candidate.get("description", "")
-    if d_desc and not d_desc.startswith("short_man_") and len(d_desc) > 5:
+    if d_desc and not d_desc.startswith("short_man_") and not d_desc.lower().startswith("al-amr ready short") and len(d_desc) > 5:
         first_line = d_desc.split("\n")[0].strip()
         return {
             "title": first_line,
