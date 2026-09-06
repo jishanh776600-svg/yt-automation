@@ -567,11 +567,11 @@ class ShortsPipeline:
         except Exception as e:
             logger.warning(f"Could not persist production summary: {e}")
 
-    def produce_batch(self, count: int = 1) -> Tuple[int, Dict[str, Any]]:
+    def produce_batch(self, count: int = 1, force_unlock: bool = False) -> Tuple[int, Dict[str, Any]]:
         """
         BATCH PRODUCER: Generates multiple complete YouTube Shorts sequentially into Google Drive Vault.
-        Uses the authoritative CloudProductionOrchestrator for 100% cloud autonomy, Bella voice,
-        History niche, human creator storytelling, real visual coverage, and Video QA.
+        Uses the authoritative CloudProductionOrchestrator protected by CompositeLock
+        for 100% cloud autonomy, Bella voice, History niche, human creator storytelling, real visual coverage, and Video QA.
         """
         effective_count = min(max(1, count), MAX_BATCH_PRODUCTION_CEILING)
         if effective_count < count:
@@ -582,7 +582,8 @@ class ShortsPipeline:
         from intelligence.cloud_orchestrator import CloudProductionOrchestrator
         orchestrator = CloudProductionOrchestrator(
             drive_engine=self.drive_engine,
-            voice_id="af_bella"
+            voice_id="af_bella",
+            force_unlock=force_unlock
         )
         telemetry = orchestrator.run_production_cycle(force_batch_count=effective_count)
 
@@ -608,7 +609,7 @@ class ShortsPipeline:
         ))
         return telemetry.videos_deposited, summary
 
-    def maintain_buffer(self, target_stock: int = 6) -> Tuple[int, Dict[str, Any]]:
+    def maintain_buffer(self, target_stock: int = 6, force_unlock: bool = False) -> Tuple[int, Dict[str, Any]]:
         """
         BUFFER MANAGER: Checks current ready stock in Drive '01_READY'.
         If stock < target_stock, dynamically calculates deficit per iteration and generates
@@ -624,7 +625,8 @@ class ShortsPipeline:
         from intelligence.cloud_orchestrator import CloudProductionOrchestrator
         orchestrator = CloudProductionOrchestrator(
             drive_engine=self.drive_engine,
-            voice_id="af_bella"
+            voice_id="af_bella",
+            force_unlock=force_unlock
         )
         telemetry = orchestrator.run_production_cycle(target_buffer=clamped_target)
 
@@ -1423,6 +1425,7 @@ def main():
     parser.add_argument("--canary", action="store_true", help="Execute single controlled live-cloud canary production and exit")
     parser.add_argument("--cloud-produce", type=int, default=0, help="Run Phase 7 CloudProductionOrchestrator to produce N shorts")
     parser.add_argument("--dry-run", action="store_true", help="Execute in dry-run mode without external mutations")
+    parser.add_argument("--force-unlock", action="store_true", help="Force-break any existing cloud locks in Drive and release local locks")
     args = parser.parse_args()
 
     pipeline = ShortsPipeline(voice=args.voice)
@@ -1512,17 +1515,31 @@ def main():
                 console.print(f"  • [yellow]{k}[/yellow]: [bold white]{v}[/bold white] ({rec['reasoning'].get(k, '')})")
         finally:
             db.close()
+    elif args.force_unlock and not (args.maintain_buffer > 0 or args.produce_batch > 0):
+        from core.cloud_lock import CloudLockManager
+        for lock_name in ["cloud_production", "cloud_publisher"]:
+            cm = CloudLockManager(drive_engine=pipeline.drive_engine, lock_name=lock_name, force_break=True)
+            cm.acquire()
+            cm.release()
+        console.print("[bold green][+] Forcibly released all cloud and local locks.[/bold green]")
+        sys.exit(0)
     elif args.maintain_buffer > 0:
-        res = pipeline.maintain_buffer(target_stock=args.maintain_buffer)
+        res = pipeline.maintain_buffer(target_stock=args.maintain_buffer, force_unlock=args.force_unlock or args.force)
         count = res[0] if isinstance(res, tuple) else res
         summary = res[1] if isinstance(res, tuple) else {}
-        if summary.get("outcome") in ("BLOCKED", "FAILED"):
+        if summary.get("outcome") == "BLOCKED":
+            console.print("[bold yellow][!] Production was safely deferred due to active concurrent lock. Exiting cleanly.[/bold yellow]")
+            sys.exit(0)
+        elif summary.get("outcome") == "FAILED":
             sys.exit(2)
     elif args.produce_batch > 0:
-        res = pipeline.produce_batch(count=args.produce_batch)
+        res = pipeline.produce_batch(count=args.produce_batch, force_unlock=args.force_unlock or args.force)
         count = res[0] if isinstance(res, tuple) else res
         summary = res[1] if isinstance(res, tuple) else {}
-        if summary.get("outcome") in ("BLOCKED", "FAILED"):
+        if summary.get("outcome") == "BLOCKED":
+            console.print("[bold yellow][!] Production was safely deferred due to active concurrent lock. Exiting cleanly.[/bold yellow]")
+            sys.exit(0)
+        elif summary.get("outcome") == "FAILED":
             sys.exit(2)
     elif args.publish_next:
         pipeline.publish_next_from_vault(force=args.force, target_file_id=args.file_id)

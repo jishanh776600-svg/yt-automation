@@ -182,6 +182,150 @@ CURATED_HISTORICAL_SEEDS = [
         "category": HistoricalCategory.UNUSUAL_WARS.value,
         "summary": "In October 1925, an armed border clash erupted between Greece and Bulgaria after a Greek soldier chased his runaway dog across the frontier.",
         "curiosity": 9.8, "visual_potential": 8.9, "historical_interest": 9.0, "storytelling": 9.6, "uniqueness": 9.8
+    },
+    {
+        "title": "The Mystery of the Mary Celeste (1872)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In December 1872, the British brigantine Dei Gratia found the Mary Celeste adrift in the Atlantic Ocean with all crew missing, cargo intact, and breakfast still on the table.",
+        "curiosity": 9.9, "visual_potential": 9.4, "historical_interest": 9.7, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The Roman Dodecahedron Enigma",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "Archaeologists have unearthed over 100 hollow twelve-sided bronze dodecahedrons across Roman Europe, yet not a single Roman text mentions what they were used for.",
+        "curiosity": 9.8, "visual_potential": 9.5, "historical_interest": 9.6, "storytelling": 9.7, "uniqueness": 9.9
+    },
+    {
+        "title": "The Green Children of Woolpit",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In the 12th century, two children speaking an unknown tongue and with green-tinted skin suddenly appeared in the village of Woolpit in Suffolk, England.",
+        "curiosity": 9.9, "visual_potential": 9.2, "historical_interest": 9.5, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Tunguska Cosmic Blast of 1908",
+        "category": HistoricalCategory.DOCUMENTED_DISASTERS.value,
+        "summary": "In June 1908, a mysterious explosion flattened 80 million trees across 800 square miles of Siberian forest with the force of a thousand atomic bombs, leaving no crater.",
+        "curiosity": 9.9, "visual_potential": 9.8, "historical_interest": 9.6, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Somerton Man Tamam Shud Enigma",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In December 1948, an unidentified man was found dead on an Australian beach with an unreadable secret code and a scrap of paper reading Tamam Shud hidden in his pocket.",
+        "curiosity": 9.8, "visual_potential": 9.2, "historical_interest": 9.4, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Flannan Isles Lighthouse Disappearance",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In December 1900, all three lighthouse keepers on the remote Scottish island of Eilean Mor vanished without a trace, leaving behind an unfinished meal and a stopped clock.",
+        "curiosity": 9.9, "visual_potential": 9.5, "historical_interest": 9.7, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The Winchester Mystery House of San Jose",
+        "category": HistoricalCategory.LOST_PLACES.value,
+        "summary": "Convinced she was haunted by victims of the Winchester rifle, eccentric heiress Sarah Winchester built a bizarre labyrinthine mansion with stairs leading into ceilings and doors opening into 30-foot drops.",
+        "curiosity": 9.8, "visual_potential": 9.6, "historical_interest": 9.3, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Wow! Signal Mystery (1977)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In August 1977, the Big Ear radio telescope in Ohio detected a powerful 72-second narrowband radio signal from deep space that has never been detected again.",
+        "curiosity": 9.8, "visual_potential": 9.4, "historical_interest": 9.5, "storytelling": 9.6, "uniqueness": 9.9
+    },
+    {
+        "title": "The Disappearance of the USS Cyclops (1918)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In March 1918, a massive 542-foot US Navy collier carrying over 300 sailors and 10,000 tons of manganese vanished in the Bermuda Triangle without sending a single distress call.",
+        "curiosity": 9.8, "visual_potential": 9.5, "historical_interest": 9.4, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Mystery of the Oak Island Money Pit",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "For over two centuries, treasure hunters on a Nova Scotia island have excavated a deeply booby-trapped shaft engineered with artificial flood tunnels and coded stone tablets.",
+        "curiosity": 9.7, "visual_potential": 9.4, "historical_interest": 9.5, "storytelling": 9.6, "uniqueness": 9.8
+    },
+    {
+        "title": "The Bizarre Lead Masks Case of Brazil (1966)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In August 1966, two electronics technicians were found dead on a Rio de Janeiro hilltop wearing formal suits and lead eye masks, with a cryptic notebook instructing them to ingest capsules and await a signal.",
+        "curiosity": 9.9, "visual_potential": 9.3, "historical_interest": 9.4, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Mad Gasser of Mattoon (1944)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In the late summer of 1944, the town of Mattoon, Illinois was terrorized by a phantom prowler who sprayed a sweet-smelling gas into bedroom windows, temporarily paralyzing dozens of residents.",
+        "curiosity": 9.7, "visual_potential": 9.1, "historical_interest": 9.2, "storytelling": 9.6, "uniqueness": 9.8
+    },
+    {
+        "title": "The Mysterious SS Ourang Medan Ghost Ship",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In 1947, merchant vessels in the Strait of Malacca received frantic Morse code distress calls from a Dutch freighter whose entire crew had perished with eyes wide open and arms outstretched.",
+        "curiosity": 9.9, "visual_potential": 9.6, "historical_interest": 9.5, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The Toxic Lady Incident of Gloria Ramirez",
+        "category": HistoricalCategory.DOCUMENTED_DISASTERS.value,
+        "summary": "In February 1994, a cancer patient admitted to a California hospital emergency room emitted noxious fumes that caused 23 medical staff members to collapse from sudden toxic exposure.",
+        "curiosity": 9.8, "visual_potential": 9.2, "historical_interest": 9.3, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Bizarre Yoro Fish Rain Phenomenon",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "For over a century, the small Honduran city of Yoro has experienced a documented annual weather phenomenon where hundreds of living fish fall from the sky onto roads and fields.",
+        "curiosity": 9.8, "visual_potential": 9.4, "historical_interest": 9.3, "storytelling": 9.7, "uniqueness": 9.9
+    },
+    {
+        "title": "The Gobekli Tepe Megalithic Enigma",
+        "category": HistoricalCategory.LOST_PLACES.value,
+        "summary": "Discovered in southeastern Turkey, a massive 11,500-year-old temple complex with 20-ton carved stone pillars predates agriculture, metal tools, and Stonehenge by six millennia.",
+        "curiosity": 9.8, "visual_potential": 9.7, "historical_interest": 9.9, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Nazca Desert Geoglyphs Enigma",
+        "category": HistoricalCategory.LOST_PLACES.value,
+        "summary": "Etched into the arid Peruvian plateau over 2,000 years ago, hundreds of massive geometric lines and animal figures can only be recognized in full detail from high above in the sky.",
+        "curiosity": 9.8, "visual_potential": 9.8, "historical_interest": 9.7, "storytelling": 9.6, "uniqueness": 9.8
+    },
+    {
+        "title": "The Caspar Hauser Royal Mystery (1828)",
+        "category": HistoricalCategory.FORGOTTEN_FIGURES.value,
+        "summary": "In May 1828, a teenage boy appeared in Nuremberg holding a cryptic letter, claiming he had spent his entire life imprisoned in a dark cell knowing nothing of the outside world.",
+        "curiosity": 9.7, "visual_potential": 9.0, "historical_interest": 9.4, "storytelling": 9.8, "uniqueness": 9.8
+    },
+    {
+        "title": "The Strange Marfa Mystery Lights of Texas",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "Since the 19th century, mysterious glowing orbs have danced, split, merged, and darted across the Mitchell Flat desert near Marfa, Texas, completely defying physical explanation.",
+        "curiosity": 9.7, "visual_potential": 9.5, "historical_interest": 9.3, "storytelling": 9.6, "uniqueness": 9.8
+    },
+    {
+        "title": "The Mystery of the Man in the Iron Mask",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "During the reign of Louis XIV, a mysterious prisoner was kept in French fortresses for 34 years under strict orders never to reveal his face, locked behind an iron mask until death.",
+        "curiosity": 9.8, "visual_potential": 9.4, "historical_interest": 9.8, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Spring-Heeled Jack Terrors of London",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "Beginning in 1837, Victorian Londoners reported a bizarre leaping phantom with clawed hands and fiery breath who could jump over ten-foot walls with effortless ease.",
+        "curiosity": 9.8, "visual_potential": 9.3, "historical_interest": 9.4, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Devils Kettle Waterfall Abyss",
+        "category": HistoricalCategory.LOST_PLACES.value,
+        "summary": "At Judge C.R. Magney State Park in Minnesota, half of the Brule River drops into an enormous natural rock pothole where millions of gallons of water vanish to an unknown destination.",
+        "curiosity": 9.7, "visual_potential": 9.5, "historical_interest": 9.1, "storytelling": 9.5, "uniqueness": 9.8
+    },
+    {
+        "title": "The Sailing Stones of Racetrack Playa",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In Death Valley, California, massive 700-pound dolomite boulders slowly glide across the desert floor, leaving long parallel tracks behind them without human or animal intervention.",
+        "curiosity": 9.7, "visual_potential": 9.6, "historical_interest": 9.2, "storytelling": 9.6, "uniqueness": 9.8
+    },
+    {
+        "title": "The Bizarre Taured Mystery Passenger (1954)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In July 1954, an impeccably dressed businessman arrived at Tokyo Haneda Airport presenting a genuine passport from the country of Taured, a nation that does not exist.",
+        "curiosity": 9.9, "visual_potential": 9.2, "historical_interest": 9.4, "storytelling": 9.9, "uniqueness": 9.9
     }
 ]
 

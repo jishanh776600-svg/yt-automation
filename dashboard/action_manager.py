@@ -367,14 +367,21 @@ class ActionManager:
         except Exception as e:
             return {"success": False, "error": f"Failed to delete lock file: {str(e)}"}
 
-    def get_review_queue(self, db: Session) -> Dict[str, Any]:
+    def get_review_queue(self, db: Session, max_age_hours: Optional[int] = 48, include_legacy: bool = False) -> Dict[str, Any]:
         """
-        Returns all jobs currently requiring operator attention (NEEDS_REVIEW or FAILED).
-        Guarantees structured dictionary objects with explicit string fields.
+        Returns jobs requiring operator attention (NEEDS_REVIEW or FAILED).
+        Filters out legacy jobs older than max_age_hours (default 48h) to separate
+        historical unreviewed attempts from active operational issues.
         """
-        jobs = db.query(Job).filter(
+        from datetime import timedelta
+        query = db.query(Job).filter(
             Job.state.in_([JobState.NEEDS_REVIEW.value, JobState.FAILED.value])
-        ).order_by(Job.updated_at.desc()).all()
+        )
+        if not include_legacy and max_age_hours:
+            cutoff = datetime.utcnow() - timedelta(hours=max_age_hours)
+            query = query.filter(Job.created_at >= cutoff)
+
+        jobs = query.order_by(Job.updated_at.desc()).all()
 
         results = []
         for j in jobs:
@@ -411,6 +418,31 @@ class ActionManager:
         return {
             "count": len(results),
             "jobs": results,
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+
+    def archive_legacy_review_jobs(self, db: Session, older_than_hours: int = 48) -> Dict[str, Any]:
+        """
+        Transitions historical jobs older than threshold from NEEDS_REVIEW/FAILED to ARCHIVED.
+        Prevents legacy test/failed runs from permanently polluting the operator review queue.
+        """
+        from datetime import timedelta
+        cutoff = datetime.utcnow() - timedelta(hours=older_than_hours)
+        legacy_jobs = db.query(Job).filter(
+            Job.state.in_([JobState.NEEDS_REVIEW.value, JobState.FAILED.value]),
+            Job.created_at < cutoff
+        ).all()
+        count = 0
+        for j in legacy_jobs:
+            j.state = JobState.ARCHIVED.value
+            j.error_message = f"[ARCHIVED_LEGACY] {j.error_message or 'Historical unreviewed job'}"
+            count += 1
+        if count > 0:
+            db.commit()
+            logger.info(f"[ACTION] Archived {count} legacy unreviewed jobs older than {older_than_hours}h.")
+        return {
+            "success": True,
+            "archived_count": count,
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
 

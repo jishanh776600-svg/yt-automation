@@ -20,8 +20,8 @@ from core.lock import ProcessLock, ProcessLockError
 logger = logging.getLogger(__name__)
 
 CLOUD_LOCK_FILENAME = "cloud_production.lock"
-CLOUD_LOCK_DEFAULT_TTL_SEC = 3600.0  # 1 hour TTL
-CLOUD_LOCK_HEARTBEAT_SEC = 300.0   # 5 minutes renewal interval
+CLOUD_LOCK_DEFAULT_TTL_SEC = 900.0   # 15 minutes TTL (prevents multi-hour dead runner deadlocks)
+CLOUD_LOCK_HEARTBEAT_SEC = 120.0    # 2 minutes renewal interval
 
 
 class CloudLockError(Exception):
@@ -36,9 +36,10 @@ class CloudLockManager:
     
     Invariants:
     - Strict fail-closed: returns False on any network, quota, or Drive API error.
-    - Stale lock detection & breaking: locks older than TTL (3600s) are safely broken.
+    - Stale lock detection & breaking: locks older than TTL (900s) are safely broken.
+    - Orphaned dead runner reclamation: locks held by terminated GitHub Actions runs are broken.
     - Consensus race resolution: tie-breaker chooses earliest createdTime file ID.
-    - Heartbeat renewal: background daemon thread updates lock timestamp every 5m.
+    - Heartbeat renewal: background daemon thread updates lock timestamp every 2m.
     """
 
     def __init__(
@@ -47,7 +48,8 @@ class CloudLockManager:
         run_id: Optional[str] = None,
         lock_name: str = "cloud_production",
         ttl_seconds: float = CLOUD_LOCK_DEFAULT_TTL_SEC,
-        heartbeat_interval: float = CLOUD_LOCK_HEARTBEAT_SEC
+        heartbeat_interval: float = CLOUD_LOCK_HEARTBEAT_SEC,
+        force_break: bool = False
     ):
         self.drive_engine = drive_engine
         self.run_id = run_id or f"run_{uuid.uuid4().hex[:8]}"
@@ -55,6 +57,7 @@ class CloudLockManager:
         self.lock_filename = f"{lock_name}.lock" if not lock_name.endswith(".lock") else lock_name
         self.ttl_seconds = float(ttl_seconds)
         self.heartbeat_interval = float(heartbeat_interval)
+        self.force_break = force_break
         self._acquired = False
         self._lock_file_id: Optional[str] = None
         self._stop_heartbeat_event = threading.Event()
@@ -91,6 +94,44 @@ class CloudLockManager:
                     props = f.get("properties", {}) or {}
                     acquired_ts = float(props.get("timestamp", 0) or 0)
                     lock_owner = props.get("run_id", "unknown")
+                    lock_gh_run = props.get("github_run_id", "")
+
+                    if self.force_break:
+                        logger.warning(f"[FORCE_BREAK] Forcibly breaking cloud lock [{self.lock_filename}] (held by {lock_owner}).")
+                        try:
+                            self.drive_engine.delete_file(f["id"])
+                            continue
+                        except Exception as del_err:
+                            logger.error(f"Failed to delete lock file on force break: {del_err}")
+
+                    # Check if owning GitHub Actions run is already dead
+                    if lock_gh_run and lock_gh_run != os.getenv("GITHUB_RUN_ID", ""):
+                        is_run_dead = False
+                        try:
+                            import subprocess
+                            gh_proc = subprocess.run(
+                                ["gh", "run", "view", str(lock_gh_run), "--json", "status,conclusion"],
+                                capture_output=True,
+                                text=True,
+                                timeout=5
+                            )
+                            if gh_proc.returncode == 0:
+                                gh_data = json.loads(gh_proc.stdout)
+                                if gh_data.get("status") == "completed":
+                                    is_run_dead = True
+                        except Exception:
+                            pass
+
+                        if is_run_dead:
+                            logger.warning(
+                                f"Found orphaned cloud lock [{self.lock_filename}] from completed GitHub Actions run {lock_gh_run}. "
+                                f"Breaking dead lock file {f.get('id')} immediately."
+                            )
+                            try:
+                                self.drive_engine.delete_file(f["id"])
+                                continue
+                            except Exception as del_err:
+                                logger.error(f"Failed to delete dead lock: {del_err}")
 
                     # Check if stale
                     if (now_ts - acquired_ts) < self.ttl_seconds and acquired_ts > 0:
@@ -114,6 +155,7 @@ class CloudLockManager:
             # Upload our lock file
             lock_payload = {
                 "run_id": self.run_id,
+                "github_run_id": os.getenv("GITHUB_RUN_ID", ""),
                 "timestamp": str(now_ts),
                 "acquired_at": datetime.now(timezone.utc).isoformat(),
                 "ttl_seconds": str(self.ttl_seconds)
@@ -247,7 +289,8 @@ class CompositeLock:
         command_name: str,
         drive_engine: Optional[Any] = None,
         cloud_lock_name: Optional[str] = None,
-        ttl_seconds: float = CLOUD_LOCK_DEFAULT_TTL_SEC
+        ttl_seconds: float = CLOUD_LOCK_DEFAULT_TTL_SEC,
+        force_break: bool = False
     ):
         self.name = name
         self.command_name = command_name
@@ -255,7 +298,8 @@ class CompositeLock:
         self.cloud_lock = CloudLockManager(
             drive_engine=drive_engine,
             lock_name=cloud_lock_name or name,
-            ttl_seconds=ttl_seconds
+            ttl_seconds=ttl_seconds,
+            force_break=force_break
         )
         self._process_acquired = False
         self._cloud_acquired = False

@@ -900,6 +900,30 @@ class SystemDataProvider:
         last_error = None
         last_produced_count = 0
 
+        # Query GitHub Actions for authoritative live cloud runner status
+        try:
+            from dashboard.github_client import GitHubWorkflowDispatcher
+            dispatcher = GitHubWorkflowDispatcher()
+            gh_runs = dispatcher.get_workflow_runs("produce_buffer.yml", limit=3)
+            if gh_runs:
+                latest_gh = gh_runs[0]
+                gh_conclusion = (latest_gh.get("conclusion") or latest_gh.get("status") or "").upper()
+                gh_run_num = latest_gh.get("run_number")
+                last_refill_completion = latest_gh.get("updated_at") or latest_gh.get("created_at")
+                last_refill_start = latest_gh.get("created_at")
+                if gh_conclusion == "SUCCESS":
+                    last_refill_result = f"SUCCEEDED (Run #{gh_run_num})"
+                elif gh_conclusion in ("FAILURE", "FAILED"):
+                    last_refill_result = f"FAILED (Run #{gh_run_num})"
+                    last_error = f"Cloud refill run #{gh_run_num} failed in GitHub Actions"
+                elif gh_conclusion in ("CANCELLED", "TIMED_OUT"):
+                    last_refill_result = f"{gh_conclusion} (Run #{gh_run_num})"
+                    last_error = f"Cloud refill run #{gh_run_num} {gh_conclusion.lower()}"
+                else:
+                    last_refill_result = f"{gh_conclusion} (Run #{gh_run_num})"
+        except Exception as gh_err:
+            logger.debug(f"GitHub workflow check notice: {gh_err}")
+
         prod_summary_file = PROJECT_ROOT / "data" / "production_summary.json"
         if prod_summary_file.exists():
             try:
@@ -907,12 +931,15 @@ class SystemDataProvider:
                 with open(prod_summary_file, "r", encoding="utf-8") as f:
                     sdata = json.load(f)
                     if sdata:
-                        last_refill_result = sdata.get("outcome_message") or sdata.get("outcome") or "COMPLETED"
-                        last_refill_completion = sdata.get("timestamp")
-                        last_refill_start = sdata.get("start_timestamp") or last_refill_completion
-                        last_produced_count = sdata.get("produced_count", 0)
-                        if sdata.get("error") or sdata.get("block_reason"):
-                            last_error = sdata.get("error") or sdata.get("block_reason")
+                        local_ts = sdata.get("timestamp")
+                        # If local summary is newer or no GitHub run was retrieved:
+                        if not last_refill_completion or (local_ts and local_ts >= last_refill_completion):
+                            last_refill_result = sdata.get("outcome_message") or sdata.get("outcome") or "COMPLETED"
+                            last_refill_completion = local_ts
+                            last_refill_start = sdata.get("start_timestamp") or last_refill_completion
+                            last_produced_count = sdata.get("produced_count", 0)
+                            if sdata.get("error") or sdata.get("block_reason"):
+                                last_error = sdata.get("error") or sdata.get("block_reason")
             except Exception:
                 pass
 
@@ -963,10 +990,10 @@ class SystemDataProvider:
             automation_status = "RUNNING"
             status_message = f"Refill in progress: {running_reason}"
             status_badge_class = "bg-amber-950 text-amber-300 border border-amber-800"
-        elif last_error and deficit > 0 and last_refill_result in ("FAILED", "BLOCKED"):
+        elif "FAILED" in last_refill_result or "FAILURE" in last_refill_result or last_refill_result in ("BLOCKED", "FAILED"):
             status = "FAILED"
             automation_status = "DEGRADED"
-            status_message = f"Last refill notice: {last_error}"
+            status_message = f"Last refill alert: {last_refill_result} — {last_error or 'Review run logs'}"
             status_badge_class = "bg-rose-950 text-rose-300 border border-rose-800"
         elif deficit > 0:
             status = "NEEDED"
