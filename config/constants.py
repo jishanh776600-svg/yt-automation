@@ -174,7 +174,7 @@ SFX_LEVEL_DB = -18.0
 BGM_FADE_IN_SEC = 0.8
 BGM_FADE_OUT_SEC = 1.5
 
-# Voiceover Pause Calibration (Restored to Natural Original Sarah Delivery)
+# Voiceover Pause Calibration (Restored to Natural Original Bella Delivery)
 VOICEOVER_PAUSE_MULTIPLIER: float = 1.00
 
 # Base intentional natural conversational pauses (seconds)
@@ -197,10 +197,10 @@ MAX_AUDIO_LOUDNESS_LUFS = -10.0
 MAX_TRUE_PEAK_DBTP = -0.5
 MIN_BGM_RMS_ENERGY = 0.005  # Ensures BGM is physically audible in final render
 
-# Script Constraints
-MIN_WORD_COUNT = 45
-MAX_WORD_COUNT = 65
-OPTIMAL_WORD_COUNT = 55
+# Script Constraints (58-72 words optimal for 22-25s natural Bella delivery)
+MIN_WORD_COUNT = 55
+MAX_WORD_COUNT = 75
+OPTIMAL_WORD_COUNT = 64
 
 # API Free Limits (Default Safety Buffers)
 PEXELS_FREE_LIMIT_HOURLY = 200

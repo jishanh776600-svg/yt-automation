@@ -490,13 +490,15 @@ class AICouncilEngine:
             "researchers discovered", "researchers found", "researchers have",
             "scientists discovered", "scientists found", "scientists have",
             "a new study", "according to a study", "according to scientists",
-            "according to researchers", "according to experts", "experts say",
+            "according to researchers", "according to experts", "according to historians", "experts say",
             "a team of researchers", "a team of scientists", "archaeologists discovered",
             "archaeologists have found", "geologists found", "historians believe",
             "in a recent study", "in a surprising turn of events", "in world news",
             "breaking:", "breaking news", "officials announced", "authorities said",
             "it was recently discovered", "it has been found that", "it was found that",
             "it has been reported", "reports indicate", "as reported by",
+            "today we're talking about", "today we are talking about", "today we're looking at",
+            "here are", "this is the story of", "in this video",
         ]
         for opener in FORBIDDEN_OPENERS:
             if lower_script.startswith(opener) or lower_hook.startswith(opener):
@@ -504,7 +506,12 @@ class AICouncilEngine:
                 hard_reject = True
                 break
 
-        # ── HARD REJECT: ARTICLE-LANGUAGE DENSITY ────────────────────────────
+        # Check for banned textbook date openers (e.g., "In 1872...", "In 1945...")
+        if re.match(r"^in \d{3,4}\b", lower_script) or re.match(r"^in \d{3,4}\b", lower_hook):
+            critique_notes.append("HARD REJECT — Forbidden textbook date opener (starts with 'In YYYY...'). Start inside the story instead.")
+            hard_reject = True
+
+        # ── HARD REJECT: ARTICLE-LANGUAGE & ROBOTIC DENSITY ───────────────────
         # If 2+ "article patterns" appear in the script body, force REWRITE minimum.
         ARTICLE_BODY_PATTERNS = [
             "this suggests that", "this demonstrates", "this indicates",
@@ -513,24 +520,26 @@ class AICouncilEngine:
             "this phenomenon demonstrates", "researchers noted", "scientists noted",
             "the findings show", "the study reveals", "results indicate",
             "it is believed that", "it is thought that", "it is estimated that",
+            "historians believe that", "scientists discovered that",
+            "the researchers subsequently determined", "subsequently determined",
             "this represents", "this marks", "this is significant because",
             "in conclusion", "to summarize", "in summary",
             "only time will tell", "the world is watching", "here is what you need to know",
             "it remains to be seen", "as it turns out", "could change everything",
         ]
         article_pattern_count = sum(1 for p in ARTICLE_BODY_PATTERNS if p in lower_script)
-        if article_pattern_count >= 3:
+        if article_pattern_count >= 2:
             critique_notes.append(
-                f"HARD REJECT — Script reads like an article ({article_pattern_count} article patterns detected). "
+                f"HARD REJECT — Script reads like an article or fact dump ({article_pattern_count} article patterns detected). "
                 "Rewrite as human creator storytelling."
             )
             hard_reject = True
-        elif article_pattern_count >= 2:
+        elif article_pattern_count >= 1:
             critique_notes.append(
-                f"Article-language density warning: {article_pattern_count} patterns found. "
+                f"Article-language density warning: '{article_pattern_count}' pattern found. "
                 "Script may sound like text being read aloud."
             )
-            rule_violations += 2
+            rule_violations += 1
 
         # ── STRUCTURAL QUALITY CHECKS ─────────────────────────────────────────
         # Check for banned AI clichés

@@ -25,7 +25,7 @@ on:
       active_voice:
         description: 'Authoritative voice identifier to use for this production run'
         required: false
-        default: 'af_sarah'
+        default: 'af_bella'
         type: string
 
 permissions:
@@ -91,7 +91,7 @@ jobs:
             echo "NVIDIA_API_KEY=${NVIDIA_API_KEY}" >> .env
           fi
           echo "TEST_MODE=false" >> .env
-          echo "KOKORO_VOICE=${{ inputs.active_voice || 'af_sarah' }}" >> .env
+          echo "KOKORO_VOICE=${{ inputs.active_voice || 'af_bella' }}" >> .env
           echo "${TOKEN_JSON}" > token.json
           echo "${CLIENT_SECRET_JSON}" > client_secret.json
 
@@ -104,7 +104,7 @@ jobs:
           BATCH_COUNT="${{ inputs.batch_count }}"
           TARGET_BUFFER="${{ inputs.target_buffer }}"
           VOICE_INPUT="${{ inputs.active_voice }}"
-          VOICE_FLAG="--voice ${VOICE_INPUT:-af_sarah}"
+          VOICE_FLAG="--voice ${VOICE_INPUT:-af_bella}"
 
           if [ -n "$BATCH_COUNT" ] && [ "$BATCH_COUNT" -gt 0 ] 2>/dev/null; then
             echo "[*] Running targeted batch production for $BATCH_COUNT Shorts (Voice: ${VOICE_INPUT:-default})..."

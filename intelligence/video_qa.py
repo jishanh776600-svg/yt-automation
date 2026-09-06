@@ -244,7 +244,8 @@ class VideoQAEngine:
         from PIL import Image
         import numpy as np
 
-        sample_points = [0.15, 0.35, 0.50, 0.70, 0.85]
+        # Comprehensive temporal sampling (11 checkpoints covering every ~2s of a 23s Short)
+        sample_points = [0.08, 0.16, 0.25, 0.33, 0.42, 0.50, 0.58, 0.67, 0.75, 0.83, 0.92]
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_p = Path(tmp_dir)
             for idx, pt in enumerate(sample_points):

@@ -90,6 +90,9 @@ APPROVED_NICHE_KEYWORDS = [
     "jack the ripper", "zodiac", "taured", "man from taured",
     # Underwater and space
     "underwater city", "submerged", "labyrinth", "time capsule",
+    # History & strange historical incidents
+    "historical", "historic", "history", "duel", "forgotten history", "documented history",
+    "true event", "true story", "strange history", "unbelievable story",
 ]
 
 BANNED_SCIENCE_EXPLAINER_KEYWORDS = [

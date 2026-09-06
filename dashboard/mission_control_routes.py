@@ -4,7 +4,7 @@ Exposes authenticated read operations and safe controlled mutations.
 """
 import os
 from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from fastapi import APIRouter, Depends, Request, Response, HTTPException, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
@@ -44,7 +44,16 @@ class JobActionRequest(BaseModel):
 
 class ProduceBatchRequest(BaseModel):
     count: int = Field(default=1, ge=1, le=5, description="Number of Shorts to produce")
+    batch_size: Optional[int] = Field(default=None, description="Compatibility alias for count")
     dry_run: bool = Field(default=True, description="Enforce dry-run safety boundary (default True)")
+
+    @model_validator(mode="before")
+    @classmethod
+    def handle_count_aliases(cls, values):
+        if isinstance(values, dict):
+            if "batch_size" in values and ("count" not in values or values["count"] is None):
+                values["count"] = values["batch_size"]
+        return values
 
 
 # ==============================================================================

@@ -211,7 +211,7 @@ class CurrentAffairsDeduplicationEngine:
         try:
             from core.models import UploadRecord
             uploads = db.query(UploadRecord).filter(
-                UploadRecord.status.in_(["PUBLISHED", "SCHEDULED", "SUCCESS", "TEST_VERIFIED"])
+                UploadRecord.status.in_(["PUBLISHED", "SCHEDULED", "SUCCESS", "TEST_VERIFIED", "RETIRED"])
             ).all()
             for u in uploads:
                 is_dup, reason = is_same_current_affairs_story(

@@ -21,18 +21,18 @@ The system discovers real-world discoveries and anomalies, deliberates across a 
 | Standard | Canonical Specification | Verification Method | Status |
 |---|---|---|---|
 | **System Status** | `🟢 LIVE / CLOUD-AUTONOMOUS` | GitHub Actions + Drive `00_SYSTEM` state | `LIVE` |
-| **Approved Niches** | `1. Mystery / Bizarre Stories` & `2. Weird Science` | `is_niche_compliant()` in `clustering.py` | `ENFORCED` |
-| **Banned Content** | `ZERO Politics, War, Military, Diplomacy` | Fail-closed keyword rejection list | `ENFORCED` |
+| **Approved Niche** | `History / Historical Mysteries / Bizarre Real-World Events` | `is_niche_compliant()` in `clustering.py` | `ENFORCED` |
+| **Banned Content** | `ZERO Politics, Current Affairs, Warfare, Military, Generic Science Facts` | Fail-closed keyword rejection list | `ENFORCED` |
 | **Video Resolution** | `1080x1920` (9:16 Vertical Shorts format) | FFmpeg stream inspection | `ENFORCED` |
-| **Short Duration** | `22.0s – 25.0s` (Canonical target: `~23.2s`) | MediaInfo + QA duration gate | `ENFORCED` |
-| **Script Length** | Exactly `62 to 70 words` (High retention) | Council Quality Gate in `JournalisticScriptEngine` | `ENFORCED` |
-| **Authoritative Voice** | **`af_sarah` (Sarah - US Female)** | Static voice lock (`af_bella` decommissioned) | `ENFORCED` |
-| **Narration Pacing** | `0.08s sentence` / `0.03s clause` / `100ms cap` | Pause tuning + silence compression | `ENFORCED` |
-| **Audio QA Gate** | Max pause $< 0.35$s, dead air $\le 18.0\%$ | Hard audio waveform gate in `VideoQAEngine` | `ENFORCED` |
-| **Scene Density** | Minimum `9 unique scenes` (Target: 10–12) | Manifest cut count validation | `ENFORCED` |
+| **Short Duration** | `22.0s – 25.0s` (Canonical target: `~23.0s`) | MediaInfo + QA duration gate | `ENFORCED` |
+| **Script Philosophy**| Conversational creator storytelling ("Tell me what happened") | 58–72 words, no academic cliches or fact dumps | `ENFORCED` |
+| **Authoritative Voice**| **`af_bella` (Bella - US Female)** | Static voice lock (`af_sarah` decommissioned) | `ENFORCED` |
+| **Narration Pacing** | Natural human creator delivery (~1.00x Kokoro) | Natural pauses, zero artificial speedups | `ENFORCED` |
+| **Audio QA Gate** | Max pause $\le 0.35$s, dead air $\le 18.0\%$ | Hard audio waveform gate in `VideoQAEngine` | `ENFORCED` |
+| **Visual Requirements**| Real footage/photos throughout; **0 Script-Card Frames** | Temporal multi-checkpoint frame inspection | `ENFORCED` |
 | **Visual Deduplication**| Perceptual hashing (dHash) + 45-day cooldown | `GlobalVisualMemory` (`visual_memory.db`) | `ENFORCED` |
 | **Story Deduplication** | 3-gram word shingles & semantic similarity | `ShortDuplicateGuard` (`short_fingerprints.db`) | `ENFORCED` |
-| **Background Music** | **`ENABLED`** (4 tracks ducked 12–16dB below voice)| Stage B bed at `-30.0 LUFS`, voice `-14.0 LUFS` | `ENFORCED` |
+| **Background Music** | **`ENABLED`** (4 tracks ducked below voice) | Mastered loudness `-14.0 LUFS` | `ENFORCED` |
 | **Sound Effects (SFX)** | **`DISABLED`** (Permanently retired) | Hard-coded production pipeline flag | `ENFORCED` |
 | **Publishing Ceiling** | Strictly $\le 3$ Shorts/day (`06:00, 11:00, 15:00 UTC`) | Database business day query | `ENFORCED` |
 | **Forward Horizon** | Rolling `48-Hour Coverage` | `scheduler.get_vacant_slots_in_horizon()` | `ENFORCED` |

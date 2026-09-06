@@ -679,8 +679,8 @@ class TopicDiscoveryEngine:
             except Exception as e:
                 logger.warning(f"Gemini live topic discovery fallback: {e}")
 
-        # 3. Evaluate curated seed topics (prioritize current geopolitics)
-        candidates = list(CURATED_GEOPOLITICAL_SEEDS) + list(CURATED_HISTORICAL_SEEDS)
+        # 3. Evaluate curated seed topics (History / Bizarre Historical Stories only)
+        candidates = list(CURATED_HISTORICAL_SEEDS)
         random.shuffle(candidates)
 
         for item in candidates:

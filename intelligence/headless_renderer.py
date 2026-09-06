@@ -56,7 +56,7 @@ class HeadlessRendererConfig:
     fps: int = VIDEO_FPS
     output_dir: Path = RENDERS_DIR
     ffmpeg_exe: str = FFMPEG_EXE
-    voice_id: str = "af_sarah"
+    voice_id: str = "af_bella"
     has_bgm: bool = True
     has_sfx: bool = False
     temp_dir: Path = Path("data/cache/render_tmp")
@@ -238,6 +238,7 @@ class HeadlessComposer:
                 )
                 cmd = [
                     self.config.ffmpeg_exe, "-y",
+                    "-loglevel", "error",
                     "-stream_loop", "-1",
                     "-ss", "0",
                     "-i", str(asset_path),
@@ -252,11 +253,15 @@ class HeadlessComposer:
                     str(output_path)
                 ]
 
-            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            try:
+                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=90)
+            except subprocess.TimeoutExpired:
+                res = subprocess.CompletedProcess(cmd, returncode=1, stdout=b"", stderr=b"timeout")
             if res.returncode != 0:
                 logger.warning(f"Video clip render fallback triggered for {beat.beat_id}")
                 cmd_fb = [
                     self.config.ffmpeg_exe, "-y",
+                    "-loglevel", "error",
                     "-stream_loop", "-1",
                     "-i", str(asset_path),
                     "-t", str(dur),
@@ -268,13 +273,14 @@ class HeadlessComposer:
                     "-an",
                     str(output_path)
                 ]
-                subprocess.run(cmd_fb, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                subprocess.run(cmd_fb, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=90)
 
         # 3. Render Image Clip with Ken Burns Motion
         else:
             frames = max(1, int(dur * self.config.fps))
+            prescale = f"scale={self.config.width*2}:{self.config.height*2}:force_original_aspect_ratio=increase,crop={self.config.width*2}:{self.config.height*2}"
             zoom_filter = (
-                f"zoompan=z='min(zoom+0.0008,1.10)':d={frames}:"
+                f"{prescale},zoompan=z='min(zoom+0.0008,1.10)':d={frames}:"
                 f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
                 f"s={self.config.width}x{self.config.height}:fps={self.config.fps}"
             )
@@ -287,6 +293,7 @@ class HeadlessComposer:
                 )
                 cmd = [
                     self.config.ffmpeg_exe, "-y",
+                    "-loglevel", "error",
                     "-loop", "1",
                     "-i", str(asset_path),
                     "-i", str(overlay_path),
@@ -304,6 +311,7 @@ class HeadlessComposer:
             else:
                 cmd = [
                     self.config.ffmpeg_exe, "-y",
+                    "-loglevel", "error",
                     "-loop", "1",
                     "-i", str(asset_path),
                     "-vf", f"{zoom_filter},format=yuv420p",
@@ -317,10 +325,14 @@ class HeadlessComposer:
                     str(output_path)
                 ]
 
-            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            try:
+                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=90)
+            except subprocess.TimeoutExpired:
+                res = subprocess.CompletedProcess(cmd, returncode=1, stdout=b"", stderr=b"timeout")
             if res.returncode != 0:
                 cmd_fb = [
                     self.config.ffmpeg_exe, "-y",
+                    "-loglevel", "error",
                     "-loop", "1",
                     "-i", str(asset_path),
                     "-t", str(dur),
@@ -332,7 +344,7 @@ class HeadlessComposer:
                     "-an",
                     str(output_path)
                 ]
-                subprocess.run(cmd_fb, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                subprocess.run(cmd_fb, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=90)
 
         return output_path
 
@@ -362,11 +374,30 @@ class HeadlessComposer:
         # 1. Fetch visual assets for manifest
         fetch_summary = self.asset_fetcher.fetch_manifest_assets(manifest)
 
-        # Build candidate pool of all successfully retrieved visual assets
+        def _is_valid_render_asset(p: Optional[Path]) -> bool:
+            if not p or not Path(p).exists() or Path(p).stat().st_size == 0:
+                return False
+            try:
+                with open(p, "rb") as f:
+                    if f.read(16).startswith(b"%PDF"):
+                        return False
+            except Exception:
+                return False
+            ext = Path(p).suffix.lower()
+            if ext in (".jpg", ".jpeg", ".png", ".webp"):
+                try:
+                    with Image.open(p) as img:
+                        img.verify()
+                    return True
+                except Exception:
+                    return False
+            return True
+
+        # Build candidate pool of all successfully retrieved and verified visual assets
         valid_pool: List[Path] = [
             Path(res.local_path)
             for res in fetch_summary.results.values()
-            if res.local_path and Path(res.local_path).exists()
+            if res.local_path and _is_valid_render_asset(Path(res.local_path))
         ]
 
         # 2. Render each beat clip in parallel
@@ -376,20 +407,21 @@ class HeadlessComposer:
 
         fallback_idx = 0
         for beat in manifest.beats:
-            if beat.transition == EditTransitionType.HOLD.value and last_asset_path:
+            if beat.transition == EditTransitionType.HOLD.value and last_asset_path and _is_valid_render_asset(last_asset_path):
                 asset_p = last_asset_path
             else:
-                asset_p = fetch_summary.asset_path_by_beat.get(beat.beat_id)
-                if not asset_p or not Path(asset_p).exists():
+                raw_p = fetch_summary.asset_path_by_beat.get(beat.beat_id)
+                asset_p = Path(raw_p) if raw_p and _is_valid_render_asset(Path(raw_p)) else None
+                if not asset_p:
                     if valid_pool:
                         asset_p = valid_pool[fallback_idx % len(valid_pool)]
                         fallback_idx += 1
                         logger.warning(
-                            f"Beat '{beat.beat_id}' had missing asset; assigned pool fallback visual: {asset_p}"
+                            f"Beat '{beat.beat_id}' had missing/invalid asset; assigned pool fallback visual: {asset_p}"
                         )
                     else:
                         raise RuntimeError(
-                            f"Visual asset missing for beat '{beat.beat_id}' and no visual assets available in manifest pool. "
+                            f"Visual asset missing or invalid for beat '{beat.beat_id}' and no valid visual assets available in manifest pool. "
                             f"Script card fallback is strictly prohibited."
                         )
                 last_asset_path = asset_p
@@ -429,13 +461,14 @@ class HeadlessComposer:
         raw_video_path = session_tmp / "raw_concatenated.mp4"
         cmd_concat = [
             self.config.ffmpeg_exe, "-y",
+            "-loglevel", "error",
             "-f", "concat",
             "-safe", "0",
             "-i", str(concat_list_file),
             "-c", "copy",
             str(raw_video_path)
         ]
-        subprocess.run(cmd_concat, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(cmd_concat, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
         render_elapsed = time.perf_counter() - t_render0
 
         # 4. Subtitle generation & burn-in
@@ -454,6 +487,7 @@ class HeadlessComposer:
                 rel_ass = ass_file.as_posix()
                 cmd_sub = [
                     self.config.ffmpeg_exe, "-y",
+                    "-loglevel", "error",
                     "-i", str(raw_video_path),
                     "-vf", f"ass={rel_ass}",
                     "-c:v", "libx264",
@@ -468,6 +502,7 @@ class HeadlessComposer:
                     cmd_sub,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
+                    timeout=120,
                 )
                 if res_sub.returncode == 0 and burned_path.exists() and burned_path.stat().st_size > 0:
                     subtitled_video_path = burned_path
@@ -511,6 +546,7 @@ class HeadlessComposer:
 
         cmd_mux = [
             self.config.ffmpeg_exe, "-y",
+            "-loglevel", "error",
             "-i", str(subtitled_video_path),
             "-i", str(master_audio_path),
             "-map", "0:v:0",
@@ -522,7 +558,7 @@ class HeadlessComposer:
             "-t", f"{manifest.total_duration_seconds:.2f}",
             str(output_path)
         ]
-        subprocess.run(cmd_mux, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run(cmd_mux, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
         render_elapsed += (time.perf_counter() - t_mux0)
 
         # 6. Run Video QA
@@ -643,6 +679,7 @@ class HeadlessComposer:
                             "event_id": rendered_record.event_id,
                             "script_id": rendered_record.script_id,
                             "qa_status": rendered_record.qa_status,
+                            "voice": getattr(rendered_record, "voice_id", "af_bella"),
                         },
                     )
                     file_id = res.get("id") if isinstance(res, dict) else str(res)
@@ -661,6 +698,7 @@ class HeadlessComposer:
                             "event_id": rendered_record.event_id,
                             "script_id": rendered_record.script_id,
                             "qa_status": rendered_record.qa_status,
+                            "voice": getattr(rendered_record, "voice_id", "af_bella"),
                         },
                     )
             elif hasattr(drive_engine, "upload_video_to_vault"):
@@ -673,6 +711,7 @@ class HeadlessComposer:
                         "event_id": rendered_record.event_id,
                         "script_id": rendered_record.script_id,
                         "qa_status": rendered_record.qa_status,
+                        "voice": getattr(rendered_record, "voice_id", "af_bella"),
                     },
                 )
                 file_id = res.get("id") if isinstance(res, dict) else str(res)
@@ -687,6 +726,7 @@ class HeadlessComposer:
                         "event_id": rendered_record.event_id,
                         "script_id": rendered_record.script_id,
                         "qa_status": rendered_record.qa_status,
+                        "voice": getattr(rendered_record, "voice_id", "af_bella"),
                     },
                 )
             else:

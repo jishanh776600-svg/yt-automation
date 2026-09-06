@@ -355,9 +355,9 @@ def _get_safe_system_state(db: Session) -> Dict[str, Any]:
         "database_summary": {"total_jobs": 0, "needs_review": 0, "failed_jobs": 0, "recent_jobs": []},
         "scheduled_queue": [],
         "voice_config": {
-            "voice": "af_sarah",
-            "active_voice_name": "Sarah",
-            "active_voice_id": "af_sarah"
+            "voice": "af_bella",
+            "active_voice_name": "Bella",
+            "active_voice_id": "af_bella"
         },
         "bgm_status": {"tracks": 4},
         "cloud_workflows": {},

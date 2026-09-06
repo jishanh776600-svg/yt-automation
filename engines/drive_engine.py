@@ -79,8 +79,8 @@ def is_valid_ready_short(
 
         # Voice property check
         v_prop = props.get("voice")
-        if v_prop and v_prop not in ("af_sarah", "sarah"):
-            return False, f"Non-authoritative voice '{v_prop}' in properties (af_sarah required)"
+        if v_prop and v_prop not in ("af_bella", "bella"):
+            return False, f"Non-authoritative voice '{v_prop}' in properties (af_bella required)"
 
         # RenderedVideoRecord check for cloud manifests
         if db and name.startswith("short_man_"):
@@ -91,8 +91,8 @@ def is_valid_ready_short(
                     (RenderedVideoRecord.cloud_storage_path.ilike(f"%{name}%"))
                 ).first()
                 if r:
-                    if r.voice_id != "af_sarah":
-                        return False, f"Non-authoritative voice '{r.voice_id}' (af_sarah required)"
+                    if r.voice_id != "af_bella":
+                        return False, f"Non-authoritative voice '{r.voice_id}' (af_bella required)"
                     if r.qa_status != "PASSED":
                         return False, f"RenderedVideoRecord QA status is '{r.qa_status}'"
             except Exception as r_err:
@@ -171,8 +171,8 @@ def is_valid_ready_short(
                     (RenderedVideoRecord.cloud_storage_path.ilike(f"%{name}%"))
                 ).first()
                 if r:
-                    if r.voice_id != "af_sarah":
-                        return False, f"Non-authoritative voice '{r.voice_id}' (af_sarah required)"
+                    if r.voice_id != "af_bella":
+                        return False, f"Non-authoritative voice '{r.voice_id}' (af_bella required)"
                     if r.qa_status != "PASSED":
                         return False, f"RenderedVideoRecord QA status is '{r.qa_status}'"
             except Exception as r_err:

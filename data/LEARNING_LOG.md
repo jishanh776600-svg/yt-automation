@@ -3819,7 +3819,7 @@
 | `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-18.0%` | `USABLE_EVIDENCE` | **0.82** | Usable evidence (N=6). Full bounded weight adjustment (-18.0% lift vs baseline). |
 | `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-13.0%` | `USABLE_EVIDENCE` | **0.87** | Usable evidence (N=5). Full bounded weight adjustment (-13.0% lift vs baseline). |
 
-## Learning Cycle — 2026-09-06 09:45:12 UTC
+## Learning Cycle — 2026-09-06 12:52:26 UTC
 
 - **Mature Videos Evaluated**: 26
 - **Channel Performance Baseline**: 43.11/100

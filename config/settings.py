@@ -77,10 +77,10 @@ YOUTUBE_CLIENT_SECRET = os.getenv("YOUTUBE_CLIENT_SECRET", "")
 YOUTUBE_REFRESH_TOKEN = os.getenv("YOUTUBE_REFRESH_TOKEN", "")
 CLIENT_SECRETS_FILE = os.getenv("CLIENT_SECRETS_FILE", str(PROJECT_ROOT / "client_secret.json"))
 
-# TTS Settings — Authoritative Production Lock: Sarah Only (af_sarah)
+# TTS Settings — Authoritative Production Lock: Bella Only (af_bella)
 TTS_PROVIDER = os.getenv("TTS_PROVIDER", "kokoro")  # kokoro, edge, piper
-KOKORO_VOICE = "af_sarah"
-APPROVED_PRODUCTION_VOICES = ["af_sarah"]
+KOKORO_VOICE = "af_bella"
+APPROVED_PRODUCTION_VOICES = ["af_bella"]
 KOKORO_MODEL_PATH = DATA_DIR / "kokoro-v1.0.onnx"
 KOKORO_VOICES_PATH = DATA_DIR / "voices-v1.0.bin"
 

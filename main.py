@@ -687,7 +687,7 @@ class ShortsPipeline:
         from intelligence.cloud_orchestrator import CloudProductionOrchestrator
         orchestrator = CloudProductionOrchestrator(
             drive_engine=self.drive_engine,
-            voice_id="af_sarah"
+            voice_id="af_bella"
         )
         telemetry = orchestrator.run_production_cycle(target_buffer=clamped_target)
 
@@ -700,7 +700,7 @@ class ShortsPipeline:
             "initial_stock": telemetry.initial_ready_stock,
             "final_stock": telemetry.final_ready_stock,
             "target_stock": clamped_target,
-            "voice": "af_sarah",
+            "voice": "af_bella",
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
         self._write_production_summary(summary)

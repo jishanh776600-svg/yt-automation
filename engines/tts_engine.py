@@ -29,21 +29,34 @@ logger = logging.getLogger(__name__)
 KOKORO_MODEL_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx"
 KOKORO_VOICES_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin"
 
-APPROVED_PRODUCTION_VOICES = ["af_sarah"]
+APPROVED_PRODUCTION_VOICES = ["af_bella"]
 
 AVAILABLE_VOICES = [
+    {
+        "id": "af_bella",
+        "display_name": "Bella (US Female)",
+        "engine": "Kokoro-82M ONNX / Edge-TTS",
+        "description": "High-energy, engaging creator voice with natural cadence and storytelling presence.",
+        "style": "Conversational / Creator",
+        "gender": "Female",
+        "accent": "American",
+        "kokoro_voice": "af_bella",
+        "edge_voice": "en-US-JennyNeural",
+        "delivery_profile": "BELLA_CANONICAL",
+        "available": True
+    },
     {
         "id": "af_sarah",
         "display_name": "Sarah (US Female)",
         "engine": "Kokoro-82M ONNX / Edge-TTS",
-        "description": "Clear, authoritative, and engaging narration. Authentic pacing for mystery and science storytelling.",
-        "style": "Authoritative / Engaging",
+        "description": "Historical compatibility voice profile (decommissioned from production).",
+        "style": "Documentary",
         "gender": "Female",
         "accent": "American",
         "kokoro_voice": "af_sarah",
         "edge_voice": "en-US-JennyNeural",
         "delivery_profile": "SARAH_CANONICAL",
-        "available": True
+        "available": False
     }
 ]
 
@@ -53,12 +66,12 @@ def resolve_voice_config(voice_id: str) -> dict:
     Authoritative voice configuration resolver.
     Returns the canonical voice entry for any supported voice_id, ensuring
     both Kokoro and Edge-TTS providers resolve to the exact intended voice profile.
-    Restricted strictly to APPROVED_PRODUCTION_VOICES (af_sarah).
+    Restricted strictly to APPROVED_PRODUCTION_VOICES (af_bella).
     """
     for v in AVAILABLE_VOICES:
-        if v["id"] == voice_id:
+        if v["id"] == voice_id and v.get("available", False):
             return v
-    # Safe fallback to approved production voice (Sarah)
+    # Safe fallback to approved production voice (Bella)
     return AVAILABLE_VOICES[0]
 
 
@@ -71,7 +84,7 @@ def get_active_voice(db: Optional[Session] = None) -> str:
                 return cfg.value
         except Exception:
             pass
-    return "af_sarah"
+    return "af_bella"
 
 
 def select_voice_by_policy(category: str = "", title: str = "", script_text: str = "") -> str:
@@ -349,8 +362,8 @@ class TTSEngine:
 
         active_voice = voice or get_active_voice(db)
         if active_voice not in APPROVED_PRODUCTION_VOICES:
-            logger.warning(f"[TTS_ENGINE] Voice '{active_voice}' not approved for production. Defaulting to 'af_sarah'.")
-            active_voice = "af_sarah"
+            logger.warning(f"[TTS_ENGINE] Voice '{active_voice}' not approved for production. Defaulting to 'af_bella'.")
+            active_voice = "af_bella"
         v_cfg = resolve_voice_config(active_voice)
         kokoro_v = v_cfg.get("kokoro_voice", active_voice)
         edge_v = v_cfg.get("edge_voice", "en-US-JennyNeural")

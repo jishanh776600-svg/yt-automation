@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "FAILED",
-  "block_reason": "Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_e31219e179de",
-  "requested_deficit": 1,
+  "outcome": "BLOCKED",
+  "block_reason": null,
+  "requested_deficit": 6,
   "produced_count": 0,
-  "initial_stock": 5,
-  "final_stock": 5,
+  "initial_stock": 0,
+  "final_stock": 0,
   "target_stock": 6,
-  "voice": "af_sarah",
-  "timestamp": "2026-09-06T05:33:38.265026Z"
+  "voice": "af_bella",
+  "timestamp": "2026-09-06T12:37:04.420206Z"
 }

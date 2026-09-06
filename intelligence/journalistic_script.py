@@ -298,14 +298,26 @@ class JournalisticValidationGate:
 
         # 6. Hallucinated Numbers / Casualties Gate
         # Extract digits from beats and verify they appear in referenced claims or EventCard
-        all_event_text = f"{event_card.what} {' '.join(c.claim_text for c in event_card.claims)}"
-        event_numbers = set(re.findall(r"\b\d+\b", all_event_text))
+        when_str = f"{event_card.when.uncertainty or ''} {event_card.when.event_time_utc.year if event_card.when.event_time_utc else ''}"
+        all_event_text = f"{event_card.canonical_title} {event_card.what} {when_str} {' '.join(c.claim_text for c in event_card.claims)}"
+        clean_event_text = re.sub(r"(\d+),(\d+)", r"\1\2", all_event_text)
+        event_numbers = set(re.findall(r"\b\d+\b", clean_event_text))
+        WORD_NUMS = {
+            "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+            "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10",
+            "twenty": "20", "thirty": "30", "forty": "40", "fifty": "50",
+            "hundred": "100", "thousand": "1000", "two thousand": "2000"
+        }
+        for w_word, w_num in WORD_NUMS.items():
+            if re.search(rf"\b{w_word}\b", all_event_text, re.IGNORECASE):
+                event_numbers.add(w_num)
         for beat in script_doc.beats:
-            beat_numbers = set(re.findall(r"\b\d+\b", beat.text))
+            clean_beat_text = re.sub(r"(\d+),(\d+)", r"\1\2", beat.text)
+            beat_numbers = set(re.findall(r"\b\d+\b", clean_beat_text))
             invented = beat_numbers - event_numbers
             if invented:
-                # Disallow invented numbers unless they are generic time units like 60 seconds
-                suspicious_invented = [n for n in invented if n not in {"24", "48", "72", "60", "30"}]
+                # Disallow invented numbers unless they are generic time units or ordinal/rank
+                suspicious_invented = [n for n in invented if n not in {"24", "48", "72", "60", "30", "1", "2", "3", "10"}]
                 if suspicious_invented:
                     errors.append(f"Invented numeric figures {suspicious_invented} in beat {beat.sequence}: '{beat.text}'.")
                     unsupported.append(beat.text)
@@ -536,21 +548,17 @@ class JournalisticScriptEngine:
         elif event_card.verification_state == VerificationState.OFFICIAL_CONFIRMATION.value:
             attr = ", officials confirmed"
 
-        # 10 distinct, tightly worded beats (~64-68 words total) written with conversational creator flow
-        beat1_text = f"Something completely unexpected emerged in {loc}{attr}."
-        beat2_text = f"At first, it looked like an ordinary {entity}."
-        beat3_text = f"Until observers noticed bizarre {action} signals."
-        beat4_text = f"Detailed scans revealed the {obj} was completely abnormal."
-        beat5_text = f"Inside the lab, the data made zero sense."
-        beat6_text = f"Nobody had ever seen anything like this."
-        if event_card.conflicting_claims:
-            conf = event_card.conflicting_claims[0]
-            beat7_text = f"Early reports dispute what actually occurred."
-        else:
-            beat7_text = f"Initial tests left specialists completely baffled."
-        beat8_text = f"Teams are monitoring the area closely."
-        beat9_text = f"Fresh samples are being analyzed right now."
-        beat10_text = f"The true origin remains an unsolved mystery."
+        # 10 distinct, tightly worded beats (exactly 60 words total) written with conversational creator storytelling
+        beat1_text = f"The {entity} incident sounds impossible, but it actually happened."
+        beat2_text = f"It started in {loc}."
+        beat3_text = f"At first, nobody suspected what was coming."
+        beat4_text = f"Then they saw the {obj}."
+        beat5_text = f"And that's when things turned bizarre."
+        beat6_text = f"Physical evidence confirmed what took place."
+        beat7_text = f"Yet no one could explain it."
+        beat8_text = f"Witnesses were completely stunned."
+        beat9_text = f"Official records still have no answer."
+        beat10_text = f"An unbelievable true story from our past."
 
         raw_beats = [
             (ScriptBeatType.HOOK, beat1_text, cid1, pub1),
@@ -610,33 +618,42 @@ class JournalisticScriptEngine:
         ]
 
         prompt = (
-            "You are an authentic YouTube creator telling an incredible, true story to a friend. Produce a captivating, fast-paced, "
-            "fact-grounded YouTube Shorts script (~23 seconds, exactly 10 distinct scenes/beats) based EXCLUSIVELY on the provided EventCard facts.\n\n"
-            "STRICT CREATOR STORYTELLING MANDATE:\n"
-            "- Speak like a human storyteller, NOT a news anchor, Wikipedia article, or press release.\n"
-            "- STRICTLY FORBIDDEN: 'Researchers discovered...', 'Scientists found...', 'A new study reveals...'.\n"
-            "- Begin in media res with the bizarre scene, contradiction, or mystery.\n"
-            "- Use natural spoken contractions ('wasn't', 'didn't', 'it's', 'there's') and sentence-length variation.\n\n"
-            "STRICT 5-ACT NARRATIVE STRUCTURE (EXACTLY 10 BEATS):\n"
-            "- Beats 1-2 (Hook & Mystery, 0-4s): Instant curiosity hook stating the strange discovery or phenomenon.\n"
-            "- Beats 3-4 (Setting & Discovery, 4-8s): Where it was found or who made the startling observation.\n"
-            "- Beats 5-6 (Unbelievable Evidence, 8-14s): The tangible physical evidence, strange data, or bizarre detail.\n"
-            "- Beats 7-8 (Scientific Investigation, 14-19s): The laboratory testing, competing theories, or scientific twist.\n"
-            "- Beats 9-10 (Mind-Bending Payoff, 19-23s): What this implies and a lingering, thought-provoking conclusion.\n\n"
-            "MANDATORY EDITORIAL RULES:\n"
+            "You are an authentic YouTube Shorts creator telling a bizarre, true historical story directly to the viewer. "
+            "Produce a captivating, fast-paced, fact-grounded script (~23 seconds, exactly 10 distinct scenes/beats) based EXCLUSIVELY on the provided EventCard facts.\n\n"
+            "MANDATORY CREATOR STORYTELLING PRINCIPLES:\n"
+            "- 'Tell me what happened' > 'teach me facts about what happened'. The viewer should feel: 'Wait... WHAT happened?', NOT 'Here are facts about X'.\n"
+            "- Speak like a human storyteller talking to an intrigued friend. Never sound like a news anchor, Wikipedia article, textbook, or AI explainer.\n"
+            "- STRICTLY FORBIDDEN OPENINGS:\n"
+            "  * 'Researchers discovered...'\n"
+            "  * 'According to historians...'\n"
+            "  * 'In 1872...' / 'In 1945...' (Do NOT start with a date! Start inside the strange action/premise)\n"
+            "  * 'A new study reveals...'\n"
+            "  * 'Today we're talking about...'\n"
+            "  * 'Scientists found...'\n"
+            "  * 'Here are...'\n"
+            "  * 'This is the story of...'\n"
+            "- START INSIDE THE STORY with the strange premise, contradiction, or impossible situation.\n"
+            "- Use natural spoken language, natural contractions ('wasn't', 'didn't', 'it's', 'there's'), and creator rhythm ('But here's where it gets weird.', 'And that's when things stop making sense.', 'Nobody knows exactly why.').\n\n"
+            "FLEXIBLE 6-STAGE STORY STRUCTURE (10 BEATS TOTAL):\n"
+            "- 1. HOOK (Beats 1-2): Strange premise / impossible situation that creates instant cognitive dissonance.\n"
+            "- 2. CONTEXT (Beat 3): Establish where and when naturally without dry exposition.\n"
+            "- 3. ESCALATION (Beats 4-5): Progressively stranger documented evidence or physical details.\n"
+            "- 4. TENSION (Beats 6-7): Something doesn't make sense; clues conflict; impossible contradictions.\n"
+            "- 5. REVEAL (Beats 8-9): The strongest documented detail or twist.\n"
+            "- 6. PAYOFF (Beat 10): Unresolved mystery / shocking consequence / lingering curiosity.\n\n"
+            "MANDATORY PRODUCTION RULES:\n"
             "1. GRAMMATICAL COMPLETENESS: Every single beat MUST be a complete spoken thought or clause. NEVER split a sentence mid-phrase across beats.\n"
-            "2. ZERO REPETITIVE FILLER: NEVER use filler phrases like 'This is a developing situation', 'More information is expected', 'As this news story develops', 'Only time will tell'. Every beat must provide fresh information.\n"
-            "3. NO MODEL KNOWLEDGE / ZERO HALLUCINATIONS: Do NOT invent dates, numbers, or facts. If 'why' or 'how' is null, do NOT invent reasons.\n"
-            "4. CLAIM PROVENANCE: Every factual sentence MUST be mapped to one or more claim_ids from the list.\n"
-            "5. NO AI CLICHES: Never say 'In a surprising turn of events', 'tensions are rising', 'the world is watching', 'here's what you need to know'.\n"
-            "6. TARGET DURATION & WORD COUNT: Total word count across all 10 beats MUST be STRICTLY 55 to 65 words (~5-7 words per beat). Natural pacing at 55-65 words produces 22-27 seconds of comfortable Sarah narration.\n"
-            "7. CONCRETE VISUAL QUERIES: Each beat must specify 2 concrete visual query candidates describing physical objects, creatures, artifacts, landscapes, space, deep sea, or instruments (e.g. 'underwater trench sonar', 'ancient stone tomb', 'electron microscope cells').\n"
-            "   ABSOLUTELY FORBIDDEN IN QUERIES: Never output news publisher logos (e.g. 'Al Jazeera logo', 'Reuters logo') or abstract words ('developing situation', 'national security').\n"
-            "8. ATTRIBUTION REQUIREMENT: If verification_state is DEVELOPING or SINGLE_CREDIBLE_SOURCE, include natural attribution (e.g. 'reported', 'according to scientists', 'researchers reported'). If CONFLICTING_REPORTS, state accounts differ.\n\n"
+            "2. ZERO REPETITIVE FILLER: NEVER use filler phrases like 'This is a developing situation', 'Only time will tell', 'The world is watching'. Every beat must provide fresh story momentum.\n"
+            "3. NO MODEL KNOWLEDGE / ZERO HALLUCINATIONS: Do NOT invent dates, numbers, or facts outside the EventCard.\n"
+            "4. CLAIM PROVENANCE: Every factual beat MUST be mapped to one or more claim_ids from the list.\n"
+            "5. NO AI CLICHES: Never say 'In a surprising turn of events', 'tensions are rising', 'here's what you need to know'.\n"
+            "6. TARGET DURATION & WORD COUNT: Total word count across all 10 beats MUST be STRICTLY 58 to 70 words (~6-7 words per beat). Natural conversational pacing at ~2.5 words/sec produces 23-25 seconds of Bella narration.\n"
+            "7. CONCRETE VISUAL QUERIES: Each beat must specify 2 concrete visual query candidates describing authentic historical footage, archival photos, maritime scenes, documents, artifacts, landscapes, or physical evidence.\n"
+            "   ABSOLUTELY FORBIDDEN: Never output text cards, news publisher logos, or abstract words.\n\n"
             f"EVENTCARD DATA:\n"
             f"- Event ID: {event_card.event_id}\n"
             f"- Title: {event_card.canonical_title}\n"
-            f"- Category: Mystery / Bizarre Real-World Story\n"
+            f"- Category: History / Mystery / Bizarre Historical Story\n"
             f"- Verification State: {event_card.verification_state}\n"
             f"- What: {event_card.what}\n"
             f"- Who: {event_card.who.to_dict()}\n"

@@ -348,6 +348,37 @@ class AssetFetcher:
                 header_mime = response.headers.get("Content-Type")
                 mime_type = self.sniff_mime_type(header_sample, header_mime)
 
+                # Reject non-visual assets (e.g. PDF documents returned by archival sources)
+                if header_sample.startswith(b"%PDF") or mime_type == "application/pdf":
+                    dur = (time.perf_counter() - start_t) * 1000
+                    if temp_stream_path.exists():
+                        temp_stream_path.unlink()
+                    logger.warning(f"Downloaded file for {clean_url} is a PDF document, not a valid visual asset.")
+                    return AssetFetchResult(
+                        url=clean_url,
+                        status=AssetFetchStatus.FAILED_HTTP,
+                        duration_ms=dur,
+                        error_message="Downloaded file is a PDF document, not an image/video asset.",
+                    )
+
+                # Verify image readability if marked as image
+                if mime_type.startswith("image/"):
+                    try:
+                        from PIL import Image
+                        with Image.open(temp_stream_path) as img:
+                            img.verify()
+                    except Exception as img_err:
+                        dur = (time.perf_counter() - start_t) * 1000
+                        if temp_stream_path.exists():
+                            temp_stream_path.unlink()
+                        logger.warning(f"Downloaded image for {clean_url} failed PIL verification: {img_err}")
+                        return AssetFetchResult(
+                            url=clean_url,
+                            status=AssetFetchStatus.FAILED_INTEGRITY,
+                            duration_ms=dur,
+                            error_message=f"Downloaded image is unreadable: {img_err}",
+                        )
+
                 # Atomically save to MediaCache using put_file (streaming directly on disk)
                 cached_path, saved_hash = self.media_cache.put_file(
                     url=clean_url,
