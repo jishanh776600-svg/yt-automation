@@ -100,7 +100,7 @@ class LoginRequest(BaseModel):
 
 class ProduceBufferRequest(BaseModel):
     count: int = Field(default=0, ge=0, le=24, description="Number of Shorts to produce or 0 for target refill")
-    target: int = Field(default=12, ge=1, le=24, description="Target reserve buffer size in Google Drive")
+    target: int = Field(default=6, ge=1, le=24, description="Target reserve buffer size in Google Drive")
     password: Optional[str] = Field(default=None, description="Admin password for major action re-authentication")
     reauth_token: Optional[str] = Field(default=None, description="Short-lived re-authentication token")
 
@@ -868,6 +868,7 @@ def api_action_self_heal(
 
 
 @app.post("/api/actions/produce")
+@app.post("/api/actions/produce-buffer")
 def api_action_produce(
     req: ProduceBufferRequest,
     db: Session = Depends(get_db),

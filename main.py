@@ -547,129 +547,46 @@ class ShortsPipeline:
         except Exception as e:
             logger.warning(f"Could not persist production summary: {e}")
 
-    def produce_batch(self, count: int = 3) -> Tuple[int, Dict[str, Any]]:
+    def produce_batch(self, count: int = 1) -> Tuple[int, Dict[str, Any]]:
         """
         BATCH PRODUCER: Generates multiple complete YouTube Shorts sequentially into Google Drive Vault.
-        Acquires process lock, validates production quota, generates assets, renders, QAs,
-        and uploads directly to Google Drive '01_READY' folder.
+        Uses the authoritative CloudProductionOrchestrator for 100% cloud autonomy, Bella voice,
+        History niche, human creator storytelling, real visual coverage, and Video QA.
         """
-        lock = CompositeLock(
-            name="production",
-            command_name="produce-batch",
-            drive_engine=getattr(self, "drive_engine", None),
-            cloud_lock_name="cloud_production",
+        effective_count = min(max(1, count), MAX_BATCH_PRODUCTION_CEILING)
+        if effective_count < count:
+            console.print(f"[bold yellow][!] Requested count ({count}) exceeds hard safety ceiling ({MAX_BATCH_PRODUCTION_CEILING}). Clamped to {effective_count}.[/bold yellow]")
+
+        console.print(Panel.fit(f"[bold magenta]=== Starting Batch Production ({effective_count} Shorts | Safety Ceiling: {MAX_BATCH_PRODUCTION_CEILING}) ===[/bold magenta]", border_style="magenta"))
+
+        from intelligence.cloud_orchestrator import CloudProductionOrchestrator
+        orchestrator = CloudProductionOrchestrator(
+            drive_engine=self.drive_engine,
+            voice_id="af_bella"
         )
-        if not lock.acquire():
-            info = lock.get_lock_info()
-            owner_pid = info.get("pid") if info else "unknown"
-            cmd = info.get("command") if info else "unknown"
-            console.print(f"[bold yellow][!] Production lock currently held by PID {owner_pid} ('{cmd}'). Batch producer exiting safely.[/bold yellow]")
-            return 0, {"outcome": "BLOCKED", "block_reason": "LOCK_HELD", "produced_count": 0}
+        telemetry = orchestrator.run_production_cycle(force_batch_count=effective_count)
 
-        try:
-            # Enforce hard batch ceiling
-            effective_count = min(max(1, count), MAX_BATCH_PRODUCTION_CEILING)
-            if effective_count < count:
-                console.print(f"[bold yellow][!] Requested count ({count}) exceeds hard safety ceiling ({MAX_BATCH_PRODUCTION_CEILING}). Clamped to {effective_count}.[/bold yellow]")
+        summary = {
+            "action": "PRODUCE_BATCH",
+            "outcome": telemetry.status,
+            "block_reason": "; ".join(telemetry.failure_reasons) if telemetry.failure_reasons else None,
+            "requested_count": effective_count,
+            "produced_count": telemetry.videos_deposited,
+            "initial_stock": telemetry.initial_ready_stock,
+            "final_stock": telemetry.final_ready_stock,
+            "voice": "af_bella",
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+        self._write_production_summary(summary)
 
-            console.print(Panel.fit(f"[bold magenta]=== Starting Batch Production ({effective_count} Shorts | Safety Ceiling: {MAX_BATCH_PRODUCTION_CEILING}) ===[/bold magenta]", border_style="magenta"))
-
-            initial_stock = self.drive_engine.get_ready_stock_count()
-            success_count = 0
-            total_attempts = 0
-            consecutive_failures = 0
-            block_reason = None
-            attempted_topic_ids: Set[str] = set()
-
-            # TARGETED SCRIPT BATCHING: Pre-discover topics and generate scripts in ONE AI call
-            batch_topic_queue: List[Topic] = []
-            if effective_count >= 2 and AI_PROVIDER_AVAILABLE:
-                db_batch = SessionLocal()
-                try:
-                    candidate_topics = self.topic_engine.discover_topics(
-                        db_batch, limit=effective_count, exclude_topic_ids=attempted_topic_ids
-                    )
-                    if len(candidate_topics) >= 2:
-                        console.print(f"[bold cyan][*] Pre-generating batch scripts for {len(candidate_topics)} topics via single AI call...[/bold cyan]")
-                        research_map = {}
-                        for cand in candidate_topics:
-                            research_map[cand.id] = self.research_engine.research_topic(db_batch, cand)
-
-                        batch_scripts = self.script_engine.generate_batch_scripts(
-                            db_batch, candidate_topics, research_data_map=research_map
-                        )
-                        for cand in candidate_topics:
-                            script_data = batch_scripts.get(cand.id)
-                            if script_data:
-                                self.script_engine.cache_script(cand.id, script_data)
-                            batch_topic_queue.append(cand)
-                except Exception as b_err:
-                    logger.warning(f"[BATCH] Script batching setup notice: {b_err}. Proceeding with sequential single-script path.")
-                finally:
-                    db_batch.close()
-
-            while success_count < effective_count and total_attempts < MAX_PRODUCTION_ATTEMPTS_CEILING:
-                total_attempts += 1
-                console.print(f"\n[bold cyan]>>> Generating Batch Item {success_count + 1}/{effective_count} (Attempt {total_attempts}/{MAX_PRODUCTION_ATTEMPTS_CEILING}) <<<[/bold cyan]")
-                target_topic = batch_topic_queue.pop(0) if batch_topic_queue else None
-                try:
-                    job = self.produce_single_to_vault(topic=target_topic, exclude_topic_ids=attempted_topic_ids)
-                    if job:
-                        success_count += 1
-                        consecutive_failures = 0
-                    else:
-                        consecutive_failures += 1
-                        if consecutive_failures >= 3:
-                            block_reason = "CONSECUTIVE_FAILURES"
-                            logger.error("[BATCH] 3 consecutive single production failures encountered. Halting safely.")
-                            break
-                except Exception as fatal_e:
-                    if "QuotaExhausted" in type(fatal_e).__name__ or "quota" in str(fatal_e).lower() or "429" in str(fatal_e):
-                        block_reason = "ALL_AI_PROVIDERS_EXHAUSTED"
-                        logger.error(f"[BATCH] Fatal AI provider quota exhaustion detected across all fallbacks: {fatal_e}. Halting batch production immediately.")
-                        break
-                    raise fatal_e
-                time.sleep(2)
-
-            if total_attempts >= MAX_PRODUCTION_ATTEMPTS_CEILING and success_count < effective_count:
-                logger.warning(f"Batch production reached maximum attempt ceiling ({MAX_PRODUCTION_ATTEMPTS_CEILING}). Halting safely.")
-                if not block_reason:
-                    block_reason = "ATTEMPT_CEILING_REACHED"
-
-            final_stock = self.drive_engine.get_ready_stock_count()
-            
-            if success_count >= effective_count:
-                outcome = "SUCCEEDED"
-            elif success_count > 0:
-                outcome = "PARTIAL"
-            elif block_reason:
-                outcome = "BLOCKED"
-            else:
-                outcome = "FAILED"
-
-            summary = {
-                "action": "PRODUCE_BATCH",
-                "outcome": outcome,
-                "block_reason": block_reason,
-                "requested_count": effective_count,
-                "produced_count": success_count,
-                "initial_stock": initial_stock,
-                "final_stock": final_stock,
-                "voice": self.run_voice,
-                "timestamp": datetime.utcnow().isoformat() + "Z"
-            }
-            self._write_production_summary(summary)
-
-            console.print(Panel.fit(
-                f"[bold green]=== Batch Production Complete ===[/bold green]\n"
-                f"Outcome: [bold]{outcome}[/bold] (Reason: {block_reason or 'None'})\n"
-                f"Successfully Produced: [bold]{success_count}/{effective_count}[/bold] (Total Attempts: {total_attempts})\n"
-                f"Total Ready Stock in Drive (01_READY): [bold cyan]{final_stock} Shorts[/bold cyan]",
-                border_style="green" if outcome == "SUCCEEDED" else ("yellow" if outcome == "PARTIAL" else "red")
-            ))
-            return success_count, summary
-        finally:
-            lock.release()
+        console.print(Panel.fit(
+            f"[bold green]=== Batch Production Complete ===[/bold green]\n"
+            f"Outcome: [bold]{telemetry.status}[/bold] (Reason: {summary['block_reason'] or 'None'})\n"
+            f"Successfully Produced: [bold]{telemetry.videos_deposited}/{effective_count}[/bold]\n"
+            f"Total Ready Stock in Drive (01_READY): [bold cyan]{telemetry.final_ready_stock} Shorts[/bold cyan]",
+            border_style="green" if telemetry.status == "SUCCEEDED" else ("yellow" if telemetry.status == "PARTIAL" else "red")
+        ))
+        return telemetry.videos_deposited, summary
 
     def maintain_buffer(self, target_stock: int = 6) -> Tuple[int, Dict[str, Any]]:
         """
@@ -1618,7 +1535,7 @@ def main():
         orchestrator = CloudProductionOrchestrator(
             drive_engine=pipeline.drive_engine,
             is_dry_run=args.dry_run,
-            voice_id=args.voice or "af_sarah"
+            voice_id=args.voice or "af_bella"
         )
         telemetry = orchestrator.run_production_cycle(
             target_buffer=args.maintain_buffer if args.maintain_buffer > 0 else 6,

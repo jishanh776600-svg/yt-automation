@@ -136,17 +136,29 @@ class SystemDataProvider:
                         public_shorts.append({
                             "id": r.youtube_video_id or r.id,
                             "title": r.title,
+                            "description": r.description or r.title,
                             "published_at": r.published_at.isoformat() + "Z" if r.published_at else datetime.utcnow().isoformat() + "Z",
                             "duration_seconds": 24,
-                            "privacy_status": "public"
+                            "privacy_status": "public",
+                            "views": 0,
+                            "likes": 0,
+                            "comments": 0,
+                            "engagement_rate": 0.0,
+                            "source": "TEST_MODE_INVENTORY"
                         })
                     elif r.status in ("SCHEDULED", "TEST_VERIFIED"):
                         scheduled_shorts.append({
                             "id": r.youtube_video_id or r.id,
                             "title": r.title,
+                            "description": r.description or r.title,
                             "publish_at": r.scheduled_publish_at.isoformat() + "Z" if r.scheduled_publish_at else datetime.utcnow().isoformat() + "Z",
                             "duration_seconds": 24,
-                            "privacy_status": "private"
+                            "privacy_status": "private",
+                            "views": 0,
+                            "likes": 0,
+                            "comments": 0,
+                            "engagement_rate": 0.0,
+                            "source": "TEST_MODE_INVENTORY"
                         })
             return {
                 "public_shorts": public_shorts,
@@ -387,10 +399,10 @@ class SystemDataProvider:
         avg_view_percentage = 78.3
 
         for p in public_shorts:
-            v_id = p["id"]
-            v_count = p["views"]
-            l_count = p["likes"]
-            c_count = p["comments"]
+            v_id = p.get("id") or p.get("youtube_video_id")
+            v_count = p.get("views", 0)
+            l_count = p.get("likes", 0)
+            c_count = p.get("comments", 0)
             
             total_views += v_count
             total_likes += l_count
@@ -398,13 +410,13 @@ class SystemDataProvider:
 
             per_video_stats[v_id] = {
                 "youtube_video_id": v_id,
-                "title": p["title"],
+                "title": p.get("title", ""),
                 "views": v_count,
                 "likes": l_count,
                 "comments": c_count,
-                "engagement_rate": p["engagement_rate"],
-                "privacy_status": p["privacy_status"],
-                "published_at": p["published_at"],
+                "engagement_rate": p.get("engagement_rate", 0.0),
+                "privacy_status": p.get("privacy_status", "public"),
+                "published_at": p.get("published_at"),
                 "source": p.get("source", api_status)
             }
 
@@ -987,16 +999,29 @@ class SystemDataProvider:
         Generates genuine, structured Strategy Changelog from persisted LearningEvents in SQLite.
         Strictly zero synthetic metrics.
         """
-        from core.models import LearningEvent, StrategyWeight, PerformanceSnapshot
+        from core.models import LearningEvent, StrategyWeight, PerformanceSnapshot, ContentPattern
         from engines.learning_engine import LearningEngine
 
         learner = LearningEngine()
         current_profile_version = learner._calculate_profile_version(db)
 
         # 1. Fetch real learning events from audit trail
-        events_rows = db.query(LearningEvent).order_by(LearningEvent.timestamp.desc()).limit(30).all()
+        events_rows = db.query(LearningEvent).order_by(LearningEvent.timestamp.desc()).limit(30).all() if db else []
         latest_event = events_rows[0] if events_rows else None
-        learning_applied_count = db.query(LearningEvent).filter(LearningEvent.outcome == "LEARNING_APPLIED").count()
+        learning_applied_count = db.query(LearningEvent).filter(LearningEvent.outcome == "LEARNING_APPLIED").count() if db else 0
+        patterns_rows = db.query(ContentPattern).order_by(ContentPattern.composite_effectiveness_score.desc()).limit(20).all() if db else []
+        patterns = [
+            {
+                "id": p.id,
+                "pattern_type": p.pattern_type,
+                "pattern_key": p.pattern_key,
+                "description": p.description,
+                "sample_size": p.sample_size,
+                "confidence": p.confidence,
+                "effectiveness_score": p.composite_effectiveness_score
+            }
+            for p in patterns_rows
+        ]
 
         # 2. Build structured Strategy Changelog
         changelog = []
@@ -1086,6 +1111,8 @@ class SystemDataProvider:
             "has_mature_data": mature_count > 0,
             "total_mature_snapshots": mature_count,
             "total_experiments": learning_applied_count,
+            "channel_baseline_score": universe.get("channel_baseline_score", 50.0) if universe else 50.0,
+            "patterns": patterns,
             "applied_events_count": learning_applied_count,
             "immature_videos_count": immature_count,
             "mature_videos_count": mature_count,

@@ -271,7 +271,7 @@
                         <div class="bg-space-850 border border-white/10 rounded-xl p-4 text-center min-w-[190px]">
                             <div class="text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">Autonomous Runtime</div>
                             <div id="hero-worker-status-display" class="text-base font-bold font-mono {{ 'text-emerald-400' if (telemetry.worker and telemetry.worker.online) else 'text-amber-400' }}">
-                                {{ 'ONLINE' if (telemetry.worker and telemetry.worker.online) else 'STANDBY' }}
+                                {{ 'ONLINE' if (telemetry.worker and telemetry.worker.online) else 'OFFLINE' }}
                             </div>
                             <div class="text-[10px] font-mono text-zinc-400 mt-1">
                                 Cycles: <span id="hero-worker-cycles" class="text-white">{{ telemetry.worker.cycles_completed or 0 if telemetry.worker else 0 }}</span> &middot; Retries: <span id="hero-worker-retries" class="text-amber-300">{{ telemetry.worker.errors_count or 0 if telemetry.worker else 0 }}</span>
@@ -374,12 +374,16 @@
                     </div>
                     <div class="space-y-1.5 text-xs font-mono">
                         <div class="flex justify-between py-1 border-b border-white/[0.04]">
-                            <span class="text-zinc-400">Drive Vault</span>
-                            <span class="text-emerald-400 font-bold">01_READY</span>
+                            <span class="text-zinc-400">Drive 01_READY</span>
+                            <span class="text-emerald-400 font-bold"><span id="telemetry-ready-count">{{ telemetry.ready_stock or 0 }}</span> / <span id="telemetry-target-reserve">{{ telemetry.target_reserve or 6 }}</span></span>
                         </div>
                         <div class="flex justify-between py-1 border-b border-white/[0.04]">
-                            <span class="text-zinc-400">Daily Booked</span>
-                            <span class="text-cyan-400 font-bold">{{ telemetry.published_today }} / {{ telemetry.daily_limit }}</span>
+                            <span class="text-zinc-400">Refill Deficit</span>
+                            <span class="text-amber-400 font-bold"><span id="telemetry-refill-deficit">{{ telemetry.refill_deficit or 0 }}</span> Shorts</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-white/[0.04]">
+                            <span class="text-zinc-400">Scheduled Queue</span>
+                            <span class="text-cyan-400 font-bold">{{ telemetry.scheduled_count or 0 }}</span>
                         </div>
                         <div class="flex justify-between py-1">
                             <span class="text-zinc-400">TTS Engine</span>
@@ -619,9 +623,25 @@
         <div class="bg-space-900 border border-white/10 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl">
             <div class="flex items-center justify-between">
                 <h4 class="text-base font-bold text-white font-mono flex items-center gap-2">
-                    <span class="text-cyan-400">⚡</span> TRIGGER AUTONOMOUS BATCH
+                    <span class="text-cyan-400">⚡</span> TRIGGER AUTONOMOUS REFILL / BATCH
                 </h4>
                 <button type="button" onclick="closeBatchModal()" class="text-zinc-500 hover:text-white text-xs">✕</button>
+            </div>
+
+            <!-- Real-time Reserve Status Card -->
+            <div class="p-3 bg-space-850/90 rounded-xl border border-white/10 flex items-center justify-between text-xs font-mono">
+                <div>
+                    <span class="text-zinc-400">READY Stock:</span>
+                    <span id="modal-ready-count" class="text-emerald-400 font-bold">{{ telemetry.ready_stock or 0 }}</span> / <span id="modal-target-reserve" class="text-zinc-300">6</span>
+                </div>
+                <div>
+                    <span class="text-zinc-400">Refill Deficit:</span>
+                    <span id="modal-deficit-count" class="text-amber-400 font-bold">{{ telemetry.refill_deficit or 0 }}</span>
+                </div>
+                <div>
+                    <span class="text-zinc-400">Voice:</span>
+                    <span class="text-cyan-400 font-bold">af_bella</span>
+                </div>
             </div>
 
             <div class="space-y-4 text-xs font-mono">
@@ -1207,7 +1227,7 @@
             return true;
         }
 
-        function openBatchModal(suggestedCount = 1) {
+        function openBatchModal(suggestedCount = null) {
             const modal = document.getElementById('modal-batch-produce');
             const input = document.getElementById('batch-count-input');
             const alertDiv = document.getElementById('batch-modal-alert');
@@ -1217,7 +1237,16 @@
             errDiv.className = 'hidden';
             errDiv.innerHTML = '';
 
-            const targetVal = (Number.isInteger(suggestedCount) && suggestedCount >= 1 && suggestedCount <= 5) ? suggestedCount : 1;
+            let targetVal = 1;
+            if (Number.isInteger(suggestedCount) && suggestedCount >= 1 && suggestedCount <= 5) {
+                targetVal = suggestedCount;
+            } else {
+                const deficitEl = document.getElementById('modal-deficit-count');
+                const defVal = deficitEl ? parseInt(deficitEl.innerText.trim(), 10) : 1;
+                if (!isNaN(defVal) && defVal >= 1) {
+                    targetVal = Math.min(5, Math.max(1, defVal));
+                }
+            }
             input.value = targetVal;
             onBatchCountInputChanged();
 
@@ -1274,7 +1303,7 @@
                 const data = await res.json();
                 if (res.ok) {
                     alertDiv.className = 'p-3 rounded-lg text-xs font-mono bg-emerald-950/60 text-emerald-300 border border-emerald-800/40';
-                    alertDiv.innerHTML = `✓ Batch production completed! (${data.success_count} / ${data.total_requested} successful)`;
+                    alertDiv.innerHTML = `✓ Batch production completed! (${data.success_count} / ${data.total_requested} successful, Ready: ${data.ready_stock || 'Verified'})`;
                     setTimeout(() => {
                         closeBatchModal();
                         window.location.reload();
@@ -1283,17 +1312,25 @@
                     let errMsg = 'Production failed: ';
                     if (typeof data.detail === 'string') {
                         errMsg += data.detail;
+                    } else if (typeof data.error === 'string') {
+                        errMsg += data.error;
+                    } else if (typeof data.message === 'string') {
+                        errMsg += data.message;
                     } else if (Array.isArray(data.detail)) {
-                        errMsg += data.detail.map(d => d.msg || JSON.stringify(d)).join('; ');
+                        errMsg += data.detail.map(d => d.msg || (typeof d === 'string' ? d : JSON.stringify(d))).join('; ');
+                    } else if (data.detail && typeof data.detail === 'object') {
+                        errMsg += JSON.stringify(data.detail);
+                    } else if (data.error && typeof data.error === 'object') {
+                        errMsg += JSON.stringify(data.error);
                     } else {
-                        errMsg += JSON.stringify(data.detail || 'Unknown server error');
+                        errMsg += 'Unknown server error';
                     }
                     alertDiv.className = 'p-3 rounded-lg text-xs font-mono bg-rose-950/60 text-rose-300 border border-rose-800/40';
                     alertDiv.innerText = errMsg;
                 }
             } catch (err) {
                 alertDiv.className = 'p-3 rounded-lg text-xs font-mono bg-rose-950/60 text-rose-300 border border-rose-800/40';
-                alertDiv.innerText = 'Request failed: ' + err.message;
+                alertDiv.innerText = 'Request failed: ' + (err.message || String(err));
             } finally {
                 btn.disabled = false;
                 btn.classList.remove('opacity-50', 'cursor-not-allowed');

@@ -38,7 +38,7 @@ class ActionManager:
         self,
         db: Session,
         count: int = 1,
-        target: int = 12,
+        target: int = 6,
         force_local: bool = False
     ) -> Dict[str, Any]:
         """
@@ -53,7 +53,7 @@ class ActionManager:
             logger.warning(f"Could not read live Drive stock before refill: {d_err}")
             current_stock = 0
 
-        if current_stock >= target:
+        if count == 0 and current_stock >= target:
             logger.info(f"[ACTION] Buffer refill rejected: stock is healthy ({current_stock}/{target} Shorts in 01_READY).")
             return {
                 "success": False,
@@ -79,11 +79,10 @@ class ActionManager:
             }
 
         from config.settings import CLOUD_MODE
+        active_v = "af_bella"
         if CLOUD_MODE and not force_local:
-            from engines.tts_engine import get_active_voice
-            active_v = get_active_voice(db)
             logger.info(f"[ACTION:CLOUD] CLOUD_MODE active. Dispatching produce_buffer.yml (Current Stock: {current_stock}/{target}, Voice: {active_v})...")
-            batch_count = count if count == 1 else 0
+            batch_count = count if count > 0 else 0
             return self.github_dispatcher.dispatch_produce_buffer(
                 target_buffer=target,
                 batch_count=batch_count,
@@ -105,34 +104,30 @@ class ActionManager:
         try:
             from main import ShortsPipeline
             pipeline = ShortsPipeline(voice=active_v)
-            if count == 1:
-                logger.info("[ACTION] Producing single Short...")
-                job = pipeline.produce_single_to_vault()
-                if job:
-                    return {
-                        "success": True,
-                        "status": "PRODUCED_SINGLE",
-                        "action": "PRODUCE_SINGLE",
-                        "job_id": job.id,
-                        "state": job.state,
-                        "title": job.topic.title if job.topic else "Unknown Topic",
-                        "timestamp": datetime.utcnow().isoformat() + "Z"
-                    }
-                else:
-                    return {
-                        "success": False,
-                        "status": "PRODUCTION_FAILED",
-                        "error": "Production completed but no job record was returned.",
-                        "timestamp": datetime.utcnow().isoformat() + "Z"
-                    }
+            if count > 0:
+                logger.info(f"[ACTION] Producing targeted batch of {count} Short(s)...")
+                res = pipeline.produce_batch(count=count)
+                produced_count = res[0] if isinstance(res, tuple) else res
+                summary = res[1] if isinstance(res, tuple) else {}
+                return {
+                    "success": produced_count > 0 or summary.get("outcome") == "SUCCEEDED",
+                    "status": "PRODUCED_BATCH",
+                    "action": "PRODUCE_BATCH",
+                    "produced_count": produced_count,
+                    "target": target,
+                    "timestamp": datetime.utcnow().isoformat() + "Z"
+                }
             else:
                 logger.info(f"[ACTION] Maintaining buffer target of {target} Shorts...")
-                produced_count = pipeline.maintain_buffer(target_stock=target)
+                res = pipeline.maintain_buffer(target_stock=target)
+                produced_count = res[0] if isinstance(res, tuple) else res
+                summary = res[1] if isinstance(res, tuple) else {}
                 return {
-                    "success": True,
+                    "success": summary.get("outcome") in ("SUCCEEDED", "PARTIAL"),
                     "status": "BUFFER_MAINTAINED",
                     "action": "MAINTAIN_BUFFER",
                     "produced_count": produced_count,
+                    "target": target,
                     "timestamp": datetime.utcnow().isoformat() + "Z"
                 }
         except Exception as e:

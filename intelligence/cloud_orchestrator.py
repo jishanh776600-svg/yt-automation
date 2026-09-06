@@ -13,10 +13,12 @@ Invariants:
   - Fail-Closed: Unverified or QA-failed assets never enter 01_READY.
 """
 
-import datetime
+import datetime as dt_module
+from datetime import datetime, timezone, timedelta
 import json
 import logging
 import os
+import re
 import sys
 import time
 import uuid
@@ -134,15 +136,15 @@ class CloudProductionOrchestrator:
 
     def get_ready_stock_count(self) -> int:
         """Queries count of QA-verified Shorts in Google Drive 01_READY."""
-        if self.drive_engine:
-            try:
-                return self.drive_engine.get_ready_stock_count()
-            except Exception as e:
-                logger.warning(f"Could not query Drive ready stock: {e}")
-
-        # Fallback to local DB count of READY_TO_UPLOAD jobs
         db = SessionLocal()
         try:
+            if self.drive_engine:
+                try:
+                    return self.drive_engine.get_ready_stock_count(db=db)
+                except Exception as e:
+                    logger.warning(f"Could not query Drive ready stock: {e}")
+
+            # Fallback to local DB count of READY_TO_UPLOAD jobs
             return db.query(RenderedVideoRecord).filter_by(qa_status="PASSED").count()
         except Exception:
             return 0
@@ -684,7 +686,7 @@ class CloudProductionOrchestrator:
                         produced_this_run += 1
 
                 telemetry.final_ready_stock = self.get_ready_stock_count()
-                status = "SUCCEEDED" if (produced_this_run > 0 or self.is_dry_run) else ("PARTIAL" if produced_this_run > 0 else "FAILED")
+                status = "SUCCEEDED" if (produced_this_run >= needed or self.is_dry_run) else ("PARTIAL" if produced_this_run > 0 else "FAILED")
                 telemetry.complete(status=status)
 
             finally:

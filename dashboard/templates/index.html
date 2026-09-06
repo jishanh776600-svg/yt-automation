@@ -747,7 +747,7 @@
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="text-zinc-300 font-medium block mb-1">Target Buffer Size</label>
-                    <input type="number" id="modal-target-buffer" min="1" max="24" value="12" class="w-full bg-layer1 border border-white/10 rounded-xl px-3 py-2 text-white outline-none">
+                    <input type="number" id="modal-target-buffer" min="1" max="24" value="6" class="w-full bg-layer1 border border-white/10 rounded-xl px-3 py-2 text-white outline-none">
                 </div>
                 <div>
                     <label class="text-zinc-300 font-medium block mb-1">Admin Authorization Password</label>
@@ -872,7 +872,7 @@
         }
 
         async function submitProduceBuffer() {
-            const target = parseInt(document.getElementById('modal-target-buffer').value, 10) || 12;
+            const target = parseInt(document.getElementById('modal-target-buffer').value, 10) || 6;
             const pass = document.getElementById('modal-admin-pass').value;
             const err = document.getElementById('modal-refill-error');
 
@@ -885,8 +885,15 @@
                     },
                     body: JSON.stringify({ count: 0, target: target, password: pass })
                 });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.detail || 'Dispatch failed');
+                const data = await res.json().catch(() => ({ detail: 'Invalid JSON response from server' }));
+                if (!res.ok) {
+                    let errMsg = 'Dispatch failed';
+                    if (typeof data.detail === 'string') errMsg = data.detail;
+                    else if (typeof data.error === 'string') errMsg = data.error;
+                    else if (typeof data.message === 'string') errMsg = data.message;
+                    else if (data.detail && typeof data.detail === 'object') errMsg = JSON.stringify(data.detail);
+                    throw new Error(errMsg);
+                }
                 closeProduceModal();
                 alert(data.message || 'Workflow dispatched successfully');
                 window.location.reload();

@@ -481,6 +481,18 @@ class MissionControlService:
         # Feed / Intelligence Health
         feed_health = self._get_intelligence_feed_health(db)
 
+        # Drive Vault & Reserve Inventory
+        from config.constants import TARGET_RESERVE_BUFFER
+        from engines.drive_engine import DriveVaultEngine
+        drive_eng = DriveVaultEngine()
+        try:
+            ready_stock = drive_eng.get_ready_stock_count(db=db)
+        except Exception:
+            ready_stock = db.query(RenderedVideoRecord).filter_by(qa_status="PASSED").count()
+        target_reserve = TARGET_RESERVE_BUFFER  # 6
+        refill_deficit = max(0, target_reserve - ready_stock)
+        scheduled_count = db.query(UploadRecord).filter(UploadRecord.status.in_(["SCHEDULED", "TEST_VERIFIED"])).count()
+
         return {
             "active_niche": {
                 "name": active_prof.name,
@@ -505,6 +517,10 @@ class MissionControlService:
             "next_scheduled_publication": next_slot_info,
             "published_today": pub_status.get("published_today", 0),
             "daily_limit": pub_status.get("daily_limit", DAILY_SHORTS_LIMIT),
+            "ready_stock": ready_stock,
+            "target_reserve": target_reserve,
+            "refill_deficit": refill_deficit,
+            "scheduled_count": scheduled_count,
             "provider_status": provider_status,
             "feed_health": feed_health,
             "worker": self.get_runtime_status(),
@@ -1137,15 +1153,12 @@ class MissionControlService:
         force_dry_run: bool = True
     ) -> Dict[str, Any]:
         """
-        Safely triggers an autonomous production batch using ProductionOrchestrator.
-        Enforces execution capability bounds (defaulting to dry-run in test/control plane)
+        Safely triggers an autonomous production batch using CloudProductionOrchestrator.
+        Enforces execution capability bounds (dry-run or production)
         and ProcessLock protection. NEVER bypasses safety gates.
         """
         if self._queue_paused:
             raise RuntimeError("Cannot produce batch while production queue is PAUSED.")
-
-        capabilities = ExecutionCapabilities.dry_run() if force_dry_run else ExecutionCapabilities.production()
-        orchestrator = ProductionOrchestrator(capabilities=capabilities)
 
         self.log_event(
             category="SYSTEM",
@@ -1155,22 +1168,34 @@ class MissionControlService:
         )
 
         try:
-            reports = orchestrator.produce_batch(count=count, db=db)
-            success_count = sum(1 for r in reports if getattr(r, "success", False) or getattr(r, "status", "") == "SUCCESS")
+            from intelligence.cloud_orchestrator import CloudProductionOrchestrator
+            from engines.drive_engine import DriveVaultEngine
+            drive_engine = DriveVaultEngine()
+            orchestrator = CloudProductionOrchestrator(
+                drive_engine=drive_engine,
+                is_dry_run=force_dry_run,
+                voice_id="af_bella"
+            )
+            telemetry = orchestrator.run_production_cycle(
+                force_batch_count=count
+            )
+            success_count = telemetry.videos_deposited if not force_dry_run else telemetry.videos_qa_passed
             return {
-                "status": "COMPLETED",
+                "status": telemetry.status,
                 "total_requested": count,
                 "success_count": success_count,
+                "ready_stock": telemetry.final_ready_stock,
                 "reports": [
                     {
-                        "job_id": r.job_id,
-                        "status": getattr(r, "status", "SUCCESS" if getattr(r, "success", False) else "FAILED"),
-                        "stages_completed": len(getattr(r, "stages_completed", getattr(r, "stages", []))),
-                        "total_duration_s": getattr(r, "total_duration_s", 0.0),
-                        "error": getattr(r, "error", getattr(r, "error_message", None))
+                        "job_id": r.get("event_id"),
+                        "manifest_id": r.get("manifest_id"),
+                        "status": r.get("qa_status", "PASSED"),
+                        "duration_s": r.get("duration_seconds", 23.0),
+                        "video_path": r.get("video_path")
                     }
-                    for r in reports
-                ]
+                    for r in telemetry.produced_records
+                ] if telemetry.produced_records else [],
+                "error": "; ".join(telemetry.failure_reasons) if telemetry.failure_reasons else None
             }
         except Exception as e:
             self.log_event(
