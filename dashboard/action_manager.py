@@ -213,6 +213,7 @@ class ActionManager:
             
             moved_files = []
             if reconciled:
+                try:
                     from core.lifecycle_gateway import vault_transition_to_published
                     processing_files = self.drive_engine.list_files_in_folder("02_PROCESSING")
                     for rec_item in reconciled:

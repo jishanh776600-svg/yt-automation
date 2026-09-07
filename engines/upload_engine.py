@@ -296,6 +296,16 @@ class UploadEngine:
             logger.warning(f"[ORPHAN_RECOVERY] Pre-upload orphan search error: {e}")
             return None, f"ORPHAN_CHECK_ERROR:{e}"
 
+    def get_youtube_service(self):
+        """Constructs and returns authenticated Google YouTube Data API v3 service."""
+        from googleapiclient.discovery import build
+        from google.oauth2.credentials import Credentials
+        token_path = PROJECT_ROOT / "token.json"
+        if not token_path.exists():
+            raise FileNotFoundError(f"OAuth token.json not found at {token_path}. Run authentication setup.")
+        creds = Credentials.from_authorized_user_file(str(token_path))
+        return build("youtube", "v3", credentials=creds)
+
     def upload_and_schedule_short(
         self,
         db: Session,
@@ -675,17 +685,13 @@ class UploadEngine:
 
         # 2. Production Reconciliation via YouTube API
         try:
-            from googleapiclient.discovery import build
-            from google.oauth2.credentials import Credentials
-
-            token_path = PROJECT_ROOT / "token.json"
-            if not token_path.exists():
+            try:
+                youtube = self.get_youtube_service()
+            except Exception as yt_auth_err:
+                logger.warning(f"[RECONCILE] YouTube client unavailable: {yt_auth_err}")
                 if reconciled:
                     db.commit()
                 return reconciled
-
-            creds = Credentials.from_authorized_user_file(str(token_path))
-            youtube = build("youtube", "v3", credentials=creds)
 
             for rec in scheduled_records:
                 if not rec.youtube_video_id:

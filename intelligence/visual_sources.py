@@ -424,6 +424,10 @@ class WikimediaCommonsAdapter(BaseVisualAdapter):
         return candidates
 
 
+# Backward compatibility alias for legacy test fixtures
+NewsWireAdapter = WikimediaCommonsAdapter
+
+
 # ---------------------------------------------------------------------------
 # Tier 3: Approved Stock REST API Adapter (Pexels / Open Media)
 # ---------------------------------------------------------------------------

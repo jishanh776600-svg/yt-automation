@@ -166,13 +166,10 @@ def vault_transition_to_published(
                 "Refusing transition to 03_PUBLISHED without authoritative YouTube confirmation."
             )
     else:
-        # Fail-closed if youtube_service is unavailable and we cannot verify live YouTube reality
-        from config.settings import TEST_MODE
-        if not TEST_MODE:
-            raise InvariantViolationError(
-                "[GATEWAY_INVARIANT_VIOLATION] YouTube service is offline or unavailable. "
-                "Production transitions to 03_PUBLISHED fail-closed when live YouTube verification is impossible."
-            )
+        raise InvariantViolationError(
+            "[GATEWAY_INVARIANT_VIOLATION] YouTube service is offline or unavailable. "
+            "Transitions to 03_PUBLISHED fail-closed when live YouTube verification is impossible."
+        )
 
     # 5. Execute Authorized Drive Vault Transition
     from_folder = "02_PROCESSING" if "02_PROCESSING" in current_parents else None
