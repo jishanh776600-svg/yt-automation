@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
+from sqlalchemy.orm import Session
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -642,9 +643,14 @@ class HeadlessComposer:
     def deposit_to_drive_vault(
         rendered_record: RenderedVideoRecord,
         drive_engine: Optional[Any] = None,
+        topic_title: Optional[str] = None,
+        topic_description: Optional[str] = None,
+        db_session: Optional[Session] = None,
     ) -> Optional[str]:
         """
         Deposits QA-verified Short into Google Drive 01_READY vault buffer.
+        Explicitly embeds real topic title and description into Drive file properties and description
+        to prevent downstream metadata collisions and false quarantines.
         """
         if rendered_record.qa_status != "PASSED":
             logger.warning(
@@ -656,6 +662,53 @@ class HeadlessComposer:
         if not video_path.exists():
             logger.error(f"Rendered video does not exist: {video_path}")
             return None
+
+        # Resolve authoritative title and description
+        resolved_title = topic_title
+        resolved_desc = topic_description
+        if not resolved_title and rendered_record.event_id:
+            close_db = False
+            sess = db_session
+            if not sess:
+                try:
+                    from core.database import SessionLocal
+                    sess = SessionLocal()
+                    close_db = True
+                except Exception:
+                    sess = None
+            if sess:
+                try:
+                    from core.models import Topic
+                    top = sess.query(Topic).filter(Topic.event_id == rendered_record.event_id).first()
+                    if top and top.title:
+                        resolved_title = top.title
+                        resolved_desc = top.summary or resolved_desc
+                except Exception:
+                    pass
+                finally:
+                    if close_db:
+                        sess.close()
+
+        if not resolved_title:
+            clean_evt = rendered_record.event_id or "documentary_mystery"
+            for prefix in ("evt_hist_", "evt_mystery_", "evt_science_", "evt_"):
+                if clean_evt.startswith(prefix):
+                    clean_evt = clean_evt[len(prefix):]
+            resolved_title = clean_evt.replace("_", " ").title()
+
+        if not resolved_desc:
+            resolved_desc = f"Documentary Short: {resolved_title}\n\n#history #mystery #shorts #documentary"
+
+        metadata_props = {
+            "manifest_id": rendered_record.manifest_id,
+            "event_id": rendered_record.event_id,
+            "script_id": rendered_record.script_id,
+            "qa_status": rendered_record.qa_status,
+            "voice": getattr(rendered_record, "voice_id", "af_bella"),
+            "title": resolved_title,
+            "topic_title": resolved_title,
+        }
+        vault_description = f"{resolved_title}\n\n{resolved_desc}"
 
         try:
             if not drive_engine:
@@ -673,14 +726,8 @@ class HeadlessComposer:
                     res = drive_engine.upload_video_to_vault(
                         local_path=video_path,
                         target_folder="01_READY",
-                        description=f"AL-AMR Ready Short {rendered_record.manifest_id} (Duration: {rendered_record.duration_seconds:.1f}s)",
-                        metadata_properties={
-                            "manifest_id": rendered_record.manifest_id,
-                            "event_id": rendered_record.event_id,
-                            "script_id": rendered_record.script_id,
-                            "qa_status": rendered_record.qa_status,
-                            "voice": getattr(rendered_record, "voice_id", "af_bella"),
-                        },
+                        description=vault_description,
+                        metadata_properties=metadata_props,
                     )
                     file_id = res.get("id") if isinstance(res, dict) else str(res)
                 else:
@@ -692,27 +739,15 @@ class HeadlessComposer:
                     file_id = drive_engine.upload_file(
                         file_path=video_path,
                         parent_folder_id=folder_id,
-                        description=f"AL-AMR Ready Short {rendered_record.manifest_id}",
-                        properties={
-                            "manifest_id": rendered_record.manifest_id,
-                            "event_id": rendered_record.event_id,
-                            "script_id": rendered_record.script_id,
-                            "qa_status": rendered_record.qa_status,
-                            "voice": getattr(rendered_record, "voice_id", "af_bella"),
-                        },
+                        description=vault_description,
+                        properties=metadata_props,
                     )
             elif hasattr(drive_engine, "upload_video_to_vault"):
                 res = drive_engine.upload_video_to_vault(
                     local_path=video_path,
                     target_folder="01_READY",
-                    description=f"AL-AMR Ready Short {rendered_record.manifest_id} (Duration: {rendered_record.duration_seconds:.1f}s)",
-                    metadata_properties={
-                        "manifest_id": rendered_record.manifest_id,
-                        "event_id": rendered_record.event_id,
-                        "script_id": rendered_record.script_id,
-                        "qa_status": rendered_record.qa_status,
-                        "voice": getattr(rendered_record, "voice_id", "af_bella"),
-                    },
+                    description=vault_description,
+                    metadata_properties=metadata_props,
                 )
                 file_id = res.get("id") if isinstance(res, dict) else str(res)
             elif hasattr(drive_engine, "upload_file"):
@@ -720,21 +755,16 @@ class HeadlessComposer:
                 file_id = drive_engine.upload_file(
                     file_path=video_path,
                     parent_folder_id=folder_id,
-                    description=f"AL-AMR Ready Short {rendered_record.manifest_id}",
-                    properties={
-                        "manifest_id": rendered_record.manifest_id,
-                        "event_id": rendered_record.event_id,
-                        "script_id": rendered_record.script_id,
-                        "qa_status": rendered_record.qa_status,
-                        "voice": getattr(rendered_record, "voice_id", "af_bella"),
-                    },
+                    description=vault_description,
+                    properties=metadata_props,
                 )
             else:
                 raise AttributeError("drive_engine has neither upload_video_to_vault nor upload_file")
 
             rendered_record.cloud_storage_path = f"drive://{file_id}"
-            logger.info(f"Deposited {video_path.name} to Drive 01_READY vault (File ID: {file_id})")
+            logger.info(f"Deposited {video_path.name} ('{resolved_title}') to Drive 01_READY vault (File ID: {file_id})")
             return file_id
         except Exception as e:
             logger.warning(f"Drive vault deposit notice: {e}")
             return None
+

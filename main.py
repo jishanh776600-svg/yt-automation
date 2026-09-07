@@ -144,25 +144,40 @@ def resolve_vault_file_metadata(candidate: Dict[str, Any], db: Optional[Session]
         if m:
             event_id = m.group(0)
 
-    # 1. Check known event metadata dictionary
+    # 1. Explicit properties if clean (not short_man_ placeholder)
+    p_title = props.get("title") or props.get("topic_title")
+    if p_title and not p_title.startswith("short_man_") and not p_title.startswith("short_job_") and not p_title.lower().startswith("al-amr ready short") and len(p_title) > 3:
+        return {
+            "title": p_title,
+            "description": props.get("description") or f"Historical Short: {p_title}\n\n#history #shorts #documentary",
+            "tags": [t.strip() for t in props.get("tags", "history,shorts,documentary,facts").split(",") if t.strip()]
+        }
+
+    # 2. Check known event metadata dictionary
     if event_id and event_id in KNOWN_EVENT_METADATA:
         return dict(KNOWN_EVENT_METADATA[event_id])
 
-    # 2. Check DB (RenderedVideoRecord -> Topic)
+    # 3. Check DB (RenderedVideoRecord / Topic by event_id)
     if db:
         try:
             from core.models import Topic, RenderedVideoRecord, Job
+            # Check by manifest_id -> event_id -> Topic
             man_id = props.get("manifest_id")
+            eff_evt_id = event_id
             if man_id:
                 rec = db.query(RenderedVideoRecord).filter(RenderedVideoRecord.manifest_id == man_id).first()
-                if rec and rec.topic_id:
-                    top = db.query(Topic).filter(Topic.id == rec.topic_id).first()
-                    if top and top.title and not top.title.startswith("short_man_"):
-                        return {
-                            "title": top.title,
-                            "description": top.summary or f"Documentary Short: {top.title}\n\n#history #shorts #mystery",
-                            "tags": ["history", "mystery", "shorts", "documentary"]
-                        }
+                if rec and rec.event_id:
+                    eff_evt_id = rec.event_id
+
+            if eff_evt_id:
+                top = db.query(Topic).filter(Topic.event_id == eff_evt_id).first()
+                if top and top.title and not top.title.startswith("short_man_"):
+                    return {
+                        "title": top.title,
+                        "description": top.summary or f"Documentary Short: {top.title}\n\n#history #shorts #mystery",
+                        "tags": ["history", "mystery", "shorts", "documentary"]
+                    }
+
             job_id = props.get("job_id")
             if job_id:
                 j = db.query(Job).filter(Job.id == job_id).first()
@@ -174,17 +189,8 @@ def resolve_vault_file_metadata(candidate: Dict[str, Any], db: Optional[Session]
                             "description": top.summary or f"Documentary Short: {top.title}\n\n#history #shorts #mystery",
                             "tags": ["history", "mystery", "shorts", "documentary"]
                         }
-        except Exception:
-            pass
-
-    # 3. Explicit properties if clean (not short_man_ placeholder)
-    p_title = props.get("title")
-    if p_title and not p_title.startswith("short_man_") and not p_title.startswith("short_job_") and not p_title.lower().startswith("al-amr ready short") and len(p_title) > 5:
-        return {
-            "title": p_title,
-            "description": props.get("description") or f"Historical Short: {p_title}\n\n#history #shorts #documentary",
-            "tags": [t.strip() for t in props.get("tags", "history,shorts,documentary,facts").split(",") if t.strip()]
-        }
+        except Exception as db_meta_err:
+            logger.debug(f"DB metadata lookup notice: {db_meta_err}")
 
     # 4. Drive file description if set
     d_desc = candidate.get("description", "")
@@ -205,9 +211,15 @@ def resolve_vault_file_metadata(candidate: Dict[str, Any], db: Optional[Session]
             "tags": ["history", "mystery", "shorts", "documentary"]
         }
 
+    # 6. Authoritative unique fallback derived from event_id (NO generic collisions)
+    clean_evt = event_id or props.get("manifest_id") or "historical_mystery"
+    for pfx in ("evt_hist_", "evt_mystery_", "evt_science_", "evt_", "man_"):
+        if clean_evt.startswith(pfx):
+            clean_evt = clean_evt[len(pfx):]
+    fallback_title = clean_evt.replace("_", " ").title()
     return {
-        "title": "Bizarre Real-World Mystery",
-        "description": "An unbelievable true real-world mystery from the archives.\n\n#mystery #shorts #history",
+        "title": fallback_title,
+        "description": f"Documentary Short: {fallback_title}\n\n#history #mystery #shorts #documentary",
         "tags": ["mystery", "history", "shorts", "documentary"]
     }
 
@@ -754,9 +766,20 @@ class ShortsPipeline:
                 scheduled_slot=scheduled_slot
             )
             if not gate_passed:
-                logger.warning(f"[PUBLICATION_SAFETY_GATE_BLOCKED] Job {job.id} blocked by safety gate: {gate_reason}. Quarantining file to 04_FAILED.")
-                console.print(f"[bold red][x] Publication Safety Gate Blocked Upload:[/bold red] {gate_reason} (Quarantined to 04_FAILED)")
-                self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="04_FAILED")
+                is_physical_corruption = any(k in gate_reason for k in [
+                    "Gate 1 Failed", "Gate 2 Failed", "Gate 3 Failed", "Gate 5 Failed", "Gate 6 Failed"
+                ])
+                if is_physical_corruption:
+                    logger.warning(f"[PUBLICATION_SAFETY_GATE_BLOCKED] Job {job.id} physically corrupted: {gate_reason}. Quarantining file to 04_FAILED.")
+                    console.print(f"[bold red][x] Publication Safety Gate Blocked Upload:[/bold red] {gate_reason} (Quarantined to 04_FAILED)")
+                    self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="04_FAILED")
+                else:
+                    logger.warning(f"[PUBLICATION_SAFETY_GATE_HOLD] Job {job.id} held by safety gate: {gate_reason}. Safely returning file to 01_READY.")
+                    console.print(f"[bold yellow][!] Publication Safety Gate Hold:[/bold yellow] {gate_reason} (Safely returning to 01_READY)")
+                    try:
+                        self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="01_READY")
+                    except Exception as ret_err:
+                        logger.warning(f"Could not return file {file_id} to 01_READY: {ret_err}")
                 return None
 
             if TEST_MODE:
@@ -940,6 +963,35 @@ class ShortsPipeline:
                     if not existing_upl and cand_title:
                         existing_upl = db.query(UploadRecord).filter(UploadRecord.title.ilike(cand_title.strip())).first()
 
+                    # Reconstruct missing DB UploadRecord if file already has YouTube ID in properties
+                    if cand_yt_id and not existing_upl:
+                        try:
+                            yt_status = props.get("upload_status") or "SCHEDULED"
+                            sched_str = props.get("scheduled_publish_at")
+                            sched_dt = None
+                            if sched_str:
+                                try:
+                                    sched_dt = datetime.fromisoformat(sched_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                                except Exception:
+                                    pass
+
+                            resolved_meta = resolve_vault_file_metadata(candidate, db=db)
+                            existing_upl = UploadRecord(
+                                id=f"upl_{uuid.uuid4().hex[:12]}",
+                                job_id=cand_job_id or f"job_vault_{candidate['id'][:8]}",
+                                youtube_video_id=cand_yt_id,
+                                title=cand_title or resolved_meta["title"],
+                                description=props.get("description") or resolved_meta["description"],
+                                status=yt_status,
+                                scheduled_publish_at=sched_dt,
+                                created_at=datetime.utcnow()
+                            )
+                            db.add(existing_upl)
+                            db.commit()
+                            logger.info(f"[PROCESSING RECONCILIATION] Reconstructed missing DB UploadRecord for YouTube video {cand_yt_id} (Status: {yt_status})")
+                        except Exception as recon_err:
+                            logger.warning(f"Could not reconstruct UploadRecord for {cand_yt_id}: {recon_err}")
+
                     # Check semantic deduplication against full catalog
                     is_dup_proc = False
                     dup_proc_status = "PUBLISHED"
@@ -961,7 +1013,14 @@ class ShortsPipeline:
                     elif (existing_upl and existing_upl.status in ["SCHEDULED", "TEST_VERIFIED"]) or (is_dup_proc and dup_proc_status in ["SCHEDULED", "TEST_VERIFIED"]):
                         continue
                     else:
-                        recovered_candidates.append(candidate)
+                        # Orphaned in 02_PROCESSING without YouTube upload: safely return to 01_READY if valid
+                        is_val, val_reason = is_valid_ready_short(candidate, db=db, allow_test_artifacts=self.upload_engine._is_test_mode())
+                        if is_val:
+                            logger.info(f"[PROCESSING RECOVERY] Returning valid un-uploaded file {candidate['id']} ({candidate.get('name')}) from 02_PROCESSING to 01_READY.")
+                            self.drive_engine.move_file_in_vault(candidate["id"], from_folder="02_PROCESSING", to_folder="01_READY")
+                        else:
+                            logger.warning(f"[PROCESSING RECOVERY] Quarantining invalid un-uploaded file {candidate['id']} to 04_FAILED: {val_reason}")
+                            self.drive_engine.move_file_in_vault(candidate["id"], from_folder="02_PROCESSING", to_folder="04_FAILED")
 
             # 5. Check 01_READY for fresh unscheduled inventory
             from engines.drive_engine import is_valid_ready_short

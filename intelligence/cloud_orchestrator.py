@@ -371,7 +371,13 @@ class CloudProductionOrchestrator:
         telemetry.transition_stage(PipelineStage.DEPOSITING_VAULT, f"Depositing {short_path.name} into 01_READY")
         t_dep0 = time.perf_counter()
         if self.drive_engine:
-            file_id = self.composer.deposit_to_drive_vault(record, drive_engine=self.drive_engine)
+            file_id = self.composer.deposit_to_drive_vault(
+                record,
+                drive_engine=self.drive_engine,
+                topic_title=topic_title,
+                topic_description=getattr(event_card, "what", getattr(event_card, "summary", None)),
+                db_session=db
+            )
             if file_id:
                 telemetry.videos_deposited += 1
             else:

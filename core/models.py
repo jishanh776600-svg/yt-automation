@@ -529,5 +529,54 @@ class RenderedVideoRecord(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
+class ProductionAttemptRecord(Base):
+    """
+    Persistent attempt and retry ledger for all production operations.
+    Enforces the zero-silent-retries invariant: every execution attempt, failure,
+    retry count, and recovery status is explicitly recorded.
+    A final success never erases prior failure attempts.
+    """
+    __tablename__ = "production_attempts"
+
+    id = Column(String(64), primary_key=True)
+    run_id = Column(String(64), nullable=False, index=True)
+    operation = Column(String(64), nullable=False, index=True)  # PRODUCE_BUFFER, MAINTAIN_BUFFER, SCHEDULE_READY, PRODUCE_BATCH, RECONCILE_PROCESSING
+    stage = Column(String(64), nullable=False, index=True)      # DISCOVERY, SCRIPT, TTS, RENDER, QA, DRIVE_DEPOSIT, YOUTUBE_UPLOAD, SCHEDULING, RECONCILIATION
+    started_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    finished_at = Column(DateTime, nullable=True)
+    status = Column(String(32), default="RUNNING", nullable=False, index=True)  # PENDING, RUNNING, SUCCESS, FAILED, RECOVERED
+    error_type = Column(String(64), nullable=True, index=True)  # Canonical Failure Taxonomy Enum
+    error_message = Column(Text, nullable=True)
+    root_cause = Column(Text, nullable=True)
+    retry_number = Column(Integer, default=0, nullable=False)
+    maximum_retries = Column(Integer, default=3, nullable=False)
+    recovery_action = Column(Text, nullable=True)
+    recovered = Column(Boolean, default=False, nullable=False)
+    related_asset_id = Column(String(64), nullable=True)
+    related_manifest_id = Column(String(64), nullable=True, index=True)
+    related_drive_file_id = Column(String(64), nullable=True, index=True)
+    related_youtube_video_id = Column(String(64), nullable=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
+class ProductionIncidentRecord(Base):
+    """
+    Persistent audit trail for production incidents affecting autonomous operation.
+    Enables autonomous debugging and answers 'What failed and why?' without chat history.
+    """
+    __tablename__ = "production_incidents"
+
+    id = Column(String(64), primary_key=True)
+    detected_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    affected_workflow = Column(String(64), nullable=False)  # produce_buffer.yml, autopilot.yml, manual
+    affected_run_id = Column(String(64), nullable=True, index=True)
+    affected_assets_json = Column(Text, nullable=True)      # JSON list of affected asset filenames/IDs
+    symptoms = Column(Text, nullable=False)
+    exact_root_cause = Column(Text, nullable=False)
+    failed_attempts_count = Column(Integer, default=0, nullable=False)
+    recovery_status = Column(String(32), default="RESOLVED", nullable=False, index=True)  # OPEN, MITIGATED, RESOLVED
+    permanent_fix_description = Column(Text, nullable=False)
+    verification_evidence = Column(Text, nullable=True)
+    regression_test = Column(String(128), nullable=True)
+    git_commit_sha = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

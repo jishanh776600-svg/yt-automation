@@ -1006,6 +1006,14 @@ class SystemDataProvider:
             status_message = f"Reserve buffer healthy ({ready_stock}/{target} Shorts in 01_READY)."
             status_badge_class = "bg-emerald-950 text-emerald-300 border border-emerald-800"
 
+        # Attempt Ledger live telemetry
+        attempt_stats = {}
+        try:
+            from core.attempt_ledger import AttemptLedger
+            attempt_stats = AttemptLedger.get_summary_for_today(db)
+        except Exception as att_err:
+            logger.debug(f"Attempt ledger query notice: {att_err}")
+
         return {
             "status": status,
             "automation_status": automation_status,
@@ -1038,7 +1046,8 @@ class SystemDataProvider:
             "next_audit_utc_display": next_refill_time.strftime("%H:%M UTC"),
             "last_scheduler_run": last_scheduler_run_display,
             "last_scheduler_result": last_scheduler_result,
-            "last_error": last_error
+            "last_error": last_error,
+            "attempt_ledger": attempt_stats
         }
 
     def get_learning_status(self, db: Session) -> Dict[str, Any]:

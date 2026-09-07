@@ -37,7 +37,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: pipeline-cloud-execution
+  group: buffer-producer
   cancel-in-progress: false
 
 jobs:

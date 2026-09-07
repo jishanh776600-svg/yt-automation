@@ -1,4 +1,4 @@
-﻿# AL-AMR // Autonomous YouTube Shorts Production Brain
+# AL-AMR // Autonomous YouTube Shorts Production Brain
 
 *Obsidian Knowledge Vault — Operational Intelligence & System Standards*  
 *Last Synchronized: 2026-09-07 (System Status: 🟢 LIVE / CLOUD-AUTONOMOUS)* `[LIVE VERIFIED]`  

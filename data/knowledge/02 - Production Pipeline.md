@@ -1,4 +1,4 @@
-﻿# 02 — Production Pipeline
+# 02 — Production Pipeline
 
 > **Status:** `[LIVE & VERIFIED]`  
 > **Scope:** End-to-end multi-stage pipeline specification from topic selection to YouTube publishing `[CODE VERIFIED]`.  
@@ -48,3 +48,12 @@ Videos are produced, rendered, QA-audited, and deposited **strictly ONE AT A TIM
 - **Scene Count:** Minimum 9 unique scenes (target 10–12).
 - **Audio Mixing:** Subtle BGM ducked 12–16dB below voiceover; SFX permanently disabled.
 - **QA Enforcement:** Fails closed if max pause >= 0.35s or dead air > 18.0%.
+
+---
+
+## 3. Vault Lifecycle & State Transitions `[LIVE VERIFIED]`
+The vault follows a deterministic four-folder state machine:
+- `01_READY`: Verified, QA-passed videos awaiting publication release slots. Minimum reserve target is 6.
+- `02_PROCESSING`: Videos actively claimed by scheduler for YouTube upload or in-flight processing. If a scheduled release is established, the file stays tracked until public release, then moves to `03_PUBLISHED`. If an upload encounters a transient hold or slot limit, it returns safely to `01_READY`.
+- `03_PUBLISHED`: Successfully released public YouTube Shorts.
+- `04_FAILED`: Quarantined files containing irrecoverable physical container corruption (black frames, zero audio, corrupted headers). Scheduling failures, quota limits, and title collision holds **NEVER** move files to `04_FAILED`.

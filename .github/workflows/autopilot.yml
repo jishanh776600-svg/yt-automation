@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: pipeline-cloud-execution
+  group: youtube-publisher
   cancel-in-progress: false
 
 jobs:
