@@ -1,4 +1,4 @@
----
+﻿---
 aliases:
   - Production Pipeline
   - Sequential Production
@@ -9,9 +9,9 @@ tags:
 last_updated: 2026-09-05
 ---
 
-# 09 — Sequential Production & Refill Controller
+# 09 â€” Sequential Production & Refill Controller
 
-> **Status:** `[CANONICAL INVARIANT — STRICT ENFORCEMENT]`  
+> **Status:** `[CANONICAL INVARIANT â€” STRICT ENFORCEMENT]`  
 > **Scope:** Sequential 1-by-1 production invariant, reserve deficit math, CloudProductionOrchestrator execution, and fail-closed deposit rules.
 
 ---
@@ -24,18 +24,18 @@ last_updated: 2026-09-05
 
 ```
 CORRECT (SEQUENTIAL EXECUTION):
-Script 1 ──► Council ──► Visuals ──► TTS ──► Render ──► QA ──► Deposit 01_READY ──► DB Sync
-                                                                                          │
-┌─────────────────────────────────────────────────────────────────────────────────────────┘
-▼
-Script 2 ──► Council ──► Visuals ──► TTS ──► Render ──► QA ──► Deposit 01_READY ──► DB Sync
-                                                                                          │
-┌─────────────────────────────────────────────────────────────────────────────────────────┘
-▼
-Script 3 ──► ...
+Script 1 â”€â”€â–º Council â”€â”€â–º Visuals â”€â”€â–º TTS â”€â”€â–º Render â”€â”€â–º QA â”€â”€â–º Deposit 01_READY â”€â”€â–º DB Sync
+                                                                                          â”‚
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+â–¼
+Script 2 â”€â”€â–º Council â”€â”€â–º Visuals â”€â”€â–º TTS â”€â”€â–º Render â”€â”€â–º QA â”€â”€â–º Deposit 01_READY â”€â”€â–º DB Sync
+                                                                                          â”‚
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+â–¼
+Script 3 â”€â”€â–º ...
 
 INCORRECT (STRICTLY BANNED):
-Spawn 6 parallel threads ──► Run 6 Kokoro processes ──► Overwrite state / crash memory
+Spawn 6 parallel threads â”€â”€â–º Run 6 Kokoro processes â”€â”€â–º Overwrite state / crash memory
 ```
 
 ### Why Sequential Production is Mandatory
@@ -78,12 +78,12 @@ Executed by [`intelligence/cloud_orchestrator.py`](file:///C:/Users/jisha/OneDri
 3. **Stage 3: Vault Inventory Audit:** Queries Drive `01_READY` using `is_valid_ready_short()` to establish true verified stock.
 4. **Stage 4: News Ingestion & Niche Filtering:** Ingests live news wires; filters strictly via `is_niche_compliant()` (rejects all politics).
 5. **Stage 5: Multi-Agent AI Council Deliberation:** DeepSeek, Kimi K3, and Nemotron analyze, critique, and synthesize the narrative.
-6. **Stage 6: Council Quality Gate:** Validates 62–70 words, 0 clichés, curiosity hook.
+6. **Stage 6: Council Quality Gate:** Validates 62â€“70 words, 0 clichÃ©s, curiosity hook.
 7. **Stage 7: Visual Evidence Retrieval:** Sourcing authentic photos/records via `VisualEvidenceRetrievalEngine`.
 8. **Stage 8: Production Asset Manifest:** Assembles beat-by-beat timeline with Ken Burns directives and transitions.
 9. **Stage 9: Kokoro Sarah Narration:** Synthesizes `af_sarah` with 0.08s sentence, 0.03s clause, and 100ms silence compression.
 10. **Stage 10: Headless Video Composition:** FFmpeg renders 1080x1920 MP4 with burned-in karaoke ASS subtitles and ducked BGM.
-11. **Stage 11: Multi-Factor Video QA:** Evaluates pauses (<0.35s), dead air (<=18%), duration (22–25s), and black frames.
+11. **Stage 11: Multi-Factor Video QA:** Evaluates pauses (<0.35s), dead air (<=18%), duration (22â€“25s), and black frames.
 12. **Stage 12: Vault Deposit:** Uploads verified video directly into Google Drive `01_READY`.
 13. **Stage 13: State Persistence & Release:** Updates SQLite and auxiliary DBs; synchronizes back to `00_SYSTEM/`; releases locks.
 

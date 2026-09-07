@@ -1,33 +1,33 @@
-# 02 — Production Pipeline
+﻿# 02 — Production Pipeline
 
 > **Status:** `[LIVE & VERIFIED]`  
-> **Scope:** End-to-end multi-stage pipeline specification from live discovery to YouTube publishing.  
-> **Master Reference:** [[09 - Production Pipeline|Sequential Production & Refill Controller]]
+> **Scope:** End-to-end multi-stage pipeline specification from topic selection to YouTube publishing `[CODE VERIFIED]`.  
+> **Master Reference:** [[04 — CONTENT PRODUCTION/Production Pipeline Specification|Production Pipeline Specification]]
 
 ---
 
 ## 1. End-to-End Pipeline Stages
 
 ```
-INGESTION & CLUSTERING (is_niche_compliant)
+TOPIC DISCOVERY (24 Curated Historical Seeds + Dynamic Gemini AI Fallback)
        │
        ▼
-AI COUNCIL DELIBERATION (DeepSeek + Kimi K3 + Nemotron)
+AI COUNCIL DELIBERATION (DeepSeek + Kimi K3 + Nemotron + Gemini)
        │
        ▼
-COUNCIL QUALITY GATE (62-70 words, 0 clichés, hook in 1-2s)
+COUNCIL QUALITY GATE (58-72 words, 0 clichés, hook in 1-2s)
        │
        ▼
-VISUAL EVIDENCE RETRIEVAL (Archival, Scientific Scans, Photos)
+VISUAL EVIDENCE RETRIEVAL (Archival Scans, Photos, Public Domain Artifacts)
        │
        ▼
-PRODUCTION ASSET MANIFEST (>=9 scenes, Ken Burns directives)
+PRODUCTION ASSET MANIFEST (>=9 scenes, Ken Burns directives, dHash dedup)
        │
        ▼
-KOKORO SARAH NARRATION (af_sarah, 0.08s/0.03s pauses, 100ms compression)
+KOKORO BELLA NARRATION (af_bella at native 1.00x, 0.08s/0.03s pauses, 100ms compression)
        │
        ▼
-HEADLESS FFMPEG COMPOSITION (1080x1920, karaoke ASS subtitles, ducked BGM)
+HEADLESS FFMPEG COMPOSITION (1080x1920, karaoke ASS subtitles, ducked BGM, 0 SFX)
        │
        ▼
 MULTI-FACTOR QA AUDIT (Pause <0.35s, Dead air <=18%, 22-25s duration)
@@ -37,14 +37,14 @@ VAULT DEPOSIT (Google Drive 01_READY) & DB STATE PERSISTENCE (00_SYSTEM)
 ```
 
 ### Critical Sequential Invariant
-Videos are produced, rendered, QA-audited, and deposited **strictly ONE AT A TIME**. Parallel rendering across multiple threads is explicitly prohibited.
+Videos are produced, rendered, QA-audited, and deposited **strictly ONE AT A TIME**. Parallel rendering across multiple threads is explicitly prohibited `[CODE VERIFIED]`.
 
 ---
 
 ## 2. Production Specifications
-- **Authoritative Voice:** `af_sarah` (Sarah - US Female) exclusively.
-- **Word Target:** Exactly 62 to 70 words.
-- **Duration Target:** 22.0s to 25.0s (canonical target: ~23.2s).
+- **Authoritative Voice:** `af_bella` (Bella - US Female at native 1.00x) exclusively `[LIVE VERIFIED]`.
+- **Word Target:** Exactly 58 to 72 words (Target: ~65 words).
+- **Duration Target:** 22.0s to 25.0s (canonical target: ~23.0s).
 - **Scene Count:** Minimum 9 unique scenes (target 10–12).
 - **Audio Mixing:** Subtle BGM ducked 12–16dB below voiceover; SFX permanently disabled.
-- **QA Enforcement:** Fails closed if max pause $\ge 0.35$s or dead air $> 18.0\%$.
+- **QA Enforcement:** Fails closed if max pause >= 0.35s or dead air > 18.0%.

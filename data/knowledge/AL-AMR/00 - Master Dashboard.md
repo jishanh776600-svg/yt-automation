@@ -1,4 +1,4 @@
----
+﻿---
 aliases:
   - AL-AMR Dashboard
   - Master Dashboard
@@ -6,43 +6,43 @@ tags:
   - dashboard
   - status/live
   - system/autonomous
-last_updated: 2026-09-05
+last_updated: 2026-09-07
 ---
 
 # 🛸 AL-AMR Master Operational Dashboard
 
 > [!IMPORTANT]
-> **SYSTEM STATUS: 🟢 LIVE / CLOUD-AUTONOMOUS**  
+> **SYSTEM STATUS: 🟢 LIVE / CLOUD-AUTONOMOUS** `[LIVE VERIFIED]`  
 > AL-AMR is a 100% autonomous, 24/7 cloud Shorts production and scheduling operation running unattended on GitHub Actions and Google Drive without depending on a local PC, terminal, or home internet.
+> **Canonical 10-Tier Hierarchy:** See [[01 — PROJECT MASTER/Project Overview|01 — PROJECT MASTER]] through [[10 — CHANGELOG/System Master Changelog|10 — CHANGELOG]].
 
 ---
 
 ## ⚡ Core Operational KPI Card
 
-| Parameter | Specification | Enforcement Mechanism |
-|---|---|---|
-| **System Status** | `🟢 LIVE / CLOUD-AUTONOMOUS` | GitHub Actions cron + Drive `00_SYSTEM` state |
-| **Approved Niches** | `1. Mystery / Bizarre Stories`<br/>`2. Weird Science / Real Facts` | Fail-closed programmatic gate `is_niche_compliant` |
-| **Banned Content** | `ZERO Politics, War, Military, Diplomacy` | Fail-closed keyword rejection list |
-| **Publishing Rotation** | `Day A (2 Mystery + 1 Science)`<br/>`Day B (1 Mystery + 2 Science)` | `CloudProductionOrchestrator` balance router |
-| **Authoritative Voice** | **`af_sarah` (Sarah - US Female)** | Static voice lock (`af_bella` decommissioned) |
-| **Narration Pacing** | `0.08s sentence` / `0.03s clause` / `100ms cap` | Kokoro pause tuning + silence compression |
-| **Audio QA Thresholds** | `Max pause < 0.35s` / `Dead air ≤ 18%` | Hard Audio QA check in `VideoQAEngine` |
-| **Short Duration** | `22.0s – 25.0s` (Target: `~23.2s`) | Duration calibration loop in `TTSEngine` |
-| **Script Length** | `62 – 70 words` (High retention) | Hard Council Quality Gate in `JournalisticScriptEngine` |
-| **Scene Density** | `9 minimum` / `10–12 target` unique beats | Manifest quality gate (`direct_evidence_ratio`) |
-| **Visual Deduplication** | `Zero intra-Short dupes` + global cooldown | `GlobalVisualMemory` (dHash + SHA256) |
-| **Story Deduplication** | `No duplicate/near-duplicate topics` | `ShortDuplicateGuard` (title & script shingles) |
-| **Background Music** | **`ENABLED`** (4 tracks ducked under voice) | EBU R128 Stage B bed (`-30.0 LUFS`), zero SFX |
-| **Sound Effects (SFX)** | **`DISABLED`** (Permanently retired) | Hard-coded production pipeline flag (`has_sfx=False`) |
-| **Ready Vault Reserve** | **`6 Verified Shorts`** in `01_READY` | Replenishment audit in `produce_buffer.yml` |
-| **Forward Horizon** | **`Rolling 48-Hour Coverage`** | Vacant slot audit in `autopilot.yml` |
-| **Daily Publish Limit** | **`Strictly 3 Shorts / Day`** | Slots at `06:00, 11:00, 15:00 UTC` |
-| **Production Mode** | **`Strictly SEQUENTIAL`** (1-by-1) | Render -> QA -> Deposit -> DB Sync before next |
-| **AI Council** | `DeepSeek` + `Kimi K3` + `Nemotron` | Multi-agent synthesis & quality evaluation |
-| **Execution Layer** | **`GitHub Actions (ubuntu-latest)`** | `produce_buffer.yml` & `autopilot.yml` |
-| **State Persistence** | **`Google Drive (00_SYSTEM)`** | Bidirectional SQLite synchronization (`database_sync`) |
-| **Current Phase** | **`Operational Observation & Optimization`** | Data-driven iteration based on YouTube telemetry |
+| Parameter | Specification | Enforcement Mechanism | Status |
+|---|---|---|---|
+| **System Status** | `🟢 LIVE / CLOUD-AUTONOMOUS` | GitHub Actions cron + Drive `00_SYSTEM` state | `[LIVE VERIFIED]` |
+| **Approved Niche** | `History / Historical Mysteries / Bizarre True Historical Events` | Fail-closed programmatic gate `is_niche_compliant` + `CURATED_HISTORICAL_SEEDS` | `[LIVE VERIFIED]` |
+| **Banned Content** | `ZERO Politics, War, Military, Diplomacy, Generic Science` | Fail-closed keyword rejection list | `[CODE VERIFIED]` |
+| **Authoritative Voice** | **`af_bella` (Bella - US Female at native 1.00x)** | Static voice lock in `TTSEngine` (`af_sarah` decommissioned) | `[LIVE VERIFIED]` |
+| **Narration Pacing** | `0.08s sentence` / `0.03s clause` / `100ms cap` | Kokoro pause tuning + silence compression | `[CODE VERIFIED]` |
+| **Audio QA Thresholds** | `Max pause < 0.35s` / `Dead air <= 18%` | Hard Audio QA check in `VideoQAEngine` | `[CODE VERIFIED]` |
+| **Short Duration** | `22.0s – 25.0s` (Target: `~23.0s`) | Duration calibration loop in `TTSEngine` | `[CODE VERIFIED]` |
+| **Script Length** | `58 – 72 words` (Target: ~65 words) | Hard Council Quality Gate in `JournalisticScriptEngine` | `[CODE VERIFIED]` |
+| **Scene Density** | `9 minimum` / `10–12 target` unique evidence beats | Manifest quality gate (0 script-card frames) | `[CODE VERIFIED]` |
+| **Visual Deduplication** | `Zero intra-Short dupes` + 45-day cooldown | `GlobalVisualMemory` (dHash + SHA256) | `[CODE VERIFIED]` |
+| **Story Deduplication** | `No duplicate/near-duplicate topics` | `ShortDuplicateGuard` (title & script shingles) | `[CODE VERIFIED]` |
+| **Background Music** | **`ENABLED`** (4 tracks ducked under voice) | EBU R128 Stage B bed (`-30.0 LUFS`), zero SFX | `[CODE VERIFIED]` |
+| **Sound Effects (SFX)** | **`PERMANENTLY DISABLED`** | Hard-coded production pipeline flag (`has_sfx=False`) | `[CODE VERIFIED]` |
+| **Ready Vault Reserve** | **`6 Verified Shorts`** in `01_READY` | Replenishment audit in `produce_buffer.yml` (Deficit: 5) | `[LIVE VERIFIED]` |
+| **Refill Schedule** | **`Every 3 Hours (0 */3 * * *)`** | GitHub Actions cron trigger | `[LIVE VERIFIED]` |
+| **Distributed Lock** | **`CompositeLock` (900s TTL, 120s heartbeat, dead-runner check)** | Drive `00_SYSTEM/locks/` (Commit `31c002c`) | `[LIVE VERIFIED]` |
+| **Forward Horizon** | **`Rolling 48-Hour Coverage`** | Vacant slot audit in `autopilot.yml` | `[CODE VERIFIED]` |
+| **Daily Publish Limit** | **`Strictly 3 Shorts / Day`** | Slots at `06:00, 11:00, 15:00 UTC` | `[CODE VERIFIED]` |
+| **Production Mode** | **`Strictly SEQUENTIAL`** (1-by-1) | Render -> QA -> Deposit -> DB Sync before next | `[CODE VERIFIED]` |
+| **Execution Layer** | **`GitHub Actions (ubuntu-latest)`** | `produce_buffer.yml` & `autopilot.yml` | `[LIVE VERIFIED]` |
+| **State Persistence** | **`Google Drive (00_SYSTEM)`** | Bidirectional SQLite synchronization (`database_sync`) | `[LIVE VERIFIED]` |
 
 ---
 
@@ -51,7 +51,7 @@ last_updated: 2026-09-05
 ```mermaid
 flowchart TD
     subgraph Cloud_Triggers [GitHub Actions Triggers]
-        PB["produce_buffer.yml<br/>(Daily 02:00 UTC)"]
+        PB["produce_buffer.yml<br/>(Every 3 Hours: 0 */3 * * *)"]
         AP["autopilot.yml<br/>(Daily 06:00, 11:00, 15:00 UTC)"]
     end
 
@@ -64,12 +64,12 @@ flowchart TD
     end
 
     subgraph Production_Engine [Cloud Production Controller]
-        LOCK["CompositeLock<br/>(ProcessLock + CloudLockManager)"]
-        INGEST["News Ingestion & Clustering<br/>(is_niche_compliant)"]
-        COUNCIL["AI Council Deliberation<br/>(DeepSeek + Kimi + Nemotron)"]
-        TTS["Kokoro af_sarah Narration<br/>(0.08s / 0.03s / 100ms Cap)"]
-        RENDER["Headless Video Composer<br/>(1080x1920 9:16, >=9 Scenes, Subtle BGM)"]
-        QA["VideoQAEngine<br/>(Pause <0.35s, Dead Air <=18%)"]
+        LOCK["CompositeLock<br/>(900s TTL + 120s Heartbeat + Dead Runner Reclaim)"]
+        INGEST["Topic Selection & Verification<br/>(24 Curated Seeds + Dynamic Gemini AI Fallback)"]
+        COUNCIL["AI Council Deliberation<br/>(DeepSeek + Kimi + Nemotron + Gemini)"]
+        TTS["Kokoro af_bella Narration<br/>(1.00x Native Speed, 0.08s / 0.03s Pauses, 100ms Cap)"]
+        RENDER["Headless Video Composer<br/>(1080x1920 9:16, >=9 Scenes, Ducked BGM, 0 SFX)"]
+        QA["VideoQAEngine<br/>(Pause <0.35s, Dead Air <=18%, Duration 22-25s)"]
     end
 
     subgraph Publishing_Engine [Autonomous Forward Scheduler]
@@ -102,22 +102,15 @@ flowchart TD
 
 ---
 
-## 📂 Master Knowledge Vault Directory
+## 📂 Canonical 10-Tier Knowledge Vault Directory
 
-- [[01 - Vision & Goals|01. Vision & Core Philosophy]] — Mission statement, zero-cost economics, operational autonomy.
-- [[02 - Content Strategy|02. Authoritative Content Strategy]] — Approved niches, political rejection gate, rotation cadence.
-- [[03 - Architecture|03. Cloud Architecture & Distributed Locking]] — 3-tier segregation, CompositeLock, runners.
-- [[04 - AI Council|04. Multi-Agent AI Council Architecture]] — DeepSeek, Kimi K3, Nemotron roles & quality gate.
-- [[05 - Script Engine|05. High-Retention Journalistic Scripting]] — 62–70 words, 22–25s target, hook, progression.
-- [[06 - Audio & Voice|06. Sarah Voice Lock & Narration Pacing]] — af_sarah, silence compression, audio QA, BGM bed.
-- [[07 - Visual System|07. Visual Evidence & Global Visual Memory]] — Real footage, perceptual hashing, scene density.
-- [[08 - Duplicate Protection|08. Short Duplicate Guard & Fingerprinting]] — Shingles, topic cooldown, intra-batch dedup.
-- [[09 - Production Pipeline|09. Sequential Production & Refill Controller]] — 1-by-1 production invariant, deficit calculation.
-- [[10 - Scheduling & Autopilot|10. 48-Hour Forward Horizon Scheduler]] — 3 slots/day, reconciliation, zero immediate uploads.
-- [[11 - Cloud Infrastructure|11. GitHub Actions Cloud Execution]] — Runner topologies, workflows, secrets management.
-- [[12 - Google Drive Vault|12. Google Drive Vault & Database Persistence]] — 00_SYSTEM through 04_FAILED schema.
-- [[13 - QA & Testing|13. Multi-Factor Video & Audio QA System]] — 15-point verification, fail-closed enforcement.
-- [[14 - Deployment & Operational State|14. Deployment Status & Live State]] — Git commit 54112e7, health check 9/9, inventory.
-- [[15 - Historical Decisions|15. Historical Decisions & Superseded Architectures]] — Bella retirement, politics pivot, BGM restoration.
-- [[16 - Roadmap|16. Project Roadmap & Operational Observation]] — Phase completion, performance-driven optimization.
-- [[17 - Operational Metrics|17. Closed-Loop Telemetry & YouTube Analytics]] — Retention, APV, swipe rate, strategy weights.
+- [[01 — PROJECT MASTER/Project Overview|01 — PROJECT MASTER]]: Vision, Invariants, System Overview & Roadmap.
+- [[02 — ARCHITECTURE/Cloud & Storage Topology|02 — ARCHITECTURE]]: 3-Tier Model, Distributed Locking Hardening, Unified Controller, Database Sync.
+- [[03 — AUTONOMOUS OPERATIONS/Buffer Replenishment Workflow|03 — AUTONOMOUS OPERATIONS]]: 3-Hour Refill Cron, 48h Forward Autopilot, Drive Vault, Zero-PC Autonomy.
+- [[04 — CONTENT PRODUCTION/Production Pipeline Specification|04 — CONTENT PRODUCTION]]: 15-Stage Pipeline, Script Craftsmanship, Bella Voice Spec, Visual Evidence, Audio Standards, Deduplication.
+- [[05 — PUBLISHING/Forward Horizon Scheduling|05 — PUBLISHING]]: Forward Horizon Scheduler, Scheduled Upload Protocol, 15-Point Safety Gate.
+- [[06 — INTELLIGENCE/Historical Topic Discovery & Curated Seeds|06 — INTELLIGENCE]]: 24 Curated Mystery Seeds, Dynamic AI Fallback, Multi-Agent Council, Telemetry Learning.
+- [[07 — MISSION CONTROL/Operational State & Inventory|07 — MISSION CONTROL]]: Operational State, Render Dashboard, Review Queue Hygiene, System Diagnostics.
+- [[08 — TESTING/Verification Suite & QA Gates|08 — TESTING]]: 15-Point VideoQA, AudioQA, Targeted Test Suites, AST Compliance.
+- [[09 — INCIDENTS & FIXES/Incident Register & Forensic Log|09 — INCIDENTS & FIXES]]: Incidents 1–7 Log, Incident 8 Deep Post-Mortem & Fixes.
+- [[10 — CHANGELOG/System Master Changelog|10 — CHANGELOG]]: Authoritative Commit & Milestone Register (Latest: Commit `31c002c`).

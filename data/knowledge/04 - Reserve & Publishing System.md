@@ -1,8 +1,8 @@
-# 04 — Reserve & Publishing System
+﻿# 04 — Reserve & Publishing System
 
 > **Status:** `[LIVE & VERIFIED]`  
-> **Scope:** 6-Short reserve contract, 48-hour forward horizon scheduling, daily publishing limits, and vault folder reconciliation.  
-> **Master Reference:** [[10 - Scheduling & Autopilot|48-Hour Forward Horizon Scheduler]]
+> **Scope:** 6-Short reserve contract, 3-hour buffer refill, 48-hour forward horizon scheduling, and vault folder reconciliation `[CODE VERIFIED]`.  
+> **Master Reference:** [[03 — AUTONOMOUS OPERATIONS/Buffer Replenishment Workflow|Buffer Replenishment]] & [[05 — PUBLISHING/Forward Horizon Scheduling|Forward Horizon Scheduling]]
 
 ---
 
@@ -12,7 +12,8 @@ $$	ext{READY\_TARGET} = 6 	ext{ Verified Shorts in Google Drive Vault } 	exttt{0
 $$	ext{Deficit} = \max(0, 	ext{READY\_TARGET} - 	ext{CURRENT\_READY\_COUNT})$$
 
 - Production produces only the missing deficit sequentially.
-- If verified stock $\ge 6$, the production loop exits immediately with zero compute spend.
+- If verified stock >= 6, the production loop exits immediately with zero compute spend.
+- Replenishment runs automatically every 3 hours (`0 */3 * * *`) via GitHub Actions `produce_buffer.yml`.
 
 ---
 

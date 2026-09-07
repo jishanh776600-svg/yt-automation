@@ -1,4 +1,4 @@
----
+﻿---
 aliases:
   - QA System
   - Quality Assurance
@@ -9,7 +9,7 @@ tags:
 last_updated: 2026-09-05
 ---
 
-# 13 — Multi-Factor Video & Audio QA System
+# 13 â€” Multi-Factor Video & Audio QA System
 
 > **Status:** `[LIVE & ENFORCED]`  
 > **Scope:** 15-point multi-factor video and audio quality gate, fail-closed thresholds, and targeted validation suites.
@@ -27,15 +27,15 @@ Every rendered video must pass all 15 automated checkpoints before it is permitt
 | **3** | **Total Duration** | $< 22.0$s or $> 25.0$s | $22.0$s to $25.0$s (Target: ~23.2s) |
 | **4** | **Max Narration Pause** | $\ge 0.35$s (350ms) | Strictly $< 0.35$s maximum silence |
 | **5** | **Dead Air Ratio** | $> 18.0\%$ of runtime | Cumulative dead air $\le 18.0\%$ |
-| **6** | **Voice Lock** | Non-`af_sarah` audio | Authoritative `af_sarah` verified |
+| **6** | **Voice Lock** | Non-`af_bella` audio | Authoritative `af_bella` verified |
 | **7** | **Master Loudness** | Outside `[-22.0, -10.0]` LUFS | Target: `-14.0 LUFS` integrated |
 | **8** | **True Peak Ceiling** | $> 0.0$ dBTP | True Peak $\le 0.0$ dBTP (Target: $-1.0$ dBTP) |
 | **9** | **Black Frame Detection** | $\ge 1$ black frame | $0$ completely black or blank frames |
 | **10**| **AV Desynchronization** | Speech cut off at tail | Speech completes $\ge 0.4$s before video end |
-| **11**| **Scene Cut Density** | $< 9$ unique visual cuts | Minimum $9$ unique scenes (Target: 10–12) |
+| **11**| **Scene Cut Density** | $< 9$ unique visual cuts | Minimum $9$ unique scenes (Target: 10â€“12) |
 | **12**| **Intra-Short Visuals** | Duplicate asset inside Short | $100\%$ unique visual assets per video |
 | **13**| **Global Visual Cooldown**| Asset reused within 45 days | Zero recently used visual assets |
-| **14**| **BGM Presence** | No background music detected | BGM present and ducked 12–16dB below voice |
+| **14**| **BGM Presence** | No background music detected | BGM present and ducked 12â€“16dB below voice |
 | **15**| **Duplicate Protection** | Topic/script similarity $\ge 0.60$ | Unique story shingles in `short_fingerprints.db` |
 
 ---

@@ -115,3 +115,23 @@ DB state after repair: APPROVED=16, DISCOVERED=427, COMPLETED=3, TOTAL=446. `top
 
 ### Key Lesson
 Never mutate persistent DB state (topic.status) inside a candidate-filtering loop. Use in-memory exclusion sets only. Database status mutations must be deliberate, explicitly tested, and never triggered as a side-effect of a discovery scan.
+---
+
+## 8. Incident 8: Refill Both Failing — Cloud Lock Deadlock + Seed Exhaustion + Stale Dashboard
+
+**Date:** 2026-09-07  
+**Commit Fixed:** `31c002c`  
+**Master Reference:** [[09 — INCIDENTS & FIXES/Incident 8 — Cloud Lock Deadlock & Seed Exhaustion|Incident 8 Full Post-Mortem]]
+
+### Root Causes
+1. **Cloud Lock Deadlock:** Prior aborted GitHub Actions runner left a dangling lock file in Google Drive `00_SYSTEM/locks/` with a 3600s TTL and no dead-runner detection. All subsequent buffer replenishment runs detected the lock and failed closed.
+2. **Curated Seed Exhaustion:** All 10 curated historical seeds in `CURATED_HISTORICAL_SEEDS` had been used or quarantined. No fallback triggered.
+3. **Render Dashboard Stale Reporting:** Dashboard was reading static test runs rather than live GitHub API workflow runs, masking failures, and the operator review queue had 123 unreviewed legacy jobs.
+
+### Engineering Fix
+- `core/cloud_lock.py`: Reduced TTL to 900s, added 120s background heartbeat thread, enabled GitHub API dead-runner reclamation, added `--force-unlock` CLI override and workflow input.
+- `engines/topic_discovery.py` & `intelligence/cloud_orchestrator.py`: Expanded `CURATED_HISTORICAL_SEEDS` to 24 verified historical mysteries + added dynamic Gemini AI discovery fallback.
+- `dashboard/data_provider.py` & `dashboard/action_manager.py`: Connected dashboard to live GitHub workflow telemetry; archived 119 legacy unreviewed review queue jobs.
+
+### Live Validation
+GitHub Actions Run #47 (`34054429381`) succeeded in 14m 26s, producing and depositing Bella Short `short_man_c85a0dd30bda.mp4` (Drive ID: `1I3X-S4OsuWUW4Ubv8v7nB-nI760dLMzx`) into `01_READY`.
