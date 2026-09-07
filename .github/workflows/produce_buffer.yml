@@ -25,7 +25,7 @@ on:
       active_voice:
         description: 'Authoritative voice identifier to use for this production run'
         required: false
-        default: 'af_bella'
+        default: 'af_sarah'
         type: string
       force_unlock:
         description: 'Force release any orphaned locks before starting'
@@ -96,7 +96,7 @@ jobs:
             echo "NVIDIA_API_KEY=${NVIDIA_API_KEY}" >> .env
           fi
           echo "TEST_MODE=false" >> .env
-          echo "KOKORO_VOICE=${{ inputs.active_voice || 'af_bella' }}" >> .env
+          echo "KOKORO_VOICE=${{ inputs.active_voice || 'af_sarah' }}" >> .env
           echo "${TOKEN_JSON}" > token.json
           echo "${CLIENT_SECRET_JSON}" > client_secret.json
 
@@ -109,7 +109,7 @@ jobs:
           BATCH_COUNT="${{ inputs.batch_count }}"
           TARGET_BUFFER="${{ inputs.target_buffer }}"
           VOICE_INPUT="${{ inputs.active_voice }}"
-          VOICE_FLAG="--voice ${VOICE_INPUT:-af_bella}"
+          VOICE_FLAG="--voice ${VOICE_INPUT:-af_sarah}"
           UNLOCK_FLAG=""
           if [ "${{ inputs.force_unlock }}" = "true" ]; then
             UNLOCK_FLAG="--force-unlock"
