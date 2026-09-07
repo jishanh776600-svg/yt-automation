@@ -587,10 +587,17 @@ class DriveVaultEngine:
         logger.info(f"[+] Downloaded Drive file {file_id} to {local_dest_path} ({local_dest_path.stat().st_size} bytes)")
         return local_dest_path
 
-    def move_file_in_vault(self, file_id: str, from_folder: str, to_folder: str) -> Dict[str, Any]:
+    def move_file_in_vault(self, file_id: str, from_folder: str, to_folder: str, _from_gateway: bool = False) -> Dict[str, Any]:
         """
         Moves a file between vault folders by updating parent IDs in Drive (or moving local staging files).
         """
+        if to_folder == "03_PUBLISHED" and not _from_gateway:
+            from core.lifecycle_gateway import InvariantViolationError
+            raise InvariantViolationError(
+                f"[HARD_BARRIER_VIOLATION] Direct move of file '{file_id}' to '03_PUBLISHED' is strictly forbidden! "
+                "All transitions to 03_PUBLISHED must proceed exclusively through vault_transition_to_published() in core.lifecycle_gateway."
+            )
+
         clean_name = file_id.replace("local_", "")
         if to_folder == "04_FAILED" and (
             clean_name == "short_man_2bf89781983b.mp4"

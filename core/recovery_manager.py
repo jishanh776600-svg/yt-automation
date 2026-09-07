@@ -244,16 +244,27 @@ class RecoveryManager:
                     ).first()
 
                 # Case 1: Already published on YouTube
-                if existing_upl and existing_upl.status == "PUBLISHED":
-                    self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
-                    actions_taken.append({
-                        "file_id": file_id,
-                        "file_name": file_name,
-                        "action": "MOVED_TO_PUBLISHED",
-                        "reason": f"Video is already published on YouTube ({existing_upl.youtube_video_id})"
-                    })
-                    if job_id:
-                        StateMachine.record_recovery_event(db, job_id, "DRIVE_STATE_RECONCILED", f"Moved {file_name} to 03_PUBLISHED.")
+                if existing_upl and existing_upl.status == "PUBLISHED" and existing_upl.youtube_video_id:
+                    from core.lifecycle_gateway import vault_transition_to_published
+                    try:
+                        vault_transition_to_published(
+                            file_id=file_id,
+                            youtube_video_id=existing_upl.youtube_video_id,
+                            db=db,
+                            drive_engine=self.drive_engine,
+                            job_id=job_id,
+                            caller="recovery_manager.recover_stale_processing_vault"
+                        )
+                        actions_taken.append({
+                            "file_id": file_id,
+                            "file_name": file_name,
+                            "action": "MOVED_TO_PUBLISHED",
+                            "reason": f"Video is already published on YouTube ({existing_upl.youtube_video_id})"
+                        })
+                        if job_id:
+                            StateMachine.record_recovery_event(db, job_id, "DRIVE_STATE_RECONCILED", f"Moved {file_name} to 03_PUBLISHED.")
+                    except Exception as gw_err:
+                        logger.warning(f"[RECOVERY_HOLD] Gateway refused transition for {file_id}: {gw_err}. Retaining in 02_PROCESSING.")
                     continue
 
                 # Case 2: Legitimately SCHEDULED on YouTube

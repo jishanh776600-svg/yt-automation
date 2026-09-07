@@ -56,6 +56,7 @@ from engines.analytics_engine import AnalyticsEngine
 from engines.drive_engine import DriveVaultEngine
 from engines.experiment_manager import ExperimentManager
 from core.recovery_manager import RecoveryManager
+from core.lifecycle_gateway import vault_transition_to_published, is_valid_youtube_id, InvariantViolationError
 
 # Setup UTF-8 Encoding on Windows
 if sys.platform == "win32":
@@ -856,8 +857,8 @@ class ShortsPipeline:
                     metadata=metadata,
                     scheduled_publish_at=scheduled_slot
                 )
-                self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
-                StateMachine.transition(db, job, JobState.PUBLISHED, f"TEST_MODE verified: Scheduled for {scheduled_slot.isoformat()}Z")
+                # NON-NEGOTIABLE INVARIANT 4: Scheduled video belongs in 02_PROCESSING until publication
+                StateMachine.transition(db, job, JobState.SCHEDULED, f"TEST_MODE verified: Scheduled for {scheduled_slot.isoformat()}Z")
                 AttemptLedger.record_success(
                     db=db,
                     attempt=attempt,
@@ -869,7 +870,7 @@ class ShortsPipeline:
                     f"Title: [bold]{title}[/bold]\n"
                     f"Assigned Slot: [bold cyan]{scheduled_slot.strftime('%Y-%m-%d %H:%M')} UTC[/bold cyan]\n"
                     f"Drive File ID: {file_id}\n"
-                    f"Moved To: [bold cyan]YouTube_Shorts_Vault/03_PUBLISHED[/bold cyan]\n"
+                    f"Vault Folder: [bold cyan]02_PROCESSING (Scheduled)[/bold cyan]\n"
                     f"YouTube Upload: [bold cyan]BYPASSED (TEST_MODE=true)[/bold cyan]",
                     border_style="green"
                 ))
@@ -1001,7 +1002,17 @@ class ShortsPipeline:
                         for pf in processing_files:
                             props = pf.get("properties", {}) or {}
                             if props.get("job_id") == rec_item["job_id"] or rec_item["job_id"] in pf.get("name", ""):
-                                self.drive_engine.move_file_in_vault(pf["id"], from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
+                                try:
+                                    vault_transition_to_published(
+                                        file_id=pf["id"],
+                                        youtube_video_id=rec_item.get("youtube_video_id", ""),
+                                        db=db,
+                                        drive_engine=self.drive_engine,
+                                        job_id=rec_item["job_id"],
+                                        caller="main.schedule_ready_buffer.reconcile"
+                                    )
+                                except Exception as gt_err:
+                                    logger.warning(f"[RECONCILE_GATEWAY_HOLD] Gateway refused transition for {pf['id']}: {gt_err}")
             except Exception as rec_err:
                 logger.warning(f"Reconciliation check notice: {rec_err}")
 
@@ -1092,8 +1103,18 @@ class ShortsPipeline:
                     # an authoritative, confirmed YouTube video resource with status in ["PUBLISHED", "SUCCESS"].
                     # An un-uploaded asset or an asset without a verified YouTube ID must NEVER be moved to 03_PUBLISHED.
                     if existing_upl and existing_upl.youtube_video_id and existing_upl.status in ["PUBLISHED", "SUCCESS"]:
-                        logger.info(f"[PROCESSING CLEANUP] File {candidate['id']} ({candidate.get('name')}) is confirmed PUBLISHED on YouTube ({existing_upl.youtube_video_id}). Moving to 03_PUBLISHED.")
-                        self.drive_engine.move_file_in_vault(candidate["id"], from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
+                        try:
+                            vault_transition_to_published(
+                                file_id=candidate["id"],
+                                youtube_video_id=existing_upl.youtube_video_id,
+                                db=db,
+                                drive_engine=self.drive_engine,
+                                job_id=existing_upl.job_id,
+                                caller="main.schedule_ready_buffer.processing_cleanup"
+                            )
+                        except Exception as p_err:
+                            logger.warning(f"[PROCESSING CLEANUP] Gateway refused transition for {candidate['id']}: {p_err}. Retaining in 02_PROCESSING.")
+                            continue
                     elif existing_upl and existing_upl.youtube_video_id and existing_upl.status in ["SCHEDULED", "TEST_VERIFIED"]:
                         continue
                     else:
@@ -1133,14 +1154,12 @@ class ShortsPipeline:
                         existing_upl = db.query(UploadRecord).filter(UploadRecord.youtube_video_id == cand_yt_id).first()
 
                 # NON-NEGOTIABLE INVARIANT:
-                # An asset in 01_READY can ONLY transition to 03_PUBLISHED if THIS specific asset has
-                # an authoritative, confirmed YouTube video resource with status in ["PUBLISHED", "SUCCESS"].
-                if existing_upl and existing_upl.youtube_video_id and existing_upl.status in ["PUBLISHED", "SUCCESS"]:
-                    logger.warning(f"[PRE-CLAIM DEDUP] File {candidate['id']} ('{c_title}') already PUBLISHED on YouTube ({existing_upl.youtube_video_id}). Moving to 03_PUBLISHED.")
-                    self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="03_PUBLISHED")
-                    continue
-                elif existing_upl and existing_upl.youtube_video_id and existing_upl.status in ["SCHEDULED", "TEST_VERIFIED"]:
-                    logger.warning(f"[PRE-CLAIM DEDUP] File {candidate['id']} ('{c_title}') already SCHEDULED on YouTube ({existing_upl.youtube_video_id}). Moving to 02_PROCESSING.")
+                # An asset in 01_READY can NEVER transition directly to 03_PUBLISHED.
+                # All published transitions must go through 02_PROCESSING -> vault_transition_to_published().
+                # If an asset in 01_READY already carries an active YouTube ID, relocate to 02_PROCESSING.
+                cand_yt_id = c_props.get("youtube_video_id") or (existing_upl.youtube_video_id if existing_upl else None)
+                if cand_yt_id and is_valid_youtube_id(cand_yt_id):
+                    logger.info(f"[PRE-CLAIM RECOVERY] File {candidate['id']} ('{c_title}') already carries YouTube ID ({cand_yt_id}). Relocating to 02_PROCESSING for reconciliation.")
                     self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="02_PROCESSING")
                     continue
 
@@ -1209,7 +1228,9 @@ class ShortsPipeline:
                         candidate_title=c_title,
                         candidate_summary=c_props.get("description", ""),
                         db=db,
-                        exclude_topic_id=cand_topic_id
+                        exclude_topic_id=cand_topic_id,
+                        exclude_job_id=c_job_id,
+                        exclude_event_id=event_id
                     )
                     if not dedup_res.is_allowed:
                         is_duplicate_story = True
@@ -1401,11 +1422,25 @@ class ShortsPipeline:
         except Exception:
             pass
 
+        from core.daemon_guard import DaemonIntegrityGuard, StaleDaemonError
+        integrity_guard = DaemonIntegrityGuard(project_root=PROJECT_ROOT)
+
         cycle_count = 0
         _update_daemon_telemetry("DAEMON_STARTING")
         try:
             while running:
                 cycle_count += 1
+
+                # Stale code detection gate: halt if code on disk diverged from startup
+                try:
+                    integrity_guard.enforce_integrity()
+                except StaleDaemonError as sde:
+                    console.print(f"\n[bold red][!] CRITICAL STALE DAEMON HALT:[/bold red] {sde}")
+                    logger.critical(f"Halting autonomous daemon: {sde}")
+                    _update_daemon_telemetry("HALTED_STALE_CODE")
+                    running = False
+                    break
+
                 now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
                 console.print(f"\n[bold cyan][Cycle {cycle_count} - {now_str}][/bold cyan] Starting convergence pass...")
                 _update_daemon_telemetry(f"CONVERGENCE_PASS_{cycle_count}")

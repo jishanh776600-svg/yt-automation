@@ -255,10 +255,18 @@ class StoryDeduplicationEngine:
             entity_pairs=entity_pairs
         )
 
-    def get_published_and_ready_corpus(self, db: Session, exclude_topic_id: Optional[str] = None) -> List[EventFingerprint]:
+    def get_published_and_ready_corpus(
+        self,
+        db: Session,
+        exclude_topic_id: Optional[str] = None,
+        exclude_job_id: Optional[str] = None,
+        exclude_title: Optional[str] = None,
+        exclude_event_id: Optional[str] = None
+    ) -> List[EventFingerprint]:
         """Aggregates all published, ready, and processing historical stories."""
         corpus = []
         seen_titles = set()
+        clean_exclude_title = exclude_title.lower().strip() if exclude_title else None
 
         # 1. Existing Topics with active jobs / uploads or approved/scheduled status
         active_jobs = db.query(Job).all()
@@ -268,6 +276,10 @@ class StoryDeduplicationEngine:
         ).all()
         for t in topics:
             if exclude_topic_id and (t.id == exclude_topic_id or (t.event_id and t.event_id == exclude_topic_id)):
+                continue
+            if exclude_event_id and t.event_id == exclude_event_id:
+                continue
+            if clean_exclude_title and t.title.lower().strip() == clean_exclude_title:
                 continue
             if t.title.lower() in seen_titles:
                 continue
@@ -281,6 +293,10 @@ class StoryDeduplicationEngine:
         # 2. UploadRecords
         uploads = db.query(UploadRecord).all()
         for u in uploads:
+            if exclude_job_id and u.job_id == exclude_job_id:
+                continue
+            if exclude_topic_id and getattr(u, "topic_id", None) == exclude_topic_id:
+                continue
             if u.title.lower() in seen_titles:
                 continue
             seen_titles.add(u.title.lower())
@@ -539,6 +555,9 @@ class StoryDeduplicationEngine:
         corpus: Optional[List[EventFingerprint]] = None,
         db: Optional[Session] = None,
         exclude_topic_id: Optional[str] = None,
+        exclude_job_id: Optional[str] = None,
+        exclude_title: Optional[str] = None,
+        exclude_event_id: Optional[str] = None,
         category: Optional[str] = None,
         policy: Optional[str] = None
     ) -> DeduplicationResult:
@@ -562,7 +581,13 @@ class StoryDeduplicationEngine:
             )
 
         if corpus is None and db is not None:
-            corpus = self.get_published_and_ready_corpus(db, exclude_topic_id=exclude_topic_id)
+            corpus = self.get_published_and_ready_corpus(
+                db,
+                exclude_topic_id=exclude_topic_id,
+                exclude_job_id=exclude_job_id,
+                exclude_title=exclude_title,
+                exclude_event_id=exclude_event_id
+            )
         elif corpus is None:
             corpus = []
 
@@ -712,6 +737,9 @@ class DeduplicationRouter:
         corpus: Optional[List[EventFingerprint]] = None,
         vault_files: Optional[List[Dict[str, Any]]] = None,
         exclude_topic_id: Optional[str] = None,
+        exclude_job_id: Optional[str] = None,
+        exclude_title: Optional[str] = None,
+        exclude_event_id: Optional[str] = None,
         category: Optional[str] = None,
         policy: Optional[str] = None
     ) -> DeduplicationResult:
@@ -733,7 +761,10 @@ class DeduplicationRouter:
                 candidate_script=candidate_script,
                 corpus=corpus,
                 db=db,
-                exclude_topic_id=exclude_topic_id
+                exclude_topic_id=exclude_topic_id,
+                exclude_job_id=exclude_job_id,
+                exclude_title=exclude_title,
+                exclude_event_id=exclude_event_id
             )
 
     def are_stories_duplicate(

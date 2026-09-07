@@ -749,14 +749,26 @@ class UploadEngine:
 
                         # Relocate corresponding video file from 02_PROCESSING to 03_PUBLISHED in Drive Vault
                         try:
+                            from core.lifecycle_gateway import vault_transition_to_published
                             from engines.drive_engine import DriveVaultEngine
                             drive = DriveVaultEngine()
                             proc_files = drive.list_files_in_folder("02_PROCESSING")
                             for pf in proc_files:
                                 props = pf.get("properties", {}) or {}
                                 if props.get("job_id") == rec.job_id or (rec.job_id and rec.job_id in pf.get("name", "")):
-                                    drive.move_file_in_vault(pf["id"], from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
-                                    logger.info(f"[RECONCILE] Moved file '{pf['name']}' to 03_PUBLISHED in Drive.")
+                                    try:
+                                        vault_transition_to_published(
+                                            file_id=pf["id"],
+                                            youtube_video_id=rec.youtube_video_id,
+                                            db=db,
+                                            drive_engine=drive,
+                                            youtube_service=youtube,
+                                            job_id=rec.job_id,
+                                            caller="upload_engine.reconcile_scheduled_uploads"
+                                        )
+                                        logger.info(f"[RECONCILE] Moved file '{pf['name']}' to 03_PUBLISHED via gateway.")
+                                    except Exception as gw_err:
+                                        logger.warning(f"[RECONCILE_GATEWAY_HOLD] Gateway refused transition for '{pf['name']}': {gw_err}")
                         except Exception as drive_mv_err:
                             logger.debug(f"[RECONCILE] Drive vault file move notice: {drive_mv_err}")
 

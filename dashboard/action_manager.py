@@ -213,14 +213,24 @@ class ActionManager:
             
             moved_files = []
             if reconciled:
-                try:
+                    from core.lifecycle_gateway import vault_transition_to_published
                     processing_files = self.drive_engine.list_files_in_folder("02_PROCESSING")
                     for rec_item in reconciled:
                         for pf in processing_files:
                             props = pf.get("properties", {}) or {}
                             if props.get("job_id") == rec_item["job_id"] or rec_item["job_id"] in pf.get("name", ""):
-                                self.drive_engine.move_file_in_vault(pf["id"], from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
-                                moved_files.append(pf["name"])
+                                try:
+                                    vault_transition_to_published(
+                                        file_id=pf["id"],
+                                        youtube_video_id=rec_item.get("youtube_video_id", ""),
+                                        db=db,
+                                        drive_engine=self.drive_engine,
+                                        job_id=rec_item.get("job_id"),
+                                        caller="action_manager.trigger_sync_youtube"
+                                    )
+                                    moved_files.append(pf["name"])
+                                except Exception as gw_e:
+                                    logger.warning(f"[DASHBOARD_GATEWAY_HOLD] Gateway refused transition for {pf['id']}: {gw_e}")
                 except Exception as drive_err:
                     logger.warning(f"Drive file sync error during YouTube sync: {drive_err}")
 

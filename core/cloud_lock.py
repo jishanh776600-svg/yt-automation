@@ -83,14 +83,19 @@ class CloudLockManager:
 
             now_ts = datetime.now(timezone.utc).timestamp()
 
-            # Search for existing lock files matching filename
+            # Mutually exclusive locking between production and publisher
+            conflicting_lock_names = {self.lock_filename}
+            if self.lock_name in ["cloud_production", "cloud_publisher"]:
+                conflicting_lock_names = {"cloud_production.lock", "cloud_publisher.lock"}
+
+            # Search for existing lock files matching filename or conflicting locks
             files = self.drive_engine.list_files(
                 folder_id=system_folder_id,
-                name_contains=self.lock_filename,
+                name_contains=".lock",
             )
 
             for f in files:
-                if f.get("name") == self.lock_filename:
+                if f.get("name") in conflicting_lock_names:
                     props = f.get("properties", {}) or {}
                     acquired_ts = float(props.get("timestamp", 0) or 0)
                     lock_owner = props.get("run_id", "unknown")
@@ -306,6 +311,18 @@ class CompositeLock:
 
     def acquire(self, timeout_seconds: float = 30.0) -> bool:
         """Acquires local process lock first, then cloud lock. Rolls back on failure."""
+        # Cross-process mutual exclusion: publisher and production cannot race
+        if self.name == "publisher":
+            prod_lock = ProcessLock(name="production")
+            if prod_lock.is_locked():
+                logger.warning("[CONCURRENCY_MUTEX] Local production process is running. Publisher deferring to prevent inventory race on 01_READY.")
+                return False
+        elif self.name == "production":
+            pub_lock = ProcessLock(name="publisher")
+            if pub_lock.is_locked():
+                logger.warning("[CONCURRENCY_MUTEX] Local publisher process is running. Production deferring to prevent inventory race on 01_READY.")
+                return False
+
         # Tier 1: Local process lock
         if not self.process_lock.acquire():
             return False

@@ -118,7 +118,7 @@ class TestProductionHardening(unittest.TestCase):
         upl_pub = UploadRecord(
             id="upl_pub_01",
             job_id="job_erfurt_1184",
-            youtube_video_id="yt_erfurt_1184",
+            youtube_video_id="erfurt_1184",
             title="The Erfurt Latrine Disaster",
             description="desc",
             status="PUBLISHED"
@@ -126,7 +126,7 @@ class TestProductionHardening(unittest.TestCase):
         upl_sched = UploadRecord(
             id="upl_sched_01",
             job_id="job_smell_1858",
-            youtube_video_id="yt_smell_1858",
+            youtube_video_id="smell__1858",
             title="The Great Stink of London",
             description="desc",
             status="SCHEDULED"
@@ -170,8 +170,8 @@ class TestProductionHardening(unittest.TestCase):
                 res = pipeline.publish_next_from_vault()
 
         self.assertTrue(res)
-        # Verify that file_pub_01 was moved directly to 03_PUBLISHED
-        pipeline.drive_engine.move_file_in_vault.assert_any_call("file_pub_01", from_folder="01_READY", to_folder="03_PUBLISHED")
+        # Verify that file_pub_01 was moved to 02_PROCESSING for reconciliation (direct 01_READY -> 03_PUBLISHED is prohibited)
+        pipeline.drive_engine.move_file_in_vault.assert_any_call("file_pub_01", from_folder="01_READY", to_folder="02_PROCESSING")
         # Verify that file_sched_01 was moved to 02_PROCESSING
         pipeline.drive_engine.move_file_in_vault.assert_any_call("file_sched_01", from_folder="01_READY", to_folder="02_PROCESSING")
         # Verify that only the fresh file was claimed for scheduling
