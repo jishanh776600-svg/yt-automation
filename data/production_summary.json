@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "PARTIAL",
-  "block_reason": "QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 10 beats.']; Render error: Visual asset missing or invalid for beat 'beat_2f5a1fcc' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_3b86b298' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Insufficient visual uniqueness: 4 unique assets across 9 beats.']; Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_dbdc2333a02a; Duplicate Short rejected: Duplicate script content (similarity 0.69 >= 0.65) with Short man_dbdc2333a02a; Render error: Visual asset missing or invalid for beat 'beat_47de6d45' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.",
-  "requested_deficit": 6,
-  "produced_count": 1,
-  "initial_stock": 0,
+  "outcome": "FAILED",
+  "block_reason": "QA Failed: ['Duration 20.97s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).', 'Insufficient visual uniqueness: 3 unique assets across 9 beats.']; Render error: Visual asset missing or invalid for beat 'beat_b67374e7' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Duration 20.33s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).']; Render error: Visual asset missing or invalid for beat 'beat_b0b5af14' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_dbdc2333a02a; Duplicate Short rejected: Duplicate script content (similarity 0.69 >= 0.65) with Short man_dbdc2333a02a",
+  "requested_deficit": 4,
+  "produced_count": 0,
+  "initial_stock": 1,
   "final_stock": 1,
-  "target_stock": 6,
+  "target_stock": 5,
   "voice": "af_bella",
-  "timestamp": "2026-09-07T08:36:26.470745Z"
+  "timestamp": "2026-09-07T08:59:42.623897Z"
 }
