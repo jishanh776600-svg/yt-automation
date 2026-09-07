@@ -32,7 +32,7 @@ from config.settings import (
 from config.constants import JobState, DAILY_SHORTS_LIMIT
 from sqlalchemy.orm import Session
 from core.database import init_db, SessionLocal
-from core.models import Job, Topic, RenderOutput, UploadRecord, ScriptRecord
+from core.models import Job, Topic, RenderOutput, UploadRecord, ScriptRecord, RenderedVideoRecord
 from core.state_machine import StateMachine
 from core.lock import ProcessLock, ProcessLockError
 from core.cloud_lock import CompositeLock, CloudLockManager, CloudLockError
@@ -946,6 +946,7 @@ class ShortsPipeline:
                 console.print(f"   [dim]{idx}. Vacant Slot:[/dim] [yellow]{vs.strftime('%Y-%m-%d %H:%M')} UTC[/yellow]")
 
             # 4. Check 02_PROCESSING for any completed or in-flight items
+            from engines.drive_engine import is_valid_ready_short
             processing_files = self.drive_engine.list_files_in_folder("02_PROCESSING")
             recovered_candidates = []
             if processing_files:
@@ -992,25 +993,14 @@ class ShortsPipeline:
                         except Exception as recon_err:
                             logger.warning(f"Could not reconstruct UploadRecord for {cand_yt_id}: {recon_err}")
 
-                    # Check semantic deduplication against full catalog
-                    is_dup_proc = False
-                    dup_proc_status = "PUBLISHED"
-                    if cand_title:
-                        try:
-                            from engines.deduplication_engine import DeduplicationRouter
-                            p_dedup = DeduplicationRouter()
-                            p_res = p_dedup.evaluate_candidate(candidate_title=cand_title, candidate_summary=props.get("description", ""), db=db)
-                            if not p_res.is_allowed:
-                                is_dup_proc = True
-                                m_upl = db.query(UploadRecord).filter(UploadRecord.title.ilike(p_res.matched_event_title)).first() if p_res.matched_event_title else None
-                                dup_proc_status = m_upl.status if m_upl else "PUBLISHED"
-                        except Exception:
-                            pass
-
-                    if (existing_upl and existing_upl.status in ["PUBLISHED", "SUCCESS"]) or (is_dup_proc and dup_proc_status in ["PUBLISHED", "SUCCESS"]):
-                        logger.info(f"[PROCESSING CLEANUP] File {candidate['id']} ({candidate.get('name')}) is already PUBLISHED. Moving to 03_PUBLISHED.")
+                    # NON-NEGOTIABLE INVARIANT:
+                    # An asset in 02_PROCESSING can ONLY transition to 03_PUBLISHED if it has
+                    # an authoritative, confirmed YouTube video resource with status in ["PUBLISHED", "SUCCESS"].
+                    # An un-uploaded asset or an asset without a verified YouTube ID must NEVER be moved to 03_PUBLISHED.
+                    if existing_upl and existing_upl.youtube_video_id and existing_upl.status in ["PUBLISHED", "SUCCESS"]:
+                        logger.info(f"[PROCESSING CLEANUP] File {candidate['id']} ({candidate.get('name')}) is confirmed PUBLISHED on YouTube ({existing_upl.youtube_video_id}). Moving to 03_PUBLISHED.")
                         self.drive_engine.move_file_in_vault(candidate["id"], from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
-                    elif (existing_upl and existing_upl.status in ["SCHEDULED", "TEST_VERIFIED"]) or (is_dup_proc and dup_proc_status in ["SCHEDULED", "TEST_VERIFIED"]):
+                    elif existing_upl and existing_upl.youtube_video_id and existing_upl.status in ["SCHEDULED", "TEST_VERIFIED"]:
                         continue
                     else:
                         # Orphaned in 02_PROCESSING without YouTube upload: safely return to 01_READY if valid
@@ -1023,25 +1013,50 @@ class ShortsPipeline:
                             self.drive_engine.move_file_in_vault(candidate["id"], from_folder="02_PROCESSING", to_folder="04_FAILED")
 
             # 5. Check 01_READY for fresh unscheduled inventory
-            from engines.drive_engine import is_valid_ready_short
             from intelligence.clustering import is_niche_compliant
             ready_files = self.drive_engine.list_files_in_folder("01_READY")
             import re
             fresh_ready_files = []
             for candidate in ready_files:
-                is_val, val_reason = is_valid_ready_short(candidate, db=db, allow_test_artifacts=self.upload_engine._is_test_mode())
-                if not is_val:
-                    logger.warning(f"[PRE-CLAIM SKIP] File {candidate['id']} ({candidate.get('name')}) skipped from immediate batch: {val_reason}")
-                    continue
-
                 c_props = candidate.get("properties", {}) or {}
                 c_meta = resolve_vault_file_metadata(candidate, db=db)
                 c_title = c_meta["title"]
                 c_desc = c_meta["description"]
 
-                # Strict Niche Compliance Gate (Mystery / Bizarre Real-World Stories ONLY)
-                # Files produced by our own pipeline (short_man_ prefix) have already passed
-                # the full AI Council + niche checks during production; trust them.
+                c_job_id = c_props.get("job_id")
+                if not c_job_id:
+                    m = re.search(r"short_(job_[a-f0-9]+)", candidate.get("name", ""))
+                    if m:
+                        c_job_id = m.group(1)
+
+                # 1. Direct DB lookup by job_id or explicit properties for THIS specific asset
+                existing_upl = None
+                if c_job_id:
+                    existing_upl = db.query(UploadRecord).filter(UploadRecord.job_id == c_job_id).first()
+                if not existing_upl:
+                    cand_yt_id = c_props.get("youtube_video_id")
+                    if cand_yt_id:
+                        existing_upl = db.query(UploadRecord).filter(UploadRecord.youtube_video_id == cand_yt_id).first()
+
+                # NON-NEGOTIABLE INVARIANT:
+                # An asset in 01_READY can ONLY transition to 03_PUBLISHED if THIS specific asset has
+                # an authoritative, confirmed YouTube video resource with status in ["PUBLISHED", "SUCCESS"].
+                if existing_upl and existing_upl.youtube_video_id and existing_upl.status in ["PUBLISHED", "SUCCESS"]:
+                    logger.warning(f"[PRE-CLAIM DEDUP] File {candidate['id']} ('{c_title}') already PUBLISHED on YouTube ({existing_upl.youtube_video_id}). Moving to 03_PUBLISHED.")
+                    self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="03_PUBLISHED")
+                    continue
+                elif existing_upl and existing_upl.youtube_video_id and existing_upl.status in ["SCHEDULED", "TEST_VERIFIED"]:
+                    logger.warning(f"[PRE-CLAIM DEDUP] File {candidate['id']} ('{c_title}') already SCHEDULED on YouTube ({existing_upl.youtube_video_id}). Moving to 02_PROCESSING.")
+                    self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="02_PROCESSING")
+                    continue
+
+                # 2. Canonical READY Short Validator
+                is_val, val_reason = is_valid_ready_short(candidate, db=db, allow_test_artifacts=self.upload_engine._is_test_mode())
+                if not is_val:
+                    logger.warning(f"[PRE-CLAIM SKIP] File {candidate['id']} ({candidate.get('name')}) skipped from immediate batch: {val_reason}")
+                    continue
+
+                # 3. Strict Niche Compliance Gate (Mystery / Bizarre Real-World Stories ONLY)
                 filename = candidate.get("name", "")
                 is_our_output = filename.startswith("short_man_") or filename.startswith("short_job_")
                 if is_our_output:
@@ -1057,55 +1072,70 @@ class ShortsPipeline:
                         logger.error(f"Failed to quarantine non-compliant file {candidate['id']}: {q_err}")
                     continue
 
-                c_job_id = c_props.get("job_id")
-                if not c_job_id:
-                    m = re.search(r"short_(job_[a-f0-9]+)", candidate.get("name", ""))
-                    if m:
-                        c_job_id = m.group(1)
-                # 1. Direct DB lookup by job_id or exact title
-                existing_upl = None
-                if c_job_id:
-                    existing_upl = db.query(UploadRecord).filter(UploadRecord.job_id == c_job_id).first()
-                if not existing_upl and c_title:
-                    existing_upl = db.query(UploadRecord).filter(UploadRecord.title.ilike(c_title.strip())).first()
+                # Resolve topic_id to exclude from deduplication check (prevent candidate self-matching against its own PRODUCED topic)
+                cand_topic_id = c_props.get("topic_id")
+                if not cand_topic_id and c_job_id:
+                    j = db.query(Job).filter(Job.id == c_job_id).first()
+                    if j and j.topic_id:
+                        cand_topic_id = j.topic_id
+                if not cand_topic_id:
+                    man_id = c_props.get("manifest_id")
+                    if not man_id:
+                        m_man = re.search(r"man_[a-f0-9]+", candidate.get("name", ""))
+                        if m_man:
+                            man_id = m_man.group(0)
+                    if man_id:
+                        rec = db.query(RenderedVideoRecord).filter(RenderedVideoRecord.manifest_id == man_id).first()
+                        if rec and rec.event_id:
+                            top = db.query(Topic).filter(Topic.event_id == rec.event_id).first()
+                            if top:
+                                cand_topic_id = top.id
+                if not cand_topic_id:
+                    event_id = c_props.get("event_id")
+                    if not event_id:
+                        m_evt = re.search(r"evt_[a-z0-9_]+", candidate.get("name", ""))
+                        if m_evt:
+                            event_id = m_evt.group(0)
+                    if event_id:
+                        top = db.query(Topic).filter(Topic.event_id == event_id).first()
+                        if top:
+                            cand_topic_id = top.id
+                if not cand_topic_id and c_title:
+                    top = db.query(Topic).filter(Topic.title.ilike(c_title.strip())).first()
+                    if top:
+                        cand_topic_id = top.id
 
-                # 2. Semantic deduplication check against full catalog
+                # 2. Semantic deduplication check against full catalog (excluding candidate's own topic)
                 is_duplicate_story = False
                 matched_event = None
-                matched_is_published = False
                 try:
                     from engines.deduplication_engine import DeduplicationRouter
                     dedup_eng = DeduplicationRouter()
                     dedup_res = dedup_eng.evaluate_candidate(
                         candidate_title=c_title,
                         candidate_summary=c_props.get("description", ""),
-                        db=db
+                        db=db,
+                        exclude_topic_id=cand_topic_id
                     )
                     if not dedup_res.is_allowed:
                         is_duplicate_story = True
                         matched_event = dedup_res.matched_event_title
-                        matched_upl = db.query(UploadRecord).filter(
-                            UploadRecord.title.ilike(matched_event)
-                        ).first() if matched_event else None
-                        if matched_upl and matched_upl.status in ["PUBLISHED", "SUCCESS"]:
-                            matched_is_published = True
-                        elif matched_upl and matched_upl.status in ["SCHEDULED", "TEST_VERIFIED"]:
-                            matched_is_published = False
-                        else:
-                            matched_is_published = True
                 except Exception as d_err:
                     logger.warning(f"[PRE-CLAIM] Dedup check notice for {candidate['id']}: {d_err}")
 
-                if (existing_upl and existing_upl.status in ["PUBLISHED", "SUCCESS"]) or (is_duplicate_story and matched_is_published):
-                    matched_str = matched_event or (existing_upl.title if existing_upl else c_title)
-                    logger.warning(f"[PRE-CLAIM DEDUP] File {candidate['id']} ('{c_title}') already PUBLISHED on YouTube (matched: '{matched_str}'). Moving to 03_PUBLISHED.")
-                    self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="03_PUBLISHED")
-                elif (existing_upl and existing_upl.status in ["SCHEDULED", "TEST_VERIFIED"]) or (is_duplicate_story and not matched_is_published):
-                    matched_str = matched_event or (existing_upl.title if existing_upl else c_title)
-                    logger.warning(f"[PRE-CLAIM DEDUP] File {candidate['id']} ('{c_title}') already SCHEDULED on YouTube (matched: '{matched_str}'). Moving to 02_PROCESSING.")
-                    self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="02_PROCESSING")
-                else:
-                    fresh_ready_files.append(candidate)
+                if is_duplicate_story:
+                    # NON-NEGOTIABLE INVARIANT:
+                    # An asset in 01_READY that duplicates another story was NEVER uploaded to YouTube.
+                    # It must NEVER be moved to 03_PUBLISHED or 02_PROCESSING.
+                    # It must be quarantined to 04_FAILED so it does not falsely claim publication.
+                    logger.warning(
+                        f"[PRE-CLAIM DEDUP REJECT] File {candidate['id']} ('{c_title}') duplicates existing story "
+                        f"'{matched_event}'. Quarantining to 04_FAILED to prevent duplicate publication."
+                    )
+                    self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="04_FAILED")
+                    continue
+
+                fresh_ready_files.append(candidate)
 
             all_eligible_candidates = fresh_ready_files + recovered_candidates
 

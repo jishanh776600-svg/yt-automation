@@ -149,7 +149,7 @@ class TestProductionHardening(unittest.TestCase):
             {
                 "id": "file_fresh_01",
                 "name": "short_job_fresh_1896_1080x1920.mp4",
-                "properties": {"job_id": "job_fresh_1896", "title": "The 38-Minute Anglo-Zanzibar War"}
+                "properties": {"job_id": "job_fresh_1896", "title": "The Voynich Manuscript Mystery"}
             }
         ]
 
@@ -163,7 +163,9 @@ class TestProductionHardening(unittest.TestCase):
         pipeline.drive_engine.download_video_from_vault.side_effect = mock_download
         pipeline.drive_engine.move_file_in_vault = MagicMock()
 
-        with patch.object(pipeline, "upload_engine", self.upload_engine):
+        with patch.object(pipeline, "upload_engine", self.upload_engine), \
+             patch("main.CompositeLock.acquire", return_value=True), \
+             patch("main.CompositeLock.release", return_value=None):
             with patch("config.settings.TEST_MODE", True):
                 res = pipeline.publish_next_from_vault()
 

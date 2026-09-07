@@ -98,7 +98,7 @@ def is_valid_ready_short(
             except Exception as r_err:
                 logger.debug(f"RenderedVideoRecord verification notice for {name}: {r_err}")
 
-        if db and job_id and not name.startswith("short_man_"):
+        if db and job_id and not name.startswith("short_man_") and not allow_test_artifacts:
             try:
                 from core.models import UploadRecord, Job
                 upl = db.query(UploadRecord).filter(

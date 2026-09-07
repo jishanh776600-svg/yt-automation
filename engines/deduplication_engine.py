@@ -267,7 +267,7 @@ class StoryDeduplicationEngine:
             (Topic.id.in_(active_topic_ids)) | (Topic.status.in_(["APPROVED", "PRODUCED", "SCHEDULED", "QUEUED"]))
         ).all()
         for t in topics:
-            if exclude_topic_id and t.id == exclude_topic_id:
+            if exclude_topic_id and (t.id == exclude_topic_id or (t.event_id and t.event_id == exclude_topic_id)):
                 continue
             if t.title.lower() in seen_titles:
                 continue

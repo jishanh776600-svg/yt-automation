@@ -135,3 +135,48 @@ Never mutate persistent DB state (topic.status) inside a candidate-filtering loo
 
 ### Live Validation
 GitHub Actions Run #47 (`34054429381`) succeeded in 14m 26s, producing and depositing Bella Short `short_man_c85a0dd30bda.mp4` (Drive ID: `1I3X-S4OsuWUW4Ubv8v7nB-nI760dLMzx`) into `01_READY`.
+---
+
+## 9. Incident 9: False Publication Lifecycle Divergence — Self-Matching Dedup Fallback
+
+**Date:** 2026-09-07  
+**Commit Fixed:** Pending  
+**Incident ID:** `inc_d7e91e6ed4a2`  
+**Master Reference:** [[09 — INCIDENTS & FIXES/Incident Register & Forensic Log|Incident 9 Entry]]
+
+### Symptoms
+The internal AL-AMR system marked 7 verified Shorts as `PUBLISHED` (moving them into Google Drive `03_PUBLISHED` and causing the Dashboard and Obsidian to claim 22 published videos), while YouTube Studio showed that these 7 videos were **NEITHER public NOR scheduled**. Google Drive `01_READY` was drained to 0.
+
+### Exact Root Cause
+In `main.py` lines 1079–1102 (and lines 1005–1012), `schedule_ready_buffer()` pre-claim deduplication failed to pass `exclude_topic_id` to `evaluate_candidate()`, causing candidate files in `01_READY` to match their own `PRODUCED` topic in the corpus (which aggregates all topics with status `APPROVED`, `PRODUCED`, `SCHEDULED`, `QUEUED`).
+
+Because the video files had never actually been uploaded to YouTube, querying `UploadRecord` for the matched title returned `None`. Lines 1094–1095 had an unsafe fallback:
+```python
+else:
+    matched_is_published = True  # <--- CRITICAL BUG: Assumed published if no UploadRecord found!
+```
+This evaluated `(is_duplicate_story and matched_is_published)` to `True`, triggering line 1102:
+```python
+self.drive_engine.move_file_in_vault(candidate["id"], from_folder="01_READY", to_folder="03_PUBLISHED")
+```
+Every one of the 7 Shorts in `01_READY` matched its own `PRODUCED` topic, found no `UploadRecord`, tripped `else: matched_is_published = True`, and was moved directly into `03_PUBLISHED` in Google Drive without ever uploading or scheduling on YouTube.
+
+### Engineering Fix
+1. **Enforced Non-Negotiable Publication Invariant:**
+   `move_file_in_vault(..., to_folder="03_PUBLISHED")` strictly requires an authoritative `UploadRecord` with a valid, non-null `youtube_video_id` and status in `["PUBLISHED", "SUCCESS"]`.
+2. **Eliminated Deduplication Publication Bypass:**
+   Removed any code path that moves an asset from `01_READY` or `02_PROCESSING` to `03_PUBLISHED` based solely on deduplication. Duplicate candidates in `01_READY` are quarantined to `04_FAILED`.
+3. **Prevented Self-Matching in Pre-Claim:**
+   Resolved `cand_topic_id` from candidate properties, manifest, or event ID and passed `exclude_topic_id=cand_topic_id` to `evaluate_candidate()`.
+4. **Enhanced Corpus Exclusion:**
+   Updated `engines/deduplication_engine.py` `get_published_and_ready_corpus()` to match either `Topic.id` or `Topic.event_id` against `exclude_topic_id`.
+5. **Cleaned Up 02_PROCESSING Orphan Recovery:**
+   Removed faulty `dup_proc_status` fallback in `02_PROCESSING`. Valid orphaned assets safely return to `01_READY`; invalid assets are quarantined to `04_FAILED`.
+6. **Physical Asset Restoration:**
+   Operator manually restored all 7 affected Bella Shorts back into `01_READY`.
+
+### Validation
+- All 7 Bella Shorts verified in Drive `01_READY`.
+- `tests/test_preclaim_deduplication_invariant.py` (3 tests) passing 100%.
+- `tests/test_production_hardening.py` (9 tests) passing 100%.
+- Incident record `inc_d7e91e6ed4a2` committed to `pipeline.db`.
