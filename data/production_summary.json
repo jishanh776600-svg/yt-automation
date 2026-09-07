@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "FAILED",
-  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc; QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 10 beats.']; Duplicate Short rejected: Duplicate script content (similarity 0.71 >= 0.65) with Short man_1c60cedfc6dc",
-  "requested_deficit": 1,
+  "outcome": "SUCCEEDED",
+  "block_reason": null,
+  "requested_deficit": 0,
   "produced_count": 0,
-  "initial_stock": 5,
-  "final_stock": 5,
+  "initial_stock": 6,
+  "final_stock": 6,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-07T17:40:23.967481Z"
+  "timestamp": "2026-09-07T21:17:20.304455Z"
 }
