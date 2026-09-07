@@ -32,7 +32,10 @@ from config.settings import (
 from config.constants import JobState, DAILY_SHORTS_LIMIT
 from sqlalchemy.orm import Session
 from core.database import init_db, SessionLocal
-from core.models import Job, Topic, RenderOutput, UploadRecord, ScriptRecord, RenderedVideoRecord
+from core.models import (
+    Job, Topic, RenderOutput, UploadRecord, ScriptRecord,
+    RenderedVideoRecord, ProductionAttemptRecord, ProductionIncidentRecord
+)
 from core.state_machine import StateMachine
 from core.lock import ProcessLock, ProcessLockError
 from core.cloud_lock import CompositeLock, CloudLockManager, CloudLockError
@@ -723,6 +726,24 @@ class ShortsPipeline:
         }
 
         temp_download_path = RENDERS_DIR / f"temp_publish_{file_id}.mp4"
+        from core.attempt_ledger import AttemptLedger, FailureCategory
+
+        run_id = os.environ.get("GITHUB_RUN_ID") or f"sched_{uuid.uuid4().hex[:8]}"
+        prior_attempts = db.query(ProductionAttemptRecord).filter(
+            ProductionAttemptRecord.related_drive_file_id == file_id
+        ).count()
+
+        attempt = AttemptLedger.start_attempt(
+            db=db,
+            run_id=run_id,
+            operation="SCHEDULE_READY_BUFFER",
+            stage="YOUTUBE_SCHEDULING",
+            retry_number=prior_attempts,
+            maximum_retries=3,
+            related_manifest_id=props.get("manifest_id"),
+            related_drive_file_id=file_id,
+        )
+
         try:
             console.print(f"[yellow][*] Downloading Short '{title}' from Google Drive Vault...[/yellow]")
             self.drive_engine.download_video_from_vault(file_id, temp_download_path)
@@ -732,6 +753,29 @@ class ShortsPipeline:
                 job = Job(id=job_id, state=JobState.READY_TO_UPLOAD.value)
                 db.add(job)
                 db.commit()
+
+            # Ensure job.topic_id is populated from vault properties / metadata to prevent self-match in safety gate
+            if not job.topic_id:
+                cand_topic_id = props.get("topic_id")
+                if not cand_topic_id:
+                    man_id = props.get("manifest_id")
+                    if man_id:
+                        rec = db.query(RenderedVideoRecord).filter(RenderedVideoRecord.manifest_id == man_id).first()
+                        if rec and rec.event_id:
+                            top = db.query(Topic).filter(Topic.event_id == rec.event_id).first()
+                            if top:
+                                cand_topic_id = top.id
+                if not cand_topic_id and props.get("event_id"):
+                    top = db.query(Topic).filter(Topic.event_id == props["event_id"]).first()
+                    if top:
+                        cand_topic_id = top.id
+                if not cand_topic_id and title:
+                    top = db.query(Topic).filter(Topic.title.ilike(title.strip())).first()
+                    if top:
+                        cand_topic_id = top.id
+                if cand_topic_id:
+                    job.topic_id = cand_topic_id
+                    db.commit()
 
             render_output = db.query(RenderOutput).filter_by(job_id=job.id).first()
             if not render_output:
@@ -773,6 +817,14 @@ class ShortsPipeline:
                     logger.warning(f"[PUBLICATION_SAFETY_GATE_BLOCKED] Job {job.id} physically corrupted: {gate_reason}. Quarantining file to 04_FAILED.")
                     console.print(f"[bold red][x] Publication Safety Gate Blocked Upload:[/bold red] {gate_reason} (Quarantined to 04_FAILED)")
                     self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="04_FAILED")
+                    AttemptLedger.record_failure(
+                        db=db,
+                        attempt=attempt,
+                        error_type=FailureCategory.QA_FAILURE.value,
+                        error_message=gate_reason,
+                        root_cause=f"Physical corruption detected in publication safety gate: {gate_reason}",
+                        recovery_action="Quarantined to 04_FAILED"
+                    )
                 else:
                     logger.warning(f"[PUBLICATION_SAFETY_GATE_HOLD] Job {job.id} held by safety gate: {gate_reason}. Safely returning file to 01_READY.")
                     console.print(f"[bold yellow][!] Publication Safety Gate Hold:[/bold yellow] {gate_reason} (Safely returning to 01_READY)")
@@ -780,6 +832,14 @@ class ShortsPipeline:
                         self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="01_READY")
                     except Exception as ret_err:
                         logger.warning(f"Could not return file {file_id} to 01_READY: {ret_err}")
+                    AttemptLedger.record_failure(
+                        db=db,
+                        attempt=attempt,
+                        error_type=FailureCategory.QA_FAILURE.value,
+                        error_message=gate_reason,
+                        root_cause=f"Publication safety gate hold: {gate_reason}",
+                        recovery_action="Safely returned to 01_READY"
+                    )
                 return None
 
             if TEST_MODE:
@@ -798,6 +858,12 @@ class ShortsPipeline:
                 )
                 self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
                 StateMachine.transition(db, job, JobState.PUBLISHED, f"TEST_MODE verified: Scheduled for {scheduled_slot.isoformat()}Z")
+                AttemptLedger.record_success(
+                    db=db,
+                    attempt=attempt,
+                    related_drive_file_id=file_id,
+                    related_youtube_video_id=getattr(upload_rec, "youtube_video_id", None) or "TEST_MODE_ID"
+                )
                 console.print(Panel.fit(
                     f"[bold green][+] Test Scheduled Publisher Success![/bold green]\n"
                     f"Title: [bold]{title}[/bold]\n"
@@ -835,6 +901,13 @@ class ShortsPipeline:
                 youtube_video_id=upload_rec.youtube_video_id
             )
 
+            AttemptLedger.record_success(
+                db=db,
+                attempt=attempt,
+                related_drive_file_id=file_id,
+                related_youtube_video_id=upload_rec.youtube_video_id
+            )
+
             console.print(Panel.fit(
                 f"[bold green][+] True YouTube Scheduled Short Successfully Uploaded & Verified![/bold green]\n"
                 f"Title: [bold]{title}[/bold]\n"
@@ -848,7 +921,8 @@ class ShortsPipeline:
 
         except Exception as upload_err:
             logger.error(f"YouTube scheduling failed for Drive file {file_id}: {upload_err}")
-            self.experiment_manager.update_experiment_status(db, job.id, "FAILED", failure_reason=f"YouTube scheduling failed: {str(upload_err)}")
+            if 'job' in locals() and job:
+                self.experiment_manager.update_experiment_status(db, job.id, "FAILED", failure_reason=f"YouTube scheduling failed: {str(upload_err)}")
 
             # SAFETY INVARIANT: Always preserve the video file in 01_READY on scheduling/API error.
             # Under NO circumstances should an API/Network/Quota/Auth error delete or quarantine a valid MP4!
@@ -857,8 +931,28 @@ class ShortsPipeline:
                 self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="01_READY")
             except Exception as move_err:
                 logger.warning(f"Could not return file {file_id} to 01_READY: {move_err}")
-            job.state = JobState.READY_TO_UPLOAD.value
-            db.commit()
+            if 'job' in locals() and job:
+                job.state = JobState.READY_TO_UPLOAD.value
+                db.commit()
+
+            err_str = str(upload_err).lower()
+            if "quota" in err_str:
+                cat = FailureCategory.QUOTA_FAILURE.value
+            elif "auth" in err_str or "unauthorized" in err_str or "token" in err_str:
+                cat = FailureCategory.AUTHENTICATION_FAILURE.value
+            elif "network" in err_str or "connection" in err_str or "timeout" in err_str:
+                cat = FailureCategory.NETWORK_FAILURE.value
+            else:
+                cat = FailureCategory.YOUTUBE_SCHEDULING_FAILURE.value
+
+            AttemptLedger.record_failure(
+                db=db,
+                attempt=attempt,
+                error_type=cat,
+                error_message=str(upload_err),
+                root_cause=str(upload_err),
+                recovery_action="Safely returned to 01_READY for subsequent slot retry"
+            )
             return None
         finally:
             if temp_download_path and hasattr(temp_download_path, "unlink"):
@@ -1501,6 +1595,7 @@ def main():
     parser.add_argument("--produce-batch", type=int, default=0, metavar="N", help="Generate N Shorts, verify QA, and deposit in Google Drive 01_READY")
     parser.add_argument("--publish-next", action="store_true", help="Claim next ready Short from Google Drive 01_READY and publish to YouTube")
     parser.add_argument("--schedule-ready", action="store_true", help="Claim and schedule all available READY Shorts up to daily limit")
+    parser.add_argument("--max-to-schedule", type=int, default=None, help="Maximum number of READY Shorts to schedule")
     parser.add_argument("--file-id", type=str, default=None, help="Target specific Google Drive File ID for publishing")
     parser.add_argument("--run-once", action="store_true", help="Run a single production cycle")
     parser.add_argument("--test", action="store_true", help="Run full pipeline in test mode (safe, local validation)")
@@ -1633,7 +1728,7 @@ def main():
     elif args.publish_next:
         pipeline.publish_next_from_vault(force=args.force, target_file_id=args.file_id)
     elif args.schedule_ready:
-        pipeline.schedule_ready_buffer(target_file_id=args.file_id)
+        pipeline.schedule_ready_buffer(target_file_id=args.file_id, max_to_schedule=args.max_to_schedule)
     elif args.run_once or args.test:
         pipeline.run_single_job(force=args.force)
     elif args.daemon:

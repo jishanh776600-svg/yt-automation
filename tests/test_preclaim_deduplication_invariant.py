@@ -17,6 +17,7 @@ from sqlalchemy.orm import sessionmaker
 from pathlib import Path
 import tempfile
 import shutil
+from datetime import datetime
 
 from core.models import Base, Topic, UploadRecord, Job, RenderedVideoRecord
 from main import ShortsPipeline
@@ -168,6 +169,67 @@ class TestPreclaimDeduplicationInvariant(unittest.TestCase):
         pipeline.drive_engine.move_file_in_vault.assert_called_with(
             "file_proc_orphan", from_folder="02_PROCESSING", to_folder="01_READY"
         )
+
+    @patch("main.CompositeLock")
+    def test_scheduling_attempt_ledger_records_success_and_failure(self, mock_lock_cls):
+        """Invariant: Every scheduling operation must be recorded in AttemptLedger (no silent retries)."""
+        from core.models import ProductionAttemptRecord
+
+        mock_lock = MagicMock()
+        mock_lock.acquire.return_value = True
+        mock_lock_cls.return_value = mock_lock
+
+        pipeline = ShortsPipeline()
+        pipeline.SessionLocal = self.SessionLocal
+        pipeline.drive_engine = MagicMock()
+        pipeline.drive_engine.download_video_from_vault = MagicMock()
+        pipeline.drive_engine.move_file_in_vault = MagicMock()
+        pipeline.upload_engine = MagicMock()
+        pipeline.upload_engine._is_test_mode.return_value = False
+
+        slot = datetime(2026, 9, 8, 6, 0, 0)
+        file_cand = {
+            "id": "drive_test_file_123",
+            "name": "short_man_test.mp4",
+            "properties": {
+                "title": "Test Title For Ledger",
+                "manifest_id": "man_test_123",
+                "job_id": "job_test_123"
+            }
+        }
+
+        # Sub-test 1: Safety gate failure -> records FAILED
+        pipeline.upload_engine.evaluate_publication_safety_gate.return_value = (False, "Gate 4 Failed: Slot Conflict")
+        res = pipeline._schedule_single_drive_file(self.db, file_cand, slot)
+        self.assertIsNone(res)
+
+        att = self.db.query(ProductionAttemptRecord).filter_by(related_drive_file_id="drive_test_file_123").first()
+        self.assertIsNotNone(att)
+        self.assertEqual(att.status, "FAILED")
+        self.assertEqual(att.error_type, "QA_FAILURE")
+        self.assertIn("Gate 4 Failed", att.error_message)
+
+        # Sub-test 2: Success on retry -> records RECOVERED
+        pipeline.upload_engine.evaluate_publication_safety_gate.return_value = (True, "All 15 Gates PASSED")
+        mock_upload_rec = MagicMock()
+        mock_upload_rec.id = "upl_test_success_123"
+        mock_upload_rec.youtube_video_id = "yt_success_abc"
+        pipeline.upload_engine.schedule_short.return_value = mock_upload_rec
+
+        res_succ = pipeline._schedule_single_drive_file(self.db, file_cand, slot)
+        self.assertIsNotNone(res_succ)
+
+        attempts = self.db.query(ProductionAttemptRecord).filter_by(
+            related_drive_file_id="drive_test_file_123"
+        ).order_by(ProductionAttemptRecord.retry_number).all()
+
+        self.assertEqual(len(attempts), 2)
+        self.assertEqual(attempts[0].status, "FAILED")
+        self.assertEqual(attempts[0].retry_number, 0)
+        self.assertEqual(attempts[1].status, "RECOVERED")
+        self.assertEqual(attempts[1].retry_number, 1)
+        self.assertTrue(attempts[1].recovered)
+        self.assertEqual(attempts[1].related_youtube_video_id, "yt_success_abc")
 
 
 if __name__ == "__main__":
