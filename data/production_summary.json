@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
   "outcome": "FAILED",
-  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc; QA Failed: ['Duration 30.63s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).']",
-  "requested_deficit": 1,
+  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.78 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.76 >= 0.65) with Short man_1c60cedfc6dc; Scripting error: Journalistic script rejected by ValidationGate: [\"VerificationState is DEVELOPING but script lacks attribution language (e.g. 'according to', 'reported').\"]",
+  "requested_deficit": 2,
   "produced_count": 0,
-  "initial_stock": 5,
-  "final_stock": 5,
+  "initial_stock": 4,
+  "final_stock": 4,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-08T16:21:24.130229Z"
+  "timestamp": "2026-09-08T20:56:21.639491Z"
 }
