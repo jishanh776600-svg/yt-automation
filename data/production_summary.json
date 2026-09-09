@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "FAILED",
-  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.78 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc; QA Failed: ['Insufficient visual uniqueness: 6 unique assets across 9 beats.']; Scripting error: Journalistic script rejected by ValidationGate: [\"VerificationState is DEVELOPING but script lacks attribution language (e.g. 'according to', 'reported').\"]",
-  "requested_deficit": 2,
-  "produced_count": 0,
-  "initial_stock": 4,
+  "outcome": "PARTIAL",
+  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.78 >= 0.65) with Short man_1c60cedfc6dc; Render error: Visual asset missing or invalid for beat 'beat_654dc086' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_1d7e3660' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Duplicate Short rejected: Duplicate script content (similarity 0.71 >= 0.65) with Short man_1c60cedfc6dc",
+  "requested_deficit": 3,
+  "produced_count": 1,
+  "initial_stock": 3,
   "final_stock": 4,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-09T03:51:37.186384Z"
+  "timestamp": "2026-09-09T11:08:35.205587Z"
 }
