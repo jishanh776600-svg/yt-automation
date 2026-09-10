@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
   "outcome": "FAILED",
-  "block_reason": "Render error: Visual asset missing or invalid for beat 'beat_e1c32d25' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_f4813a0f' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Duplicate Short rejected: Duplicate script content (similarity 0.79 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.71 >= 0.65) with Short man_1c60cedfc6dc; QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 9 beats.']",
-  "requested_deficit": 5,
+  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc; Render error: Visual asset missing or invalid for beat 'beat_0bb95357' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 10 beats.']; QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 9 beats.']; Render error: Visual asset missing or invalid for beat 'beat_b6a3c07c' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_c3d56024f3c0; Render error: Visual asset missing or invalid for beat 'beat_8f977ec7' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_d3d9fbb5' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.",
+  "requested_deficit": 6,
   "produced_count": 0,
-  "initial_stock": 1,
-  "final_stock": 1,
+  "initial_stock": 0,
+  "final_stock": 0,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-10T16:19:32.519864Z"
+  "timestamp": "2026-09-10T20:45:45.298967Z"
 }
