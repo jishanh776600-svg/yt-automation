@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "BLOCKED",
-  "block_reason": null,
-  "requested_deficit": 6,
+  "outcome": "FAILED",
+  "block_reason": "Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_b06f564d1e88; Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc; Render error: Visual asset missing or invalid for beat 'beat_7565ddf4' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_2bf89781983b; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_c3d56024f3c0; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_c4285409d4bf",
+  "requested_deficit": 4,
   "produced_count": 0,
-  "initial_stock": 0,
-  "final_stock": 0,
+  "initial_stock": 2,
+  "final_stock": 2,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-11T16:07:33.592709Z"
+  "timestamp": "2026-09-11T20:45:14.881399Z"
 }
