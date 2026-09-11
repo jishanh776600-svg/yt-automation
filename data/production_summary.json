@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
   "outcome": "FAILED",
-  "block_reason": "Render error: Visual asset missing or invalid for beat 'beat_177a45ee' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 9 beats.']; Render error: Visual asset missing or invalid for beat 'beat_6ca9ce5b' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_dce0a391' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 9 beats.']; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_c3d56024f3c0; Render error: Visual asset missing or invalid for beat 'beat_30d2412a' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Duration 21.26s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).', 'Insufficient visual uniqueness: 3 unique assets across 9 beats.']",
+  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.76 >= 0.65) with Short man_1c60cedfc6dc; Render error: Visual asset missing or invalid for beat 'beat_c169466e' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 9 beats.']; QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 9 beats.']; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_c3d56024f3c0; QA Failed: ['Insufficient visual uniqueness: 1 unique assets across 10 beats.']; Render error: Visual asset missing or invalid for beat 'beat_48881c54' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.",
   "requested_deficit": 6,
   "produced_count": 0,
   "initial_stock": 0,
   "final_stock": 0,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-10T23:10:31.179980Z"
+  "timestamp": "2026-09-11T03:52:56.809983Z"
 }
