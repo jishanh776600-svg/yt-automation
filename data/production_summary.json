@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
   "outcome": "FAILED",
-  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.76 >= 0.65) with Short man_1c60cedfc6dc; Render error: Visual asset missing or invalid for beat 'beat_c169466e' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 9 beats.']; QA Failed: ['Insufficient visual uniqueness: 3 unique assets across 9 beats.']; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_c3d56024f3c0; QA Failed: ['Insufficient visual uniqueness: 1 unique assets across 10 beats.']; Render error: Visual asset missing or invalid for beat 'beat_48881c54' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.",
-  "requested_deficit": 6,
+  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.76 >= 0.65) with Short man_1c60cedfc6dc",
+  "requested_deficit": 2,
   "produced_count": 0,
-  "initial_stock": 0,
-  "final_stock": 0,
+  "initial_stock": 4,
+  "final_stock": 4,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-11T03:52:56.809983Z"
+  "timestamp": "2026-09-11T10:55:07.364708Z"
 }
