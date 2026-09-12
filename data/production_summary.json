@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
   "outcome": "FAILED",
-  "block_reason": "Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_b06f564d1e88; Scripting error: Journalistic script rejected by ValidationGate: [\"VerificationState is DEVELOPING but script lacks attribution language (e.g. 'according to', 'reported').\"]; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_2bf89781983b; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_7b1eed6ecfde; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_c3d56024f3c0; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_c4285409d4bf",
-  "requested_deficit": 4,
+  "block_reason": "Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_b06f564d1e88; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_cfb4d44892ac; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_2bf89781983b; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_e31219e179de; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_7b1eed6ecfde; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_c3d56024f3c0; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_c4285409d4bf",
+  "requested_deficit": 5,
   "produced_count": 0,
-  "initial_stock": 2,
-  "final_stock": 2,
+  "initial_stock": 1,
+  "final_stock": 1,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-12T15:19:01.996706Z"
+  "timestamp": "2026-09-12T20:24:47.649072Z"
 }
