@@ -1,4 +1,4 @@
-﻿# 00 — Project Overview
+# 00 — Project Overview
 
 > **Status:** `[LIVE & OPERATIONAL — CLOUD-AUTONOMOUS]` `[LIVE VERIFIED]`  
 > **System Name:** AL-AMR (Autonomous Long-term Automated Media Reservoir)  
@@ -26,15 +26,17 @@ The system discovers documented historical mysteries and bizarre events, deliber
 | **Video Resolution** | `1080x1920` (9:16 Vertical Shorts format) | FFmpeg stream inspection | `[CODE VERIFIED]` |
 | **Short Duration** | `22.0s – 25.0s` (Canonical target: `~23.0s`) | MediaInfo + QA duration gate | `[CODE VERIFIED]` |
 | **Script Philosophy**| Conversational creator storytelling ("Tell me what happened") | 58–72 words, no academic cliches or fact dumps | `[CODE VERIFIED]` |
-| **Authoritative Voice**| **`af_bella` (Bella - US Female at native 1.00x)** | Static voice lock (`af_sarah` decommissioned) | `[LIVE VERIFIED]` |
-| **Narration Pacing** | Natural human creator delivery (~1.00x Kokoro) | Natural pauses, zero artificial speedups | `[LIVE VERIFIED]` |
+| **Authoritative Voice**| **`af_bella` (Bella - US Female at native 1.00x)** | `APPROVED_PRODUCTION_VOICES = ["af_bella"]` (Commit `b4dd8f6`) | `[LIVE VERIFIED]` |
+| **Narration Pacing** | Natural human creator delivery (~1.00x Kokoro) | Natural pauses, TTS phonetic year normalization | `[LIVE VERIFIED]` |
 | **Audio QA Gate** | Max pause <= 0.35s, dead air <= 18.0% | Hard audio waveform gate in `VideoQAEngine` | `[CODE VERIFIED]` |
+| **Content Quality Gate**| Semantic era/visual alignment, loop ending, duration bounds | Pre-READY gate (`core/content_quality_gate.py`) | `[CODE VERIFIED]` |
 | **Visual Requirements**| Real footage/photos throughout; **0 Script-Card Frames** | Temporal multi-checkpoint frame inspection | `[CODE VERIFIED]` |
 | **Visual Deduplication**| Perceptual hashing (dHash) + 45-day cooldown | `GlobalVisualMemory` (`visual_memory.db`) | `[CODE VERIFIED]` |
 | **Story Deduplication** | 3-gram word shingles & semantic similarity | `ShortDuplicateGuard` (`short_fingerprints.db`) | `[CODE VERIFIED]` |
 | **Background Music** | **`ENABLED`** (4 tracks ducked below voice) | Mastered loudness `-14.0 LUFS` / bed `-30.0 LUFS` | `[CODE VERIFIED]` |
 | **Sound Effects (SFX)** | **`DISABLED`** (Permanently retired) | Hard-coded production pipeline flag | `[CODE VERIFIED]` |
 | **Publishing Ceiling** | Strictly <= 3 Shorts/day (`06:00, 11:00, 15:00 UTC`) | Database business day query | `[CODE VERIFIED]` |
+| **Publication Gateway** | Physical barrier to `03_PUBLISHED` + YouTube read-back | `core/lifecycle_gateway.py` + `_from_gateway` check | `[LIVE VERIFIED]` |
 | **Forward Horizon** | Rolling `48-Hour Coverage` | `scheduler.get_vacant_slots_in_horizon()` | `[CODE VERIFIED]` |
 | **Target Vault Stock** | `6 verified Shorts` in Google Drive `01_READY` | Google Drive API inventory query | `[LIVE VERIFIED]` |
 | **Autonomous Refill** | `Every 3 Hours (0 */3 * * *)` | GitHub Actions cron in `produce_buffer.yml` | `[LIVE VERIFIED]` |

@@ -68,3 +68,9 @@ last_updated: 2026-09-07
 ## Incident 9: False Publication Lifecycle Divergence (Self-Matching Dedup Fallback)
 - **Root Cause:** `schedule_ready_buffer` pre-claim deduplication failed to pass `exclude_topic_id`, causing candidate files in `01_READY` to match their own `PRODUCED` topic in the corpus. When no `UploadRecord` was found, an unsafe fallback (`else: matched_is_published = True`) assumed the video was published on YouTube and moved the un-uploaded file directly to `03_PUBLISHED`.
 - **Permanent Fix:** Enforced non-negotiable publication invariant (`03_PUBLISHED` strictly requires verified YouTube video ID with status `PUBLISHED`/`SUCCESS`); duplicate candidates quarantined to `04_FAILED`; candidate's topic ID passed to exclude self-matching; restored 7 affected Bella Shorts to `01_READY`.
+
+---
+
+## Incident 10: Erroneous Production Sarah Voice Lock & Surgical Rollback to Bella
+- **Root Cause:** During a content-quality hardening cycle, prompt instructions inadvertently locked `APPROVED_PRODUCTION_VOICES` and defaults across modules to `af_sarah`, overriding the intended canonical production voice `af_bella`.
+- **Permanent Fix:** Surgically restored `af_bella` as the sole authoritative production voice across all configuration files, engines (`config/settings.py`, `engines/tts_engine.py`, `engines/visual_intelligence/voice_policy.py`, `engines/orchestrator.py`, `main.py`), and GitHub Actions workflow (`.github/workflows/produce_buffer.yml`). Locked whitelist to `APPROVED_PRODUCTION_VOICES = ["af_bella"]`. Unapproved voice requests fail closed to `af_bella`. Applied corrective commit `b4dd8f6306368859f07352adf42deb0b1de6199a`. Verified across 25 voice/content tests, 7 cloud autonomy tests, and 40 negative lifecycle invariant tests.

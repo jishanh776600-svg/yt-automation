@@ -1,4 +1,4 @@
-﻿---
+---
 aliases:
   - Buffer Replenishment
   - produce_buffer.yml
@@ -12,10 +12,11 @@ last_updated: 2026-09-07
 
 # Buffer Replenishment Workflow (`produce_buffer.yml`)
 
-> **Status:** `[LIVE & RUNNING — 3-HOUR CADENCE]`  
+> **Status:** `[LIVE & VERIFIED — 3-HOUR CADENCE — WORKING / VERIFIED]`  
 > **Trigger:** Cron `0 */3 * * *` (Every 3 hours UTC) + `workflow_dispatch` `[LIVE VERIFIED]`  
 > **Reserve Contract:** Google Drive `01_READY` Target = **6 Shorts** `[LIVE VERIFIED]`  
 > **Dynamic Deficit:** `max(0, 6 - actual_01_READY_count)` `[CODE VERIFIED]`  
+> **Authoritative Voice:** `af_bella` (`APPROVED_PRODUCTION_VOICES = ["af_bella"]`) `[LIVE VERIFIED]`  
 
 ---
 
@@ -34,6 +35,10 @@ on:
         description: 'Desired ready buffer count (default 6)'
         required: false
         default: '6'
+      active_voice:
+        description: 'Authoritative voice identifier'
+        required: false
+        default: 'af_bella'
       force_unlock:
         description: 'Force break cloud lock if stuck'
         required: false

@@ -1,4 +1,4 @@
-﻿---
+---
 aliases:
   - Publication Safety Gate
   - Safety Gate
@@ -30,10 +30,20 @@ Before any Short is claimed from `01_READY` for YouTube scheduling, `upload_engi
 8. **Dead Air Gate:** Cumulative dead air ratio $\le 18.0\%$.
 9. **Audio Loudness Gate:** Integrated LUFS between $[-22.0, -10.0]$ LUFS.
 10. **Visual Diversity Gate:** Minimum 9 distinct physical evidence scenes.
-11. **Deduplication Gate:** Topic title and script shingle check vs `UploadRecord`.
+11. **Deduplication Gate:** Topic title and script shingle check vs `UploadRecord` (with self-matching exclusion so candidate Shorts are never compared against themselves).
 12. **Niche Compliance Gate:** Zero political or military keywords.
 13. **Daily Ceiling Gate:** Target calendar day must have $<3$ scheduled uploads.
 14. **Slot Validity Gate:** Scheduled timestamp must be $\ge 45$ minutes in future.
 15. **Database Transaction Gate:** DB record must be in `READY_TO_UPLOAD` status.
 
 Failure of ANY gate immediately aborts the upload, quarantines the file to `04_FAILED`, and logs the forensic failure code `[CODE VERIFIED]`.
+
+---
+
+## 2. Authoritative Publication Gateway & Physical 03_PUBLISHED Barrier
+
+Implemented in [`core/lifecycle_gateway.py`](file:///C:/Users/jisha/OneDrive/Desktop/yt%20automation/core/lifecycle_gateway.py):
+
+- **Physical Barrier Enforcement:** Direct calls to `move_file_in_vault()` targeting `03_PUBLISHED` fail closed with `InvariantViolationError`.
+- **Mandatory YouTube Read-Back:** A Short can transition from `02_PROCESSING` to `03_PUBLISHED` **ONLY** after live YouTube API queries confirm that the video has been released publicly (`privacyStatus == 'public'`).
+- **Idempotent Reconciliation:** Prevents duplicate publication records or premature status changes while videos remain scheduled privately `[CODE VERIFIED]`.

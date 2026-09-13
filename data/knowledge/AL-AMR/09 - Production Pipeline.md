@@ -1,4 +1,4 @@
-﻿---
+---
 aliases:
   - Production Pipeline
   - Sequential Production
@@ -81,7 +81,7 @@ Executed by [`intelligence/cloud_orchestrator.py`](file:///C:/Users/jisha/OneDri
 6. **Stage 6: Council Quality Gate:** Validates 62â€“70 words, 0 clichÃ©s, curiosity hook.
 7. **Stage 7: Visual Evidence Retrieval:** Sourcing authentic photos/records via `VisualEvidenceRetrievalEngine`.
 8. **Stage 8: Production Asset Manifest:** Assembles beat-by-beat timeline with Ken Burns directives and transitions.
-9. **Stage 9: Kokoro Sarah Narration:** Synthesizes `af_sarah` with 0.08s sentence, 0.03s clause, and 100ms silence compression.
+9. **Stage 9: Kokoro Bella Narration:** Synthesizes `af_bella` at native 1.00x with 0.08s sentence, 0.03s clause, and 100ms silence compression.
 10. **Stage 10: Headless Video Composition:** FFmpeg renders 1080x1920 MP4 with burned-in karaoke ASS subtitles and ducked BGM.
 11. **Stage 11: Multi-Factor Video QA:** Evaluates pauses (<0.35s), dead air (<=18%), duration (22â€“25s), and black frames.
 12. **Stage 12: Vault Deposit:** Uploads verified video directly into Google Drive `01_READY`.

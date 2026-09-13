@@ -18,10 +18,16 @@ AI COUNCIL DELIBERATION (DeepSeek + Kimi K3 + Nemotron + Gemini)
 COUNCIL QUALITY GATE (58-72 words, 0 clichés, hook in 1-2s)
        │
        ▼
+PHONETIC TTS NORMALIZATION (1837 -> "eighteen thirty-seven", engines/tts_normalizer.py)
+       │
+       ▼
+SCRIPT-AWARE VISUAL STORYBOARDING (>=9 scenes, era-consistency filter, storyboard_engine.py)
+       │
+       ▼
 VISUAL EVIDENCE RETRIEVAL (Archival Scans, Photos, Public Domain Artifacts)
        │
        ▼
-PRODUCTION ASSET MANIFEST (>=9 scenes, Ken Burns directives, dHash dedup)
+PRODUCTION ASSET MANIFEST (Ken Burns directives, dHash deduplication)
        │
        ▼
 KOKORO BELLA NARRATION (af_bella at native 1.00x, 0.08s/0.03s pauses, 100ms compression)
@@ -30,7 +36,13 @@ KOKORO BELLA NARRATION (af_bella at native 1.00x, 0.08s/0.03s pauses, 100ms comp
 HEADLESS FFMPEG COMPOSITION (1080x1920, karaoke ASS subtitles, ducked BGM, 0 SFX)
        │
        ▼
-MULTI-FACTOR QA AUDIT (Pause <0.35s, Dead air <=18%, 22-25s duration)
+MULTI-FACTOR QA AUDIT (Pause <0.35s, Dead air <=18%, 22-27s duration)
+       │
+       ▼
+ENDING & LOOP STRATEGY (Seamless audio loop, comment hooks, ending_strategy.py)
+       │
+       ▼
+PRE-READY CONTENT QUALITY GATE (Semantic visual-script alignment, core/content_quality_gate.py)
        │
        ▼
 VAULT DEPOSIT (Google Drive 01_READY) & DB STATE PERSISTENCE (00_SYSTEM)
@@ -42,18 +54,20 @@ Videos are produced, rendered, QA-audited, and deposited **strictly ONE AT A TIM
 ---
 
 ## 2. Production Specifications
-- **Authoritative Voice:** `af_bella` (Bella - US Female at native 1.00x) exclusively `[LIVE VERIFIED]`.
+- **Authoritative Voice:** `af_bella` (Bella - US Female at native 1.00x) exclusively; `APPROVED_PRODUCTION_VOICES = ["af_bella"]` `[LIVE VERIFIED]`.
 - **Word Target:** Exactly 58 to 72 words (Target: ~65 words).
-- **Duration Target:** 22.0s to 25.0s (canonical target: ~23.0s).
+- **Duration Target:** 22.0s to 27.0s (canonical target: ~23.0s).
 - **Scene Count:** Minimum 9 unique scenes (target 10–12).
 - **Audio Mixing:** Subtle BGM ducked 12–16dB below voiceover; SFX permanently disabled.
+- **Pronunciation Normalization:** Phonetic expansion of historical numbers/years via `engines/tts_normalizer.py`.
+- **Content Quality Gate:** Programmatic check in `core/content_quality_gate.py` rejecting visual era mismatches, weak endings, or off-target durations before vault entry.
 - **QA Enforcement:** Fails closed if max pause >= 0.35s or dead air > 18.0%.
 
 ---
 
 ## 3. Vault Lifecycle & State Transitions `[LIVE VERIFIED]`
-The vault follows a deterministic four-folder state machine:
+The vault follows a deterministic four-folder state machine protected by the Authoritative Publication Gateway:
 - `01_READY`: Verified, QA-passed videos awaiting publication release slots. Minimum reserve target is 6.
 - `02_PROCESSING`: Videos actively claimed by scheduler for YouTube upload or in-flight processing. If a scheduled release is established, the file stays tracked until public release, then moves to `03_PUBLISHED`. If an upload encounters a transient hold or slot limit, it returns safely to `01_READY`.
-- `03_PUBLISHED`: Successfully released public YouTube Shorts.
+- `03_PUBLISHED`: Successfully released public YouTube Shorts. Protected by a **hard physical barrier** (`_from_gateway=True` check in `drive_engine.py`) requiring live YouTube read-back verification (`privacyStatus == 'public'`) before any transition is permitted.
 - `04_FAILED`: Quarantined files containing irrecoverable physical container corruption (black frames, zero audio, corrupted headers). Scheduling failures, quota limits, and title collision holds **NEVER** move files to `04_FAILED`.

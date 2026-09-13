@@ -1,4 +1,4 @@
-﻿---
+---
 aliases:
   - Project Overview
   - Master Overview
@@ -36,10 +36,12 @@ The system continuously discovers documented historical mysteries and bizarre tr
 |---|---|---|---|
 | **Editorial Niche** | **History / Historical Mysteries / Bizarre True Historical Events / Unexplained Historical Stories** | `[LIVE VERIFIED]` | `is_niche_compliant()` in `clustering.py` + `CURATED_HISTORICAL_SEEDS` |
 | **Banned Content** | **ZERO Politics, Current Affairs, Geopolitics, Warfare, Elections, or Generic Science** | `[CODE VERIFIED]` | Fail-closed keyword rejection list in `intelligence/clustering.py` |
-| **Active Narration Voice** | **`af_bella` (Bella Kokoro-82M ONNX at native 1.00x speed)** | `[LIVE VERIFIED]` | Static voice lock in `engines/tts_engine.py` (Run #47 verified: `short_man_c85a0dd30bda.mp4`) |
+| **Active Narration Voice** | **`af_bella` (Bella Kokoro-82M ONNX at native 1.00x speed)** | `[LIVE VERIFIED]` | `APPROVED_PRODUCTION_VOICES = ["af_bella"]` (Commit `b4dd8f6306368859f07352adf42deb0b1de6199a`) |
 | **Decommissioned Voice** | **`af_sarah` (Sarah) & `am_adam` (Adam) permanently decommissioned** | `[HISTORICAL]` | Hard rejection guards in `ShortsPipeline.__init__()` and `TTSEngine` |
+| **Publication Gateway** | **Authoritative barrier to `03_PUBLISHED` + live YouTube read-back** | `[CODE VERIFIED]` | `core/lifecycle_gateway.py` + `_from_gateway` check in Drive engine |
+| **Content Quality Gate** | **Pre-READY semantic era/visual check, loop ending, duration bounds** | `[CODE VERIFIED]` | `core/content_quality_gate.py` rejects non-compliant renders |
 | **Buffer Reserve Target** | **`6 Verified Shorts` in Google Drive `01_READY`** | `[LIVE VERIFIED]` | Drive API query in `produce_buffer.yml` & `maintain_buffer()` |
-| **Autonomous Refill Cycle** | **Every 3 hours (`0 */3 * * *`)** | `[LIVE VERIFIED]` | GitHub Actions cron trigger in `.github/workflows/produce_buffer.yml` |
+| **Autonomous Refill Cycle** | **Every 3 hours (`0 */3 * * *`)** | `[LIVE VERIFIED]` | GitHub Actions cron trigger in `.github/workflows/produce_buffer.yml` (Status: `WORKING / VERIFIED`) |
 | **Refill Computation** | **Dynamic deficit: max(0, 6 - actual_01_READY_count)** | `[CODE VERIFIED]` | `CloudProductionOrchestrator.run_production_cycle(target_buffer=6)` |
 | **Execution Environment** | **100% Cloud Autonomy (GitHub Actions `ubuntu-latest`)** | `[LIVE VERIFIED]` | Zero local PC dependency; state persisted to Drive `00_SYSTEM` |
 | **Distributed Cloud Lock** | **`CompositeLock` with 900s TTL, 120s heartbeat, dead-runner reclamation, `--force-unlock`** | `[LIVE VERIFIED]` | `core/cloud_lock.py` hardened against deadlocks (Commit `31c002c`) |

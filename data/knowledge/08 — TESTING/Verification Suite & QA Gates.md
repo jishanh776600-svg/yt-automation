@@ -1,4 +1,4 @@
-﻿---
+---
 aliases:
   - QA Gates
   - VideoQAEngine
@@ -39,3 +39,24 @@ Every rendered MP4 must pass 15 programmatic tests prior to deposit into Google 
 | 13 | **Scene Count** | Fewer than 9 unique evidence scenes | Manifest frame auditor |
 | 14 | **Visual Deduplication**| Intra-Short duplicate scene or cooldown violation | `GlobalVisualMemory` dHash check |
 | 15 | **AV Sync** | Audio and video stream duration delta $>0.10\text{s}$ | MediaInfo stream delta |
+
+---
+
+## 2. Pre-READY Content Quality Gate & Negative Invariants
+
+### Pre-READY Content Quality Gate (`core/content_quality_gate.py`)
+Executes prior to Drive deposit:
+- Validates semantic alignment between visual evidence era and historical narration.
+- Rejects modern vehicles/technology for pre-modern historical stories.
+- Enforces seamless audio loop and ending engagement strategy (`engines/ending_strategy.py`).
+- Verifies total duration within bounds [22.0, 27.0]s.
+
+### Lifecycle Negative Invariants Suite (`tests/test_lifecycle_negative_invariants.py`)
+Adversarially tests 40 distinct lifecycle failure modes:
+- **Result:** **40/40 PASSED** `[CODE VERIFIED]`
+- Verifies that:
+  - No asset can reach `03_PUBLISHED` without passing through `core.lifecycle_gateway`.
+  - YouTube read-back verification fails closed if privacyStatus is not `public`.
+  - Stale daemons with mismatched PIDs cannot mutate production state.
+  - Candidate deduplication excludes candidate self-matching.
+  - Recovery of unuploaded assets is idempotent.
