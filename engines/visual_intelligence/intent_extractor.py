@@ -40,6 +40,16 @@ class VisualIntent:
     transition_requirements: str = "cut"
     evidence_overlay_requirements: Optional[Dict[str, Any]] = None
     search_queries: List[str] = field(default_factory=list)
+    era: Optional[str] = None
+    environment: Optional[str] = None
+    weather: Optional[str] = None
+    time_of_day: Optional[str] = None
+    mood: Optional[str] = None
+    subject: Optional[str] = None
+    historical_classification: str = "HISTORICAL"
+    architectural_requirements: Optional[str] = None
+    clothing_requirements: Optional[str] = None
+    forbidden_content: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
@@ -152,12 +162,86 @@ class VisualIntentExtractor:
                 "badge_type": "FACT_CHECKED" if action else "CONTEXT"
             }
 
-        # 7. Formulate targeted search queries (avoiding generic modern stock defaults)
+        # 7. Scene-level Semantic Requirements (Era, Location, Weather, Environment)
+        location = None
+        known_locations = [
+            "London", "Paris", "Rome", "Siberia", "Kentucky", "Brazil", "Baltic",
+            "Red Sea", "Hormuz", "Taiwan", "Washington", "Tokyo", "Berlin", "Vienna",
+            "Strasbourg", "Louisiana", "Danube", "Crimea", "Egypt", "Pacific", "Atlantic"
+        ]
+        for loc in known_locations:
+            if re.search(r'\b' + loc + r'\b', clean_text, re.IGNORECASE) or re.search(r'\b' + loc + r'\b', topic_title, re.IGNORECASE):
+                location = loc
+                break
+
+        # Era derivation
+        era = None
+        historical_class = "HISTORICAL"
+        forbidden = []
+        year_val = int(year_match.group(0)) if year_match else None
+
+        if "1837" in clean_text or "1837" in topic_title or "victorian" in lower_text or "victorian" in topic_title.lower():
+            era = "Victorian / 1837"
+            historical_class = "HISTORICAL"
+        elif year_val:
+            if year_val < 1900:
+                era = f"{year_val} / 19th Century or earlier"
+                historical_class = "HISTORICAL"
+            elif year_val < 1960:
+                era = f"{year_val} / Early-to-Mid 20th Century"
+                historical_class = "HISTORICAL"
+            elif year_val >= 2020:
+                era = f"{year_val} / Contemporary"
+                historical_class = "MODERN"
+            else:
+                era = f"{year_val}"
+                historical_class = "HISTORICAL"
+        elif any(w in lower_text for w in ["ancient", "rome", "roman", "medieval", "knight", "castle", "pharaoh"]):
+            era = "Ancient / Medieval"
+            historical_class = "HISTORICAL"
+        elif any(w in lower_text for w in ["current", "breaking", "today", "drone", "cyber", "satellite", "guided-missile"]):
+            era = "Modern / Contemporary"
+            historical_class = "MODERN"
+
+        # Forbidden modern / antique content filters
+        if historical_class == "HISTORICAL":
+            forbidden = [
+                "modern car", "modern cars", "traffic", "skyscraper", "skyscrapers",
+                "smartphone", "smartphones", "laptop", "modern office", "neon", "asphalt highway"
+            ]
+        else:
+            forbidden = [
+                "19th century painting", "woodcut engraving", "ancient fresco", "antique lithograph", "medieval manuscript"
+            ]
+
+        # Weather & Time of Day
+        weather = None
+        for w_candidate in ["fog", "rain", "storm", "snow", "smoke", "haze", "sunny", "mist"]:
+            if re.search(r'\b' + w_candidate + r'\b', lower_text):
+                weather = w_candidate
+                break
+
+        time_of_day = None
+        for t_candidate in ["night", "midnight", "dawn", "dusk", "evening", "morning", "afternoon"]:
+            if re.search(r'\b' + t_candidate + r'\b', lower_text):
+                time_of_day = t_candidate
+                break
+
+        # Environment
+        environment = None
+        for env_cand in ["narrow streets", "cobblestone", "street", "forest", "ocean", "sea", "desert", "castle", "palace", "battlefield", "harbor", "trench"]:
+            if re.search(r'\b' + env_cand + r'\b', lower_text):
+                environment = env_cand
+                break
+
+        # 8. Formulate targeted search queries (avoiding generic modern stock defaults)
         queries = []
         if primary_entity and action:
             queries.append(f"{primary_entity} {action}")
+        if era and location:
+            queries.append(f"{era} {location} archival vintage")
         if primary_entity:
-            queries.append(f"{primary_entity} speech press conference")
+            queries.append(f"{primary_entity} speech press conference" if historical_class == "MODERN" else f"{primary_entity} vintage documentary")
             queries.append(f"{primary_entity} event")
         if topic_title:
             clean_title = re.sub(r'[^\w\s]', '', topic_title)
@@ -175,7 +259,7 @@ class VisualIntentExtractor:
             primary_entity=primary_entity,
             secondary_entities=secondary_entities,
             event=topic_title[:60] if topic_title else None,
-            location=None,
+            location=location,
             date_context=date_context,
             action=action,
             claim_discussed=claim,
@@ -185,5 +269,13 @@ class VisualIntentExtractor:
             minimum_visual_duration=min(2.0, duration),
             transition_requirements="cut" if tone in ("URGENT", "REVEAL") else "crossfade",
             evidence_overlay_requirements=overlay_req,
-            search_queries=queries
+            search_queries=queries,
+            era=era,
+            environment=environment,
+            weather=weather,
+            time_of_day=time_of_day,
+            mood=tone,
+            subject=primary_entity,
+            historical_classification=historical_class,
+            forbidden_content=forbidden
         )

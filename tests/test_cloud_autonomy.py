@@ -78,13 +78,13 @@ def test_requirements_txt_contains_phase1_and_phase2_deps():
 
 
 def test_github_workflow_produce_buffer_voice_lock():
-    """Verify produce_buffer.yml enforces af_sarah as the default voice."""
+    """Verify produce_buffer.yml enforces af_bella as the default voice."""
     wf_path = settings.PROJECT_ROOT / ".github" / "workflows" / "produce_buffer.yml"
     assert wf_path.exists()
     content = wf_path.read_text(encoding="utf-8")
 
-    assert "default: 'af_sarah'" in content, "produce_buffer.yml does not default active_voice to af_sarah"
-    assert "default: 'af_bella'" not in content, "produce_buffer.yml still contains af_bella default"
+    assert "default: 'af_bella'" in content, "produce_buffer.yml does not default active_voice to af_bella"
+    assert "default: 'af_sarah'" not in content, "produce_buffer.yml still contains af_sarah default"
 
 
 def test_github_workflows_run_headless():
@@ -123,6 +123,6 @@ def test_sfx_remains_permanently_disabled_in_production():
         category="geopolitics", title="Crisis Update", script_text="Forces advanced."
     )
     assert decision.bgm_policy == "NONE"
-    assert decision.voice_id == "af_sarah"
-    assert "af_sarah" in APPROVED_PRODUCTION_VOICES
+    assert decision.voice_id == "af_bella"
+    assert "af_bella" in APPROVED_PRODUCTION_VOICES
 

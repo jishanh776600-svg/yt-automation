@@ -244,9 +244,9 @@ def test_10_no_change_to_speaking_rate():
     assert conv_spec.speed_multiplier == 1.00
 
     policy = VoiceVariationPolicy()
-    assert "af_sarah" in policy.APPROVED_PRODUCTION_VOICES
-    v_cfg = resolve_voice_config("af_sarah")
-    assert v_cfg["kokoro_voice"] == "af_sarah"
+    assert "af_bella" in policy.APPROVED_PRODUCTION_VOICES
+    v_cfg = resolve_voice_config("af_bella")
+    assert v_cfg["kokoro_voice"] == "af_bella"
 
 
 # ------------------------------------------------------------------------------

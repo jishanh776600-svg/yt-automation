@@ -295,7 +295,7 @@ class DeliveryDirector:
             "lead_ins": ["You cannot make this up.", "In peak bureaucratic fashion,"]
         },
         DeliveryProfile.LIAM_MAX_CREATOR: {
-            "speed_multiplier": 1.00,
+            "speed_multiplier": 1.08,
             "sentence_pause_sec": 0.17,
             "clause_pause_sec": 0.07,
             "presence_boost_db": 2.2,
@@ -306,9 +306,9 @@ class DeliveryDirector:
             "lead_ins": ["Okay, wait.", "So here's the thing.", "Look,", "And this is the part almost everyone missed."]
         },
         DeliveryProfile.SARAH_MAX_CREATOR: {
-            "speed_multiplier": 1.00,
-            "sentence_pause_sec": 0.18,
-            "clause_pause_sec": 0.05,
+            "speed_multiplier": 1.08,
+            "sentence_pause_sec": 0.17,
+            "clause_pause_sec": 0.07,
             "presence_boost_db": 2.2,
             "eq_freq_hz": 3000,
             "target_lufs": -15.5,

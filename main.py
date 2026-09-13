@@ -253,8 +253,12 @@ class ShortsPipeline:
         
         from engines.editing_director import EditingDirector
         from engines.sfx_manager import SFXManager
+        from engines.ending_strategy import EndingStrategyEngine
+        from core.content_quality_gate import ContentQualityGate
         self.editing_director = EditingDirector()
         self.sfx_manager = SFXManager()
+        self.ending_engine = EndingStrategyEngine()
+        self.content_quality_gate = ContentQualityGate()
 
         from engines.tts_engine import get_active_voice, APPROVED_PRODUCTION_VOICES
         db = SessionLocal()
@@ -331,6 +335,14 @@ class ShortsPipeline:
             shots[-1]["duration"] = max(2.5, round(shots[-1]["duration"] + diff, 2))
             logger.info(f"[TIMELINE] Calibrated shots timeline: total={sum(s['duration'] for s in shots):.2f}s for narration={audio_duration:.2f}s (safety margin: {safety_margin}s)")
 
+        # 5.4. ENDING & LOOP STRATEGY FORMULATION
+        ending_plan = self.ending_engine.plan_ending(
+            script_text=script.full_text,
+            topic_title=topic.title,
+            category=topic.category
+        )
+        console.print(f"[cyan][+] Ending Strategy Formulated:[/cyan] {ending_plan.ending_mode} mode | Hook callback: {bool(ending_plan.hook_callback_text)}")
+
         # 5.5. AUTONOMOUS EDITING DIRECTING
         editing_plan = self.editing_director.plan_editing(
             db=db,
@@ -376,7 +388,8 @@ class ShortsPipeline:
             output_path=master_audio_path,
             duration=target_video_duration,
             job_id=job.id,
-            sfx_layer_path=rendered_sfx_layer
+            sfx_layer_path=rendered_sfx_layer,
+            bgm_policy="DUCKED"
         )
         StateMachine.transition(db, job, JobState.AUDIO_READY, "Master audio mixed with audible BGM (-13dB), SFX layer, and normalized")
 
@@ -416,7 +429,8 @@ class ShortsPipeline:
                     output_path=master_audio_path,
                     duration=audio_duration,
                     bgm_volume_db=-13.0,
-                    job_id=job.id
+                    job_id=job.id,
+                    bgm_policy="DUCKED"
                 )
                 render_output = self.render_engine.assemble_short(
                     db=db,
@@ -445,8 +459,26 @@ class ShortsPipeline:
             console.print(f"[bold red][x] QA Failed (Upload Aborted by Fail-Safe):[/bold red] {qa_report.failure_reasons}")
             return None, None
 
+        # 9.5. PRE-READY CONTENT QUALITY GATE (12-Factor Verification)
+        cq_report = self.content_quality_gate.evaluate(
+            topic_title=topic.title,
+            script_text=script.full_text,
+            shots_data=shots,
+            asset_map=asset_map,
+            render_duration=render_output.duration_sec,
+            render_path=Path(render_output.video_path),
+            qa_report=qa_report,
+            editing_plan=editing_plan,
+            ending_plan=ending_plan
+        )
+        if not cq_report.passed:
+            self.experiment_manager.update_experiment_status(db, job.id, "FAILED", failure_reason=f"Content Quality Gate Failed: {cq_report.failure_reasons}")
+            StateMachine.flag_needs_review(db, job, f"Content Quality Gate Failed: {cq_report.failure_reasons}")
+            console.print(f"[bold red][x] Content Quality Gate Failed:[/bold red] {cq_report.failure_reasons}")
+            return None, None
+
         self.experiment_manager.update_experiment_status(db, job.id, "READY")
-        console.print(f"[bold green][+] QA Passed Successfully![/bold green] (1080x1920 | {render_output.duration_sec:.1f}s | Codec: H.264/AAC | BGM Verified)")
+        console.print(f"[bold green][+] QA & Content Quality Gate Passed Successfully![/bold green] (1080x1920 | {render_output.duration_sec:.1f}s | Score: {cq_report.overall_quality:.2f} | BGM Verified)")
 
         # 10. SEO METADATA
         metadata = self.seo_engine.generate_metadata(topic, script)
@@ -474,6 +506,8 @@ class ShortsPipeline:
                 "duration_sec": render_output.duration_sec,
                 "editing_profile": editing_plan.overall_profile if editing_plan else "GENERAL_DOCUMENTARY",
                 "sfx_events": editing_plan.total_sfx_count if editing_plan else 0,
+                "ending_strategy": ending_plan.to_dict() if ending_plan else {},
+                "content_quality": cq_report.to_dict() if cq_report else {},
                 "rendered_at": datetime.utcnow().isoformat() + "Z"
             }
             with open(meta_file, "w", encoding="utf-8") as mf:

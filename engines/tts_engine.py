@@ -36,27 +36,14 @@ AVAILABLE_VOICES = [
         "id": "af_bella",
         "display_name": "Bella (US Female)",
         "engine": "Kokoro-82M ONNX / Edge-TTS",
-        "description": "High-energy, engaging creator voice with natural cadence and storytelling presence.",
-        "style": "Conversational / Creator",
+        "description": "Clear, authoritative, and engaging narration. Authentic pacing for mystery and science storytelling.",
+        "style": "Authoritative / Engaging",
         "gender": "Female",
         "accent": "American",
         "kokoro_voice": "af_bella",
         "edge_voice": "en-US-JennyNeural",
         "delivery_profile": "BELLA_CANONICAL",
         "available": True
-    },
-    {
-        "id": "af_sarah",
-        "display_name": "Sarah (US Female)",
-        "engine": "Kokoro-82M ONNX / Edge-TTS",
-        "description": "Historical compatibility voice profile (decommissioned from production).",
-        "style": "Documentary",
-        "gender": "Female",
-        "accent": "American",
-        "kokoro_voice": "af_sarah",
-        "edge_voice": "en-US-JennyNeural",
-        "delivery_profile": "SARAH_CANONICAL",
-        "available": False
     }
 ]
 
@@ -156,7 +143,7 @@ class TTSEngine:
         self,
         text: str,
         output_path: Path,
-        voice: str = "af_sarah",
+        voice: str = "af_bella",
         speed: float = 1.00,
         sentence_pause: float = EFFECTIVE_SENTENCE_PAUSE_SEC,
         clause_pause: float = EFFECTIVE_CLAUSE_PAUSE_SEC
@@ -370,6 +357,8 @@ class TTSEngine:
 
         # Extract delivery parameters if delivery_spec is provided (calibrated natural breathing pauses)
         synthesize_text = delivery_spec.prepared_text if (delivery_spec and getattr(delivery_spec, "prepared_text", None)) else text
+        from engines.tts_normalizer import normalize_script_for_tts
+        synthesize_text = normalize_script_for_tts(synthesize_text)
         eff_speed = delivery_spec.speed_multiplier if (delivery_spec and speed_multiplier == 1.0) else speed_multiplier
         sentence_pause = getattr(delivery_spec, "sentence_pause_sec", EFFECTIVE_SENTENCE_PAUSE_SEC) if delivery_spec else EFFECTIVE_SENTENCE_PAUSE_SEC
         clause_pause = getattr(delivery_spec, "clause_pause_sec", EFFECTIVE_CLAUSE_PAUSE_SEC) if delivery_spec else EFFECTIVE_CLAUSE_PAUSE_SEC

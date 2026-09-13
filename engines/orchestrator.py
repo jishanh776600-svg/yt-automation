@@ -643,7 +643,7 @@ class ProductionOrchestrator:
             script_text=script.full_text,
             bgm_policy=self.bgm_policy
         )
-        if self.voice_override and self.voice_override in ["am_liam", "af_sarah"]:
+        if self.voice_override and self.voice_override in ["af_bella"]:
             voice = self.voice_override
         else:
             voice = decision.voice_id

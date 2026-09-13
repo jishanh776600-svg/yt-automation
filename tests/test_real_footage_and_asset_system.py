@@ -15,17 +15,18 @@ def test_user_provided_assets_catalog():
     categories = set(item["category"] for item in data.values())
     assert "transition_whoosh" in categories or "tension_suspense" in categories
 
-def test_sarah_only_voice_lock():
-    """Verifies that af_sarah is strictly enforced as the sole production voice."""
+def test_bella_only_voice_lock():
+    """Verifies that af_bella is strictly enforced as the sole production voice."""
     from config.settings import KOKORO_VOICE, APPROVED_PRODUCTION_VOICES
-    assert KOKORO_VOICE == "af_sarah"
-    assert APPROVED_PRODUCTION_VOICES == ["af_sarah"]
+    assert KOKORO_VOICE == "af_bella"
+    assert APPROVED_PRODUCTION_VOICES == ["af_bella"]
     assert "am_liam" not in APPROVED_PRODUCTION_VOICES
+    assert "af_sarah" not in APPROVED_PRODUCTION_VOICES
     
     from engines.visual_intelligence.voice_policy import VoiceVariationPolicy
     policy = VoiceVariationPolicy()
     voice = policy.select_voice()
-    assert voice == "af_sarah"
+    assert voice == "af_bella"
 
 def test_sfx_manager_user_assets_priority():
     """Verifies that SFXManager resolves user-provided audio assets first."""

@@ -85,9 +85,17 @@ class VisualIntent:
     visual_intent: str = "DOCUMENTARY"           # DOCUMENTARY, EVIDENCE, REVEAL, ATMOSPHERIC, REACTION
     preferred_visual_type: VisualContentType = VisualContentType.REAL_VIDEO
     preferred_source: str = "real_footage"        # real_footage, event_news, archival, official, document, reaction, generic_stock
-    evidence_required: bool = False
-    minimum_motion_requirement: float = 0.50     # 0.0 (static ok) to 0.85+ (strict video required)
     search_queries: List[str] = field(default_factory=list)
+    era: Optional[str] = None
+    environment: Optional[str] = None
+    weather: Optional[str] = None
+    time_of_day: Optional[str] = None
+    mood: Optional[str] = None
+    subject: Optional[str] = None
+    historical_classification: str = "HISTORICAL"   # HISTORICAL, MODERN, TIMELESS
+    architectural_requirements: Optional[str] = None
+    clothing_requirements: Optional[str] = None
+    forbidden_content: List[str] = field(default_factory=list)
 
     # Backwards-compatibility aliases
     @property

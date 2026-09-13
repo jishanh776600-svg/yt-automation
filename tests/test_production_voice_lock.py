@@ -37,26 +37,26 @@ from config.constants import VOICEOVER_PAUSE_MULTIPLIER
 
 
 # ------------------------------------------------------------------------------
-# TEST 1: Whitelist of Approved Production Voices (Sarah Only)
+# TEST 1: Whitelist of Approved Production Voices (Bella Only)
 # ------------------------------------------------------------------------------
 def test_approved_production_voices_whitelist():
-    """Verify that only af_sarah is an approved production voice (Sarah Only Lock)."""
-    assert set(APPROVED_PRODUCTION_VOICES) == {"af_sarah"}
-    assert set(TTS_APPROVED_VOICES) == {"af_sarah"}
-    assert set(VoiceVariationPolicy.APPROVED_PERSONAS.keys()) == {"af_sarah"}
+    """Verify that only af_bella is an approved production voice (Bella Only Lock)."""
+    assert set(APPROVED_PRODUCTION_VOICES) == {"af_bella"}
+    assert set(TTS_APPROVED_VOICES) == {"af_bella"}
+    assert set(VoiceVariationPolicy.APPROVED_PERSONAS.keys()) == {"af_bella"}
     
     available_ids = [v["id"] for v in AVAILABLE_VOICES]
-    assert set(available_ids) == {"af_sarah"}
-    assert KOKORO_VOICE == "af_sarah"
+    assert set(available_ids) == {"af_bella"}
+    assert KOKORO_VOICE == "af_bella"
 
 
 # ------------------------------------------------------------------------------
-# TEST 2: Elimination of Retired Voices (Including Liam from Production Selection)
+# TEST 2: Elimination of Retired Voices (Including Liam and Sarah from Production Selection)
 # ------------------------------------------------------------------------------
 def test_elimination_of_retired_voices():
-    """Verify retired voices (including Liam) cannot be selected and resolve safely to af_sarah."""
+    """Verify retired voices (including Liam and Sarah) cannot be selected and resolve safely to af_bella."""
     retired_voices = [
-        "am_liam", "af_bella", "am_adam", "am_michael", "bm_george", "af_heart",
+        "am_liam", "af_sarah", "am_adam", "am_michael", "bm_george", "af_heart",
         "am_fenrir", "af_nova", "bm_lewis", "af_alloy", "am_echo"
     ]
     for voice in retired_voices:
@@ -66,15 +66,15 @@ def test_elimination_of_retired_voices():
         # Safe resolution fallback
         resolved = resolve_voice_config(voice)
         assert resolved["id"] in APPROVED_PRODUCTION_VOICES
-        assert resolved["id"] == "af_sarah"
+        assert resolved["id"] == "af_bella"
 
     # Verify get_active_voice() never returns a retired voice even if DB has stale value
     mock_db = MagicMock()
     mock_row = MagicMock()
-    mock_row.value = "af_bella"
+    mock_row.value = "af_sarah"
     mock_db.query.return_value.filter.return_value.first.return_value = mock_row
     assert get_active_voice(mock_db) in APPROVED_PRODUCTION_VOICES
-    assert get_active_voice(mock_db) == "af_sarah"
+    assert get_active_voice(mock_db) == "af_bella"
 
 
 # ------------------------------------------------------------------------------
@@ -104,39 +104,19 @@ def test_liam_max_creator_parameters():
 
 
 # ------------------------------------------------------------------------------
-# TEST 4: Sarah Coupled to SARAH_MAX_CREATOR with Exact Parameters
+# TEST 4: Bella Coupled to CONVERSATIONAL Delivery Profile
 # ------------------------------------------------------------------------------
-def test_sarah_max_creator_parameters():
-    """Verify Sarah is coupled to SARAH_MAX_CREATOR with exact approved tuning parameters."""
-    persona = VoiceVariationPolicy.APPROVED_PERSONAS["af_sarah"]
-    assert persona["profile"] == DeliveryProfile.SARAH_MAX_CREATOR
-    
-    director = DeliveryDirector()
-    preset = director.PROFILE_PRESETS[DeliveryProfile.SARAH_MAX_CREATOR]
-    assert preset["speed_multiplier"] == 1.08
-    assert preset["sentence_pause_sec"] == 0.17
-    assert preset["clause_pause_sec"] == 0.07
-    assert preset["presence_boost_db"] == 2.2
-    assert preset["eq_freq_hz"] == 3000
-    assert preset["target_lufs"] == -15.5
-    assert preset["true_peak_ceiling"] == -1.2
-
-    spec = director.build_delivery_spec(DeliveryProfile.SARAH_MAX_CREATOR, "Test script text.")
-    assert spec.profile == DeliveryProfile.SARAH_MAX_CREATOR
-    assert spec.speed_multiplier == 1.08
-    assert spec.sentence_pause_sec == round(0.17 * VOICEOVER_PAUSE_MULTIPLIER, 3)
-    assert spec.clause_pause_sec == round(0.07 * VOICEOVER_PAUSE_MULTIPLIER, 3)
-    assert spec.presence_boost_db == 2.2
-    assert spec.eq_freq_hz == 3000
-    assert spec.target_lufs == -15.5
-    assert spec.true_peak_ceiling == -1.2
+def test_bella_conversational_parameters():
+    """Verify Bella is coupled to CONVERSATIONAL delivery profile."""
+    persona = VoiceVariationPolicy.APPROVED_PERSONAS["af_bella"]
+    assert persona["profile"] == DeliveryProfile.CONVERSATIONAL
 
 
 # ------------------------------------------------------------------------------
-# TEST 5: Production Selection Strictly Locked to Sarah
+# TEST 5: Production Selection Strictly Locked to Bella
 # ------------------------------------------------------------------------------
-def test_voice_selection_strictly_locks_sarah():
-    """Verify selection strictly locks to af_sarah and never selects retired voices."""
+def test_voice_selection_strictly_locks_bella():
+    """Verify selection strictly locks to af_bella and never selects retired voices."""
     policy = VoiceVariationPolicy()
     policy.reset_history()
 
@@ -145,9 +125,9 @@ def test_voice_selection_strictly_locks_sarah():
         for _ in range(8)
     ]
 
-    # Every selection must be strictly Sarah
+    # Every selection must be strictly Bella
     for v in selections:
-        assert v == "af_sarah"
+        assert v == "af_bella"
 
 
 # ------------------------------------------------------------------------------
@@ -245,15 +225,16 @@ def test_audition_archives_preserved():
 # TEST 10: Safe Fallback on Unapproved Voice Request
 # ------------------------------------------------------------------------------
 def test_safe_fallback_on_unapproved_voice_request():
-    """Verify requesting an unapproved voice safely defaults to af_sarah without crashing."""
+    """Verify requesting an unapproved voice safely defaults to af_bella without crashing."""
     mock_db = MagicMock()
     engine = TTSEngine()
 
-    with patch.object(engine, "generate_kokoro_audio", return_value=(True, 22.5)),          patch.object(engine, "apply_presence_mastering", return_value=True):
+    with patch.object(engine, "generate_kokoro_audio", return_value=(True, 22.5)), \
+         patch.object(engine, "apply_presence_mastering", return_value=True):
         asset, dur = engine.generate_narration(
             db=mock_db,
             text="Testing fallback resolution.",
-            voice="af_bella"  # Unapproved retired voice
+            voice="af_sarah"  # Unapproved retired voice
         )
         assert dur == 22.5
         mock_db.add.assert_called_once()

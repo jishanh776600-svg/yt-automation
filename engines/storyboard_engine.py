@@ -79,8 +79,8 @@ class StoryboardEngine:
                     "description": role_desc
                 })
 
-        # Ensure minimum 7 beats
-        while len(beats) < 7:
+        # Ensure minimum beats meets target_count (min 8)
+        while len(beats) < target_count:
             longest_idx = max(range(len(beats)), key=lambda i: len(beats[i]["text"]))
             longest = beats[longest_idx]
             words = longest["text"].split()
@@ -97,18 +97,18 @@ class StoryboardEngine:
 
     def create_storyboard(self, script: ScriptRecord) -> List[Dict[str, Any]]:
         """
-        Visual Engine 2.0: Generates 7-10 structured visual shots with topic-specific queries,
+        Visual Engine 2.0: Generates 8-10 structured visual shots with topic-specific queries,
         historical era compatibility, and camera motion profiles.
         """
         total_duration = max(20.0, float(script.estimated_duration_sec or 23.0))
         
-        # Calculate target beat count based on duration (aiming for ~2.3 - 2.8s per shot)
+        # Calculate target beat count based on duration (aiming for ~2.2 - 2.8s per shot)
         if total_duration >= 24.0:
-            target_shots = 9
+            target_shots = 10
         elif total_duration >= 22.0:
-            target_shots = 8
+            target_shots = 9
         else:
-            target_shots = 7
+            target_shots = 8
 
         raw_beats = self._split_into_beats(script, target_count=target_shots)
         shot_count = len(raw_beats)

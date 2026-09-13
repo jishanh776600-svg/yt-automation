@@ -747,23 +747,23 @@ def test_f10_t5_script_over_70_words_rejected_by_quality_gate():
 # Feature 11: Production Voice Lock (Sarah) (F11_T1 to F11_T5)
 # ==============================================================================
 
-def test_f11_t1_default_tts_voice_is_af_sarah():
-    """F11-1: Production TTS engine default voice is strictly af_sarah."""
+def test_f11_t1_default_tts_voice_is_af_bella():
+    """F11-1: Production TTS engine default voice is strictly af_bella."""
     from engines.tts_engine import get_active_voice, AVAILABLE_VOICES
-    assert get_active_voice() == "af_sarah"
-    assert AVAILABLE_VOICES[0]["id"] == "af_sarah"
+    assert get_active_voice() == "af_bella"
+    assert AVAILABLE_VOICES[0]["id"] == "af_bella"
 
 
-def test_f11_t2_approved_production_voices_list_contains_af_sarah():
-    """F11-2: APPROVED_PRODUCTION_VOICES contains af_sarah."""
-    assert "af_sarah" in APPROVED_PRODUCTION_VOICES
+def test_f11_t2_approved_production_voices_list_contains_af_bella():
+    """F11-2: APPROVED_PRODUCTION_VOICES contains af_bella."""
+    assert "af_bella" in APPROVED_PRODUCTION_VOICES
 
 
-def test_f11_t3_unapproved_voice_request_falls_back_to_af_sarah():
-    """F11-3: Requesting an unapproved voice defaults safely to af_sarah."""
+def test_f11_t3_unapproved_voice_request_falls_back_to_af_bella():
+    """F11-3: Requesting an unapproved voice defaults safely to af_bella."""
     from engines.tts_engine import resolve_voice_config
     canonical = resolve_voice_config("unapproved_voice_xyz")
-    assert canonical["id"] == "af_sarah"
+    assert canonical["id"] == "af_bella"
 
 
 def test_f11_t4_drive_vault_engine_verifies_sarah_voice_metadata():

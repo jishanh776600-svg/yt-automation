@@ -26,7 +26,7 @@ Strictly prefers accurate/contextually relevant footage over beautiful but gener
 """
 import re
 import logging
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Dict, Any, Optional, Set, Tuple
 from .models import VisualCandidate, VisualIntent, RightsStatus, VisualContentType
 
 logger = logging.getLogger(__name__)
@@ -181,6 +181,69 @@ class VisualCandidateScorer:
             score += 0.20
         return round(score, 2)
 
+    def evaluate_era_and_context_compatibility(
+        self,
+        candidate: Any,
+        intent: Any
+    ) -> Tuple[float, str]:
+        """
+        Hard defense against anachronisms and contradictory visuals:
+          - 1837 London -> rejects modern London streets, modern cars, traffic, skyscrapers.
+          - Ancient/Medieval/WWII -> rejects modern office, modern apartment, modern electronics.
+          - Modern geopolitics/current events -> rejects antique engravings, 19th-century paintings.
+        """
+        # Handle swapped arguments gracefully
+        if hasattr(candidate, "visual_query") or hasattr(candidate, "forbidden_content") or hasattr(candidate, "era"):
+            candidate, intent = intent, candidate
+
+        if isinstance(candidate, dict):
+            cand_title = candidate.get("title", "")
+            cand_desc = candidate.get("description", "")
+            cand_tags = candidate.get("tags", [])
+            cand_text = f"{cand_title} {cand_desc} {' '.join(cand_tags)}".lower()
+        else:
+            cand_title = getattr(candidate, 'title', '')
+            cand_desc = getattr(candidate, 'description', '')
+            cand_ev = getattr(candidate, 'event_tags', [])
+            cand_en = getattr(candidate, 'entity_tags', [])
+            cand_text = f"{cand_title} {cand_desc} {' '.join(cand_ev)} {' '.join(cand_en)}".lower()
+
+        # Check explicit forbidden items from intent
+        forbidden = getattr(intent, "forbidden_content", []) or []
+        for item in forbidden:
+            if item.lower() in cand_text:
+                return 0.0, f"Anachronistic content '{item}' forbidden for {getattr(intent, 'era', 'this era')}"
+
+        hist_class = getattr(intent, "historical_classification", "HISTORICAL")
+
+        # 1. Historical Scene Defense against Modern Visuals
+        is_pre_modern = (hist_class == "HISTORICAL") or any(k in (getattr(intent, "era", "") or "").lower() for k in ["victorian", "ancient", "medieval", "1800", "1700", "1830s"])
+        if getattr(intent, "date_context", None):
+            year_matches = re.findall(r'\b(1[0-9]{3}|20[0-2][0-9])\b', str(intent.date_context))
+            if year_matches and any(int(y) < 1960 for y in year_matches):
+                is_pre_modern = True
+
+        if is_pre_modern:
+            modern_markers = [
+                "modern car", "modern cars", "traffic", "highway", "skyscraper", "skyscrapers",
+                "smartphone", "smartphones", "laptop", "modern office", "asphalt", "neon lights",
+                "modern city", "contemporary downtown", "modern london", "modern street"
+            ]
+            for m in modern_markers:
+                if m in cand_text:
+                    return 0.0, f"Modern anachronism '{m}' rejected for historical pre-modern scene ({getattr(intent, 'date_context', None) or getattr(intent, 'era', '')})"
+
+        # 2. Modern Scene Defense against Antique/Archival Artifacts
+        if hist_class == "MODERN" or any(k in (getattr(intent, "era", "") or "").lower() for k in ["current", "breaking", "today", "modern", "2024", "2025", "2026"]):
+            antique_markers = [
+                "19th century painting", "woodcut engraving", "ancient fresco", "antique lithograph", "medieval manuscript", "18th century etching", "antique renaissance", "ancient parchment"
+            ]
+            for a in antique_markers:
+                if a in cand_text:
+                    return 0.0, f"Antique archival artwork '{a}' rejected for modern current-events scene"
+
+        return 1.0, ""
+
     def score_candidate(
         self,
         candidate: VisualCandidate,
@@ -193,9 +256,18 @@ class VisualCandidateScorer:
         Computes final deterministic score for candidate under given intent.
         Enforces:
           - Accurate/contextual relevance dominates over generic beauty
+          - Hard rejection of anachronistic and contradictory visuals
           - Video > Photo motion preference
           - Strict penalties for duplicate, rights risk, and generic stock overuse
         """
+        # Hard era and context compatibility check
+        is_compat, reason = self.evaluate_era_and_context_compatibility(candidate, intent)
+        if not is_compat:
+            candidate.raw_score = 0.0
+            candidate.final_score = 0.0
+            candidate.rejection_reason = reason
+            return 0.0
+
         job_used = job_used_urls or set()
         near_dups = near_duplicate_urls or set()
         recent_counts = recent_usage_counts or {}

@@ -369,7 +369,13 @@ class AudioMixer:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         job_tag = job_id if job_id else uuid.uuid4().hex[:8]
 
-        has_sfx = bool(sfx_layer_path and sfx_layer_path.exists() and sfx_layer_path.stat().st_size > 1000)
+        has_sfx = False
+        if sfx_layer_path:
+            try:
+                if sfx_layer_path.exists() and sfx_layer_path.stat().st_size > 1000:
+                    has_sfx = True
+            except Exception:
+                has_sfx = False
         use_bgm = (bgm_policy != "NONE" and music_path is not None and music_path.exists())
 
         bgm_only_path: Optional[Path] = None

@@ -34,21 +34,11 @@ class VoiceVariationPolicy:
             "id": "af_bella",
             "name": "Bella (US Female)",
             "gender": "FEMALE",
-            "style": "Natural / Expressive / Creator Delivery",
-            "persona": "Natural Female Creator",
-            "best_for": ["history", "mystery", "bizarre", "culture", "curiosity"],
-            "profile": DeliveryProfile.CONVERSATIONAL,
-            "supported_profiles": [DeliveryProfile.CONVERSATIONAL, DeliveryProfile.URGENT]
-        },
-        "af_sarah": {
-            "id": "af_sarah",
-            "name": "Sarah (US Female)",
-            "gender": "FEMALE",
             "style": "High-Presence / Slightly-Fast / Creator Delivery",
             "persona": "Energetic Female Creator",
             "best_for": ["history", "mystery"],
-            "profile": DeliveryProfile.SARAH_MAX_CREATOR,
-            "supported_profiles": [DeliveryProfile.SARAH_MAX_CREATOR]
+            "profile": DeliveryProfile.CONVERSATIONAL,
+            "supported_profiles": [DeliveryProfile.CONVERSATIONAL]
         }
     }
 
@@ -134,10 +124,10 @@ class VoiceVariationPolicy:
         # 2. Select Delivery Profile coupled directly to the chosen voice
         if chosen_voice == "am_liam":
             profile = DeliveryProfile.LIAM_MAX_CREATOR
-        elif chosen_voice == "af_bella":
-            profile = DeliveryProfile.CONVERSATIONAL
-        else:
+        elif chosen_voice == "af_sarah":
             profile = DeliveryProfile.SARAH_MAX_CREATOR
+        else:
+            profile = DeliveryProfile.CONVERSATIONAL
 
         # 3. Build calibrated delivery spec
         delivery_spec = self.delivery_director.build_delivery_spec(

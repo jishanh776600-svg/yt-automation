@@ -502,10 +502,10 @@ def test_22_no_youtube_upload_occurs():
 # --------------------------------------------------------------------------
 # Tests 23-26: Invariants: Voice Lock, SFX Disabled, No Historical Fallback
 # --------------------------------------------------------------------------
-def test_23_sarah_only_voice_invariant_remains_intact():
-    """Approved production voice remains strictly af_sarah."""
-    assert "af_sarah" in APPROVED_PRODUCTION_VOICES
-    assert KOKORO_VOICE == "af_sarah"
+def test_23_bella_only_voice_invariant_remains_intact():
+    """Approved production voice remains strictly af_bella."""
+    assert "af_bella" in APPROVED_PRODUCTION_VOICES
+    assert KOKORO_VOICE == "af_bella"
 
 
 
