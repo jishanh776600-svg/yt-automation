@@ -1213,7 +1213,7 @@ class ProductionOrchestrator:
         candidate pre-filtering, and sequential job execution.
         Accepts either count or batch_size for caller flexibility (defaults to 3).
         """
-        target_count = count if count is not None else (batch_size if batch_size is not None else 3)
+        target_count = count if count is not None else (batch_size if batch_size is not None else 6)
 
         lock = ProcessLock(name="production", command_name="orchestrator-batch")
         if not lock.acquire():

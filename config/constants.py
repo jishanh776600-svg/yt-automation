@@ -212,16 +212,16 @@ YOUTUBE_UPLOAD_COST = 1600
 DAILY_SHORTS_LIMIT = 3
 TARGET_RESERVE_BUFFER = 6
 
-# Canonical Buffer Audit & Replenishment Automation (Every 3 Hours, 24/7)
-BUFFER_AUDIT_INTERVAL_HOURS = 3
-BUFFER_AUDIT_CRON = "0 */3 * * *"
-BUFFER_AUDIT_HOURS_UTC = [0, 3, 6, 9, 12, 15, 18, 21]
+# Canonical Buffer Audit & Replenishment Automation (Every 2 Hours, 24/7)
+BUFFER_AUDIT_INTERVAL_HOURS = 2
+BUFFER_AUDIT_CRON = "0 */2 * * *"
+BUFFER_AUDIT_HOURS_UTC = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
 
 
 def get_next_buffer_audit_time(reference_dt: Optional[datetime] = None) -> datetime:
     """
-    Computes the exact next upcoming 3-hour audit slot:
-    00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00, 21:00 UTC.
+    Computes the exact next upcoming 2-hour audit slot:
+    00:00, 02:00, 04:00, 06:00, 08:00, 10:00, 12:00, 14:00, 16:00, 18:00, 20:00, 22:00 UTC.
     Returns naive UTC datetime suitable for ISO formatting and countdowns.
     """
     from datetime import time as dtime

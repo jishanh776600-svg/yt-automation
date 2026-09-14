@@ -532,6 +532,8 @@ class MissionControlService:
             "ready_stock": ready_stock,
             "target_reserve": target_reserve,
             "refill_deficit": refill_deficit,
+            "refill_required": refill_deficit > 0,
+            "refill_status": "REFILL_REQUIRED" if refill_deficit > 0 else "NOT_REQUIRED",
             "scheduled_count": scheduled_count,
             "audit_interval_hours": BUFFER_AUDIT_INTERVAL_HOURS,
             "audit_cron": BUFFER_AUDIT_CRON,

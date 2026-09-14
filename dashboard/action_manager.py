@@ -37,7 +37,7 @@ class ActionManager:
     def trigger_buffer_production(
         self,
         db: Session,
-        count: int = 1,
+        count: int = 0,
         target: int = 6,
         force_local: bool = False
     ) -> Dict[str, Any]:
@@ -46,6 +46,10 @@ class ActionManager:
         In CLOUD_MODE, performs stock-health check, checks for active duplicate runs,
         and requests produce_buffer.yml workflow dispatch on GitHub Actions.
         """
+        from config.constants import TARGET_RESERVE_BUFFER
+        # Canonical Target-6 Invariant: Ensure target is never below canonical TARGET_RESERVE_BUFFER
+        target = max(target or TARGET_RESERVE_BUFFER, TARGET_RESERVE_BUFFER)
+
         # 1. Authoritative Stock Health Gate (Phase 6)
         try:
             current_stock = self.drive_engine.get_ready_stock_count(db=db)
@@ -53,16 +57,22 @@ class ActionManager:
             logger.warning(f"Could not read live Drive stock before refill: {d_err}")
             current_stock = 0
 
-        if count == 0 and current_stock >= target:
-            logger.info(f"[ACTION] Buffer refill rejected: stock is healthy ({current_stock}/{target} Shorts in 01_READY).")
+        deficit = max(0, target - current_stock)
+
+        if count == 0 and deficit == 0:
+            logger.info(f"[ACTION] Buffer refill rejected: stock is healthy ({current_stock}/{target} Shorts in 01_READY). Deficit: 0. Status: NOT REQUIRED.")
             return {
                 "success": False,
                 "status": "STOCK_HEALTHY",
+                "refill_status": "NOT_REQUIRED",
+                "deficit": 0,
                 "error": f"Google Drive 01_READY stock is healthy ({current_stock}/{target} Shorts). Refill not required.",
                 "current_stock": current_stock,
                 "target": target,
                 "timestamp": datetime.utcnow().isoformat() + "Z"
             }
+
+        logger.info(f"[ACTION] Buffer refill needed: current stock is {current_stock}/{target}. Deficit: {deficit}. Status: REFILL REQUIRED.")
 
         # 2. Duplicate Refill Protection (Phase 5)
         active_run = self.github_dispatcher.get_active_workflow_run("produce_buffer.yml")
@@ -71,6 +81,8 @@ class ActionManager:
             return {
                 "success": False,
                 "status": "REFILL_ALREADY_RUNNING",
+                "refill_status": "REFILL_REQUIRED",
+                "deficit": deficit,
                 "error": f"A buffer refill workflow is already running on GitHub Actions (Run ID: {active_run['id']}, Status: {active_run['status']}).",
                 "active_run_id": active_run["id"],
                 "run_status": active_run["status"],
@@ -81,13 +93,18 @@ class ActionManager:
         from config.settings import CLOUD_MODE
         active_v = "af_bella"
         if CLOUD_MODE and not force_local:
-            logger.info(f"[ACTION:CLOUD] CLOUD_MODE active. Dispatching produce_buffer.yml (Current Stock: {current_stock}/{target}, Voice: {active_v})...")
+            logger.info(f"[ACTION:CLOUD] CLOUD_MODE active. Dispatching produce_buffer.yml (Current Stock: {current_stock}/{target}, Deficit: {deficit}, Voice: {active_v})...")
             batch_count = count if count > 0 else 0
-            return self.github_dispatcher.dispatch_produce_buffer(
+            dispatch_res = self.github_dispatcher.dispatch_produce_buffer(
                 target_buffer=target,
                 batch_count=batch_count,
                 active_voice=active_v
             )
+            dispatch_res["current_stock"] = current_stock
+            dispatch_res["target"] = target
+            dispatch_res["deficit"] = deficit
+            dispatch_res["refill_status"] = "REFILL_REQUIRED"
+            return dispatch_res
 
         # Local execution fallback for offline development
         prod_lock = ProcessLock(name="production")
@@ -96,6 +113,8 @@ class ActionManager:
             return {
                 "success": False,
                 "status": "LOCK_HELD",
+                "refill_status": "REFILL_REQUIRED",
+                "deficit": deficit,
                 "error": f"Production lock is currently held by active PID {info.get('pid') if info else 'unknown'}.",
                 "lock_active": True,
                 "timestamp": datetime.utcnow().isoformat() + "Z"
@@ -109,25 +128,35 @@ class ActionManager:
                 res = pipeline.produce_batch(count=count)
                 produced_count = res[0] if isinstance(res, tuple) else res
                 summary = res[1] if isinstance(res, tuple) else {}
+                outcome = summary.get("outcome", "")
+                is_success = produced_count > 0 or outcome == "SUCCEEDED"
                 return {
-                    "success": produced_count > 0 or summary.get("outcome") == "SUCCEEDED",
-                    "status": "PRODUCED_BATCH",
+                    "success": is_success,
+                    "status": "PRODUCED_BATCH" if is_success else "PRODUCTION_FAILED",
                     "action": "PRODUCE_BATCH",
                     "produced_count": produced_count,
                     "target": target,
+                    "deficit": deficit,
+                    "refill_status": "NOT_REQUIRED" if (current_stock + produced_count) >= target else "REFILL_REQUIRED",
+                    "error": summary.get("block_reason") if not is_success else None,
                     "timestamp": datetime.utcnow().isoformat() + "Z"
                 }
             else:
-                logger.info(f"[ACTION] Maintaining buffer target of {target} Shorts...")
+                logger.info(f"[ACTION] Maintaining buffer target of {target} Shorts (Deficit: {deficit})...")
                 res = pipeline.maintain_buffer(target_stock=target)
                 produced_count = res[0] if isinstance(res, tuple) else res
                 summary = res[1] if isinstance(res, tuple) else {}
+                outcome = summary.get("outcome", "")
+                is_success = outcome in ("SUCCEEDED", "PARTIAL")
                 return {
-                    "success": summary.get("outcome") in ("SUCCEEDED", "PARTIAL"),
-                    "status": "BUFFER_MAINTAINED",
+                    "success": is_success,
+                    "status": "BUFFER_MAINTAINED" if is_success else "REFILL_FAILED",
                     "action": "MAINTAIN_BUFFER",
                     "produced_count": produced_count,
                     "target": target,
+                    "deficit": deficit,
+                    "refill_status": "NOT_REQUIRED" if (current_stock + produced_count) >= target else "REFILL_REQUIRED",
+                    "error": summary.get("block_reason") if not is_success else None,
                     "timestamp": datetime.utcnow().isoformat() + "Z"
                 }
         except Exception as e:

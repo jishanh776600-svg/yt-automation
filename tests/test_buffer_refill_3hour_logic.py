@@ -1,5 +1,5 @@
 """
-Dedicated Test Suite: 3-Hour Autonomous Buffer Refill Logic.
+Dedicated Test Suite: 2-Hour Autonomous Buffer Refill Logic.
 =============================================================
 Covers all 10 canonical requirements:
 1. READY = 6 -> produce 0
@@ -9,8 +9,8 @@ Covers all 10 canonical requirements:
 5. READY > 6 -> produce 0
 6. Re-running after successful refill does not create duplicates
 7. Manual refill uses same CloudProductionOrchestrator
-8. Dashboard displays same target (6) and interval (Every 3 hours)
-9. Workflow YAML contains 0 */3 * * * and target 6
+8. Dashboard displays same target (6) and interval (Every 2 hours)
+9. Workflow YAML contains 0 */2 * * * and target 6
 10. Last/next audit telemetry is correctly calculated
 """
 
@@ -44,7 +44,17 @@ def _get_mock_cloud_lock():
 
 
 class TestBufferRefill3HourLogic:
-    """Comprehensive test suite for the 3-hour autonomous buffer refill system."""
+    """Comprehensive test suite for the 2-hour autonomous buffer refill system."""
+
+    @pytest.fixture(autouse=True)
+    def setup_locks(self):
+        mock_proc_lock = MagicMock()
+        mock_proc_lock.acquire.return_value = True
+        mock_proc_lock.release.return_value = True
+        mock_proc_lock.is_locked.return_value = False
+        with patch("intelligence.cloud_orchestrator.ProcessLock", return_value=mock_proc_lock), \
+             patch("core.lock.ProcessLock.is_locked", return_value=False):
+            yield
 
     # --------------------------------------------------------------------------
     # 1. READY = 6 -> produce 0
@@ -257,10 +267,10 @@ class TestBufferRefill3HourLogic:
             mock_run.assert_called_once_with(target_buffer=6)
 
     # --------------------------------------------------------------------------
-    # 8. Dashboard displays same target (6) and interval (Every 3 hours)
+    # 8. Dashboard displays same target (6) and interval (Every 2 hours)
     # --------------------------------------------------------------------------
     def test_08_dashboard_displays_same_target_and_interval(self):
-        """SystemDataProvider and MissionControlService report 6-reserve and 3-hour interval."""
+        """SystemDataProvider and MissionControlService report 6-reserve and 2-hour interval."""
         provider = SystemDataProvider()
         mock_db = MagicMock()
 
@@ -268,9 +278,9 @@ class TestBufferRefill3HourLogic:
         with patch("engines.drive_engine.DriveVaultEngine.get_ready_stock_count", return_value=4):
             refill_telem = provider.get_refill_telemetry(mock_db)
             assert refill_telem["target_reserve"] == 6
-            assert refill_telem["audit_interval_hours"] == 3
-            assert refill_telem["audit_cron"] == "0 */3 * * *"
-            assert "Every 3 hours" in refill_telem["trigger_schedule"]
+            assert refill_telem["audit_interval_hours"] == 2
+            assert refill_telem["audit_cron"] == "0 */2 * * *"
+            assert "Every 2 hours" in refill_telem["trigger_schedule"]
             assert refill_telem["automation_status"] == "ACTIVE"
 
             # Cloud workflows check
@@ -278,34 +288,34 @@ class TestBufferRefill3HourLogic:
             workflows = cloud_wf.get("workflows", [])
             buffer_wf = next((w for w in workflows if w["id"] == "produce_buffer"), None)
             assert buffer_wf is not None
-            assert "0 */3 * * *" in buffer_wf["cron"]
-            assert "Every 3 hours" in buffer_wf["cron"]
+            assert "0 */2 * * *" in buffer_wf["cron"]
+            assert "Every 2 hours" in buffer_wf["cron"]
             assert "6 Shorts" in buffer_wf["target"]
 
             # Mission control command center telemetry check
             mc_telem = mission_control_service.get_command_center_telemetry(db=mock_db)
             assert mc_telem["target_reserve"] == 6
-            assert mc_telem["audit_interval_hours"] == 3
-            assert mc_telem["audit_cron"] == "0 */3 * * *"
+            assert mc_telem["audit_interval_hours"] == 2
+            assert mc_telem["audit_cron"] == "0 */2 * * *"
             assert mc_telem["refill_deficit"] == 2  # 6 - 4
             assert mc_telem["automation_status"] == "ACTIVE"
 
     # --------------------------------------------------------------------------
-    # 9. Workflow YAML contains 0 */3 * * * and target 6
+    # 9. Workflow YAML contains 0 */2 * * * and target 6
     # --------------------------------------------------------------------------
-    def test_09_workflow_yaml_contains_3hour_cron_and_target_6(self):
-        """produce_buffer.yml matches 3-hour cron and target_buffer default of 6."""
+    def test_09_workflow_yaml_contains_2hour_cron_and_target_6(self):
+        """produce_buffer.yml matches 2-hour cron and target_buffer default of 6."""
         wf_path = PROJECT_ROOT / ".github" / "workflows" / "produce_buffer.yml"
         assert wf_path.exists(), "produce_buffer.yml must exist"
 
         content = wf_path.read_text(encoding="utf-8")
-        assert "0 */3 * * *" in content, "Cron must be 0 */3 * * *"
+        assert "0 */2 * * *" in content, "Cron must be 0 */2 * * *"
 
         parsed = yaml.safe_load(content)
         triggers = parsed.get("on") or parsed.get(True) or {}
         schedule = triggers.get("schedule", [])
         crons = [s.get("cron") for s in schedule if isinstance(s, dict)]
-        assert "0 */3 * * *" in crons, f"Expected '0 */3 * * *' in crons: {crons}"
+        assert "0 */2 * * *" in crons, f"Expected '0 */2 * * *' in crons: {crons}"
 
         dispatch = triggers.get("workflow_dispatch", {})
         inputs = dispatch.get("inputs", {})
@@ -316,20 +326,20 @@ class TestBufferRefill3HourLogic:
     # 10. Last/next audit telemetry is correctly calculated
     # --------------------------------------------------------------------------
     def test_10_next_audit_telemetry_dynamic_calculation(self):
-        """get_next_buffer_audit_time aligns to 00, 03, 06, 09, 12, 15, 18, 21 UTC."""
-        assert BUFFER_AUDIT_INTERVAL_HOURS == 3
-        assert BUFFER_AUDIT_CRON == "0 */3 * * *"
-        assert BUFFER_AUDIT_HOURS_UTC == [0, 3, 6, 9, 12, 15, 18, 21]
+        """get_next_buffer_audit_time aligns to 00, 02, 04, 06, 08, 10, 12, 14, 16, 18, 20, 22 UTC."""
+        assert BUFFER_AUDIT_INTERVAL_HOURS == 2
+        assert BUFFER_AUDIT_CRON == "0 */2 * * *"
+        assert BUFFER_AUDIT_HOURS_UTC == [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
 
-        # Case A: 01:15 UTC -> Next is 03:00 UTC
+        # Case A: 01:15 UTC -> Next is 02:00 UTC
         dt_a = datetime(2026, 9, 6, 1, 15, 0, tzinfo=timezone.utc)
         next_a = get_next_buffer_audit_time(dt_a)
-        assert next_a == datetime(2026, 9, 6, 3, 0, 0)
+        assert next_a == datetime(2026, 9, 6, 2, 0, 0)
 
-        # Case B: Exactly on slot 03:00 UTC -> Next is 06:00 UTC
-        dt_b = datetime(2026, 9, 6, 3, 0, 0, tzinfo=timezone.utc)
+        # Case B: Exactly on slot 02:00 UTC -> Next is 04:00 UTC
+        dt_b = datetime(2026, 9, 6, 2, 0, 0, tzinfo=timezone.utc)
         next_b = get_next_buffer_audit_time(dt_b)
-        assert next_b == datetime(2026, 9, 6, 6, 0, 0)
+        assert next_b == datetime(2026, 9, 6, 4, 0, 0)
 
         # Case C: 22:30 UTC -> Next is 00:00 UTC tomorrow
         dt_c = datetime(2026, 9, 6, 22, 30, 0, tzinfo=timezone.utc)

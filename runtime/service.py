@@ -424,7 +424,8 @@ class AutonomousRuntimeService:
         - Target reserve = 6 verified Shorts (or configured target_buffer_stock).
         - Calculates deficit = max(target_reserve - ready_count, 0).
         """
-        target = self.config.target_buffer_stock
+        from config.constants import TARGET_RESERVE_BUFFER
+        target = max(self.config.target_buffer_stock or TARGET_RESERVE_BUFFER, TARGET_RESERVE_BUFFER)
         allow_test = self.config.dry_run or TEST_MODE or os.environ.get("TEST_MODE", "").lower() in ("true", "1", "yes")
         allow_net_read = getattr(self.orchestrator.capabilities, "allow_network_read", True)
 
@@ -451,8 +452,9 @@ class AutonomousRuntimeService:
             if local_vault_ready > 0:
                 ready_count = local_vault_ready
             else:
+                # Invariant: Only assets strictly in READY_TO_UPLOAD count toward the ready reserve buffer
                 db_ready = db.query(Job).filter(
-                    Job.state.in_([JobState.QA.value, JobState.READY_TO_UPLOAD.value, JobState.SCHEDULED.value])
+                    Job.state == JobState.READY_TO_UPLOAD.value
                 ).count()
                 ready_count = db_ready
 
@@ -462,7 +464,9 @@ class AutonomousRuntimeService:
             "processing_count": processing_count,
             "target_reserve": target,
             "deficit": deficit,
-            "is_healthy": (deficit == 0)
+            "is_healthy": (deficit == 0),
+            "status": "NOT_REQUIRED" if deficit == 0 else "REFILL_REQUIRED",
+            "refill_required": deficit > 0
         }
 
     # ==========================================================================

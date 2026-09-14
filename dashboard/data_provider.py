@@ -813,6 +813,7 @@ class SystemDataProvider:
         runway_days = round(ready_stock / float(DAILY_SHORTS_LIMIT), 2)
         runway_hours = round(runway_days * 24.0, 1)
 
+        deficit = max(0, target - ready_stock)
         health = "HEALTHY"
         health_message = f"Vault buffer healthy ({ready_stock}/{target} Shorts)"
         if ready_stock == 0:
@@ -829,12 +830,15 @@ class SystemDataProvider:
             "ready_stock": ready_stock,
             "current_reserve": ready_stock,
             "target_reserve": target,
+            "deficit": deficit,
+            "status": "REFILL_REQUIRED" if deficit > 0 else "NOT_REQUIRED",
+            "refill_status": "REFILL_REQUIRED" if deficit > 0 else "NOT_REQUIRED",
             "health": health,
             "health_message": health_message,
             "runway_days": runway_days,
             "runway_hours": runway_hours,
             "runway_display": f"{runway_days:.1f} days ({runway_hours:.0f} hours)",
-            "needed_replenishment": max(0, target - ready_stock)
+            "needed_replenishment": deficit
         }
 
     def get_refill_telemetry(self, db: Session, ready_stock: Optional[int] = None) -> Dict[str, Any]:
@@ -880,7 +884,7 @@ class SystemDataProvider:
         except Exception:
             pass
 
-        # 2. Next scheduled 3-hour audit run (00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00, 21:00 UTC)
+        # 2. Next scheduled 2-hour audit run (00, 02, 04, 06, 08, 10, 12, 14, 16, 18, 20, 22 UTC)
         from config.constants import (
             BUFFER_AUDIT_INTERVAL_HOURS,
             BUFFER_AUDIT_CRON,
@@ -998,7 +1002,7 @@ class SystemDataProvider:
         elif deficit > 0:
             status = "NEEDED"
             automation_status = "ACTIVE"
-            status_message = f"Deficit of {deficit} Shorts detected. Scheduled for next {next_refill_time.strftime('%H:%M UTC')} 3-hour refill audit window."
+            status_message = f"Deficit of {deficit} Shorts detected. Scheduled for next {next_refill_time.strftime('%H:%M UTC')} 2-hour refill audit window."
             status_badge_class = "bg-sky-950 text-sky-300 border border-sky-800"
         else:
             status = "IDLE"
@@ -1025,8 +1029,10 @@ class SystemDataProvider:
             "current_ready": ready_stock,
             "target_reserve": target,
             "deficit": deficit,
+            "refill_status": "REFILL_REQUIRED" if deficit > 0 else "NOT_REQUIRED",
+            "refill_required": deficit > 0,
             "trigger": f"Reserve buffer < {target} Shorts in 01_READY",
-            "trigger_schedule": "Every 3 hours (00, 03, 06, 09, 12, 15, 18, 21 UTC) or manual dispatch",
+            "trigger_schedule": "Every 2 hours (00, 02, 04, 06, 08, 10, 12, 14, 16, 18, 20, 22 UTC) or manual dispatch",
             "audit_interval_hours": BUFFER_AUDIT_INTERVAL_HOURS,
             "audit_cron": BUFFER_AUDIT_CRON,
             "last_audit_timestamp": last_refill_completion,
@@ -1422,7 +1428,7 @@ class SystemDataProvider:
         """
         now = datetime.utcnow()
         
-        # Calculate next buffer cron run (Every 3 hours: 00, 03, 06, 09, 12, 15, 18, 21 UTC)
+        # Calculate next buffer cron run (Every 2 hours: 00, 02, 04, 06, 08, 10, 12, 14, 16, 18, 20, 22 UTC)
         from config.constants import get_next_buffer_audit_time
         next_buffer = get_next_buffer_audit_time(now)
 
@@ -1453,7 +1459,7 @@ class SystemDataProvider:
                 "id": "produce_buffer",
                 "name": "01 Buffer Producer",
                 "filename": "produce_buffer.yml",
-                "cron": "0 */3 * * * (Every 3 hours: 00, 03, 06, 09, 12, 15, 18, 21 UTC)",
+                "cron": "0 */2 * * * (Every 2 hours: 00, 02, 04, 06, 08, 10, 12, 14, 16, 18, 20, 22 UTC)",
                 "target": "Replenish 01_READY reserve to 6 Shorts",
                 "concurrency_group": "buffer-producer",
                 "live_status": "STATUS_UNAVAILABLE (Cloud Runner)",

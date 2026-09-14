@@ -642,9 +642,9 @@ class CloudProductionOrchestrator:
                             score -= 4.0
                     return score
 
-                # If live news yields fewer than needed niche-compliant cards, replenish from documented historical stories
-                if len(compliant_cards) < needed:
-                    logger.info(f"[NICHE_DISCOVERY] Ingested {len(compliant_cards)}/{needed} cards from live sources. Sourcing qualified historical mystery stories...")
+                target_candidates_count = max(needed * 4, 12)
+                if len(compliant_cards) < target_candidates_count:
+                    logger.info(f"[NICHE_DISCOVERY] Currently have {len(compliant_cards)}/{target_candidates_count} candidates. Sourcing qualified historical mystery stories...")
                     from engines.topic_discovery import TopicDiscoveryEngine, CURATED_HISTORICAL_SEEDS
                     from intelligence.event_card import WhoSection, WhereSection, WhenSection, ClaimEvidence
                     t_engine = TopicDiscoveryEngine()
@@ -652,11 +652,21 @@ class CloudProductionOrchestrator:
                         t_title = s["title"]
                         if t_engine.is_duplicate(db, t_title, s["summary"]):
                             continue
-                        # Check duplicate guard
                         slug = re.sub(r'[^a-zA-Z0-9_]', '_', t_title.lower())[:30].strip('_')
                         ev_id = f"evt_hist_{slug}"
                         if self.is_event_already_produced(ev_id, db):
                             continue
+                        # Pre-filter using global ShortDuplicateGuard to prevent choosing known produced titles
+                        is_uniq, uniq_reason, _ = self.duplicate_guard.verify_short_uniqueness(
+                            topic_title=t_title,
+                            script_text=s["summary"],
+                            duration_seconds=23.0,
+                            asset_ids=[]
+                        )
+                        if not is_uniq:
+                            logger.debug(f"[SEED_PRE_FILTER] Skipping duplicate seed '{t_title}': {uniq_reason}")
+                            continue
+
                         hist_card = EventCard(
                             event_id=ev_id,
                             canonical_title=t_title,
@@ -682,16 +692,16 @@ class CloudProductionOrchestrator:
                             entities=[t_title]
                         )
                         compliant_cards.append(hist_card)
-                        if len(compliant_cards) >= (needed + 2):
+                        if len(compliant_cards) >= target_candidates_count:
                             break
 
-                    # If curated seeds did not supply enough candidates, discover fresh unproduced historical topics
-                    if len(compliant_cards) < needed:
+                    # If curated seeds did not supply enough unique candidates, discover fresh unproduced historical topics
+                    if len(compliant_cards) < target_candidates_count:
                         logger.info(f"[NICHE_DISCOVERY] Sourcing additional fresh unproduced historical mystery topics via TopicDiscoveryEngine...")
                         try:
                             fresh_topics = t_engine._discover_historical_topics(
                                 db,
-                                limit=(needed + 2 - len(compliant_cards)),
+                                limit=(target_candidates_count - len(compliant_cards)),
                                 allow_ai=True
                             )
                             for ft in (fresh_topics or []):
@@ -701,6 +711,16 @@ class CloudProductionOrchestrator:
                                 ev_id = f"evt_hist_{slug}"
                                 if self.is_event_already_produced(ev_id, db):
                                     continue
+                                is_uniq, uniq_reason, _ = self.duplicate_guard.verify_short_uniqueness(
+                                    topic_title=ft.title,
+                                    script_text=ft.summary,
+                                    duration_seconds=23.0,
+                                    asset_ids=[]
+                                )
+                                if not is_uniq:
+                                    logger.debug(f"[FRESH_TOPIC_PRE_FILTER] Skipping duplicate topic '{ft.title}': {uniq_reason}")
+                                    continue
+
                                 hist_card = EventCard(
                                     event_id=ev_id,
                                     canonical_title=ft.title,
@@ -726,7 +746,7 @@ class CloudProductionOrchestrator:
                                     entities=[ft.title]
                                 )
                                 compliant_cards.append(hist_card)
-                                if len(compliant_cards) >= (needed + 2):
+                                if len(compliant_cards) >= target_candidates_count:
                                     break
                         except Exception as ai_disc_err:
                             logger.warning(f"Notice during live historical topic discovery: {ai_disc_err}")
@@ -735,16 +755,26 @@ class CloudProductionOrchestrator:
 
                 # 7. Produce Up to Deficit
                 produced_this_run = 0
+                logger.info(f"[PRODUCING_DEFICIT] Sourcing from pool of {len(compliant_cards)} unique compliant candidates to fulfill deficit of {needed} Short(s)...")
                 for ec in compliant_cards:
                     if produced_this_run >= needed:
                         break
 
+                    cand_title = getattr(ec, "canonical_title", getattr(ec, "headline", "Event"))
+                    logger.info(f"[PRODUCING_DEFICIT] [{produced_this_run + 1}/{needed}] Processing candidate '{cand_title}' [{ec.event_id}]...")
                     rec = self.produce_single_event(ec, telemetry, db)
                     if rec or self.is_dry_run:
                         produced_this_run += 1
+                        logger.info(f"[PRODUCING_DEFICIT] [+] Successfully produced candidate '{cand_title}' ({produced_this_run}/{needed})")
+                    else:
+                        logger.warning(f"[PRODUCING_DEFICIT] [!] Candidate '{cand_title}' was rejected or skipped. Trying next candidate from pool...")
 
                 telemetry.final_ready_stock = self.get_ready_stock_count()
                 status = "SUCCEEDED" if (produced_this_run >= needed or self.is_dry_run) else ("PARTIAL" if produced_this_run > 0 else "FAILED")
+                logger.info(
+                    f"[BUFFER_REFILL_AUDIT] Production cycle finished. Produced: {produced_this_run}/{needed}. "
+                    f"Final ready stock: {telemetry.final_ready_stock}/{target_buffer} Shorts. Status: {status}."
+                )
                 telemetry.complete(status=status)
 
             finally:

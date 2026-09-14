@@ -27,13 +27,18 @@ from engines.scheduler_engine import PublicationScheduler
 from dashboard.action_manager import ActionManager
 from dashboard.data_provider import SystemDataProvider
 from config.constants import JobState, DAILY_SHORTS_LIMIT, TARGET_RESERVE_BUFFER, PUBLISHING_SLOTS_UTC
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from core.models import Base
 from core.lock import ProcessLock
 
 
 @pytest.fixture
 def db_session():
-    init_db()
-    session = SessionLocal()
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
     try:
         yield session
     finally:

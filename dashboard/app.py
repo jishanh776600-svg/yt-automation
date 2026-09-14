@@ -100,13 +100,13 @@ class LoginRequest(BaseModel):
 
 class ProduceBufferRequest(BaseModel):
     count: int = Field(default=0, ge=0, le=24, description="Number of Shorts to produce or 0 for target refill")
-    target: int = Field(default=6, ge=1, le=24, description="Target reserve buffer size in Google Drive")
+    target: int = Field(default=6, ge=6, le=24, description="Target reserve buffer size in Google Drive (canonical: 6)")
     password: Optional[str] = Field(default=None, description="Admin password for major action re-authentication")
     reauth_token: Optional[str] = Field(default=None, description="Short-lived re-authentication token")
 
 
 class PublishNextRequest(BaseModel):
-    # Note: Hard DAILY_SHORTS_LIMIT = 4 invariant is strictly enforced. No remote force bypass.
+    # Note: Hard DAILY_SHORTS_LIMIT = 3 invariant is strictly enforced. No remote force bypass.
     pass
 
 
@@ -370,14 +370,14 @@ def _get_safe_system_state(db: Session) -> Dict[str, Any]:
             "last_audit_result": "Standing by (Reserve healthy)",
             "next_check_at": "00:00 UTC",
             "next_check_utc": "00:00 UTC",
-            "next_check_display": "in 3h",
-            "next_audit_display": "in 3h",
+            "next_check_display": "in 2h",
+            "next_audit_display": "in 2h",
             "next_audit_utc_display": "00:00 UTC",
-            "interval_hours": 3,
-            "audit_interval_hours": 3,
-            "audit_cron": "0 */3 * * *",
+            "interval_hours": 2,
+            "audit_interval_hours": 2,
+            "audit_cron": "0 */2 * * *",
             "trigger": "Reserve buffer < 6 Shorts in 01_READY",
-            "trigger_schedule": "Every 3 hours (00, 03, 06, 09, 12, 15, 18, 21 UTC) or manual dispatch",
+            "trigger_schedule": "Every 2 hours (00, 02, 04, 06, 08, 10, 12, 14, 16, 18, 20, 22 UTC) or manual dispatch",
             "last_scheduler_run": "Never",
             "last_scheduler_result": "STANDBY",
             "last_error": None
