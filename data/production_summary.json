@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "PARTIAL",
-  "block_reason": "Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_b06f564d1e88; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_2bf89781983b; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_e31219e179de; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_c3d56024f3c0; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_c4285409d4bf",
-  "requested_deficit": 4,
-  "produced_count": 1,
-  "initial_stock": 2,
+  "outcome": "FAILED",
+  "block_reason": "Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_b06f564d1e88; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_2bf89781983b; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_180afd75860d; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_c3d56024f3c0; Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_c4285409d4bf",
+  "requested_deficit": 3,
+  "produced_count": 0,
+  "initial_stock": 3,
   "final_stock": 3,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-14T04:08:26.204130Z"
+  "timestamp": "2026-09-14T12:16:29.062903Z"
 }
