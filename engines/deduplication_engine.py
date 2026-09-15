@@ -33,6 +33,15 @@ DEDUP_STOPWORDS = {
     "shorts", "video", "youtube", "tiktok"
 }
 
+GENERIC_DEDUP_ENTITIES = {
+    "british", "american", "european", "german", "french", "spanish", "russian",
+    "royal", "empire", "navy", "army", "king", "queen", "president",
+    "january", "february", "march", "april", "may", "june", "july",
+    "august", "september", "october", "november", "december",
+    "scientists", "researchers", "study", "experts", "team", "people",
+    "doctor", "doctors", "author", "authors", "university", "science"
+}
+
 # Thematic anchors that link events when exact year matches
 THEMATIC_EVENT_ANCHORS = {
     "parliament", "river", "sewage", "stink", "stench", "foul", "fumes", "miasma", "curtains",
@@ -415,7 +424,7 @@ class StoryDeduplicationEngine:
             return None
 
         # 5. Multi-Entity + Multi-Stem Overlap
-        specific_entities = {e for e in shared_entities if e not in {"british", "american", "european", "german", "french", "royal", "empire", "navy"}}
+        specific_entities = {e for e in shared_entities if e not in GENERIC_DEDUP_ENTITIES}
         if (len(specific_entities) >= 2 and len(shared_stems) >= 3) or (len(specific_entities) >= 1 and len(shared_stems) >= 6):
             shared_desc = [f"Entities: {list(specific_entities)}", f"Keywords: {list(shared_stems)[:4]}"]
             return DeduplicationResult(
@@ -624,18 +633,12 @@ class StoryDeduplicationEngine:
                     return sem_res
 
         # 3. General Semantic NLI for shared years, entities, or thematic stems
-        GENERIC_ENTITIES = {
-            "british", "american", "european", "german", "french", "spanish", "russian",
-            "royal", "empire", "navy", "army", "king", "queen", "president",
-            "january", "february", "march", "april", "may", "june", "july",
-            "august", "september", "october", "november", "december"
-        }
         for existing in corpus:
             if candidate_fp.years and existing.years and not candidate_fp.years.intersection(existing.years):
                 continue
             shared_years = candidate_fp.years.intersection(existing.years)
             shared_entities = candidate_fp.entities.intersection(existing.entities)
-            specific_shared = shared_entities - GENERIC_ENTITIES
+            specific_shared = shared_entities - GENERIC_DEDUP_ENTITIES
             shared_stems = candidate_fp.action_stems.intersection(existing.action_stems)
 
             should_check = (

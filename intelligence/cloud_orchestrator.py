@@ -611,13 +611,28 @@ class CloudProductionOrchestrator:
                         text=f"{card.what} {card.why} {card.how}",
                         entities=card.entities
                     )
-                    if is_ok:
-                        compliant_cards.append(card)
-                    else:
+                    if not is_ok:
                         logger.warning(
                             f"[NICHE_GATE_REJECT] Rejecting event '{card.canonical_title}' [{card.event_id}]: {reason}"
                         )
                         telemetry.events_rejected += 1
+                        continue
+
+                    if self.is_event_already_produced(card.event_id, db):
+                        logger.debug(f"[LIVE_EVENT_PRE_FILTER] Skipping already-produced event ID '{card.event_id}'")
+                        continue
+
+                    is_uniq, uniq_reason, _ = self.duplicate_guard.verify_short_uniqueness(
+                        topic_title=card.canonical_title,
+                        script_text=card.what,
+                        duration_seconds=23.0,
+                        asset_ids=[]
+                    )
+                    if not is_uniq:
+                        logger.info(f"[LIVE_EVENT_PRE_FILTER] Skipping duplicate candidate '{card.canonical_title}': {uniq_reason}")
+                        continue
+
+                    compliant_cards.append(card)
 
                 # Rank event cards by Mystery / Bizarre real-world storytelling potential
                 def _score_niche_curiosity(card: EventCard) -> float:
