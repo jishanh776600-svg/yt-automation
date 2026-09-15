@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
   "outcome": "FAILED",
-  "block_reason": "Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_157195b60ce4",
-  "requested_deficit": 4,
+  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc",
+  "requested_deficit": 6,
   "produced_count": 0,
-  "initial_stock": 2,
-  "final_stock": 2,
+  "initial_stock": 0,
+  "final_stock": 0,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-15T09:11:38.941619Z"
+  "timestamp": "2026-09-15T11:16:38.962593Z"
 }

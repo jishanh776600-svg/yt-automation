@@ -387,6 +387,7 @@ class TopicDiscoveryEngine:
             candidate_script=script_text,
             db=db,
             exclude_topic_id=exclude_topic_id,
+            exclude_title=title.strip() if exclude_topic_id else None,
             category=category,
             policy=effective_policy
         )
@@ -785,9 +786,14 @@ class TopicDiscoveryEngine:
                 favored_cats = guidance.get("top_categories", ["Unusual Wars", "Documented Disasters"])
                 cat_prompt_part = f"Focus especially on high-performing categories: {', '.join(favored_cats)}." if strategy_info["strategy_type"] == "PROVEN_PATTERN" else "Explore unusual, less-known historical categories."
 
+                recent_topics = db.query(Topic.title).filter(Topic.status.in_(["PRODUCED", "PUBLISHED", "SCHEDULED", "APPROVED"])).order_by(Topic.created_at.desc()).limit(25).all()
+                excluded_list = [t[0].strip() for t in recent_topics if t[0]]
+                excluded_str = f" Do NOT suggest any of these already covered topics: {', '.join(excluded_list[:15])}." if excluded_list else ""
+
+                num_to_request = max(limit * 2, 6)
                 prompt = (
-                    f"Suggest 3 obscure, true, bizarre historical events from American or European history "
-                    f"that make great 23-second YouTube Shorts. {cat_prompt_part} "
+                    f"Suggest {num_to_request} obscure, true, bizarre historical events from American or European history "
+                    f"that make great 23-second YouTube Shorts. {cat_prompt_part}{excluded_str} "
                     f"Format each as: Title | Category | 1-sentence factual summary. "
                     f"Do NOT use generic facts. Prioritize strange laws, unusual wars, or documented mysteries."
                 )

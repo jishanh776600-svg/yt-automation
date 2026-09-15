@@ -392,12 +392,15 @@ class CloudProductionOrchestrator:
         # 9. Persist Records to SQLite
         self.composer.persist_rendered_record(record, db_session=db)
 
-        # Mark Topic as PRODUCED
+        # Mark Topic as PRODUCED (lookup by event_id or canonical title to prevent duplicate rows)
         topic = db.query(Topic).filter_by(event_id=event_id).first()
+        c_title = getattr(event_card, "canonical_title", getattr(event_card, "headline", "Event"))
+        if not topic and c_title:
+            topic = db.query(Topic).filter(Topic.title.ilike(c_title.strip())).first()
         if not topic:
             topic = Topic(
                 id=f"top_{uuid.uuid4().hex[:12]}",
-                title=getattr(event_card, "canonical_title", getattr(event_card, "headline", "Event")),
+                title=c_title,
                 summary=getattr(event_card, "what", getattr(event_card, "summary", "")),
                 category=getattr(event_card, "category", "Mystery / Bizarre Real-World Stories"),
                 event_id=event_id,
@@ -409,6 +412,8 @@ class CloudProductionOrchestrator:
             db.add(topic)
         else:
             topic.status = "PRODUCED"
+            if not topic.event_id:
+                topic.event_id = event_id
 
         # Persist ProductionAssetManifestRecord
         manifest_rec = ProductionAssetManifestRecord(

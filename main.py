@@ -1309,13 +1309,14 @@ class ShortsPipeline:
                 matched_event = None
                 try:
                     from engines.deduplication_engine import DeduplicationRouter
-                    dedup_eng = DeduplicationRouter()
+                    clean_preclaim_title = c_title.strip() if c_title else ""
                     dedup_res = dedup_eng.evaluate_candidate(
-                        candidate_title=c_title,
+                        candidate_title=clean_preclaim_title,
                         candidate_summary=c_props.get("description", ""),
                         db=db,
                         exclude_topic_id=cand_topic_id,
                         exclude_job_id=c_job_id,
+                        exclude_title=clean_preclaim_title,
                         exclude_event_id=event_id
                     )
                     if not dedup_res.is_allowed:

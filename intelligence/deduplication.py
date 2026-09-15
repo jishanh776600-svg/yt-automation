@@ -155,7 +155,9 @@ class CurrentAffairsDeduplicationEngine:
         candidate_script: str = "",
         db: Optional[Session] = None,
         vault_files: Optional[List[Dict[str, Any]]] = None,
-        exclude_topic_id: Optional[str] = None
+        exclude_topic_id: Optional[str] = None,
+        exclude_job_id: Optional[str] = None,
+        exclude_title: Optional[str] = None
     ) -> Any:
         """
         Evaluates a candidate story against the SQLite Topic catalog and Upload records
@@ -173,6 +175,7 @@ class CurrentAffairsDeduplicationEngine:
                 reason="No database session provided for verification."
             )
 
+        clean_exclude = exclude_title.lower().strip() if exclude_title else None
         cand_text = f"{candidate_title}. {candidate_summary}"
         cand_entities, cand_countries, cand_actions, cand_keywords = extract_entities_and_tokens(
             cand_text,
@@ -186,6 +189,8 @@ class CurrentAffairsDeduplicationEngine:
         existing_topics = query.all()
 
         for t in existing_topics:
+            if clean_exclude and t.title.lower().strip() == clean_exclude:
+                continue
             is_dup, reason = is_same_current_affairs_story(
                 cand_title=candidate_title,
                 cand_summary=candidate_summary,
@@ -214,6 +219,10 @@ class CurrentAffairsDeduplicationEngine:
                 UploadRecord.status.in_(["PUBLISHED", "SCHEDULED", "SUCCESS", "TEST_VERIFIED", "RETIRED"])
             ).all()
             for u in uploads:
+                if exclude_job_id and u.job_id == exclude_job_id:
+                    continue
+                if clean_exclude and u.title.lower().strip() == clean_exclude:
+                    continue
                 is_dup, reason = is_same_current_affairs_story(
                     cand_title=candidate_title,
                     cand_summary=candidate_summary,

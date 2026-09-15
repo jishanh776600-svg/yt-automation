@@ -193,17 +193,20 @@ class UploadEngine:
             from engines.deduplication_engine import DeduplicationRouter
             dedup_engine = DeduplicationRouter()
             desc = metadata.get("description", "") or ""
+            clean_cand_title = (metadata.get("title") or "").strip()
             exclude_topic_id = getattr(job, "topic_id", None)
-            if not exclude_topic_id and metadata.get("title"):
-                top_match = db.query(Topic).filter(Topic.title.ilike(metadata.get("title").strip())).first()
+            if not exclude_topic_id and clean_cand_title:
+                top_match = db.query(Topic).filter(Topic.title.ilike(clean_cand_title)).first()
                 if top_match:
                     exclude_topic_id = top_match.id
 
             dedup_res = dedup_engine.evaluate_candidate(
-                candidate_title=metadata.get("title", ""),
+                candidate_title=clean_cand_title,
                 candidate_summary=desc,
                 db=db,
-                exclude_topic_id=exclude_topic_id
+                exclude_topic_id=exclude_topic_id,
+                exclude_job_id=getattr(job, "id", None),
+                exclude_title=clean_cand_title
             )
             if not dedup_res.is_allowed:
                 return False, f"Gate 15 Failed: Story is a duplicate of '{dedup_res.matched_event_title}' ({dedup_res.classification})"

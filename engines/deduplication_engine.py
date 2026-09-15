@@ -297,6 +297,8 @@ class StoryDeduplicationEngine:
                 continue
             if exclude_topic_id and getattr(u, "topic_id", None) == exclude_topic_id:
                 continue
+            if clean_exclude_title and u.title.lower().strip() == clean_exclude_title:
+                continue
             if u.title.lower() in seen_titles:
                 continue
             seen_titles.add(u.title.lower())
@@ -414,7 +416,7 @@ class StoryDeduplicationEngine:
 
         # 5. Multi-Entity + Multi-Stem Overlap
         specific_entities = {e for e in shared_entities if e not in {"british", "american", "european", "german", "french", "royal", "empire", "navy"}}
-        if (len(specific_entities) >= 2 and len(shared_stems) >= 3) or (len(shared_stems) >= 6):
+        if (len(specific_entities) >= 2 and len(shared_stems) >= 3) or (len(specific_entities) >= 1 and len(shared_stems) >= 6):
             shared_desc = [f"Entities: {list(specific_entities)}", f"Keywords: {list(shared_stems)[:4]}"]
             return DeduplicationResult(
                 is_duplicate=True,
@@ -752,7 +754,9 @@ class DeduplicationRouter:
                 candidate_script=candidate_script,
                 db=db,
                 vault_files=vault_files,
-                exclude_topic_id=exclude_topic_id
+                exclude_topic_id=exclude_topic_id,
+                exclude_job_id=exclude_job_id,
+                exclude_title=exclude_title
             )
         else:
             return self._story_engine.evaluate_candidate(

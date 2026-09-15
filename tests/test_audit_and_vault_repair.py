@@ -239,10 +239,11 @@ def test_deepseek_401_fails_fast_and_marks_exhausted(monkeypatch):
     assert client.is_provider_exhausted("deepseek")
 
 
-def test_zero_output_is_never_reported_as_success():
+def test_zero_output_is_never_reported_as_success(monkeypatch):
     """Verifies that 0 produced Shorts results in BLOCKED or FAILED outcome, never SUCCEEDED."""
     from main import ShortsPipeline
     pipeline = ShortsPipeline()
+    monkeypatch.setattr(pipeline.drive_engine, "get_ready_stock_count", lambda db=None: 0)
 
     with patch.object(pipeline, "produce_single_to_vault", side_effect=Exception("Daily quota exhausted")):
         count, summary = pipeline.maintain_buffer(target_stock=1)
