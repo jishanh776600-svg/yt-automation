@@ -1,12 +1,11 @@
 {
-  "action": "MAINTAIN_BUFFER",
+  "action": "PRODUCE_BATCH",
   "outcome": "FAILED",
   "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc",
-  "requested_deficit": 6,
+  "requested_count": 1,
   "produced_count": 0,
   "initial_stock": 0,
   "final_stock": 0,
-  "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-15T11:16:38.962593Z"
+  "timestamp": "2026-09-15T11:49:58.223649Z"
 }
