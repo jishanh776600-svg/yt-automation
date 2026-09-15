@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "BLOCKED",
-  "block_reason": null,
-  "requested_deficit": 6,
+  "outcome": "FAILED",
+  "block_reason": "Duplicate Short rejected: Duplicate topic title (similarity 1.00 >= 0.7) with Short man_157195b60ce4",
+  "requested_deficit": 4,
   "produced_count": 0,
-  "initial_stock": 0,
-  "final_stock": 0,
+  "initial_stock": 2,
+  "final_stock": 2,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-15T02:11:14.431454Z"
+  "timestamp": "2026-09-15T06:35:35.740068Z"
 }
