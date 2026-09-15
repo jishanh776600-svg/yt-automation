@@ -1,11 +1,12 @@
 {
-  "action": "PRODUCE_BATCH",
+  "action": "MAINTAIN_BUFFER",
   "outcome": "FAILED",
-  "block_reason": null,
-  "requested_count": 1,
+  "block_reason": "Scripting error: Journalistic script rejected by ValidationGate: ['VerificationState is CONFLICTING_REPORTS but script fails to explicitly preserve the dispute/divergence.']; Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc",
+  "requested_deficit": 6,
   "produced_count": 0,
   "initial_stock": 0,
   "final_stock": 0,
+  "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-15T12:17:05.293215Z"
+  "timestamp": "2026-09-15T14:50:49.144618Z"
 }
