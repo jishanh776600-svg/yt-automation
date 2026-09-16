@@ -356,6 +356,7 @@ class HeadlessComposer:
         topic_title: str = "",
         output_path: Optional[Path] = None,
         run_qa: bool = True,
+        category: Optional[str] = None,
     ) -> Tuple[Path, VideoQAReport, RenderedVideoRecord]:
         """
         Assembles all beats from manifest with narration audio into a verified MP4 Short.
@@ -524,8 +525,22 @@ class HeadlessComposer:
                 from engines.audio_mixer import AudioMixer
                 mixer = AudioMixer()
                 script_full = " ".join(b.text for b in manifest.beats) if manifest.beats else ""
+                category_theme = (category or "").strip()
+                if not category_theme and manifest.event_id:
+                    try:
+                        from core.database import SessionLocal
+                        from core.models import Topic
+                        with SessionLocal() as db_sess:
+                            top = db_sess.query(Topic).filter(
+                                (Topic.event_id == manifest.event_id) | (Topic.id == manifest.event_id)
+                            ).first()
+                            if top and top.category:
+                                category_theme = top.category.strip()
+                    except Exception:
+                        pass
+
                 music_file, track_key, mood, reason = mixer.select_bgm_track(
-                    category="Mystery",
+                    category=category_theme,
                     title=topic_title,
                     script_text=script_full
                 )

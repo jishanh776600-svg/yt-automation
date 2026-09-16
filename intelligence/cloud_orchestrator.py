@@ -339,6 +339,7 @@ class CloudProductionOrchestrator:
                 topic_title=getattr(event_card, "canonical_title", getattr(event_card, "headline", "Event")),
                 output_path=output_mp4,
                 run_qa=True,
+                category=getattr(event_card, "event_type", getattr(event_card, "category", "")),
             )
         except Exception as render_err:
             logger.error(f"Render composition error: {render_err}")

@@ -40,7 +40,10 @@ BGM_LIBRARY = {
             "emperor", "pope", "crusade", "medieval", "royal", "duel", "regime", "conquest",
             "siege", "knight", "throne", "castle", "crown", "republic", "legion", "armada",
             "commander", "soldier", "navy", "military", "napoleon", "caesar", "churchill",
-            "latrine", "privy", "scandal", "erfurt", "tax", "beards", "laws", "aristocrats", "collapse"
+            "latrine", "privy", "scandal", "erfurt", "tax", "beards", "laws", "aristocrats",
+            "collapse", "politics", "political", "government", "diplomacy", "diplomatic",
+            "state", "senate", "historical", "history", "warfare", "general", "president",
+            "treaties", "alliance", "conflict", "clash"
         ]
     },
     "emotional_sad": {
@@ -54,7 +57,9 @@ BGM_LIBRARY = {
             "heartbreak", "death", "tears", "memorial", "ruin", "sorrow", "farewell", "crying",
             "dying", "famine", "plague", "victim", "burial", "fatal", "suffering", "sorrowful",
             "heartbreaking", "perished", "massacre", "destitution", "orphan", "starved", "grave",
-            "lonely", "tear", "sympathy", "deprived", "destitute", "grieving", "sorrow", "regret"
+            "lonely", "tear", "sympathy", "deprived", "destitute", "grieving", "sorrow", "regret",
+            "disaster", "catastrophe", "casualty", "casualties", "mourning", "wept", "aftermath",
+            "human toll", "devastation"
         ]
     },
     "flux_ambient": {
@@ -62,15 +67,13 @@ BGM_LIBRARY = {
         "display_name": "The Flux Beneath It All",
         "mood": "Dark Mystery / Atmospheric Intrigue / Scientific Wonder / Bizarre Oddity",
         "default_intensity": "Atmospheric-Tense",
-        "description": "Atmospheric ambient pulse for unexplained mysteries, bizarre historical oddities, strange cataclysms, disasters, scientific discoveries, and curiosity.",
+        "description": "Atmospheric ambient pulse for unexplained mysteries, ciphers, artifacts, cryptic enigmas, and strange oddities.",
         "keywords": [
-            "mystery", "secret", "strange", "lost", "invention", "wonder", "science", "curiosity",
-            "puzzle", "ancient", "unexplained", "phenomenon", "intrigue", "dark", "riddle",
-            "cryptic", "alchemist", "astronomy", "unknown", "hidden", "discovery", "experiment",
-            "baffling", "artifact", "voynich", "roanoke", "atlantis", "conspiracy", "code",
-            "anomaly", "alien", "weird", "disaster", "cataclysm", "eruption",
-            "volcano", "tsunami", "explosion", "stink", "molasses", "smell", "flood",
-            "miracle", "supernatural", "unbelievable", "peculiar", "unusual", "mysterious"
+            "mystery", "secret", "strange", "lost", "curiosity", "puzzle", "unexplained",
+            "phenomenon", "intrigue", "dark", "riddle", "cryptic", "alchemist", "astronomy",
+            "unknown", "hidden", "baffling", "artifact", "voynich", "roanoke", "atlantis",
+            "conspiracy", "code", "anomaly", "alien", "supernatural", "peculiar", "unusual",
+            "mysterious", "cipher", "enigma", "unsolved", "occult"
         ]
     },
     "suspense_climax": {
@@ -85,7 +88,8 @@ BGM_LIBRARY = {
             "assassination", "robbery", "ambush", "plot", "trapped", "deadly", "urgent",
             "strike", "pursuit", "breakout", "hostage", "bomb", "confrontation", "alarm",
             "ticking", "undercover", "spy", "infiltrate", "stealth", "infiltrator", "fugitive",
-            "assassin", "pursuer", "critical", "threat", "danger", "peril", "emergency"
+            "assassin", "pursuer", "critical", "threat", "danger", "peril", "emergency",
+            "crisis", "high-stakes", "sabotage", "interception", "race against time"
         ]
     }
 }
@@ -183,40 +187,19 @@ class AudioMixer:
         if ai_result:
             selected_key, detected_mood, detected_intensity, reason = ai_result
             reason = f"[AI Analyzed] {reason}"
+            self.bgm_selector.record_usage(selected_key)
         else:
-            # 2. Balanced Semantic Heuristic Fallback Analysis
-            cat_lower = (category or "").lower()
-            title_lower = (title or "").lower()
-            sum_lower = (summary or "").lower()
-            script_lower = (script_text or "").lower()
-
-            scores = {}
-            for key, info in BGM_LIBRARY.items():
-                cat_score = sum(3 for kw in info["keywords"] if kw in cat_lower)
-                title_score = sum(2 for kw in info["keywords"] if kw in title_lower)
-                sum_score = sum(1 for kw in info["keywords"] if kw in sum_lower)
-                script_score = sum(1 for kw in info["keywords"] if kw in script_lower)
-                scores[key] = cat_score + title_score + sum_score + script_score
-
-            max_score = max(scores.values()) if scores else 0
-            keys_with_max = [k for k, v in scores.items() if v == max_score] if max_score > 0 else []
-
-            if max_score > 0 and len(keys_with_max) == 1:
-                selected_key = keys_with_max[0]
-                detected_intensity = BGM_LIBRARY[selected_key]["default_intensity"]
-                score_str = ", ".join(f"{k}:{v}" for k, v in scores.items())
-                reason = f"Keyword matching ({selected_key} with {scores[selected_key]} pts [{score_str}])"
-            else:
-                # Intelligent BGMSelector profile matching and anti-repetition rotation
-                selected_key = self.bgm_selector.select_track(
-                    category=category,
-                    title=title,
-                    script_text=f"{summary} {script_text}"
-                )
-                detected_intensity = BGM_LIBRARY[selected_key]["default_intensity"]
-                reason = f"BGMSelector profile matching & rotation (Track: {selected_key})"
-
+            # 2. Theme-aware BGMSelector matching & persistent rotation
+            full_context = f"{summary} {script_text}".strip()
+            selected_key = self.bgm_selector.select_track(
+                category=category,
+                title=title,
+                script_text=full_context
+            )
+            detected_intensity = BGM_LIBRARY[selected_key]["default_intensity"]
             detected_mood = BGM_LIBRARY[selected_key]["mood"]
+            recent_hist = self.bgm_selector.get_recent_usage()
+            reason = f"Theme-aware BGMSelector matching & rotation (Track: {selected_key}, Recent: {recent_hist})"
 
 
         # Resolve physical file on disk (dynamically from self.music_dir)
@@ -376,6 +359,8 @@ class AudioMixer:
                     has_sfx = True
             except Exception:
                 has_sfx = False
+        if bgm_policy == "NONE" and music_path is not None and music_path.exists():
+            bgm_policy = "DUCKED"
         use_bgm = (bgm_policy != "NONE" and music_path is not None and music_path.exists())
 
         bgm_only_path: Optional[Path] = None
