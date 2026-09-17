@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "PARTIAL",
-  "block_reason": "Render error: Visual asset missing or invalid for beat 'beat_483ffcc3' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_ee6ea890' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_0f898aea' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Duplicate Short rejected: Duplicate script content (similarity 0.85 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.77 >= 0.65) with Short man_1c60cedfc6dc; Render error: Visual asset missing or invalid for beat 'beat_1dbe2fd3' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Duplicate Short rejected: Duplicate script content (similarity 0.79 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc; Render error: Visual asset missing or invalid for beat 'beat_c32e6fad' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_cf425d5c' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_a793163f' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Duplicate Short rejected: Duplicate script content (similarity 0.79 >= 0.65) with Short man_1c60cedfc6dc; Render error: Visual asset missing or invalid for beat 'beat_2fb6ebb1' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Insufficient visual uniqueness: 4 unique assets across 9 beats.']; Duplicate Short rejected: Duplicate script content (similarity 0.69 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.68 >= 0.65) with Short man_1c60cedfc6dc; Render error: Visual asset missing or invalid for beat 'beat_84e9e93b' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.",
-  "requested_deficit": 5,
-  "produced_count": 3,
-  "initial_stock": 1,
-  "final_stock": 4,
+  "outcome": "BLOCKED",
+  "block_reason": null,
+  "requested_deficit": 6,
+  "produced_count": 0,
+  "initial_stock": 0,
+  "final_stock": 0,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-17T14:08:54.032272Z"
+  "timestamp": "2026-09-17T14:31:56.046875Z"
 }
