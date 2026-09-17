@@ -746,12 +746,22 @@ class ShortsPipeline:
         }
         self._write_production_summary(summary)
 
+        req_deficit = max(0, clamped_target - telemetry.initial_ready_stock)
+        outcome_color = "green" if telemetry.status == "SUCCEEDED" else ("yellow" if telemetry.status == "PARTIAL" else ("cyan" if telemetry.status == "BLOCKED" else "red"))
+        reasons_str = "; ".join(telemetry.failure_reasons) if telemetry.failure_reasons else "None"
+
         console.print(Panel.fit(
-            f"[bold green]=== Buffer Maintenance Complete ===[/bold green]\n"
-            f"Outcome: [bold]{telemetry.status}[/bold]\n"
-            f"Videos Deposited: [bold cyan]{telemetry.videos_deposited}[/bold cyan]\n"
-            f"Vault Reserve: [bold cyan]{telemetry.final_ready_stock}/{clamped_target} Shorts[/bold cyan]",
-            border_style="green" if telemetry.status == "SUCCEEDED" else ("yellow" if telemetry.status == "PARTIAL" else "red")
+            f"[bold {outcome_color}]=== REFILL AUDIT: Buffer Maintenance Complete ===[/bold {outcome_color}]\n"
+            f"• Target Reserve: [bold white]{clamped_target}[/bold white] Shorts (01_READY)\n"
+            f"• Initial Stock: [bold white]{telemetry.initial_ready_stock}/{clamped_target}[/bold white] | Deficit Requested: [bold white]{req_deficit}[/bold white]\n"
+            f"• Events Ingested/Discovered: [bold white]{telemetry.events_discovered}[/bold white] | Rejected: [bold white]{telemetry.events_rejected}[/bold white]\n"
+            f"• Scripts Generated: [bold white]{telemetry.scripts_generated}[/bold white] | Visual Plans: [bold white]{telemetry.visual_plans_generated}[/bold white]\n"
+            f"• Rendered Videos: [bold white]{telemetry.videos_rendered}[/bold white] | QA Passed: [bold green]{telemetry.videos_qa_passed}[/bold green] | QA Failed: [bold red]{telemetry.videos_qa_failed}[/bold red]\n"
+            f"• Deposited to 01_READY: [bold cyan]{telemetry.videos_deposited}[/bold cyan] Short(s)\n"
+            f"• Final Vault Reserve: [bold white]{telemetry.final_ready_stock}/{clamped_target}[/bold white] Shorts\n"
+            f"• Outcome Status: [bold {outcome_color}]{telemetry.status}[/bold {outcome_color}]\n"
+            f"• Diagnostic Details: [dim]{reasons_str}[/dim]",
+            border_style=outcome_color
         ))
         return telemetry.videos_deposited, summary
 
@@ -1833,20 +1843,40 @@ def main():
         res = pipeline.maintain_buffer(target_stock=args.maintain_buffer, force_unlock=args.force_unlock or args.force)
         count = res[0] if isinstance(res, tuple) else res
         summary = res[1] if isinstance(res, tuple) else {}
+        sys.stdout.flush()
+        sys.stderr.flush()
         if summary.get("outcome") == "BLOCKED":
             console.print("[bold yellow][!] Production was safely deferred due to active concurrent lock. Exiting cleanly.[/bold yellow]")
-            sys.exit(0)
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(0)
         elif summary.get("outcome") == "FAILED":
-            sys.exit(2)
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(2)
+        else:
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(0)
     elif args.produce_batch > 0:
         res = pipeline.produce_batch(count=args.produce_batch, force_unlock=args.force_unlock or args.force)
         count = res[0] if isinstance(res, tuple) else res
         summary = res[1] if isinstance(res, tuple) else {}
+        sys.stdout.flush()
+        sys.stderr.flush()
         if summary.get("outcome") == "BLOCKED":
             console.print("[bold yellow][!] Production was safely deferred due to active concurrent lock. Exiting cleanly.[/bold yellow]")
-            sys.exit(0)
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(0)
         elif summary.get("outcome") == "FAILED":
-            sys.exit(2)
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(2)
+        else:
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(0)
     elif args.publish_next:
         pipeline.publish_next_from_vault(force=args.force, target_file_id=args.file_id)
     elif args.schedule_ready:
@@ -1894,8 +1924,12 @@ def main():
             f"Dry Run: [yellow]{telemetry.is_dry_run}[/yellow]",
             border_style="green" if telemetry.status == "SUCCEEDED" else "yellow"
         ))
+        sys.stdout.flush()
+        sys.stderr.flush()
         if telemetry.status in ("FAILED", "BLOCKED"):
-            sys.exit(2)
+            os._exit(2)
+        else:
+            os._exit(0)
     else:
         parser.print_help()
 

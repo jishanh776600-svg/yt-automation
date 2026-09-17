@@ -48,7 +48,9 @@ from core.models import (
     VisualEvidenceRecord,
     ProductionAssetManifestRecord,
     RenderedVideoRecord,
+    ProductionAttemptRecord,
 )
+from core.attempt_ledger import AttemptLedger, FailureCategory
 from core.pipeline_state import (
     CLOUD_AUTONOMOUS,
     TARGET_BUFFER,
@@ -496,6 +498,21 @@ class CloudProductionOrchestrator:
             telemetry.complete(status="BLOCKED")
             return telemetry
 
+        # Attempt Ledger initialization
+        attempt_rec = None
+        db_attempt = SessionLocal()
+        try:
+            attempt_rec = AttemptLedger.start_attempt(
+                db=db_attempt,
+                run_id=telemetry.run_id,
+                operation="MAINTAIN_BUFFER",
+                stage="BUFFER_AUDIT",
+            )
+        except Exception as att_err:
+            logger.warning(f"Could not record attempt start: {att_err}")
+        finally:
+            db_attempt.close()
+
         try:
             # 2. Download Canonical Database from Cloud Vault
             if self.drive_engine and not TEST_MODE:
@@ -517,6 +534,20 @@ class CloudProductionOrchestrator:
             if not valid_secrets:
                 logger.error(f"Missing required cloud credentials: {missing_sec}")
                 telemetry.failure_reasons.append(f"Missing secrets: {missing_sec}")
+                if attempt_rec:
+                    db_att = SessionLocal()
+                    try:
+                        att_obj = db_att.query(ProductionAttemptRecord).filter_by(id=attempt_rec.id).first()
+                        if att_obj:
+                            AttemptLedger.record_failure(
+                                db=db_att,
+                                attempt=att_obj,
+                                error_type=FailureCategory.AUTHENTICATION_FAILURE.value,
+                                error_message=f"Missing required cloud credentials: {missing_sec}",
+                                root_cause="Cloud runner missing one or more required secrets",
+                            )
+                    finally:
+                        db_att.close()
                 telemetry.complete(status="FAILED")
                 return telemetry
 
@@ -537,6 +568,14 @@ class CloudProductionOrchestrator:
                 )
                 telemetry.transition_stage(PipelineStage.BUFFER_HEALTHY, "Buffer full; conserving compute")
                 telemetry.final_ready_stock = initial_stock
+                if attempt_rec:
+                    db_att = SessionLocal()
+                    try:
+                        att_obj = db_att.query(ProductionAttemptRecord).filter_by(id=attempt_rec.id).first()
+                        if att_obj:
+                            AttemptLedger.record_success(db=db_att, attempt=att_obj)
+                    finally:
+                        db_att.close()
                 telemetry.complete(status="SUCCEEDED")
                 return telemetry
 
@@ -797,6 +836,27 @@ class CloudProductionOrchestrator:
                     f"Final ready stock: {telemetry.final_ready_stock}/{target_buffer} Shorts. Status: {status}."
                 )
                 telemetry.complete(status=status)
+                if attempt_rec:
+                    db_att = SessionLocal()
+                    try:
+                        att_obj = db_att.query(ProductionAttemptRecord).filter_by(id=attempt_rec.id).first()
+                        if att_obj:
+                            if status in ("SUCCEEDED", "PARTIAL"):
+                                AttemptLedger.record_success(db=db_att, attempt=att_obj)
+                            else:
+                                fail_msg = "; ".join(telemetry.failure_reasons) if telemetry.failure_reasons else "Candidate pool starvation or render failure"
+                                AttemptLedger.record_failure(
+                                    db=db_att,
+                                    attempt=att_obj,
+                                    error_type=FailureCategory.CANDIDATE_REJECTION.value,
+                                    error_message=fail_msg,
+                                    root_cause="Candidate pool starvation: insufficient non-duplicate mystery/bizarre seeds or gate rejections",
+                                    recovery_action="Expand CURATED_HISTORICAL_SEEDS or inspect Gate 15 deduplication parameters"
+                                )
+                    except Exception as att_fin_err:
+                        logger.warning(f"Could not record attempt completion: {att_fin_err}")
+                    finally:
+                        db_att.close()
 
             finally:
                 db.close()
@@ -820,6 +880,29 @@ class CloudProductionOrchestrator:
             with open(summary_path, "w", encoding="utf-8") as f:
                 json.dump(telemetry.to_dict(), f, indent=2)
 
+            return telemetry
+
+        except Exception as unhandled_err:
+            logger.error(f"[BUFFER_REFILL_CRITICAL] Unhandled error during maintain_buffer: {unhandled_err}", exc_info=True)
+            telemetry.failure_reasons.append(str(unhandled_err))
+            telemetry.complete(status="FAILED")
+            if attempt_rec:
+                db_att = SessionLocal()
+                try:
+                    att_obj = db_att.query(ProductionAttemptRecord).filter_by(id=attempt_rec.id).first()
+                    if att_obj:
+                        AttemptLedger.record_failure(
+                            db=db_att,
+                            attempt=att_obj,
+                            error_type=FailureCategory.UNKNOWN_FAILURE.value,
+                            error_message=str(unhandled_err)[:1000],
+                            root_cause="Unhandled exception during cloud buffer maintenance cycle",
+                            recovery_action="Inspect runner logs and stack trace"
+                        )
+                except Exception:
+                    pass
+                finally:
+                    db_att.close()
             return telemetry
 
         finally:

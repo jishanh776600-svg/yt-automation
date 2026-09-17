@@ -326,6 +326,198 @@ CURATED_HISTORICAL_SEEDS = [
         "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
         "summary": "In July 1954, an impeccably dressed businessman arrived at Tokyo Haneda Airport presenting a genuine passport from the country of Taured, a nation that does not exist.",
         "curiosity": 9.9, "visual_potential": 9.2, "historical_interest": 9.4, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The Mad Trapper of Rat River Arctic Pursuit",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In the winter of 1932, a mysterious trapper named Albert Johnson engaged Canadian Mounties in a 150-mile blizzard gunfight across frozen tundra without ever speaking a word.",
+        "curiosity": 9.8, "visual_potential": 9.5, "historical_interest": 9.3, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Ellen Austin Ghost Ship Encounter (1881)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In 1881, the American schooner Ellen Austin encountered an abandoned, fully provisioned vessel in the Atlantic, but two separate prize crews placed aboard vanished without a trace.",
+        "curiosity": 9.9, "visual_potential": 9.4, "historical_interest": 9.5, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The Hollinwell Incident Mass Fainting (1980)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In July 1980, over 300 children and adults suddenly collapsed with nausea and fainting during a marching band competition in Nottinghamshire, with no physical cause ever determined.",
+        "curiosity": 9.7, "visual_potential": 9.2, "historical_interest": 9.1, "storytelling": 9.6, "uniqueness": 9.8
+    },
+    {
+        "title": "The Hexham Heads Stone Relic Enigma (1971)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In 1971, two bizarre carved Celtic stone heads unearthed in a suburban English garden were linked to sightings of a half-man, half-beast creature before mysteriously vanishing.",
+        "curiosity": 9.8, "visual_potential": 9.3, "historical_interest": 9.4, "storytelling": 9.7, "uniqueness": 9.9
+    },
+    {
+        "title": "The 1904 Olympic Marathon Bizarre Chaos",
+        "category": HistoricalCategory.FORGOTTEN_FIGURES.value,
+        "summary": "The 1904 Olympic marathon in St. Louis descended into absurdity when the leader hitched an 11-mile car ride and the winner was kept alive on strychnine and raw brandy.",
+        "curiosity": 9.9, "visual_potential": 9.6, "historical_interest": 9.3, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Cottingley Fairies Photographic Mystery",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In 1917, two young Yorkshire cousins took five photographs claiming to show real winged fairies dancing in a glen, baffling photographic experts and Sir Arthur Conan Doyle for decades.",
+        "curiosity": 9.7, "visual_potential": 9.5, "historical_interest": 9.4, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Pollock Twins Reincarnation Enigma",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In 1957, two English sisters born after their older siblings died in a tragic crash possessed identical birthmarks, memories, and phobias of their deceased sisters.",
+        "curiosity": 9.8, "visual_potential": 9.1, "historical_interest": 9.2, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Devil's Footprints of Devon (1855)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In February 1855, a continuous single line of cloven hoof-like impressions appeared overnight in deep snow across more than 100 miles of Devon, scaling walls and crossing rooftops.",
+        "curiosity": 9.9, "visual_potential": 9.5, "historical_interest": 9.5, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Mystery of the Abandoned MV Joyita",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In October 1955, the merchant vessel Joyita was found half-submerged in the South Pacific with four tons of cargo aboard, but all 25 passengers and crew had vanished completely.",
+        "curiosity": 9.9, "visual_potential": 9.4, "historical_interest": 9.4, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The Oakville Gelatinous Rain Incident (1994)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In August 1994, a series of mysterious gelatinous blobs fell from the sky over Oakville, Washington, causing severe respiratory illness and baffling state microbiologists.",
+        "curiosity": 9.8, "visual_potential": 9.3, "historical_interest": 9.2, "storytelling": 9.7, "uniqueness": 9.9
+    },
+    {
+        "title": "The WWII Ghost Army Inflatable Deceptions",
+        "category": HistoricalCategory.UNUSUAL_WARS.value,
+        "summary": "The US Army's 23rd Headquarters Special Troops used inflatable rubber tanks, massive sound trucks, and elaborate radio deception to mislead German generals across Western Europe.",
+        "curiosity": 9.8, "visual_potential": 9.7, "historical_interest": 9.5, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Bizarre Deception of Operation Mincemeat",
+        "category": HistoricalCategory.UNUSUAL_WARS.value,
+        "summary": "In 1943, British naval intelligence planted false Allied invasion plans on the corpse of a homeless man dressed as a Royal Marines officer, completely fooling Adolf Hitler.",
+        "curiosity": 9.9, "visual_potential": 9.5, "historical_interest": 9.6, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The 1962 Alcatraz Inflatable Raft Escape",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In June 1962, three inmates vanished from the inescapable island prison of Alcatraz using raincoats vulcanized into an inflatable raft and dummy heads placed in their beds.",
+        "curiosity": 9.8, "visual_potential": 9.6, "historical_interest": 9.4, "storytelling": 9.8, "uniqueness": 9.8
+    },
+    {
+        "title": "The Lake Nyos Carbon Dioxide Eruption (1986)",
+        "category": HistoricalCategory.DOCUMENTED_DISASTERS.value,
+        "summary": "In August 1986, a rare limnic eruption at Lake Nyos in Cameroon silently released a 100,000-ton cloud of carbon dioxide, suffocating 1,746 people overnight across four sleeping villages.",
+        "curiosity": 9.8, "visual_potential": 9.4, "historical_interest": 9.3, "storytelling": 9.7, "uniqueness": 9.9
+    },
+    {
+        "title": "The Medical Mystery of Soldier Tarrare",
+        "category": HistoricalCategory.FORGOTTEN_FIGURES.value,
+        "summary": "In late 18th-century France, an army courier named Tarrare possessed an insatiable biological appetite that stunned military surgeons, consuming massive feasts without ever gaining weight.",
+        "curiosity": 9.9, "visual_potential": 9.2, "historical_interest": 9.4, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The Mass Ergotism Panic of Pont-Saint-Esprit",
+        "category": HistoricalCategory.DOCUMENTED_DISASTERS.value,
+        "summary": "In August 1951, hundreds of residents in a peaceful French village were stricken with terrifying hallucinations and mass madness traced to a baker's tainted rye flour.",
+        "curiosity": 9.8, "visual_potential": 9.3, "historical_interest": 9.2, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Silent Twins Private World Mystery",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "Identical twins June and Jennifer Gibbons spoke only to each other in an impenetrable private dialect and entered a pact where one would have to perish for the other to live normally.",
+        "curiosity": 9.8, "visual_potential": 9.1, "historical_interest": 9.2, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Disappearance of Bandleader Glenn Miller",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In December 1944, America's most celebrated big band leader boarded an aircraft over the foggy English Channel bound for Paris and vanished completely from the skies.",
+        "curiosity": 9.8, "visual_potential": 9.4, "historical_interest": 9.5, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The London Monster Phantom Slasher (1790)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "Between 1788 and 1790, an aristocratic stalker terrorized wealthy London women by slicing their dresses and skin with concealed blades while posing as a polite gentleman.",
+        "curiosity": 9.8, "visual_potential": 9.3, "historical_interest": 9.4, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Marree Man Outback Geoglyph Mystery (1998)",
+        "category": HistoricalCategory.LOST_PLACES.value,
+        "summary": "In 1998, a pilot flying over remote South Australia discovered an immense 2.6-mile-tall carving of an Indigenous hunter etched into the desert plateau with zero footprints found.",
+        "curiosity": 9.8, "visual_potential": 9.8, "historical_interest": 9.3, "storytelling": 9.6, "uniqueness": 9.9
+    },
+    {
+        "title": "The Secret Identity of Dr. James Barry",
+        "category": HistoricalCategory.FORGOTTEN_FIGURES.value,
+        "summary": "A brilliant 19th-century British military surgeon performed groundbreaking operations across the Empire for decades before post-mortem examiners discovered Barry was biologically female.",
+        "curiosity": 9.9, "visual_potential": 9.3, "historical_interest": 9.6, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The Dyatlov Pass Ural Mountain Enigma (1959)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In February 1959, nine experienced Soviet ski hikers fled their tent slashed from the inside into freezing temperatures, suffering inexplicable trauma and radiation traces.",
+        "curiosity": 9.9, "visual_potential": 9.5, "historical_interest": 9.6, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The Secret Underground City of Derinkuyu",
+        "category": HistoricalCategory.LOST_PLACES.value,
+        "summary": "In 1963, a Turkish homeowner knocking down a basement wall discovered an ancient subterranean city eighteen stories deep that could shelter 20,000 people and livestock.",
+        "curiosity": 9.9, "visual_potential": 9.8, "historical_interest": 9.7, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Disappearance of Author Ambrose Bierce",
+        "category": HistoricalCategory.FORGOTTEN_FIGURES.value,
+        "summary": "In December 1913, the acclaimed American author of The Devil's Dictionary rode into revolutionary Mexico alongside Pancho Villa's army and vanished forever from history.",
+        "curiosity": 9.7, "visual_potential": 9.3, "historical_interest": 9.5, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Batagaika Siberian Megaslump Abyss",
+        "category": HistoricalCategory.LOST_PLACES.value,
+        "summary": "A massive one-kilometer-wide depression known as the Gateway to the Underworld in Siberia has rapidly expanded, exposing 650,000-year-old permafrost and prehistoric mummies.",
+        "curiosity": 9.8, "visual_potential": 9.8, "historical_interest": 9.3, "storytelling": 9.6, "uniqueness": 9.9
+    },
+    {
+        "title": "The Bizarre Singapore Torrential Fish Rain (1861)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In February 1861, a three-day torrential downpour in Singapore resulted in thousands of live catfish flopping in street puddles and drying across residential roads.",
+        "curiosity": 9.8, "visual_potential": 9.4, "historical_interest": 9.2, "storytelling": 9.6, "uniqueness": 9.9
+    },
+    {
+        "title": "The Zebrina Uncrewed Ghost Schooner (1917)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In September 1917, the British three-masted schooner Zebrina grounded on the coast of France with its coal cargo intact and table set, but not a single soul aboard.",
+        "curiosity": 9.8, "visual_potential": 9.4, "historical_interest": 9.3, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Nanotechnology of the Roman Lycurgus Cup",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "A 4th-century Roman glass chalice displays optical dichroic effects, shifting from jade green to fiery ruby when backlit due to embedded gold and silver nanoparticles.",
+        "curiosity": 9.9, "visual_potential": 9.7, "historical_interest": 9.7, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Whispering Acoustic Caves of Barabar",
+        "category": HistoricalCategory.LOST_PLACES.value,
+        "summary": "Dating back to the 3rd century BCE in India, the granite caves of Barabar feature mirror-polished internal surfaces creating an eerie, endless acoustic reverberation chamber.",
+        "curiosity": 9.8, "visual_potential": 9.6, "historical_interest": 9.6, "storytelling": 9.7, "uniqueness": 9.9
+    },
+    {
+        "title": "The Shag Harbour Maritime Incident (1967)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In October 1967, dozens of witnesses watched a mysterious 60-foot glowing object crash into the waters of Nova Scotia before search and rescue divers detected zero wreckage.",
+        "curiosity": 9.8, "visual_potential": 9.5, "historical_interest": 9.4, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Great New York Moon Hoax of 1835",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In August 1835, the New York Sun published a sensational front-page series claiming a famous astronomer had observed winged bat-men and blue unicorns on the Moon.",
+        "curiosity": 9.8, "visual_potential": 9.6, "historical_interest": 9.4, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Unidentified Babushka Lady of Dallas (1963)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "During the 1963 assassination of John F. Kennedy in Dallas, a woman in a Russian headscarf filmed the motorcade from feet away and vanished without ever being identified.",
+        "curiosity": 9.9, "visual_potential": 9.5, "historical_interest": 9.8, "storytelling": 9.9, "uniqueness": 9.9
     }
 ]
 
