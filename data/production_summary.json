@@ -2,11 +2,11 @@
   "action": "MAINTAIN_BUFFER",
   "outcome": "FAILED",
   "block_reason": null,
-  "requested_deficit": 5,
+  "requested_deficit": 6,
   "produced_count": 0,
-  "initial_stock": 1,
-  "final_stock": 1,
+  "initial_stock": 0,
+  "final_stock": 0,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-16T22:33:10.377741Z"
+  "timestamp": "2026-09-17T02:13:13.212468Z"
 }
