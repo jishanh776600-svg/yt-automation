@@ -171,12 +171,20 @@ class GeminiClient:
             NVIDIA_API_KEY,
             NVIDIA_MODEL
         )
-        self.api_key = api_key if api_key is not None else GEMINI_API_KEY
-        self.secondary_api_key = secondary_api_key if secondary_api_key is not None else GEMINI_API_KEY_SECONDARY
-        self.groq_api_key = groq_api_key if groq_api_key is not None else GROQ_API_KEY
-        self.openrouter_api_key = openrouter_api_key if openrouter_api_key is not None else OPENROUTER_API_KEY
-        self.deepseek_api_key = deepseek_api_key if deepseek_api_key is not None else DEEPSEEK_API_KEY
-        self.nvidia_api_key = nvidia_api_key if nvidia_api_key is not None else NVIDIA_API_KEY
+        if is_test_environment() and any(k is not None for k in (api_key, secondary_api_key, groq_api_key, openrouter_api_key, deepseek_api_key, nvidia_api_key)):
+            self.api_key = api_key
+            self.secondary_api_key = secondary_api_key
+            self.groq_api_key = groq_api_key
+            self.openrouter_api_key = openrouter_api_key
+            self.deepseek_api_key = deepseek_api_key
+            self.nvidia_api_key = nvidia_api_key
+        else:
+            self.api_key = api_key if api_key is not None else GEMINI_API_KEY
+            self.secondary_api_key = secondary_api_key if secondary_api_key is not None else GEMINI_API_KEY_SECONDARY
+            self.groq_api_key = groq_api_key if groq_api_key is not None else GROQ_API_KEY
+            self.openrouter_api_key = openrouter_api_key if openrouter_api_key is not None else OPENROUTER_API_KEY
+            self.deepseek_api_key = deepseek_api_key if deepseek_api_key is not None else DEEPSEEK_API_KEY
+            self.nvidia_api_key = nvidia_api_key if nvidia_api_key is not None else NVIDIA_API_KEY
         self.primary_model = GEMINI_MODEL
         self.secondary_model = secondary_model or GEMINI_MODEL_SECONDARY or GEMINI_MODEL
         self.groq_model = groq_model or GROQ_MODEL or "llama-3.1-8b-instant"
@@ -208,6 +216,8 @@ class GeminiClient:
             self._exhausted_providers.clear()
             self.active_provider = "primary"
 
+    reset_provider_exhaustion = reset_provider_status
+
     def get_available_providers(self) -> List[Dict[str, Any]]:
         """Returns list of configured providers that are not currently marked quota-exhausted."""
         return [p for p in self._get_configured_providers() if not self.is_provider_exhausted(p["name"])]
@@ -215,12 +225,11 @@ class GeminiClient:
     def _get_configured_providers(
         self,
         requested_model: Optional[str] = None,
-        allow_experimental_providers: bool = False
+        allow_experimental_providers: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Returns ordered list of configured, non-empty provider credentials:
-        Primary -> Secondary -> Groq -> OpenRouter -> Clean Failure.
-        Preserves the deterministic cascade without DeepSeek unless explicitly enabled.
+        Primary -> Secondary -> Groq -> OpenRouter -> DeepSeek -> NVIDIA.
         """
         providers = []
         if self.api_key:
@@ -340,7 +349,7 @@ class GeminiClient:
 
                 # Compute backoff delay
                 if server_delay and server_delay > 0:
-                    delay = server_delay + (0.01 if is_test else random.uniform(0.5, 1.5))
+                    delay = min(max_delay, server_delay) + (0.01 if is_test else random.uniform(0.5, 1.5))
                 else:
                     raw = base_delay * (2 ** (attempt - 1))
                     jitter = 0.01 if is_test else random.uniform(0.5, 1.5)
@@ -830,15 +839,15 @@ class GeminiClient:
                 code = http_err.code
                 err_body = http_err.read().decode("utf-8", errors="ignore")
 
-                # HTTP 401 / 403: Authentication or forbidden failure - fail fast immediately
-                if code in (401, 403):
+                # HTTP 401 / 402 / 403: Authentication, payment, or forbidden failure - fail fast immediately
+                if code in (401, 402, 403):
                     self.mark_provider_exhausted("openrouter")
                     logger.error(
-                        f"[OPENROUTER_AUTH_FAIL] OpenRouter client authentication error (HTTP {code}). "
+                        f"[OPENROUTER_AUTH_FAIL] OpenRouter authentication/payment error (HTTP {code}). "
                         f"Marking provider exhausted permanently for session: {err_body}"
                     )
                     raise GeminiQuotaExhaustedError(
-                        f"OpenRouter client authentication error (HTTP {code})"
+                        f"OpenRouter authentication/payment error (HTTP {code})"
                     ) from http_err
 
                 # HTTP 429: Rate limit or quota exhausted - fail fast and rotate immediately
@@ -994,7 +1003,7 @@ class GeminiClient:
                 if remaining:
                     next_prov = remaining[0]["name"].upper()
                     logger.warning(
-                        f"[AI_FAILOVER] Provider '{prov_name.upper()}' quota/balance exhausted. "
+                        f"[AI_FAILOVER] Provider '{prov_name.upper()}' (model: '{prov_model}') quota/balance exhausted: {quota_err}. "
                         f"Switching immediately to {next_prov} provider account (model: '{remaining[0]['model']}')..."
                     )
                     continue
@@ -1005,6 +1014,29 @@ class GeminiClient:
                     raise GeminiQuotaExhaustedError(
                         "All configured AI providers exhausted daily API quotas."
                     ) from quota_err
+            except Exception as prov_err:
+                if isinstance(prov_err, (KeyboardInterrupt, SystemExit)):
+                    raise
+                if isinstance(prov_err, ValueError) and "prompt" in str(prov_err).lower():
+                    raise prov_err
+
+                last_err = prov_err
+                self.mark_provider_exhausted(prov_name)
+                remaining = [p for p in all_providers if not self.is_provider_exhausted(p["name"])]
+                if remaining:
+                    next_prov = remaining[0]["name"].upper()
+                    logger.warning(
+                        f"[AI_FAILOVER] Provider '{prov_name.upper()}' (model: '{prov_model}') failed ({type(prov_err).__name__}: {prov_err}). "
+                        f"Switching immediately to {next_prov} provider account (model: '{remaining[0]['model']}')..."
+                    )
+                    continue
+                else:
+                    logger.error(
+                        f"[AI_EXHAUSTED] All configured AI providers failed or exhausted daily API quotas. Last error: {prov_err}"
+                    )
+                    raise GeminiQuotaExhaustedError(
+                        f"All configured AI providers failed or exhausted daily API quotas. Last error: {prov_err}"
+                    ) from prov_err
 
         if last_err:
             raise last_err

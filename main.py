@@ -78,53 +78,53 @@ console = Console(force_terminal=False)
 KNOWN_EVENT_METADATA: Dict[str, Dict[str, Any]] = {
     "evt_dancing_plague_1518": {
         "title": "The Bizarre Dancing Plague of 1518",
-        "description": "In July 1518, hundreds of citizens in Strasbourg began dancing uncontrollably for days without music. Here is the true bizarre story.\n\n#mystery #history #shorts #bizarre",
-        "tags": ["dancing plague", "strasbourg", "mystery", "history", "bizarre", "shorts", "unexplained"]
+        "description": "In July 1518, hundreds of citizens in Strasbourg began dancing uncontrollably for days without music. Here is the true bizarre story.\n\n#Mystery #History #Bizarre",
+        "tags": []
     },
     "evt_roman_dodecahedron_puzzle": {
         "title": "The Roman Dodecahedron Enigma",
-        "description": "Mysterious hollow bronze 12-sided objects found across Roman ruins in Europe with no mention in ancient texts. What were they used for?\n\n#mystery #ancient #archaeology #shorts #history",
-        "tags": ["roman dodecahedron", "ancient artifact", "archaeology", "mystery", "history", "shorts"]
+        "description": "Mysterious hollow bronze 12-sided objects found across Roman ruins in Europe with no mention in ancient texts. What were they used for?\n\n#Mystery #Ancient #Archaeology #History",
+        "tags": []
     },
     "evt_the_bloop_pacific_anomaly": {
         "title": "The Bloop: Pacific Acoustic Anomaly",
-        "description": "In 1997, deep ocean underwater sensors detected an ultra-low frequency sound louder than any known creature. The mystery of the Bloop.\n\n#mystery #deepsea #ocean #shorts #thebloop",
-        "tags": ["the bloop", "ocean mystery", "deep sea", "acoustic anomaly", "shorts", "unexplained"]
+        "description": "In 1997, deep ocean underwater sensors detected an ultra-low frequency sound louder than any known creature. The mystery of the Bloop.\n\n#Mystery #DeepSea #Ocean #TheBloop",
+        "tags": []
     },
     "evt_man_from_taured_1954": {
         "title": "The Man from Taured Mystery",
-        "description": "In July 1954, a man arrived at Tokyo Airport carrying a valid passport from a country that did not exist. Then he vanished from a locked room.\n\n#mystery #paralleluniverse #shorts #tokyo #unexplained",
-        "tags": ["man from taured", "mystery", "parallel universe", "tokyo airport", "shorts", "strange"]
+        "description": "In July 1954, a man arrived at Tokyo Airport carrying a valid passport from a country that did not exist. Then he vanished from a locked room.\n\n#Mystery #ParallelUniverse #Tokyo #Unexplained",
+        "tags": []
     },
     "evt_atomic_survivor_yamaguchi": {
         "title": "Yamaguchi: The Double Atomic Survivor",
-        "description": "Tsutomu Yamaguchi was in Hiroshima when the atomic bomb detonated, survived, returned home to Nagasaki, and survived the second bomb three days later.\n\n#history #survival #shorts #incredible #truestory",
-        "tags": ["tsutomu yamaguchi", "atomic survivor", "hiroshima", "nagasaki", "history", "shorts"]
+        "description": "Tsutomu Yamaguchi was in Hiroshima when the atomic bomb detonated, survived, returned home to Nagasaki, and survived the second bomb three days later.\n\n#History #Survival #Incredible #TrueStory",
+        "tags": []
     },
     "evt_mary_celeste_1872": {
         "title": "The Ghost Ship Mary Celeste Disappearance",
-        "description": "Found floating silently in the Atlantic in 1872 with all cargo completely intact, meals prepared, and every crew member vanished without a trace.\n\n#mystery #ghostship #maryceleste #shorts #maritime",
-        "tags": ["mary celeste", "ghost ship", "maritime mystery", "disappearance", "history", "shorts"]
+        "description": "Found floating silently in the Atlantic in 1872 with all cargo completely intact, meals prepared, and every crew member vanished without a trace.\n\n#Mystery #GhostShip #MaryCeleste #Maritime",
+        "tags": []
     },
     "evt_balloon_duel_1808": {
         "title": "The Paris Hot Air Balloon Duel of 1808",
-        "description": "In 1808, two French gentlemen settled a duel not with swords on the ground, but in hot air balloons over Paris with blunderbusses.\n\n#history #shorts #bizarre #duel #paris",
-        "tags": ["balloon duel", "paris", "history", "bizarre", "shorts", "true story"]
+        "description": "In 1808, two French gentlemen settled a duel not with swords on the ground, but in hot air balloons over Paris with blunderbusses.\n\n#History #Bizarre #Duel #Paris",
+        "tags": []
     },
     "evt_devon_footprints_1855": {
         "title": "The Devil's Footprints of Devon (1855)",
-        "description": "In February 1855, mysterious cloven hoofprints appeared overnight across Devon snow, traversing 100 miles over high rooftops and 14-foot walls.\n\n#mystery #history #shorts #bizarre #unexplained",
-        "tags": ["devon footprints", "mystery", "history", "bizarre", "shorts", "unexplained"]
+        "description": "In February 1855, mysterious cloven hoofprints appeared overnight across Devon snow, traversing 100 miles over high rooftops and 14-foot walls.\n\n#Mystery #History #Bizarre #Unexplained",
+        "tags": []
     },
     "evt_antikythera_mechanism_1901": {
         "title": "The Antikythera Mechanism: Ancient Greek Computer",
-        "description": "In 1901, divers discovered an ancient corroded bronze lump that proved to be an impossibly complex 30-gear astronomical computer built 2,000 years ago.\n\n#mystery #ancient #history #archaeology #shorts #computer",
-        "tags": ["antikythera mechanism", "ancient computer", "history", "mystery", "archaeology", "shorts"]
+        "description": "In 1901, divers discovered an ancient corroded bronze lump that proved to be an impossibly complex 30-gear astronomical computer built 2,000 years ago.\n\n#Mystery #Ancient #History #Archaeology #Computer",
+        "tags": []
     },
     "evt_voynich_manuscript_1912": {
         "title": "The Voynich Manuscript: History's Most Mysterious Book",
-        "description": "A 15th-century codex written in an unbreakable cipher with bizarre botanical drawings that no cryptographer or supercomputer has ever solved.\n\n#mystery #history #cryptography #shorts #unexplained",
-        "tags": ["voynich manuscript", "mystery", "history", "cryptography", "shorts", "unexplained"]
+        "description": "A 15th-century codex written in an unbreakable cipher with bizarre botanical drawings that no cryptographer or supercomputer has ever solved.\n\n#Mystery #History #Cryptography #Unexplained",
+        "tags": []
     }
 }
 
@@ -132,18 +132,22 @@ KNOWN_EVENT_METADATA: Dict[str, Dict[str, Any]] = {
 def resolve_vault_file_metadata(candidate: Dict[str, Any], db: Optional[Session] = None) -> Dict[str, Any]:
     """
     Authoritative metadata resolver for Drive Vault files.
-    Ensures real story titles, descriptions, and tags are extracted from:
+    Ensures real story titles, descriptions, and empty tags are extracted from:
     1. Event ID mapping (KNOWN_EVENT_METADATA)
     2. Local SQLite DB (RenderedVideoRecord -> Topic)
     3. Explicit Drive file properties (if not short_man_ / short_job_)
     4. Drive description field
     5. Clean sanitized filename
+    All descriptions are sanitized to remove internal IDs and provide natural narrative context.
     """
+    import re
+    from engines.upload_engine import UploadEngine
+    sanitize = UploadEngine.sanitize_public_description
+
     props = candidate.get("properties", {}) or {}
     name = candidate.get("name", "")
     event_id = props.get("event_id")
     if not event_id:
-        import re
         m = re.search(r"evt_[a-z0-9_]+", name)
         if m:
             event_id = m.group(0)
@@ -151,15 +155,22 @@ def resolve_vault_file_metadata(candidate: Dict[str, Any], db: Optional[Session]
     # 1. Explicit properties if clean (not short_man_ placeholder)
     p_title = props.get("title") or props.get("topic_title")
     if p_title and not p_title.startswith("short_man_") and not p_title.startswith("short_job_") and not p_title.lower().startswith("al-amr ready short") and len(p_title) > 3:
+        raw_desc = props.get("description") or f"The documented true story behind {p_title} reveals a fascinating real-world event."
+        clean_desc = sanitize(raw_desc)
+        tags_raw = props.get("tags")
+        tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()] if tags_raw else []
         return {
             "title": p_title,
-            "description": props.get("description") or f"Historical Short: {p_title}\n\n#history #shorts #documentary",
-            "tags": [t.strip() for t in props.get("tags", "history,shorts,documentary,facts").split(",") if t.strip()]
+            "description": clean_desc,
+            "tags": tags_list
         }
 
     # 2. Check known event metadata dictionary
     if event_id and event_id in KNOWN_EVENT_METADATA:
-        return dict(KNOWN_EVENT_METADATA[event_id])
+        meta_copy = dict(KNOWN_EVENT_METADATA[event_id])
+        meta_copy["description"] = sanitize(meta_copy.get("description", ""))
+        meta_copy["tags"] = []
+        return meta_copy
 
     # 3. Check DB (RenderedVideoRecord / Topic by event_id)
     if db:
@@ -176,10 +187,11 @@ def resolve_vault_file_metadata(candidate: Dict[str, Any], db: Optional[Session]
             if eff_evt_id:
                 top = db.query(Topic).filter(Topic.event_id == eff_evt_id).first()
                 if top and top.title and not top.title.startswith("short_man_"):
+                    raw_d = top.summary or f"The documented true story behind {top.title} reveals a fascinating real-world event."
                     return {
                         "title": top.title,
-                        "description": top.summary or f"Documentary Short: {top.title}\n\n#history #shorts #mystery",
-                        "tags": ["history", "mystery", "shorts", "documentary"]
+                        "description": sanitize(raw_d),
+                        "tags": []
                     }
 
             job_id = props.get("job_id")
@@ -188,10 +200,11 @@ def resolve_vault_file_metadata(candidate: Dict[str, Any], db: Optional[Session]
                 if j and j.topic_id:
                     top = db.query(Topic).filter(Topic.id == j.topic_id).first()
                     if top and top.title and not top.title.startswith("short_man_"):
+                        raw_d = top.summary or f"The documented true story behind {top.title} reveals a fascinating real-world event."
                         return {
                             "title": top.title,
-                            "description": top.summary or f"Documentary Short: {top.title}\n\n#history #shorts #mystery",
-                            "tags": ["history", "mystery", "shorts", "documentary"]
+                            "description": sanitize(raw_d),
+                            "tags": []
                         }
         except Exception as db_meta_err:
             logger.debug(f"DB metadata lookup notice: {db_meta_err}")
@@ -202,8 +215,8 @@ def resolve_vault_file_metadata(candidate: Dict[str, Any], db: Optional[Session]
         first_line = d_desc.split("\n")[0].strip()
         return {
             "title": first_line,
-            "description": d_desc,
-            "tags": ["history", "mystery", "shorts", "documentary"]
+            "description": sanitize(d_desc),
+            "tags": []
         }
 
     # 5. Clean filename if it's descriptive (not short_man_ / short_job_)
@@ -211,8 +224,8 @@ def resolve_vault_file_metadata(candidate: Dict[str, Any], db: Optional[Session]
     if not clean_name.lower().startswith("short man") and not clean_name.lower().startswith("short job"):
         return {
             "title": clean_name,
-            "description": f"Historical Short: {clean_name}\n\n#history #shorts #documentary",
-            "tags": ["history", "mystery", "shorts", "documentary"]
+            "description": sanitize(f"The documented true story behind {clean_name} reveals a fascinating real-world event."),
+            "tags": []
         }
 
     # 6. Authoritative unique fallback derived from event_id (NO generic collisions)
@@ -223,8 +236,8 @@ def resolve_vault_file_metadata(candidate: Dict[str, Any], db: Optional[Session]
     fallback_title = clean_evt.replace("_", " ").title()
     return {
         "title": fallback_title,
-        "description": f"Documentary Short: {fallback_title}\n\n#history #mystery #shorts #documentary",
-        "tags": ["mystery", "history", "shorts", "documentary"]
+        "description": sanitize(f"The documented true story behind {fallback_title} reveals a fascinating real-world event."),
+        "tags": []
     }
 
 

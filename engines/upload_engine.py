@@ -229,6 +229,36 @@ class UploadEngine:
 
         return True, "All 16 publication safety gates passed successfully"
 
+    @staticmethod
+    def sanitize_public_description(description: str) -> str:
+        """
+        Strips internal production identifiers (job IDs, run IDs, manifest IDs,
+        event IDs, UUIDs, telemetry tokens) from public YouTube descriptions.
+        """
+        if not description:
+            return ""
+        import re
+        # Remove bracketed tags like [JOB_ID: ...]
+        cleaned = re.sub(
+            r"\[(JOB_ID|RUN_ID|MANIFEST_ID|EVENT_ID|PIPELINE_ID|DRIVE_ID|VAULT_ID)[^\]]*\]",
+            "",
+            description,
+            flags=re.IGNORECASE
+        )
+        # Remove standalone internal ID tokens
+        cleaned = re.sub(r"\b(job|upl|manrec|man|rnd|evt)_[a-zA-Z0-9_-]+\b", "", cleaned)
+        # Remove standard UUIDs
+        cleaned = re.sub(
+            r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b",
+            "",
+            cleaned,
+            flags=re.IGNORECASE
+        )
+        cleaned = re.sub(r"\*{2,}", "", cleaned)
+        cleaned = re.sub(r"[ \t]+", " ", cleaned)
+        cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+        return cleaned.strip()
+
     def recover_orphaned_upload(
         self,
         youtube,
@@ -379,7 +409,11 @@ class UploadEngine:
             UploadRecord.job_id != job.id
         ).count()
 
-        total_day_booked = pub_count + sched_count
+        try:
+            total_day_booked = int(pub_count or 0) + int(sched_count or 0)
+        except (TypeError, ValueError):
+            total_day_booked = 0
+
         if total_day_booked >= DAILY_SHORTS_LIMIT:
             raise ValueError(
                 f"[DAILY_LIMIT_EXCEEDED] Target UTC date {target_date} already has {total_day_booked}/{DAILY_SHORTS_LIMIT} "
@@ -389,13 +423,14 @@ class UploadEngine:
         # 2. Test Mode Handling
         if self._is_test_mode():
             logger.info(f"[TEST_MODE/STAGING] Staging Scheduled YouTube Short '{metadata['title']}' for slot {publish_at_str}.")
+            clean_desc = self.sanitize_public_description(metadata.get("description", ""))
             record = UploadRecord(
                 id=upload_id,
                 job_id=job.id,
                 youtube_video_id=f"TEST_SCHED_{uuid.uuid4().hex[:8]}",
                 title=metadata["title"],
-                description=metadata["description"],
-                tags=",".join(metadata.get("tags", [])),
+                description=clean_desc,
+                tags="",
                 privacy_status="private",
                 scheduled_publish_at=publish_at_utc,
                 published_at=None,
@@ -441,13 +476,14 @@ class UploadEngine:
                     f"[CRASH_RECOVERY] Found existing YouTube video {orphan_id} ({orphan_reason}). "
                     f"Reconciling without re-upload."
                 )
+                clean_desc = self.sanitize_public_description(metadata.get("description", ""))
                 record = UploadRecord(
                     id=upload_id,
                     job_id=job.id,
                     youtube_video_id=orphan_id,
                     title=metadata["title"],
-                    description=metadata["description"],
-                    tags=",".join(metadata.get("tags", [])),
+                    description=clean_desc,
+                    tags="",
                     privacy_status="private",
                     scheduled_publish_at=publish_at_utc,
                     published_at=None,
@@ -459,18 +495,15 @@ class UploadEngine:
                 db.commit()
                 return record
 
-            # Embed Job ID in description for unambiguous identity reconciliation
-            job_tag = f"\n\n[JOB_ID: {job.id}]"
-            full_description = metadata["description"]
-            if f"[JOB_ID: {job.id}]" not in full_description:
-                full_description += job_tag
+            # Sanitize description: strictly viewer-facing, zero internal IDs
+            clean_description = self.sanitize_public_description(metadata.get("description", ""))
 
-            # YouTube API requires privacyStatus='private' when publishAt is set
+            # YouTube API requires privacyStatus='private' when publishAt is set.
+            # The tags field is completely omitted for all new uploads.
             body = {
                 "snippet": {
                     "title": metadata["title"][:100],
-                    "description": full_description[:5000],
-                    "tags": metadata.get("tags", []),
+                    "description": clean_description[:5000],
                     "categoryId": "27"  # Education
                 },
                 "status": {
@@ -574,13 +607,14 @@ class UploadEngine:
             if not actual_publish_at:
                 logger.warning(f"Video {yt_id} publishAt verification returned null, but upload completed with private status.")
 
+            clean_desc = self.sanitize_public_description(metadata.get("description", ""))
             record = UploadRecord(
                 id=upload_id,
                 job_id=job.id,
                 youtube_video_id=yt_id,
                 title=metadata["title"],
-                description=metadata["description"],
-                tags=",".join(metadata.get("tags", [])),
+                description=clean_desc,
+                tags="",
                 privacy_status="private",
                 scheduled_publish_at=publish_at_utc,
                 published_at=None,
@@ -624,13 +658,14 @@ class UploadEngine:
                                     logger.warning(
                                         f"[RECOVERY] Exception during upload ({e}), but video was successfully created on YouTube (ID: {rec_id}). Reconciling."
                                     )
+                                    clean_desc = self.sanitize_public_description(metadata.get("description", ""))
                                     record = UploadRecord(
                                         id=upload_id,
                                         job_id=job.id,
                                         youtube_video_id=rec_id,
                                         title=metadata["title"],
-                                        description=metadata["description"],
-                                        tags=",".join(metadata.get("tags", [])),
+                                        description=clean_desc,
+                                        tags="",
                                         privacy_status="private",
                                         scheduled_publish_at=publish_at_utc,
                                         published_at=None,
@@ -826,13 +861,14 @@ class UploadEngine:
             )
 
         # TEST_MODE STAGING
+        clean_desc = self.sanitize_public_description(metadata.get("description", ""))
         record = UploadRecord(
             id=upload_id,
             job_id=job.id,
             youtube_video_id=f"TEST_VIDEO_{uuid.uuid4().hex[:8]}",
             title=metadata["title"],
-            description=metadata["description"],
-            tags=",".join(metadata.get("tags", [])),
+            description=clean_desc,
+            tags="",
             privacy_status="public",
             published_at=datetime.utcnow(),
             status="TEST_VERIFIED"
