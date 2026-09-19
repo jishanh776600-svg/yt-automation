@@ -11,6 +11,7 @@ Strictly crops/reframes all visuals to 1080x1920 (9:16 vertical), preserves natu
 prevents duplicate asset reuse in the same Short, and tracks commercial zero-cost licenses.
 """
 import os
+import re
 import uuid
 import random
 import logging
@@ -26,6 +27,7 @@ from config.constants import (
     VIDEO_WIDTH, VIDEO_HEIGHT, LicenseType, VisualSourceType, HistoricalEventRelation
 )
 from core.models import AssetRecord
+from core.media_validator import PhysicalVideoValidator, VIDEO_ONLY
 
 logger = logging.getLogger(__name__)
 
@@ -393,59 +395,11 @@ class AssetFetcher:
         query: str,
         exclude_urls: Optional[Set[str]] = None
     ) -> Optional[str]:
-        """Queries Pexels Photo API and picks a fresh, high-resolution photo."""
-        if not PEXELS_API_KEY:
-            return None
-        url = "https://api.pexels.com/v1/search"
-        endpoint = "/v1/search"
-        headers = {"Authorization": PEXELS_API_KEY}
-        params = {"query": query, "per_page": 15, "page": random.randint(1, 3), "orientation": "portrait"}
-        exclude = exclude_urls or set()
-
-        try:
-            from core.retry import retry_call
-            resp = retry_call(
-                lambda: requests.get(url, headers=headers, params=params, timeout=10),
-                max_retries=3,
-                base_delay=1.0
-            )
-            if resp is not None:
-                record_pexels_telemetry(
-                    db=db,
-                    endpoint=endpoint,
-                    status_code=resp.status_code,
-                    headers=resp.headers,
-                    units=1,
-                    is_observed=True
-                )
-
-            if resp is not None and resp.status_code == 200:
-                data = resp.json()
-                photos = data.get("photos", [])
-                if photos:
-                    used_urls = set([r[0] for r in db.query(AssetRecord.source_url).all() if r[0]])
-                    used_urls.update(exclude)
-
-                    unused = [
-                        p["src"].get("large2x") or p["src"].get("original") or p["src"].get("large")
-                        for p in photos
-                        if (p["src"].get("large2x") or p["src"].get("original")) not in used_urls
-                    ]
-                    if unused:
-                        return unused[0]
-                    # Fallback to any high-res photo from list
-                    candidate = photos[0]["src"]
-                    return candidate.get("large2x") or candidate.get("original") or candidate.get("large")
-        except Exception as e:
-            logger.warning(f"Pexels photo query failed for '{query}': {e}")
-            record_pexels_telemetry(
-                db=db,
-                endpoint=endpoint,
-                status_code=getattr(e, "status_code", None),
-                headers=getattr(getattr(e, "response", None), "headers", None),
-                units=1,
-                is_observed=False
-            )
+        """
+        PROHIBITED UNDER VIDEO_ONLY INVARIANT.
+        Pexels photo search is permanently disabled for production visual assets.
+        """
+        logger.warning(f"[VIDEO_ONLY_INVARIANT] search_pexels_photo rejected for query '{query}': static images are prohibited.")
         return None
 
     def search_wikimedia_commons(
@@ -455,15 +409,15 @@ class AssetFetcher:
         exclude_urls: Optional[Set[str]] = None
     ) -> Optional[Dict[str, Any]]:
         """
-        Queries Wikimedia Commons API for authentic Public Domain / CC-BY historical material.
-        Filters out non-commercial and incompatible licenses.
+        Queries Wikimedia Commons API for authentic Public Domain / CC-BY historical video material.
+        Filters out non-commercial and incompatible licenses, and strictly rejects static images.
         """
         url = "https://commons.wikimedia.org/w/api.php"
         headers = {"User-Agent": "AL_AMR_History_Automation/1.0 (Educational Historical Shorts)"}
         params = {
             "action": "query",
             "generator": "search",
-            "gsrsearch": query,
+            "gsrsearch": f"{query} filetype:video",
             "gsrnamespace": "6",  # File namespace
             "gsrlimit": 10,
             "prop": "imageinfo",
@@ -499,6 +453,13 @@ class AssetFetcher:
                     if not img_url or img_url in used_urls or width < 400 or height < 400:
                         continue
 
+                    # Strict Video-Only Invariant: Filter out any still image
+                    lower_url = img_url.lower()
+                    if not any(lower_url.endswith(v_ext) for v_ext in [".webm", ".mp4", ".ogv"]):
+                        continue
+                    if PhysicalVideoValidator.is_image_url(lower_url):
+                        continue
+
                     lic_short = ext_meta.get("LicenseShortName", {}).get("value", "Public Domain")
                     artist = ext_meta.get("Artist", {}).get("value", "Historical Archive")
                     desc = ext_meta.get("ImageDescription", {}).get("value", "")
@@ -526,33 +487,19 @@ class AssetFetcher:
                 if candidates:
                     candidates.sort(key=lambda c: c["score"], reverse=True)
                     selected = candidates[0]
-                    logger.info(f"[WIKIMEDIA_HISTORICAL] Found archival asset '{selected['title']}' ({selected['license']}) for query '{query}'")
+                    logger.info(f"[WIKIMEDIA_HISTORICAL] Found archival video '{selected['title']}' ({selected['license']}) for query '{query}'")
                     return selected
         except Exception as e:
-            logger.warning(f"Wikimedia search notice for '{query}': {e}")
+            logger.warning(f"Wikimedia video search notice for '{query}': {e}")
 
         return None
 
     def generate_ai_image(self, prompt: str, output_path: Path) -> bool:
         """
-        Generates free, commercially usable AI historical image via Pollinations.ai (Free $0 / Open).
+        PROHIBITED UNDER VIDEO_ONLY INVARIANT.
+        Static AI image generation is permanently disabled.
         """
-        try:
-            from core.retry import retry_call
-            seed = random.randint(1, 999999)
-            encoded_prompt = urllib.parse.quote(prompt + f", historic photograph style, authentic documentary, seed {seed}")
-            url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&nologo=true&seed={seed}"
-            resp = retry_call(
-                lambda: requests.get(url, timeout=25),
-                max_retries=3,
-                base_delay=1.5
-            )
-            if resp.status_code == 200 and len(resp.content) > 5000:
-                with open(output_path, "wb") as f:
-                    f.write(resp.content)
-                return True
-        except Exception as e:
-            logger.warning(f"AI image generation failed: {e}")
+        logger.warning("[VIDEO_ONLY_INVARIANT] generate_ai_image rejected: static AI images are prohibited.")
         return False
 
     def fetch_asset_for_shot(
@@ -612,50 +559,52 @@ class AssetFetcher:
                         except Exception as adapt_err:
                             logger.debug(f"Source adapter {adapter_key} search notice: {adapt_err}")
 
-                # Deterministic multi-factor ranking
+                # Deterministic multi-factor ranking - Videos ONLY
                 if candidates:
+                    # Filter candidates: VIDEO ONLY
+                    video_candidates = [
+                        c for c in candidates
+                        if getattr(c, "is_video", False)
+                        and not PhysicalVideoValidator.is_image_url(getattr(c, "media_url", "") or getattr(c, "source_url", ""))
+                    ]
                     ranked = self.vi_scorer.rank_candidates(
-                        candidates=candidates,
+                        candidates=video_candidates,
                         intent=intent,
                         recent_usage_counts=recent_history,
                         job_used_urls=exclude_set
-                    )
+                    ) if video_candidates else []
+
                     top_cand = ranked[0] if ranked else None
                     if top_cand and top_cand.raw_score > 0.0:
                         logger.info(
-                            f"[VISUAL_INTELLIGENCE] Selected {top_cand.source_name} candidate "
-                            f"'{top_cand.title}' (Score: {top_cand.raw_score:.2f}, Motion: {top_cand.motion_score}) "
+                            f"[VISUAL_INTELLIGENCE] Selected {top_cand.source_name} video candidate "
+                            f"'{top_cand.title}' (Score: {top_cand.raw_score:.2f}) "
                             f"for beat {shot_data.get('shot_id')}"
                         )
-                        # Handle local rendering / download
-                        chosen_path = cropped_img_path
+                        chosen_path = None
                         download_success = False
                         if top_cand.local_path and Path(top_cand.local_path).exists():
-                            chosen_path = Path(top_cand.local_path)
-                            download_success = True
-                        elif top_cand.media_url:
+                            if PhysicalVideoValidator.is_valid_video(top_cand.local_path):
+                                chosen_path = Path(top_cand.local_path)
+                                download_success = True
+                        elif top_cand.media_url and not PhysicalVideoValidator.is_image_url(top_cand.media_url):
                             try:
-                                if top_cand.is_video:
-                                    target_p = raw_video_path
-                                    r = requests.get(top_cand.media_url, timeout=20, stream=True)
+                                target_p = raw_video_path
+                                r = requests.get(top_cand.media_url, timeout=25, stream=True)
+                                if r.status_code == 200:
                                     with open(target_p, "wb") as f:
                                         for chunk in r.iter_content(chunk_size=1024*1024):
                                             f.write(chunk)
-                                    if target_p.exists() and target_p.stat().st_size > 100000:
+                                    if target_p.exists() and PhysicalVideoValidator.is_valid_video(target_p):
                                         chosen_path = target_p
                                         download_success = True
-                                else:
-                                    img_data = requests.get(top_cand.media_url, timeout=15).content
-                                    with open(raw_img_path, "wb") as f:
-                                        f.write(img_data)
-                                    self.crop_to_vertical_9_16(raw_img_path, cropped_img_path)
-                                    if cropped_img_path.exists() and cropped_img_path.stat().st_size > 5000:
-                                        chosen_path = cropped_img_path
-                                        download_success = True
+                                    else:
+                                        target_p.unlink(missing_ok=True)
                             except Exception as dl_err:
-                                logger.warning(f"Failed downloading top_cand {top_cand.media_url}: {dl_err}")
+                                logger.warning(f"Failed downloading top_cand video {top_cand.media_url}: {dl_err}")
+                                raw_video_path.unlink(missing_ok=True)
 
-                        if download_success:
+                        if download_success and chosen_path:
                             exclude_set.add(top_cand.source_url)
                             self.vi_diversity.record_job_assets([top_cand])
                             meta_dict = top_cand.to_dict()
@@ -663,7 +612,7 @@ class AssetFetcher:
 
                             asset_rec = AssetRecord(
                                 id=asset_id,
-                                asset_type="video" if top_cand.is_video else "image",
+                                asset_type="video",
                                 source=top_cand.source_name,
                                 source_url=top_cand.source_url,
                                 license=top_cand.license_name,
@@ -671,8 +620,8 @@ class AssetFetcher:
                                 attribution_required=bool(top_cand.creator),
                                 attribution_text=top_cand.creator,
                                 local_path=str(chosen_path),
-                                width=top_cand.width,
-                                height=top_cand.height,
+                                width=top_cand.width or VIDEO_WIDTH,
+                                height=top_cand.height or VIDEO_HEIGHT,
                                 duration_sec=shot_duration,
                                 metadata_json=json.dumps(meta_dict)
                             )
@@ -684,47 +633,50 @@ class AssetFetcher:
                 logger.warning(f"Visual Intelligence acquisition fallback: {vi_err}")
 
         # ----------------------------------------------------
-        # 0. TIER 1 & 2: Archival First (Wikimedia Commons)
+        # 0. TIER 1 & 2: Archival Video First (Wikimedia Commons)
         # ----------------------------------------------------
-
         is_explicit_archival = any(k in q_lower for k in [
-            "engraving", "painting", "map", "document", "archival", "illustration",
-            "1814", "1919", "1866", "1908", "1932", "1872", "vintage photograph", "antique"
+            "archival", "newsreel", "footage", "film", "1919", "1866", "1908", "1932", "historical film"
         ])
         if is_explicit_archival:
             wiki_meta = self.search_wikimedia_commons(db, query, exclude_urls=exclude_set)
             if wiki_meta and wiki_meta.get("download_url"):
                 wiki_url = wiki_meta["download_url"]
                 try:
-                    logger.info(f"[ASSET_FETCH] Downloading Wikimedia Archival Asset for shot: '{query}'")
-                    img_resp = requests.get(wiki_url, timeout=15, headers={"User-Agent": "AL_AMR_History/1.0"})
-                    if img_resp.status_code == 200 and len(img_resp.content) > 5000:
-                        with open(raw_img_path, "wb") as f:
-                            f.write(img_resp.content)
-                        self.crop_to_vertical_9_16(raw_img_path, cropped_img_path)
-                        exclude_set.add(wiki_url)
-                        prov = classify_visual_provenance(query, prompt, "wikimedia_commons", is_video=False)
-                        asset_rec = AssetRecord(
-                            id=asset_id,
-                            asset_type="image",
-                            source="wikimedia_commons",
-                            source_url=wiki_url,
-                            license=wiki_meta.get("license", LicenseType.PUBLIC_DOMAIN_CC0.value),
-                            commercial_use=True,
-                            attribution_required=bool(wiki_meta.get("artist")),
-                            attribution_text=wiki_meta.get("artist"),
-                            local_path=str(cropped_img_path),
-                            width=VIDEO_WIDTH,
-                            height=VIDEO_HEIGHT,
-                            duration_sec=shot_duration,
-                            metadata_json=json.dumps(prov)
-                        )
-                        db.add(asset_rec)
-                        db.commit()
-                        logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied with Wikimedia Archival ({asset_id})")
-                        return asset_rec
+                    logger.info(f"[ASSET_FETCH] Downloading Wikimedia Archival Video for shot: '{query}'")
+                    v_resp = requests.get(wiki_url, timeout=30, stream=True, headers={"User-Agent": "AL_AMR_History/1.0"})
+                    if v_resp.status_code == 200:
+                        with open(raw_video_path, "wb") as vf:
+                            for chunk in v_resp.iter_content(chunk_size=65536):
+                                if chunk:
+                                    vf.write(chunk)
+                        if raw_video_path.exists() and PhysicalVideoValidator.is_valid_video(raw_video_path):
+                            exclude_set.add(wiki_url)
+                            prov = classify_visual_provenance(query, prompt, "wikimedia_commons", is_video=True)
+                            asset_rec = AssetRecord(
+                                id=asset_id,
+                                asset_type="video",
+                                source="wikimedia_commons",
+                                source_url=wiki_url,
+                                license=wiki_meta.get("license", LicenseType.PUBLIC_DOMAIN_CC0.value),
+                                commercial_use=True,
+                                attribution_required=bool(wiki_meta.get("artist")),
+                                attribution_text=wiki_meta.get("artist"),
+                                local_path=str(raw_video_path),
+                                width=wiki_meta.get("width") or VIDEO_WIDTH,
+                                height=wiki_meta.get("height") or VIDEO_HEIGHT,
+                                duration_sec=shot_duration,
+                                metadata_json=json.dumps(prov)
+                            )
+                            db.add(asset_rec)
+                            db.commit()
+                            logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied with Wikimedia Archival Video ({asset_id})")
+                            return asset_rec
+                        else:
+                            raw_video_path.unlink(missing_ok=True)
                 except Exception as w_err:
-                    logger.warning(f"Failed downloading Wikimedia asset {wiki_url}: {w_err}")
+                    logger.warning(f"Failed downloading Wikimedia video asset {wiki_url}: {w_err}")
+                    raw_video_path.unlink(missing_ok=True)
 
         # ----------------------------------------------------
         # 1. PRIMARY: Pexels Video Search (1080p / 720p)
@@ -741,7 +693,7 @@ class AssetFetcher:
                             if chunk:
                                 vf.write(chunk)
 
-                    if raw_video_path.stat().st_size > 10000:
+                    if raw_video_path.exists() and PhysicalVideoValidator.is_valid_video(raw_video_path):
                         exclude_set.add(dl_url)
                         prov = classify_visual_provenance(query, prompt, "pexels_video", is_video=True)
                         asset_rec = AssetRecord(
@@ -753,8 +705,8 @@ class AssetFetcher:
                             commercial_use=True,
                             attribution_required=False,
                             local_path=str(raw_video_path),
-                            width=video_meta.get("width"),
-                            height=video_meta.get("height"),
+                            width=video_meta.get("width") or VIDEO_WIDTH,
+                            height=video_meta.get("height") or VIDEO_HEIGHT,
                             duration_sec=video_meta.get("duration", shot_duration),
                             metadata_json=json.dumps(prov)
                         )
@@ -762,32 +714,93 @@ class AssetFetcher:
                         db.commit()
                         logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied with {video_meta['quality_tier']} video ({asset_id})")
                         return asset_rec
+                    else:
+                        raw_video_path.unlink(missing_ok=True)
             except Exception as vid_err:
                 logger.warning(f"Failed downloading Pexels video {dl_url}: {vid_err}")
                 raw_video_path.unlink(missing_ok=True)
 
         # ----------------------------------------------------
-        # 2. FALLBACK 1: Pexels Photo
+        # 2. SECONDARY: Alternative Video Queries (VIDEO ONLY)
         # ----------------------------------------------------
-        photo_url = self.search_pexels_photo(db, query, exclude_urls=exclude_set)
-        if photo_url:
-            try:
-                logger.info(f"[ASSET_FETCH] Falling back to high-res Pexels photo for shot: '{query}'")
-                img_data = requests.get(photo_url, timeout=15).content
-                with open(raw_img_path, "wb") as f:
-                    f.write(img_data)
-                self.crop_to_vertical_9_16(raw_img_path, cropped_img_path)
-                exclude_set.add(photo_url)
-                prov = classify_visual_provenance(query, prompt, "pexels", is_video=False)
+        alt_video_queries = [
+            re.sub(r"\b(the|a|an|in|on|at|of|for|to)\b", "", query, flags=re.IGNORECASE).strip(),
+            prompt[:45] if prompt else "",
+            "cinematic historical documentary",
+            "ancient historical atmosphere",
+            "dramatic mystery landscape"
+        ]
+        for alt_q in alt_video_queries:
+            if not alt_q or alt_q == query:
+                continue
+            alt_meta = self.search_pexels_video(db, alt_q, min_duration=2.0, exclude_urls=exclude_set)
+            if alt_meta and alt_meta.get("download_url"):
+                dl_url = alt_meta["download_url"]
+                try:
+                    logger.info(f"[ASSET_FETCH] Downloading secondary Pexels video ('{alt_q}') for shot: '{query}'")
+                    v_resp = requests.get(dl_url, timeout=30, stream=True)
+                    if v_resp.status_code == 200:
+                        with open(raw_video_path, "wb") as vf:
+                            for chunk in v_resp.iter_content(chunk_size=65536):
+                                if chunk:
+                                    vf.write(chunk)
+
+                        if raw_video_path.exists() and PhysicalVideoValidator.is_valid_video(raw_video_path):
+                            exclude_set.add(dl_url)
+                            prov = classify_visual_provenance(query, prompt, "pexels_video_alt", is_video=True)
+                            asset_rec = AssetRecord(
+                                id=asset_id,
+                                asset_type="video",
+                                source="pexels_video",
+                                source_url=dl_url,
+                                license=LicenseType.PEXELS_LICENSE.value,
+                                commercial_use=True,
+                                attribution_required=False,
+                                local_path=str(raw_video_path),
+                                width=alt_meta.get("width") or VIDEO_WIDTH,
+                                height=alt_meta.get("height") or VIDEO_HEIGHT,
+                                duration_sec=alt_meta.get("duration", shot_duration),
+                                metadata_json=json.dumps(prov)
+                            )
+                            db.add(asset_rec)
+                            db.commit()
+                            logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied with alternative video ({asset_id})")
+                            return asset_rec
+                        else:
+                            raw_video_path.unlink(missing_ok=True)
+                except Exception as alt_err:
+                    logger.warning(f"Alternative video fetch notice for '{alt_q}': {alt_err}")
+                    raw_video_path.unlink(missing_ok=True)
+
+        # ----------------------------------------------------
+        # 3. RESILIENT LOCAL VERIFIED VIDEO POOL (VIDEO ONLY)
+        # ----------------------------------------------------
+        # Check local pre-cached authentic MP4 videos to guarantee offline resilience without image fallback
+        local_cands = [
+            p for p in self.cache_dir.glob("*.mp4")
+            if p.is_file() and p.stat().st_size > 50000 and not p.name.startswith("short_") and p != raw_video_path
+        ]
+        if not local_cands:
+            from config.settings import ASSETS_DIR
+            local_cands = [
+                p for p in ASSETS_DIR.glob("*.mp4")
+                if p.is_file() and p.stat().st_size > 50000 and not p.name.startswith("short_")
+            ]
+
+        for cand_path in local_cands:
+            if PhysicalVideoValidator.is_valid_video(cand_path):
+                import shutil
+                shutil.copyfile(cand_path, raw_video_path)
+                prov = classify_visual_provenance(query, prompt, "local_video_pool", is_video=True)
                 asset_rec = AssetRecord(
                     id=asset_id,
-                    asset_type="image",
-                    source="pexels",
-                    source_url=photo_url,
+                    asset_type="video",
+                    source="local_video_pool",
+                    source_url=f"file:///{cand_path.name}",
                     license=LicenseType.PEXELS_LICENSE.value,
                     commercial_use=True,
                     attribution_required=False,
-                    local_path=str(cropped_img_path),
+                    local_path=str(raw_video_path),
                     width=VIDEO_WIDTH,
                     height=VIDEO_HEIGHT,
                     duration_sec=shot_duration,
@@ -795,98 +808,14 @@ class AssetFetcher:
                 )
                 db.add(asset_rec)
                 db.commit()
-                logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied with Pexels photo ({asset_id})")
+                logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied via local verified video pool ({asset_id})")
                 return asset_rec
-            except Exception as e:
-                logger.warning(f"Failed downloading Pexels image {photo_url}: {e}")
 
-        # ----------------------------------------------------
-        # 3. FALLBACK 2: Pollinations AI Image
-        # ----------------------------------------------------
-        logger.info(f"[ASSET_FETCH] Falling back to AI visual for shot: '{prompt[:40]}...'")
-        if self.generate_ai_image(prompt, raw_img_path):
-            self.crop_to_vertical_9_16(raw_img_path, cropped_img_path)
-            prov = classify_visual_provenance(query, prompt, "pollinations_ai", is_video=False)
-            asset_rec = AssetRecord(
-                id=asset_id,
-                asset_type="image",
-                source="pollinations_ai",
-                source_url="https://image.pollinations.ai",
-                license=LicenseType.PUBLIC_DOMAIN_CC0.value,
-                commercial_use=True,
-                attribution_required=False,
-                local_path=str(cropped_img_path),
-                width=VIDEO_WIDTH,
-                height=VIDEO_HEIGHT,
-                duration_sec=shot_duration,
-                metadata_json=json.dumps(prov)
-            )
-            db.add(asset_rec)
-            db.commit()
-            logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied with Pollinations AI visual ({asset_id})")
-            return asset_rec
-
-        # ----------------------------------------------------
-        # 4. FINAL RESILIENT FALLBACK: Broad Mystery Photographic Search (Pexels)
-        # ----------------------------------------------------
-        fallback_queries = [
-            "mysterious ancient ruins", "ancient artifact excavation", "dark fog landscape",
-            "historical archive document", "deep ocean mystery", "starry sky anomaly", "unsolved investigation"
-        ]
-        import random
-        for fb_q in random.sample(fallback_queries, len(fallback_queries)):
-            fb_url = self.search_pexels_photo(db, fb_q, exclude_urls=exclude_set)
-            if fb_url:
-                try:
-                    img_data = requests.get(fb_url, timeout=15).content
-                    with open(raw_img_path, "wb") as f:
-                        f.write(img_data)
-                    self.crop_to_vertical_9_16(raw_img_path, cropped_img_path)
-                    exclude_set.add(fb_url)
-                    prov = classify_visual_provenance(query, prompt, "pexels_fallback", is_video=False)
-                    asset_rec = AssetRecord(
-                        id=asset_id,
-                        asset_type="image",
-                        source="pexels_fallback",
-                        source_url=fb_url,
-                        license=LicenseType.PEXELS_LICENSE.value,
-                        commercial_use=True,
-                        attribution_required=False,
-                        local_path=str(cropped_img_path),
-                        width=VIDEO_WIDTH,
-                        height=VIDEO_HEIGHT,
-                        duration_sec=shot_duration,
-                        metadata_json=json.dumps(prov)
-                    )
-                    db.add(asset_rec)
-                    db.commit()
-                    logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied with real photographic Pexels visual ({asset_id})")
-                    return asset_rec
-                except Exception as fb_err:
-                    logger.warning(f"Failed downloading fallback Pexels image {fb_url}: {fb_err}")
-
-        # Emergency fallback if all network APIs fail
-        im = Image.new("RGB", (VIDEO_WIDTH, VIDEO_HEIGHT), color=(20, 24, 32))
-        im.save(cropped_img_path, "JPEG", quality=95)
-        prov = classify_visual_provenance(query, prompt, "emergency_canvas", is_video=False)
-        asset_rec = AssetRecord(
-            id=asset_id,
-            asset_type="image",
-            source="emergency_canvas",
-            source_url="local://emergency",
-            license=LicenseType.PUBLIC_DOMAIN_CC0.value,
-            commercial_use=True,
-            attribution_required=False,
-            local_path=str(cropped_img_path),
-            width=VIDEO_WIDTH,
-            height=VIDEO_HEIGHT,
-            duration_sec=shot_duration,
-            metadata_json=json.dumps(prov)
+        # If absolutely no video could be found, fail closed under the hard invariant
+        raise RuntimeError(
+            f"Unable to find or verify authentic moving video footage for shot '{query}'. "
+            f"Under the VIDEO_ONLY policy, image fallbacks are strictly prohibited."
         )
-        db.add(asset_rec)
-        db.commit()
-        logger.info(f"[ASSET_READY] Shot {shot_data['shot_id']} supplied with emergency canvas ({asset_id})")
-        return asset_rec
 
 
 def generate_provenance_manifest(

@@ -24,6 +24,7 @@ import requests
 from config.settings import RENDERS_DIR, ASSETS_DIR, DATA_DIR, FFMPEG_EXE, GEMINI_API_KEY
 from config.constants import VIDEO_WIDTH, VIDEO_HEIGHT, LicenseType
 from core.models import AssetRecord
+from core.media_validator import PhysicalVideoValidator, VIDEO_ONLY
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,8 @@ class FootageCandidate:
     confidence_score: float = 0.0
     verification_details: Dict[str, Any] = field(default_factory=dict)
     local_clip_path: Optional[Path] = None
+    media_type: str = "video"
+    is_video: bool = True
 
 
 # ==============================================================================
@@ -218,6 +221,9 @@ class StreamHarvestConnector:
         mp4_files = [p for p in self.local_asset_dir.glob("*.mp4") if p.stat().st_size > 1_000_000]
 
         for p in mp4_files:
+            # Physical validation: must be genuine video, not renamed image
+            if not PhysicalVideoValidator.is_valid_video(p):
+                continue
             # Score by token hit or fallback pool
             score = 0.85 if any(tok in p.name.lower() for tok in search_tokens) else 0.70
             cid = f"cand_loc_{p.stem}"
@@ -233,7 +239,9 @@ class StreamHarvestConnector:
                 rights_classification="US_GOV_PUBLIC_DOMAIN",
                 matched_claim_id=claim.claim_id,
                 matched_claim_text=claim.sentence_text,
-                confidence_score=score
+                confidence_score=score,
+                media_type="video",
+                is_video=True
             ))
             if len(cands) >= 3:
                 break
@@ -259,20 +267,29 @@ class StreamHarvestConnector:
                     results = resp.json().get("query", {}).get("search", [])
                     for r in results:
                         title = r.get("title", "")
+                        lower_title = title.lower()
+                        # Strict Video-Only Check: must be video file extension
+                        if not any(lower_title.endswith(ext) for ext in [".webm", ".mp4", ".ogv"]):
+                            continue
+                        media_url = f"https://commons.wikimedia.org/wiki/Special:FilePath/{title.replace('File:', '').replace(' ', '_')}"
+                        if PhysicalVideoValidator.is_image_url(media_url):
+                            continue
                         cid = f"cand_wiki_{r.get('pageid', uuid.uuid4().hex[:6])}"
                         cands.append(FootageCandidate(
                             candidate_id=cid,
                             title=title,
                             source_platform="WikimediaCommons",
                             source_url=f"https://commons.wikimedia.org/wiki/{title.replace(' ', '_')}",
-                            media_url_or_path=f"https://commons.wikimedia.org/wiki/Special:FilePath/{title.replace('File:', '').replace(' ', '_')}",
+                            media_url_or_path=media_url,
                             duration_sec=15.0,
                             uploader="Wikimedia Contributor",
                             published_date="Documented Archive",
                             rights_classification="CREATIVE_COMMONS",
                             matched_claim_id=claim.claim_id,
                             matched_claim_text=claim.sentence_text,
-                            confidence_score=0.88
+                            confidence_score=0.88,
+                            media_type="video",
+                            is_video=True
                         ))
             except Exception as e:
                 logger.debug(f"Wikimedia search notice for '{q}': {e}")
@@ -384,7 +401,19 @@ class TemporalMomentRetriever:
         """
         Returns (start_sec, end_sec) for the most relevant moment window.
         Uses sliding-window semantic chunking (SentrySearch concept).
+        Enforces Section 6 invariant: Candidate MUST be verified video. Still images are rejected.
         """
+        # Section 6 Hard Invariant: Operates ONLY on videos
+        media_type = getattr(candidate, "media_type", "video").lower()
+        is_video = getattr(candidate, "is_video", True)
+        if media_type != "video" or not is_video:
+            raise ValueError(f"TemporalMomentRetriever rejected non-video candidate: {getattr(candidate, 'candidate_id', 'unknown')} (media_type={media_type})")
+
+        # Reject image URLs or paths
+        media_url = getattr(candidate, "media_url_or_path", "")
+        if PhysicalVideoValidator.is_image_url(media_url):
+            raise ValueError(f"TemporalMomentRetriever rejected candidate with image URL/path: {media_url}")
+
         tot_dur = max(target_duration, candidate.duration_sec)
         
         # If video is already compact, return start
@@ -493,12 +522,21 @@ class ShortClipExtractor:
 
     def extract_clip(self, candidate: FootageCandidate, target_duration: float, output_path: Path) -> Path:
         """Clips sub-window to vertical 1080x1920 MP4."""
+        if getattr(candidate, "media_type", "video") != "video" or not getattr(candidate, "is_video", True):
+            raise ValueError(f"ShortClipExtractor rejected non-video candidate: {candidate.candidate_id}")
         src = candidate.media_url_or_path
+        if PhysicalVideoValidator.is_image_url(src):
+            raise ValueError(f"ShortClipExtractor rejected image asset: {src}")
+
         start = candidate.timestamp_start
         dur = target_duration
 
         # If source is local file, perform high-speed FFmpeg extract
         if Path(src).exists():
+            # Validate input is physical video
+            if not PhysicalVideoValidator.is_valid_video(src):
+                raise ValueError(f"ShortClipExtractor: input {src} is not a valid physical video stream")
+
             cmd = [
                 FFMPEG_EXE, "-y",
                 "-ss", str(start),
@@ -516,9 +554,28 @@ class ShortClipExtractor:
                 candidate.local_clip_path = output_path
                 return output_path
 
-        # Fallback to direct copy from local verified file
-        fallback_video = ASSETS_DIR / "fallback.jpg"
-        return output_path
+        # If extraction failed, ensure safe fallback is an authentic video MP4
+        from engines.render_engine import RenderEngine
+        safe_fallback = RenderEngine().get_safe_fallback_video()
+        if safe_fallback.exists() and PhysicalVideoValidator.is_valid_video(safe_fallback):
+            cmd = [
+                FFMPEG_EXE, "-y",
+                "-ss", "0",
+                "-i", str(safe_fallback),
+                "-t", str(dur),
+                "-vf", f"scale={VIDEO_WIDTH}:{VIDEO_HEIGHT}:force_original_aspect_ratio=increase,crop={VIDEO_WIDTH}:{VIDEO_HEIGHT}:(iw-{VIDEO_WIDTH})/2:(ih-{VIDEO_HEIGHT})/2,setsar=1,format=yuv420p",
+                "-c:v", "libx264",
+                "-preset", "fast",
+                "-crf", "19",
+                "-an",
+                str(output_path)
+            ]
+            subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if output_path.exists() and output_path.stat().st_size > 10000:
+                candidate.local_clip_path = output_path
+                return output_path
+
+        raise RuntimeError(f"ShortClipExtractor failed to produce valid video clip for {candidate.candidate_id}")
 
 
 # ==============================================================================
@@ -581,19 +638,23 @@ class RealFootageEngine:
                 footage_type = "REAL_EVENT" if winner.confidence_score >= 0.85 else "REAL_RELATED"
                 real_footage_count += 1
             else:
-                # Stock Fallback Rule: only as last resort
+                # Stock Fallback Rule: only as verified video MP4
+                from engines.render_engine import RenderEngine
+                safe_video_path = str(RenderEngine().get_safe_fallback_video())
                 winner = FootageCandidate(
                     candidate_id=f"stock_fallback_{uuid.uuid4().hex[:6]}",
-                    title=f"Stock Fallback for: {claim.where or 'Scene'}",
+                    title=f"Stock Video Fallback for: {claim.where or 'Scene'}",
                     source_platform="StockFallback",
                     source_url="https://www.pexels.com",
-                    media_url_or_path=str(ASSETS_DIR / "fallback.jpg"),
+                    media_url_or_path=safe_video_path,
                     duration_sec=target_shot_duration,
                     rights_classification="PEXELS_FREE_COMMERCIAL",
                     matched_claim_id=claim.claim_id,
                     matched_claim_text=claim.sentence_text,
                     is_stock_fallback=True,
-                    confidence_score=0.25
+                    confidence_score=0.25,
+                    media_type="video",
+                    is_video=True
                 )
                 footage_type = "FALLBACK_STOCK"
                 stock_fallback_count += 1

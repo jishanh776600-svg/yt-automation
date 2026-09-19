@@ -53,4 +53,6 @@ data/database/*
 # Runtime locks & temporary cache
 data/locks/
 data/cache/
+data/vault/
 .agents/
+

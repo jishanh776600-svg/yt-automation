@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from config.settings import RENDERS_DIR, FFMPEG_EXE, ASSETS_DIR
 from config.constants import VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_FPS
 from core.models import RenderOutput, AssetRecord
+from core.media_validator import PhysicalVideoValidator, VIDEO_ONLY
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,6 @@ class RenderEngine:
         self.renders_dir = RENDERS_DIR
         self.renders_dir.mkdir(parents=True, exist_ok=True)
 
-
     def get_safe_fallback_video(self) -> Path:
         """Finds a verified, valid moving video MP4 from project assets to prevent black screens."""
         from config.settings import ASSETS_DIR
@@ -34,13 +34,12 @@ class RenderEngine:
         for cdir in candidate_dirs:
             if cdir.exists():
                 for f in cdir.glob("*_raw.mp4"):
-                    if f.is_file() and f.stat().st_size > 50000:
+                    if f.is_file() and f.stat().st_size > 50000 and PhysicalVideoValidator.is_valid_video(f):
                         return f
                 for f in cdir.glob("*.mp4"):
-                    if f.is_file() and f.stat().st_size > 50000 and not f.name.startswith("short_") and not f.name.startswith("clip_"):
+                    if f.is_file() and f.stat().st_size > 50000 and not f.name.startswith("short_") and not f.name.startswith("clip_") and PhysicalVideoValidator.is_valid_video(f):
                         return f
-        # Fallback to standard fallback image if no MP4 found
-        return ASSETS_DIR / "fallback.jpg"
+        raise RuntimeError("VIDEO_ONLY invariant violation: No verified moving MP4 video found in project assets.")
 
     def validate_clip_visual(self, clip_path: Path, min_duration: float = 0.5) -> bool:
         """
@@ -158,56 +157,13 @@ class RenderEngine:
         output_path: Path
     ) -> Path:
         """
-        Renders a single image into a 1080x1920 vertical video clip with Ken Burns motion.
-        Maintains natural visual clarity with zero dark edge darkening or global contrast crushing.
+        PROHIBITED UNDER VIDEO_ONLY INVARIANT.
+        Still images and Ken Burns -loop 1 conversions are strictly forbidden for visual evidence.
         """
-        frames = max(1, int(duration * VIDEO_FPS))
-        if motion == "zoom_in" or motion == "subtle_zoom_in":
-            zoom_filter = f"zoompan=z='min(zoom+0.0012,1.15)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS}"
-        elif motion == "zoom_out" or motion == "subtle_zoom_out":
-            zoom_filter = f"zoompan=z='if(lte(zoom,1.0),1.15,max(1.001,zoom-0.0012))':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS}"
-        elif motion == "pan_left" or motion == "slow_pan_left":
-            zoom_filter = f"zoompan=z='1.12':d={frames}:x='if(lte(on,1),(iw-iw/zoom)/2,x+0.8)':y='ih/2-(ih/zoom/2)':s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS}"
-        else:
-            zoom_filter = f"zoompan=z='min(zoom+0.0008,1.10)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS}"
-
-        filter_str = f"{zoom_filter},unsharp=3:3:0.4:3:3:0.0,format=yuv420p"
-
-        cmd = [
-            FFMPEG_EXE, "-y",
-            "-loop", "1",
-            "-i", str(image_path),
-            "-vf", filter_str,
-            "-t", str(duration),
-            "-c:v", "libx264",
-            "-preset", "slow",
-            "-crf", "18",
-            "-pix_fmt", "yuv420p",
-            "-r", str(VIDEO_FPS),
-            "-an",
-            str(output_path)
-        ]
-
-        logger.info(f"Rendering image shot clip ({motion}): {output_path.name}")
-        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if res.returncode != 0:
-            logger.warning(f"Ken burns render warning: {res.stderr.decode('utf-8', errors='ignore')}")
-            cmd_fallback = [
-                FFMPEG_EXE, "-y",
-                "-loop", "1",
-                "-i", str(image_path),
-                "-t", str(duration),
-                "-vf", f"scale={VIDEO_WIDTH}:{VIDEO_HEIGHT},format=yuv420p",
-                "-c:v", "libx264",
-                "-preset", "ultrafast",
-                "-pix_fmt", "yuv420p",
-                "-r", str(VIDEO_FPS),
-                "-an",
-                str(output_path)
-            ]
-            subprocess.run(cmd_fallback, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        return output_path
+        raise ValueError(
+            f"FFmpeg composition refused prohibited image evidence input: {image_path}. "
+            f"Still images and -loop 1 conversions are strictly forbidden under VIDEO_ONLY invariant."
+        )
 
     def render_shot_clip(
         self,
@@ -218,22 +174,24 @@ class RenderEngine:
         overlay_image: Optional[Path] = None
     ) -> Path:
         """
-        Polymorphic shot renderer: dispatches to video or image rendering based on file extension/type.
+        Renders an authentic moving video clip into a 1080x1920 vertical video clip.
+        Strictly enforces VIDEO_ONLY invariant: rejects all static images.
         """
-        suffix = media_path.suffix.lower()
-        if suffix in [".mp4", ".mov", ".mkv", ".webm"]:
-            out = self.render_video_shot_clip(media_path, duration, output_path, motion=motion, overlay_image=overlay_image)
-        else:
-            out = self.render_image_shot_clip(media_path, duration, motion, output_path)
+        # Section 9 & 14 (Test 16): Reject prohibited image evidence inputs
+        if PhysicalVideoValidator.is_image_url(str(media_path)) or media_path.suffix.lower() in [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff"]:
+            raise ValueError(f"FFmpeg composition refused prohibited image evidence input: {media_path}")
+
+        # Physical video validation
+        if not PhysicalVideoValidator.is_valid_video(media_path):
+            raise ValueError(f"FFmpeg composition refused prohibited non-video input (failed physical validation): {media_path}")
+
+        out = self.render_video_shot_clip(media_path, duration, output_path, motion=motion, overlay_image=overlay_image)
 
         # Auto-Repair: verify rendered clip is not black or corrupt
         if not self.validate_clip_visual(out, min_duration=min(duration * 0.5, 1.0)):
             logger.warning(f"[AUTO_REPAIR] Shot clip {output_path.name} failed visual validation. Auto-repairing with safe moving asset.")
             safe_asset = self.get_safe_fallback_video()
-            if safe_asset.suffix.lower() in [".mp4", ".mov", ".mkv", ".webm"]:
-                out = self.render_video_shot_clip(safe_asset, duration, output_path, motion=motion, overlay_image=overlay_image)
-            else:
-                out = self.render_image_shot_clip(safe_asset, duration, motion, output_path)
+            out = self.render_video_shot_clip(safe_asset, duration, output_path, motion=motion, overlay_image=overlay_image)
         return out
 
     def assemble_short(
@@ -301,7 +259,7 @@ class RenderEngine:
             for idx, shot in enumerate(shots_data):
                 shot_id = shot["shot_id"]
                 asset = asset_map.get(shot_id)
-                media_path = Path(asset.local_path) if asset else (ASSETS_DIR / "fallback.jpg")
+                media_path = Path(asset.local_path) if asset else self.get_safe_fallback_video()
                 clip_out = self.renders_dir / f"clip_{job_id}_{idx}.mp4"
 
                 # Check for evidence overlay
@@ -330,10 +288,10 @@ class RenderEngine:
                 else:
                     motion = shot.get("camera_motion", "none")
 
-                # Safety check: if media_path is an overlay PNG, avoid black-screen bug by falling back to fallback image/video
+                # Safety check: if media_path is an overlay PNG, avoid black-screen bug by falling back to verified video
                 if media_path.suffix.lower() == ".png" and "overlay" in media_path.name.lower():
                     overlay_path = media_path
-                    media_path = ASSETS_DIR / "fallback.jpg"
+                    media_path = self.get_safe_fallback_video()
 
                 self.render_shot_clip(
                     media_path=media_path,

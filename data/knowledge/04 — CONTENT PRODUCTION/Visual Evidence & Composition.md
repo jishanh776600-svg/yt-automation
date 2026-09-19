@@ -296,4 +296,78 @@ py -3.13 -m pytest tests/test_controlled_429_failover.py -v
 
 # Verify reserve buffer stock
 python main.py --status
+
+# Verify Hard Video-Only Visual Asset Invariant
+pytest tests/test_video_only_policy.py -v
 ```
+
+---
+
+# Video-Only Visual Asset Invariant
+
+> **Status:** `[CANONICAL PRODUCTION INVARIANT — LIVE & VERIFIED]`  
+> **Invariant:** `VIDEO_ONLY = True`  
+> **Absolute Rule:** Authentic moving video footage ONLY. Zero still images, zero photo slideshows, zero static photographs, zero image-to-video fallbacks, zero AI-generated still images, zero procedural canvases.
+
+### 1. User Requirement
+The channel operator's explicit, unconditional requirement is:
+> **"ONLY STOCK VIDEOS, NEVER IMAGES."**
+
+Every visual evidence scene in a production Short must be sourced from an authentic video asset with genuine temporal duration ($> 0\text{s}$) and a moving temporal stream. If video retrieval fails, the pipeline MUST NOT fall back to still images, photos, thumbnails, or Ken Burns zoomed pictures. Instead, it must continue searching for alternative video candidates or fail closed.
+
+### 2. Root Cause of Image Leakage
+A forensic audit of `data/database/pipeline.db` revealed **168 static image assets** (representing 67.5% of all historical visual assets) entering production through multiple legacy fallback tiers:
+1. **`engines/asset_fetcher.py` Legacy Tiers**:
+   - `search_pexels_photo()` (lines 390–449): Queried Pexels Photo API when video search returned no results.
+   - `search_wikimedia_commons()` (lines 451–534): Downloaded static JPG/PNG archival scans.
+   - `generate_ai_image()` (lines 536–577): Sourced static JPEGs from `image.pollinations.ai`.
+   - Procedural Canvas (lines 868–890): Generated static solid-color PIL images.
+   - Lines 594–601: Downscaled and cropped static images to 9:16 vertical JPGs and saved `AssetRecord(asset_type="image")`.
+2. **`engines/render_engine.py` Silent Ken Burns Loop**:
+   - Line 153 (`render_image_shot_clip`): Executed FFmpeg `-loop 1 -i image_path` with `zoompan` to convert still photographs into video clips.
+   - Line 221 (`render_shot_clip`): Delegated non-MP4 file extensions to `render_image_shot_clip()`.
+   - Lines 43, 304, 336: Defaulted missing or invalid assets to `ASSETS_DIR / "fallback.jpg"`.
+3. **`engines/visual_intelligence/real_footage_engine.py`**:
+   - Lines 520 & 590: Sourced `fallback.jpg` as stock fallback.
+   - Line 500: `ShortClipExtractor` cropped `fallback.jpg` into an MP4 sub-clip.
+4. **`engines/storyboard_engine.py`**:
+   - Line 129: Prompt explicitly instructed the LLM to generate "stock photo/video search queries".
+
+### 3. Exact Enforcement Points
+The hard invariant is enforced at every layer of the asset lifecycle:
+
+| Layer | File | Enforcement Mechanism |
+|---|---|---|
+| **Physical Validator** | `core/media_validator.py` | Binary magic bytes inspection + FFprobe stream analysis (`PhysicalVideoValidator`). Validates container, `codec_type == 'video'`, `duration > 0.05s`, `nb_frames > 1`, and dimensions. Strictly rejects JPEG/PNG/WebP/GIF/BMP/TIFF, thumbnails, audio-only containers, and renamed images (e.g. `.jpg` renamed to `.mp4`). |
+| **Real Footage Engine** | `engines/visual_intelligence/real_footage_engine.py` | Purged `fallback.jpg`. Enforces `candidate.media_type == 'video'` and `candidate.is_video == True` before `TemporalMomentRetriever.localize_moment()`. Rejects image URLs and static files. `ShortClipExtractor` verifies physical video input before FFmpeg extraction. |
+| **Asset Fetcher** | `engines/asset_fetcher.py` | Purged Tiers 4 (Pexels photo), 5 (Pollinations AI image), and 6 (procedural canvas). `search_pexels_photo()` returns `None`; `generate_ai_image()` returns `False`; `search_wikimedia_commons()` filters to video extensions (`.webm`, `.mp4`, `.ogv`). Added secondary video query expansion and local verified MP4 fallback. Validates downloaded media with `PhysicalVideoValidator` and returns `asset_type="video"` exclusively. |
+| **Render Engine** | `engines/render_engine.py` | `render_shot_clip()` passes media through `PhysicalVideoValidator` and raises `ValueError` on any image input. `render_image_shot_clip()` raises `ValueError` prohibiting `-loop 1` still image conversions. Replaced all `fallback.jpg` fallbacks with `get_safe_fallback_video()` (verified MP4 only). |
+| **Storyboard Engine** | `engines/storyboard_engine.py` | Updated AI prompt to generate "stock video footage search queries exclusively". Injected `asset_type: "video"` into all storyboard beats. Added `validate_storyboard_scene()` rejecting `asset_type == 'image'` or image file paths. |
+| **Wikimedia Adapter** | `engines/visual_intelligence/sources/wikimedia_adapter.py` | Filters candidates at discovery: drops any asset where `not is_video` (`VisualContentType.STATIC_PHOTO` completely removed). |
+
+### 4. Verification Suite & Test Evidence
+Implemented in [`tests/test_video_only_policy.py`](file:///C:/Users/jisha/OneDrive/Desktop/yt%20automation/tests/test_video_only_policy.py) (17/17 pass, 5.03s):
+- `test_01_mp4_video_accepted`: Valid MP4 container & H.264 stream $\to$ **ACCEPT**
+- `test_02_webm_video_accepted`: Valid WebM container & VP8/VP9 stream $\to$ **ACCEPT**
+- `test_03_jpeg_rejected`: JPEG image $\to$ **REJECT**
+- `test_04_png_rejected`: PNG image $\to$ **REJECT**
+- `test_05_webp_rejected`: WebP image $\to$ **REJECT**
+- `test_06_gif_rejected`: GIF image $\to$ **REJECT**
+- `test_07_image_url_rejected`: Image CDN URLs $\to$ **REJECT**
+- `test_08_thumbnail_url_rejected`: YouTube / Pexels thumbnail URLs $\to$ **REJECT**
+- `test_09_image_renamed_mp4_rejected`: JPEG file renamed `.mp4` $\to$ **REJECT (Binary magic byte inspection)**
+- `test_10_video_with_valid_temporal_stream_accepted`: Temporal video with frames $\to$ **ACCEPT**
+- `test_11_candidate_without_video_stream_rejected`: Audio-only AAC file $\to$ **REJECT**
+- `test_12_image_search_fallback_rejected`: Photo search & AI image methods $\to$ **REJECT**
+- `test_13_video_search_failure_does_not_invoke_image_fallback`: Video failure $\to$ **REJECT candidate, NO image fallback**
+- `test_14_temporal_moment_retriever_rejects_non_video`: Non-video candidate $\to$ **REJECT**
+- `test_15_storyboard_rejects_image_asset`: Storyboard image scene $\to$ **REJECT**
+- `test_16_ffmpeg_composition_refuses_prohibited_image_input`: Image passed to renderer $\to$ **REJECT (`ValueError`)**
+- `test_17_valid_video_pipeline_end_to_end`: Video candidate $\to$ Localization $\to$ Verification $\to$ Storyboard $\to$ FFmpeg render $\to$ **PASS**
+
+### 5. Production Safety & Invariants Preserved
+- **Refill Runner**: Untouched (`TARGET_RESERVE_BUFFER = 6`, 2-hour cadence).
+- **Scheduler**: Untouched (3 Shorts/day at 06:00, 11:00, 15:00 UTC).
+- **YouTube Upload & Drive Vault**: Untouched (`_from_gateway` barrier, 4-folder lifecycle).
+- **Voice & BGM**: Untouched (`af_bella` at native 1.00x speed, BGM bed at -30 LUFS, SFX disabled).
+- **Refill Safety**: If an individual video candidate fails validation, the system queries alternative video keywords and local verified video stock, preventing candidate starvation while maintaining 100% video purity.

@@ -135,3 +135,21 @@ def get_ffmpeg_path() -> str:
 
 
 FFMPEG_EXE = get_ffmpeg_path()
+
+
+def get_ffprobe_path() -> str:
+    """Finds valid FFprobe binary path."""
+    ffprobe_sys = shutil.which("ffprobe")
+    if ffprobe_sys:
+        return ffprobe_sys
+    # If ffmpeg is alongside ffprobe in the same directory
+    ffmpeg_dir = Path(FFMPEG_EXE).parent if FFMPEG_EXE else None
+    if ffmpeg_dir:
+        cand = ffmpeg_dir / ("ffprobe.exe" if os.name == "nt" else "ffprobe")
+        if cand.exists():
+            return str(cand)
+    return "ffprobe"
+
+
+FFPROBE_EXE = get_ffprobe_path()
+

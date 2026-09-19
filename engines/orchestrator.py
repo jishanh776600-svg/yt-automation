@@ -574,11 +574,11 @@ class ProductionOrchestrator:
                 shot_id = shot.get("shot_id", "shot_01")
                 mock_asset = AssetRecord(
                     id=f"ast_{uuid.uuid4().hex[:8]}",
-                    asset_type="image",
+                    asset_type="video",
                     source="local_mock",
                     license="CC0",
                     commercial_use=True,
-                    local_path=str(RENDERS_DIR / f"mock_asset_{shot_id}.jpg")
+                    local_path=str(RENDERS_DIR / f"mock_asset_{shot_id}.mp4")
                 )
                 assets_used.append(mock_asset)
                 asset_map[shot_id] = mock_asset

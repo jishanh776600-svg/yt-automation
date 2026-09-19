@@ -126,9 +126,9 @@ class StoryboardEngine:
                     f"Escalation: {script.escalation}\n"
                     f"Reveal: {script.reveal}\n"
                     f"Twist: {script.loop_twist}\n\n"
-                    f"Generate {shot_count} distinct, highly specific stock photo/video search queries (2-4 words each) "
+                    f"Generate {shot_count} distinct, highly specific stock video footage search queries (2-4 words each, NO STILL IMAGES) "
                     f"and {shot_count} cinematic historical visual prompts tailored exactly to this event.\n"
-                    f"Include authentic era keywords (e.g. vintage, archival, 19th century, documentary).\n"
+                    f"Include authentic era keywords (e.g. archival footage, newsreel, documentary, moving film).\n"
                     f"Return ONLY valid JSON format with a list of {shot_count} objects, each having 'query' and 'prompt'."
                 )
                 from config.settings import GEMINI_MODEL
@@ -210,8 +210,10 @@ class StoryboardEngine:
                 "transition": trans,
                 "min_resolution": "1080x1920",
                 "era_compatibility": "HISTORICAL_AUTHENTIC",
-                "visual_intent": intent.to_dict()
+                "visual_intent": intent.to_dict(),
+                "asset_type": "video"
             }
+            self.validate_storyboard_scene(shot)
             shots.append(shot)
             current_time += dur
 
@@ -220,4 +222,37 @@ class StoryboardEngine:
             f"(Total Duration: {total_duration:.1f}s, Avg Segment: {total_duration/len(shots):.2f}s)"
         )
         return shots
+
+    @staticmethod
+    def validate_storyboard_scene(scene: Dict[str, Any]) -> bool:
+        """
+        Validates that a storyboard scene complies with the hard VIDEO_ONLY contract (Section 8).
+        Rejects scenes specifying asset_type == 'image', or referencing static image files.
+        Requires valid temporal duration and video asset specification.
+        """
+        asset_type = str(scene.get("asset_type", "video")).lower()
+        if asset_type in ["image", "photo", "still", "canvas", "slideshow"]:
+            raise ValueError(
+                f"Storyboard validation failed: prohibited asset_type '{asset_type}' in scene {scene.get('shot_id')}. "
+                f"Only 'video' assets are permitted."
+            )
+
+        asset_path = scene.get("asset_path") or scene.get("media_path") or scene.get("image_path") or scene.get("photo_url") or scene.get("media_url") or ""
+        if scene.get("image_path") or scene.get("photo_url") or scene.get("still_path") or scene.get("thumbnail_path"):
+            raise ValueError(f"Storyboard validation failed: prohibited image reference in scene {scene.get('shot_id')}")
+
+        if asset_path:
+            from core.media_validator import PhysicalVideoValidator
+            if PhysicalVideoValidator.is_image_url(str(asset_path)):
+                raise ValueError(f"Storyboard validation failed: prohibited image URL/path '{asset_path}' in scene {scene.get('shot_id')}")
+
+        # Check temporal fields
+        start = scene.get("start") if "start" in scene else scene.get("start_time")
+        end = scene.get("end") if "end" in scene else scene.get("end_time")
+
+        if start is not None and end is not None:
+            if float(end) <= float(start):
+                raise ValueError(f"Storyboard scene {scene.get('shot_id')} has invalid temporal range: start={start}, end={end}")
+
+        return True
 

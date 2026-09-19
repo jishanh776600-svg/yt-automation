@@ -71,6 +71,9 @@ class WikimediaAdapter(BaseSourceAdapter):
 
                         cid = f"cand_wiki_{pid}_{uuid.uuid4().hex[:4]}"
                         is_video = img_url.lower().endswith((".webm", ".mp4", ".ogv"))
+                        # Hard Invariant: VIDEO FOOTAGE ONLY. Drop all static photos/images.
+                        if not is_video:
+                            continue
 
                         prov = VisualProvenance(
                             asset_id=cid,
@@ -80,7 +83,7 @@ class WikimediaAdapter(BaseSourceAdapter):
                             publisher="Wikimedia Commons",
                             rights_status=RightsStatus.PUBLIC_DOMAIN if "public domain" in lic.lower() else RightsStatus.PERMISSION_BASED,
                             license_name=lic,
-                            content_type=VisualContentType.ARCHIVAL_VIDEO if is_video else VisualContentType.STATIC_PHOTO,
+                            content_type=VisualContentType.ARCHIVAL_VIDEO,
                             attribution_required=bool(artist and artist != "Historical Archive"),
                             attribution_text=artist[:100],
                             confidence_score=0.98
@@ -93,7 +96,7 @@ class WikimediaAdapter(BaseSourceAdapter):
                             source_url=img_url,
                             title=pdata.get("title", q),
                             description=desc[:150],
-                            content_type=VisualContentType.ARCHIVAL_VIDEO if is_video else VisualContentType.STATIC_PHOTO,
+                            content_type=VisualContentType.ARCHIVAL_VIDEO,
                             rights_status=prov.rights_status,
                             license_name=lic,
                             creator=artist[:80],
@@ -101,8 +104,8 @@ class WikimediaAdapter(BaseSourceAdapter):
                             width=w,
                             height=h,
                             duration_sec=getattr(intent, "duration", 4.0),
-                            motion_score=0.85 if is_video else 0.40,
-                            is_video=is_video,
+                            motion_score=0.85,
+                            is_video=True,
                             entity_tags=[q],
                             event_tags=[],
                             provenance=prov
