@@ -112,44 +112,20 @@ def is_niche_compliant(
 ) -> Tuple[bool, str]:
     """
     STRICT NICHE PURITY GATE (PHASE 0).
-    Authoritatively enforces the channel's SOLE target niche:
-    MYSTERY / BIZARRE REAL-WORLD STORIES ONLY.
-    Weird Science and pure academic/science explainers are completely removed.
-    Strictly rejects conventional politics, geopolitics, elections,
-    military conflicts, diplomacy, and science explainers.
+    Delegates directly to canonical NicheGuard to authoritatively enforce the channel's target niche:
+    Historical mysteries, unexplained events, folklore, legends, ancient enigmas,
+    archaeological discoveries, and bizarre documented real-world history.
+    Strictly rejects modern academic science, oncology/cancer research, genetics/aging papers,
+    forestry/environmental studies, and university press releases.
     """
-    combined = f"{title} {text} {' '.join(entities or [])}".lower()
-
-    # 1. Hard check for political/geopolitical/military terms
-    if not allow_political:
-        matched_political = []
-        for kw in BANNED_POLITICAL_KEYWORDS:
-            pattern = rf"\b{re.escape(kw)}\b"
-            if re.search(pattern, combined):
-                matched_political.append(kw)
-
-        if matched_political:
-            return False, f"REJECTED_POLITICAL_CONTENT: matched {matched_political[:3]}"
-
-    # 2. Hard check for banned science explainer topics (Weird Science purged)
-    matched_science = []
-    for kw in BANNED_SCIENCE_EXPLAINER_KEYWORDS:
-        if kw in combined:
-            matched_science.append(kw)
-
-    if matched_science:
-        return False, f"REJECTED_SCIENCE_EXPLAINER: Weird Science removed; matched {matched_science[:2]}"
-
-    # 3. Check for positive mystery / bizarre real-world story alignment
-    matched_niche = []
-    for kw in APPROVED_NICHE_KEYWORDS:
-        if kw in combined:
-            matched_niche.append(kw)
-
-    if matched_niche:
-        return True, f"APPROVED_MYSTERY_BIZARRE: matched {matched_niche[:3]}"
-
-    return False, "REJECTED_OUT_OF_NICHE: Lacks mystery, bizarre, or unexplained real-world indicators"
+    from intelligence.niche_guard import NicheGuard
+    decision = NicheGuard.evaluate(
+        title=title,
+        text=text,
+        entities=entities,
+        allow_political=allow_political
+    )
+    return decision.is_allowed, decision.reason
 
 
 

@@ -2,6 +2,7 @@
 
 | Date | Video | Result | Observation (Facts) | Hypothesis | Experiment | Confidence | Strategic Decision |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 2026-09-19 | **Niche Guard Remediation** | `CRITICAL_FIX` | Sep 15–17 Shorts Feed collapse caused by modern oncology/genetics/forestry deviation | Audience retention requires strict channel niche purity | Implemented canonical NicheGuard rejecting academic science | **HIGH_CONFIDENCE** | Permanently block modern academic science from topic discovery |
 | 2026-08-27 | **The 38-Minute War** | `OUTPERFORMER` | APV 92.5% (+17.5% over channel median 75.0%) | High-stakes conflict hook + 22.5s duration maximizes completion rate | Re-test hook on 'The Pig War' | **MEDIUM_CONFIDENCE** | Prioritize Unusual Wars category in 60% proven slot |
 
 ## Learning Cycle — 2026-08-28 11:30:21 UTC
@@ -5054,3 +5055,1191 @@
 | `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
 | `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
 | `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 08:08:14 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 08:24:48 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 08:41:35 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 08:59:08 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 09:16:37 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 09:33:15 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 09:49:51 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 10:06:27 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 10:22:52 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 10:39:09 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 10:55:38 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 11:12:17 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 11:37:56 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 11:56:21 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 12:14:40 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 12:49:40 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 12:53:39 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 13:36:04 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 13:53:20 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 14:10:08 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 14:29:45 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 14:46:12 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 15:02:42 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 16:13:26 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 16:31:06 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 16:49:08 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 17:06:50 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 17:23:40 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 17:41:23 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 18:21:20 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 18:38:07 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 18:54:49 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 19:11:19 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 19:27:53 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 19:44:32 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-18 20:01:04 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 01:09:58 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 01:26:27 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 01:43:00 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 01:59:23 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 02:16:03 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 02:33:19 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 02:50:32 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 03:07:41 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 03:24:18 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.16/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.3%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.3% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.2% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.8%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.0%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.0% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.4%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.4% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.0%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.0% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 06:28:36 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.07/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-6.9%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-6.9% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+4.5%` | `USABLE_EVIDENCE` | **1.04** | Usable evidence (N=10). Full bounded weight adjustment (+4.5% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+6.4%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+6.4% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-10.6%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `+0.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `+0.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-12.9%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-12.9% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-4.2%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.3% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-4.2%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=6). Full bounded weight adjustment (-4.3% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-6.9%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-6.9% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 07:29:17 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.43/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.6%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.6% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.5%` | `USABLE_EVIDENCE` | **1.07** | Usable evidence (N=10). Full bounded weight adjustment (+7.5% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.6%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.6% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.3%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.1%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.6%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.5% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.0%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.0% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.0%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.0% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.6%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.6% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 07:53:38 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 08:12:36 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 08:30:58 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 08:49:36 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 09:08:04 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 09:26:27 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 09:45:08 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 10:03:33 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 10:22:05 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 10:40:31 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 10:58:50 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 11:17:41 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 11:37:08 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 11:55:49 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 12:30:58 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 12:47:37 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 13:04:28 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 13:22:48 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+
+## Learning Cycle — 2026-09-19 13:41:08 UTC
+
+- **Mature Videos Evaluated**: 49
+- **Channel Performance Baseline**: 46.54/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 10 | `+7.9%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=10). Full bounded weight adjustment (+7.9% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.3%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.5%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-1.0%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.8%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.8% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.2%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.2% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.8%` | `USABLE_EVIDENCE` | **0.92** | Usable evidence (N=5). Full bounded weight adjustment (-7.8% lift vs baseline). |

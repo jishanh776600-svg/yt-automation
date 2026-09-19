@@ -3,11 +3,13 @@ aliases:
   - Visual System
   - Visual Memory
   - GlobalVisualMemory
+  - Temporal Moment Localization
 tags:
   - visuals
   - rendering
   - video
-last_updated: 2026-09-05
+  - localization
+last_updated: 2026-09-18
 ---
 
 # 07 — Visual Evidence & Global Visual Memory
@@ -79,8 +81,25 @@ flowchart TD
 
 ---
 
-## 5. Architectural Links
+## 5. Temporal Moment Localization & Real Footage Engine
+
+Implemented in [`engines/visual_intelligence/real_footage_engine.py`](file:///C:/Users/jisha/OneDrive/Desktop/yt%20automation/engines/visual_intelligence/real_footage_engine.py) (September 2026):
+
+The Visual System features dynamic sub-clip temporal moment localization to ensure script claims are backed by physical footage:
+1. **5W1H Event Claim Planner:** Converts each narration beat into structured claims (`who`, `what`, `when`, `where`, `why`).
+2. **Multi-Source Ingestion:** Harvests candidates from DVIDS, Wikimedia, Internet Archive, and reference feeds.
+3. **`TemporalMomentRetriever.localize_moment()`:** Evaluates candidate videos using an overlapping sliding window (stride 1.0s, window 2.0s–5.0s) to locate the exact sub-clip matching narration duration.
+4. **`VisualClaimVerifier` Multimodal Validation:** Computes visual density and keyframe relevance scores to verify genuine physical presence (Absolute Relevance Rule).
+5. **Lossless Vertical Extraction:** Extracts sub-second segments (`ss`/`to`) with FFmpeg `scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920`.
+
+> **Canonical Master Reference:** For the complete architectural flow, non-regression contract, test proofs, and forensic incident log, see:  
+> `[[04 — CONTENT PRODUCTION/Visual Evidence & Composition#Localization — Implementation & Final State|Visual Evidence & Composition — Localization Section]]`.
+
+---
+
+## 6. Architectural Links
 - Master Overview: [[00 - Master Dashboard|AL-AMR Dashboard]]
+- Canonical Localization Master: [[04 — CONTENT PRODUCTION/Visual Evidence & Composition|Visual Evidence & Composition]]
 - Script Alignment: [[05 - Script Engine|Script Engine]]
 - Deduplication: [[08 - Duplicate Protection|Short Duplicate Guard]]
 - Video QA Gate: [[13 - QA & Testing|QA System]]

@@ -7,13 +7,13 @@ tags:
   - incidents
   - post-mortem
   - forensics
-last_updated: 2026-09-07
+last_updated: 2026-09-18
 ---
 
-# Incident Register & Forensic Log (Incidents 1–7)
+# Incident Register & Forensic Log (Incidents 1–12)
 
 > **Status:** `[HISTORICAL POST-MORTEM REGISTER]`  
-> **Scope:** Forensic post-mortems of production failures and permanent code fixes implemented prior to Incident 8 `[CODE VERIFIED]`.
+> **Scope:** Forensic post-mortems of production failures and permanent code fixes implemented across all operational cycles `[CODE VERIFIED]`.
 
 ---
 
@@ -74,3 +74,15 @@ last_updated: 2026-09-07
 ## Incident 10: Erroneous Production Sarah Voice Lock & Surgical Rollback to Bella
 - **Root Cause:** During a content-quality hardening cycle, prompt instructions inadvertently locked `APPROVED_PRODUCTION_VOICES` and defaults across modules to `af_sarah`, overriding the intended canonical production voice `af_bella`.
 - **Permanent Fix:** Surgically restored `af_bella` as the sole authoritative production voice across all configuration files, engines (`config/settings.py`, `engines/tts_engine.py`, `engines/visual_intelligence/voice_policy.py`, `engines/orchestrator.py`, `main.py`), and GitHub Actions workflow (`.github/workflows/produce_buffer.yml`). Locked whitelist to `APPROVED_PRODUCTION_VOICES = ["af_bella"]`. Unapproved voice requests fail closed to `af_bella`. Applied corrective commit `b4dd8f6306368859f07352adf42deb0b1de6199a`. Verified across 25 voice/content tests, 7 cloud autonomy tests, and 40 negative lifecycle invariant tests.
+
+---
+
+## Incident 11: YouTube Data API Read-Replica Replication Latency During Scheduled Metadata Remediation
+- **Root Cause:** During live public metadata sanitization (stripping internal `[JOB_ID: ...]` traces and YouTube tags from scheduled Shorts), immediate read-after-write queries against Google's `videos.list` endpoint returned stale cached metadata due to eventual consistency across YouTube API read replicas.
+- **Permanent Fix:** Implemented explicit exponential backoff polling (up to 3 retries, 2.0s initial delay with jitter) combined with direct assertion on write response payloads rather than immediate un-delayed read-after-write. Additionally guaranteed strict `publishAt` preservation across all scheduled Shorts updates.
+
+---
+
+## Incident 12: Upstream Gemini 429 Quota Exhaustion & NVIDIA NIM Gateway Circuit-Breaker Failover
+- **Root Cause:** High-density visual candidate extraction during automated video assembly caused transient HTTP 429 (Resource Exhausted) errors from the upstream Gemini API, blocking automated visual claim validation.
+- **Permanent Fix:** Integrated NVIDIA NIM secondary LLM/VLM gateway as an automated circuit-breaker fallback in `gemini_client.py` and `real_footage_engine.py`. When Gemini encounters HTTP 429 or network timeouts, candidate queries seamlessly divert to NIM endpoints without failing the assembly pipeline or interrupting the buffer refill runner.

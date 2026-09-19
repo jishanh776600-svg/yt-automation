@@ -7,13 +7,13 @@ tags:
   - changelog
   - history
   - commits
-last_updated: 2026-09-07
+last_updated: 2026-09-18
 ---
 
 # 10 — System Master Changelog: AL-AMR
 
 > **Status:** `[SINGLE SOURCE OF SYSTEM EVOLUTION TRUTH]`  
-> **Current Authoritative Commit:** `b4dd8f6306368859f07352adf42deb0b1de6199a` on `origin/main` `[CODE VERIFIED]`  
+> **Current Authoritative Commit:** `503af7d` on `origin/main` `[CODE VERIFIED]`  
 
 ---
 
@@ -21,6 +21,8 @@ last_updated: 2026-09-07
 
 | Release / Step | Date | Milestone & Description | Verification Evidence | Claim Status |
 |---|---|---|---|---|
+| **Step 50** | 2026-09-19 | **Critical Topic Discovery Niche-Guard Hardening**<br/>Implemented canonical `NicheGuard` in `intelligence/niche_guard.py` with multi-category negative exclusion patterns (`MODERN_MEDICAL_RESEARCH`, `MODERN_GENETICS_RESEARCH`, `MODERN_ENVIRONMENTAL_RESEARCH`, `PRESS_RELEASE_SCIENCE`, `MODERN_ACADEMIC_SCIENCE`), positive historical/mystery/archaeology matchers, and historical-context exception logic (e.g. ancient Roman medical texts and Lycurgus Cup nanotechnology allowed). Wired into `intelligence/clustering.py` (`is_niche_compliant` delegation), `engines/topic_discovery.py` (unproduced DB topic gating, AI prompt negative constraints, candidate gating, topic score 0.0 drop for out-of-niche items), and `sources/rss_sources.py` (purged miscategorized ScienceDaily feed, prioritized genuine historical feeds). Fully verified against all 7 September 15–17 failure candidates (100% rejected) and 75 curated historical seeds (100% accepted). Preserved scheduler, 3/day cadence, and Gate 15 deduplication. | 18/18 targeted niche guard tests pass (`tests/test_niche_guard.py`); 15/15 deduplication tests pass (`tests/test_topic_deduplication_integration.py`). | `[CODE VERIFIED]` |
+| **Step 49** | 2026-09-18 | **Temporal Moment Localization & Public Metadata Decoupling**<br/>Commit `503af7d`. Implemented dynamic sub-clip temporal moment localization in `engines/visual_intelligence/real_footage_engine.py` (5W1H event claim decomposition, multi-source video harvesting via DVIDS, Wikimedia, Archive, yt-dlp, sliding-window `TemporalMomentRetriever.localize_moment()`, multimodal `VisualClaimVerifier`, sub-second FFmpeg 1080x1920 cropping). Decoupled public YouTube metadata from internal telemetry in `engines/upload_engine.py` and `seo_engine.py`: strictly omitted YouTube tags from API snippets, sanitized viewer descriptions to strip all internal job/run IDs, and performed live retroactive sanitization of 5 scheduled Shorts on YouTube (`MG3dnL_ijts`, `HDx1dAw4Lpk`, `CgzjTCAgIUU`, `6FCb4NjsZhA`, `Q6qzh3xHego`) while preserving exact scheduled `publishAt` slots. | 15/15 unit & integration tests pass; live YouTube API read-back verification confirmed 0 tags and clean descriptions across all scheduled Shorts. | `[LIVE VERIFIED]` |
 | **Step 48** | 2026-09-13 | **Surgical Rollback & Authoritative Voice Lock to Bella (`af_bella`)**<br/>Commit `b4dd8f6306368859f07352adf42deb0b1de6199a`. Restored `af_bella` as the sole authoritative production voice across all configuration files, engines (`tts_engine.py`, `visual_intelligence/voice_policy.py`, `orchestrator.py`, `main.py`), and GitHub Actions workflows (`produce_buffer.yml`). Locked whitelist to `APPROVED_PRODUCTION_VOICES = ["af_bella"]`. Unapproved voice requests fail closed to `af_bella`. | 25/25 targeted voice/content tests, 7/7 cloud autonomy tests, and 40/40 negative lifecycle invariant tests passed cleanly. | `[CODE VERIFIED]` |
 | **Step 47** | 2026-09-13 | **Content Quality Upgrade & Autonomous Video Assembly Hardening**<br/>Implemented script-aware visual intelligence, era & context consistency validation, phonetic pronunciation normalization for historical numbers/years (`engines/tts_normalizer.py`), dynamic storyboard pacing (`engines/storyboard_engine.py`), ducked BGM with permanent SFX disablement, seamless narrative ending & loop strategy (`engines/ending_strategy.py`), and pre-READY Content Quality Gate (`core/content_quality_gate.py`). | 12/12 content quality tests passed; full automated assembly pipeline verified. | `[CODE VERIFIED]` |
 | **Step 46** | 2026-09-07 | **Lifecycle Hardening & Authoritative Publication Gateway Barrier**<br/>Commits `846cfb7`, `036a7c3`, `a888e6f`, `b626812`, `9a1ebc5`. Hardened publication gateway (`core/lifecycle_gateway.py`), enforced physical `03_PUBLISHED` barrier in Drive vault (`_from_gateway` check), implemented strict YouTube read-back verification (`privacyStatus == 'public'`), eliminated stale daemon mutations via heartbeat/PID checks, segregated producer and publisher concurrency locks, and safely recovered 7 falsely-published Bella Shorts back to `01_READY` with 100% DB and Drive consistency. | 40/40 adversarial negative invariant tests passed. | `[CODE VERIFIED]` |

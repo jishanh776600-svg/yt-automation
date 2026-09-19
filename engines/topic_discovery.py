@@ -543,7 +543,16 @@ class TopicDiscoveryEngine:
         """
         Calculates multi-factor score:
         TOPIC_SCORE = curiosity + visual_potential + historical_interest + storytelling + uniqueness
+        Authoritatively gated by NicheGuard: if candidate violates the Forgotten Files niche boundary,
+        the score drops to 0.0 immediately.
         """
+        from intelligence.niche_guard import NicheGuard
+        title = item.get("title", "")
+        summary = item.get("summary", "")
+        decision = NicheGuard.evaluate(title, summary)
+        if not decision.is_allowed:
+            return 0.0
+
         curiosity = float(item.get("curiosity", 8.0))
         visual_potential = float(item.get("visual_potential", 8.0))
         historical_interest = float(item.get("historical_interest", 8.0))
@@ -933,12 +942,18 @@ class TopicDiscoveryEngine:
             ~Topic.status.in_(["REJECTED", "COMPLETED", "PUBLISHED", "SCHEDULED"])
         ).all()
 
-        # Filter unproduced topics through deduplication against published/scheduled stories
+        # Filter unproduced topics through deduplication and niche compliance
         valid_unproduced = []
+        from intelligence.niche_guard import NicheGuard
         for t in unproduced:
             if t.id in excluded_ids:
                 continue
             if is_test_topic(t):
+                continue
+            # Niche Compliance Check: Ensure stored DB topic conforms to Forgotten Files niche
+            decision = NicheGuard.evaluate(t.title, t.summary or "")
+            if not decision.is_allowed:
+                logger.info(f"[TOPIC DISCOVERY] Rejecting unproduced DB topic '{t.title}' due to {decision.rejection_code}: {decision.reason}")
                 continue
             # Pass exclude_topic_id=t.id so the topic is not compared against itself in the corpus
             if not self.is_duplicate(db, t.title, t.summary, exclude_topic_id=t.id):
@@ -984,10 +999,15 @@ class TopicDiscoveryEngine:
 
                 num_to_request = max(limit * 2, 6)
                 prompt = (
-                    f"Suggest {num_to_request} obscure, true, bizarre historical events from American or European history "
-                    f"that make great 23-second YouTube Shorts. {cat_prompt_part}{excluded_str} "
+                    f"You are the lead researcher for Forgotten Files, a documentary channel dedicated strictly to "
+                    f"historical mysteries, ancient enigmas, historical disappearances, bizarre historical incidents, "
+                    f"archaeological discoveries, and folklore/legends from American or European history. "
+                    f"Suggest {num_to_request} obscure, true historical mysteries or bizarre events that make great 23-second YouTube Shorts. "
+                    f"STRICT NEGATIVE CONSTRAINT: Absolutely DO NOT suggest modern academic science, modern cancer or oncology research, "
+                    f"modern genetics, cellular aging, forestry, environmental studies, or university press releases. "
+                    f"{cat_prompt_part}{excluded_str} "
                     f"Format each as: Title | Category | 1-sentence factual summary. "
-                    f"Do NOT use generic facts. Prioritize strange laws, unusual wars, or documented mysteries."
+                    f"Do NOT use generic facts. Prioritize strange historical occurrences, unusual wars, documented mysteries, or archaeological discoveries."
                 )
                 from config.settings import GEMINI_MODEL
                 response = gemini_client.generate_content(
@@ -1000,6 +1020,10 @@ class TopicDiscoveryEngine:
                         parts = [p.strip() for p in line.split("|")]
                         if len(parts) >= 3:
                             title, category, summary = parts[0].lstrip("1234567890. -*"), parts[1], parts[2]
+                            decision = NicheGuard.evaluate(title, summary)
+                            if not decision.is_allowed:
+                                logger.info(f"[TOPIC DISCOVERY] Rejecting Gemini AI candidate '{title}' due to {decision.rejection_code}: {decision.reason}")
+                                continue
                             if not self.is_duplicate(db, title, summary):
                                 topic_id = f"top_{uuid.uuid4().hex[:12]}"
                                 topic = Topic(

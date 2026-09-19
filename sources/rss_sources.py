@@ -18,26 +18,26 @@ class RSSFeedSource:
 
 DEFAULT_HISTORICAL_MYSTERY_FEEDS: List[RSSFeedSource] = [
     RSSFeedSource(
-        name="ScienceDaily Strange & Offbeat",
-        url="https://www.sciencedaily.com/rss/strange_offbeat.xml",
+        name="Historic Mysteries",
+        url="https://www.historicmysteries.com/feed/",
+        source_type=SourceType.ESTABLISHED_NEWS,
+        default_category="Historical Mysteries"
+    ),
+    RSSFeedSource(
+        name="Archaeology Magazine News",
+        url="https://www.archaeology.org/feed",
+        source_type=SourceType.ESTABLISHED_NEWS,
+        default_category="Historical Mysteries"
+    ),
+    RSSFeedSource(
+        name="Google News Ancient Discoveries",
+        url="https://news.google.com/rss/search?q=when:48h+\"ancient+discovery\"+OR+\"archaeological+enigma\"+OR+\"lost+civilization\"&hl=en-US&gl=US&ceid=US:en",
         source_type=SourceType.ESTABLISHED_NEWS,
         default_category="Historical Mysteries"
     ),
     RSSFeedSource(
         name="Live Science Strange News",
         url="https://www.livescience.com/feeds/tag/strange-news",
-        source_type=SourceType.ESTABLISHED_NEWS,
-        default_category="Historical Mysteries"
-    ),
-    RSSFeedSource(
-        name="Google News Mystery & Discoveries",
-        url="https://news.google.com/rss/search?q=when:48h+unexplained+OR+mysterious+anomaly+OR+bizarre&hl=en-US&gl=US&ceid=US:en",
-        source_type=SourceType.ESTABLISHED_NEWS,
-        default_category="Historical Mysteries"
-    ),
-    RSSFeedSource(
-        name="Google News Ancient Discoveries",
-        url="https://news.google.com/rss/search?q=when:48h+\"bizarre\"+OR+\"ancient+discovery\"+OR+\"archaeological+enigma\"&hl=en-US&gl=US&ceid=US:en",
         source_type=SourceType.ESTABLISHED_NEWS,
         default_category="Historical Mysteries"
     )
