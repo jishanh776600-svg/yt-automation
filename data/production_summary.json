@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "BLOCKED",
-  "block_reason": null,
-  "requested_deficit": 6,
-  "produced_count": 0,
-  "initial_stock": 0,
-  "final_stock": 0,
+  "outcome": "PARTIAL",
+  "block_reason": "Render error: Visual asset missing or invalid for beat 'beat_41490310' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_cba8380f' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Duplicate Short rejected: Duplicate script content (similarity 0.79 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.78 >= 0.65) with Short man_1c60cedfc6dc; Scripting error: Journalistic script rejected by ValidationGate: [\"VerificationState is DEVELOPING but script lacks attribution language (e.g. 'according to', 'reported').\"]; Render error: Visual asset missing or invalid for beat 'beat_a3f03611' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Duplicate Short rejected: Duplicate script content (similarity 0.81 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.78 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc",
+  "requested_deficit": 4,
+  "produced_count": 1,
+  "initial_stock": 2,
+  "final_stock": 3,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-24T12:58:51.771157Z"
+  "timestamp": "2026-09-24T18:29:50.733295Z"
 }
