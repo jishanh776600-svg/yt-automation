@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "PARTIAL",
-  "block_reason": "Render error: Visual asset missing or invalid for beat 'beat_590a2133' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_1275e01e' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Duration 18.53s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).', 'Insufficient visual uniqueness: 6 unique assets across 9 beats.']; Render error: Visual asset missing or invalid for beat 'beat_66f232fd' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_036e71dc' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Duration 20.47s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).']",
-  "requested_deficit": 4,
-  "produced_count": 2,
-  "initial_stock": 2,
-  "final_stock": 4,
+  "outcome": "BLOCKED",
+  "block_reason": null,
+  "requested_deficit": 6,
+  "produced_count": 0,
+  "initial_stock": 0,
+  "final_stock": 0,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-26T02:36:09.849950Z"
+  "timestamp": "2026-09-26T08:54:42.575022Z"
 }
