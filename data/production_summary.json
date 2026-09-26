@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
   "outcome": "PARTIAL",
-  "block_reason": "QA Failed: ['Duration 19.70s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).', 'Insufficient visual uniqueness: 3 unique assets across 9 beats.']; Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc; Render error: Visual asset missing or invalid for beat 'beat_a60e847f' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Duration 19.13s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).', 'Insufficient visual uniqueness: 3 unique assets across 9 beats.']; Scripting error: Journalistic script rejected by ValidationGate: [\"VerificationState is DEVELOPING but script lacks attribution language (e.g. 'according to', 'reported').\"]; QA Failed: ['Duration 16.23s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).', 'Insufficient visual uniqueness: 6 unique assets across 9 beats.']; Duplicate Short rejected: Duplicate script content (similarity 0.78 >= 0.65) with Short man_1c60cedfc6dc; Render error: Visual asset missing or invalid for beat 'beat_0e0e7d14' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.",
-  "requested_deficit": 5,
-  "produced_count": 1,
-  "initial_stock": 1,
-  "final_stock": 2,
+  "block_reason": "Render error: Visual asset missing or invalid for beat 'beat_590a2133' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_1275e01e' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Duration 18.53s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).', 'Insufficient visual uniqueness: 6 unique assets across 9 beats.']; Render error: Visual asset missing or invalid for beat 'beat_66f232fd' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_036e71dc' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Duration 20.47s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).']",
+  "requested_deficit": 4,
+  "produced_count": 2,
+  "initial_stock": 2,
+  "final_stock": 4,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-25T23:11:59.597149Z"
+  "timestamp": "2026-09-26T02:36:09.849950Z"
 }
