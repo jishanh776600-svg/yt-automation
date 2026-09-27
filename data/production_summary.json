@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
   "outcome": "FAILED",
-  "block_reason": "Render error: Visual asset missing or invalid for beat 'beat_c7d41dd6' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_5e6a4f8b' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_9c323426' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Render error: Visual asset missing or invalid for beat 'beat_c09acf55' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Duplicate Short rejected: Duplicate script content (similarity 0.78 >= 0.65) with Short man_1c60cedfc6dc",
+  "block_reason": "Render error: Visual asset missing or invalid for beat 'beat_91cdf6df' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Duration 20.37s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).', 'Insufficient visual uniqueness: 6 unique assets across 9 beats.']; Render error: Visual asset missing or invalid for beat 'beat_821a02bf' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Duration 17.67s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).', 'Insufficient visual uniqueness: 1 unique assets across 9 beats.']; QA Failed: ['Duration 27.77s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).']",
   "requested_deficit": 4,
   "produced_count": 0,
   "initial_stock": 2,
   "final_stock": 2,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-26T17:40:56.522481Z"
+  "timestamp": "2026-09-27T00:15:07.126171Z"
 }
