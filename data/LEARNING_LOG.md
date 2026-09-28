@@ -5468,3 +5468,21 @@
 | `duration_target` | **SWEET_SPOT** | 6 | `-1.4%` | `USABLE_EVIDENCE` | **0.99** | Usable evidence (N=6). Full bounded weight adjustment (-1.4% lift vs baseline). |
 | `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-1.4%` | `USABLE_EVIDENCE` | **0.99** | Usable evidence (N=6). Full bounded weight adjustment (-1.4% lift vs baseline). |
 | `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-3.9%` | `USABLE_EVIDENCE` | **0.96** | Usable evidence (N=5). Full bounded weight adjustment (-3.9% lift vs baseline). |
+
+## Learning Cycle — 2026-09-28 09:08:27 UTC
+
+- **Mature Videos Evaluated**: 66
+- **Channel Performance Baseline**: 47.01/100
+
+| Feature Type | Feature Value | Samples | Rel Lift | Confidence | Weight | Update Reason |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `bgm_mood` | **Historical / Serious Documentary / War / Disaster / Historic Riots & Oddities** | 5 | `-7.5%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.5% lift vs baseline). |
+| `category` | **Mystery / Bizarre Real-World Stories** | 11 | `+8.0%` | `USABLE_EVIDENCE` | **1.08** | Usable evidence (N=11). Full bounded weight adjustment (+8.0% lift vs baseline). |
+| `category` | **Historical Documentaries** | 3 | `+5.2%` | `WEAK_EVIDENCE` | **1.02** | Weak evidence (N=3). Conservative +-10% damped adjustment (+5.3% lift vs baseline). |
+| `category` | **Unusual Wars** | 2 | `-11.2%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=2 < 3). Weight held neutral at 1.00. |
+| `category` | **Cavalry vs. Naval Warfare** | 1 | `-0.7%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | ****Unusual Wars**** | 1 | `-0.4%` | `INSUFFICIENT_EVIDENCE` | **1.00** | Insufficient evidence (N=1 < 3). Weight held neutral at 1.00. |
+| `category` | **Documented Disasters** | 4 | `-13.3%` | `WEAK_EVIDENCE` | **0.96** | Weak evidence (N=4). Conservative +-10% damped adjustment (-13.3% lift vs baseline). |
+| `duration_target` | **SWEET_SPOT** | 6 | `-5.1%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.1% lift vs baseline). |
+| `hook_archetype` | **DATE_TIME_ANCHOR** | 6 | `-5.1%` | `USABLE_EVIDENCE` | **0.95** | Usable evidence (N=6). Full bounded weight adjustment (-5.1% lift vs baseline). |
+| `motion_style` | **DYNAMIC_ZOOM_PAN** | 5 | `-7.5%` | `USABLE_EVIDENCE` | **0.93** | Usable evidence (N=5). Full bounded weight adjustment (-7.5% lift vs baseline). |
