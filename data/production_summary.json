@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "FAILED",
-  "block_reason": "QA Failed: ['Insufficient visual uniqueness: 2 unique assets across 9 beats.']; Render error: Visual asset missing or invalid for beat 'beat_61bcc17f' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; QA Failed: ['Duration 19.27s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).']; Duplicate Short rejected: Duplicate script content (similarity 0.78 >= 0.65) with Short man_1c60cedfc6dc",
-  "requested_deficit": 4,
+  "outcome": "BLOCKED",
+  "block_reason": null,
+  "requested_deficit": 6,
   "produced_count": 0,
-  "initial_stock": 2,
-  "final_stock": 2,
+  "initial_stock": 0,
+  "final_stock": 0,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-27T22:53:29.852446Z"
+  "timestamp": "2026-09-28T02:17:46.995727Z"
 }
