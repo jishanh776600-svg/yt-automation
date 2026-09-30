@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "BLOCKED",
-  "block_reason": null,
+  "outcome": "FAILED",
+  "block_reason": "Scripting error: Journalistic script rejected by ValidationGate: [\"VerificationState is DEVELOPING but script lacks attribution language (e.g. 'according to', 'reported').\"]; QA Failed: ['Duration 28.35s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s]).', 'Insufficient visual uniqueness: 3 unique assets across 10 beats.']; Render error: Visual asset missing or invalid for beat 'beat_5f9682cc' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.; Duplicate Short rejected: Duplicate script content (similarity 0.78 >= 0.65) with Short man_1c60cedfc6dc",
   "requested_deficit": 6,
   "produced_count": 0,
   "initial_stock": 0,
   "final_stock": 0,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-09-30T00:50:38.900833Z"
+  "timestamp": "2026-09-30T07:52:06.150814Z"
 }
