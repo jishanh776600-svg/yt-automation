@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "BLOCKED",
-  "block_reason": null,
+  "outcome": "FAILED",
+  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.69 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc",
   "requested_deficit": 6,
   "produced_count": 0,
   "initial_stock": 0,
   "final_stock": 0,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-10-01T14:54:21.714011Z"
+  "timestamp": "2026-10-01T20:49:35.957739Z"
 }
