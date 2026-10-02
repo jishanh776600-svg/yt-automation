@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "FAILED",
-  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.69 >= 0.65) with Short man_1c60cedfc6dc; Duplicate Short rejected: Duplicate script content (similarity 0.70 >= 0.65) with Short man_1c60cedfc6dc",
+  "outcome": "PARTIAL",
+  "block_reason": "Render error: Visual asset missing or invalid for beat 'beat_dbc37649' and no valid visual assets available in manifest pool. Script card fallback is strictly prohibited.",
   "requested_deficit": 6,
   "produced_count": 0,
   "initial_stock": 0,
   "final_stock": 0,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-10-01T20:49:35.957739Z"
+  "timestamp": "2026-10-02T01:31:28.859751Z"
 }
