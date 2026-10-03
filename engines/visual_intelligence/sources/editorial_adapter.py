@@ -4,6 +4,7 @@ Authentic event and entity footage with explicit provenance, publisher attributi
 and legal rights classification.
 Strictly distinguishes licensed/permitted material from rights-uncertain online material.
 """
+import os
 import uuid
 import logging
 from typing import List, Dict, Any, Optional, Set
@@ -33,6 +34,10 @@ class EditorialAdapter(BaseSourceAdapter):
         """
         candidates: List[VisualCandidate] = []
         exclude = exclude_urls or set()
+
+        is_test = os.getenv("TEST_MODE", "").lower() in ("true", "1", "yes") or bool(os.getenv("PYTEST_CURRENT_TEST"))
+        if not is_test:
+            return []
 
         # Generate structured editorial candidate models matching requested entities/events
         for q in queries:

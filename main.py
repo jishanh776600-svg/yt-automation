@@ -1031,12 +1031,30 @@ class ShortsPipeline:
 
         except Exception as upload_err:
             logger.error(f"YouTube scheduling failed for Drive file {file_id}: {upload_err}")
+            if 'upload_rec' in locals() and upload_rec and getattr(upload_rec, 'youtube_video_id', None):
+                logger.info(f"Video {upload_rec.youtube_video_id} was already uploaded to YouTube. Retaining in 02_PROCESSING.")
+                return upload_rec
+
             if 'job' in locals() and job:
                 self.experiment_manager.update_experiment_status(db, job.id, "FAILED", failure_reason=f"YouTube scheduling failed: {str(upload_err)}")
 
-            # SAFETY INVARIANT: Always preserve the video file in 01_READY on scheduling/API error.
-            # Under NO circumstances should an API/Network/Quota/Auth error delete or quarantine a valid MP4!
-            logger.warning(f"Transient upload error for {file_id}. Returning file safely to 01_READY for subsequent slot retry.")
+            # SAFETY INVARIANT: Only return to 01_READY if the file was NEVER uploaded to YouTube.
+            # If the file already received a YouTube ID, it MUST remain in 02_PROCESSING.
+            drive_meta = None
+            try:
+                drive_meta = self.drive_engine.get_file_metadata(file_id)
+            except Exception:
+                pass
+            existing_yt_id = (drive_meta.get("properties", {}) or {}).get("youtube_video_id") if drive_meta else None
+
+            if existing_yt_id:
+                logger.warning(
+                    f"Upload error occurred for {file_id}, but Drive properties confirm YouTube ID {existing_yt_id} "
+                    f"exists. RETAINING in 02_PROCESSING to prevent duplicate upload!"
+                )
+                return None
+
+            logger.warning(f"Transient upload error for {file_id}. Returning un-uploaded file safely to 01_READY for subsequent slot retry.")
             try:
                 self.drive_engine.move_file_in_vault(file_id, from_folder="02_PROCESSING", to_folder="01_READY")
             except Exception as move_err:
@@ -1131,21 +1149,23 @@ class ShortsPipeline:
             except Exception as e:
                 logger.warning(f"Analytics feedback notice: {e}")
 
-            # 3. Calculate canonical today boundaries & counts in Asia/Kolkata timezone
-            from config.constants import get_business_day_bounds_utc
-            today_start, today_end = get_business_day_bounds_utc()
-            
+            # 3. Calculate canonical today boundaries & counts in pure UTC calendar day
+            from datetime import time as dtime
             now_utc = datetime.utcnow()
+            today_utc = now_utc.date()
+            today_start = datetime.combine(today_utc, dtime.min)
+            today_end = datetime.combine(today_utc, dtime.max)
+            
             published_count_today = db.query(UploadRecord).filter(
                 UploadRecord.status.in_(["PUBLISHED", "SUCCESS"]),
                 UploadRecord.published_at >= today_start,
-                UploadRecord.published_at < today_end
+                UploadRecord.published_at <= today_end
             ).count()
 
             scheduled_count_today = db.query(UploadRecord).filter(
                 UploadRecord.status == "SCHEDULED",
-                UploadRecord.scheduled_publish_at >= now_utc,
-                UploadRecord.scheduled_publish_at < today_end
+                UploadRecord.scheduled_publish_at >= today_start,
+                UploadRecord.scheduled_publish_at <= today_end
             ).count()
 
             vacant_horizon_slots = self.scheduler.get_vacant_slots_in_horizon(db, reference_time=now_utc)
@@ -1226,6 +1246,10 @@ class ShortsPipeline:
                             continue
                     elif existing_upl and existing_upl.youtube_video_id and existing_upl.status in ["SCHEDULED", "TEST_VERIFIED"]:
                         continue
+                    elif cand_yt_id:
+                        # Video has a YouTube ID in metadata but not yet reconciled to PUBLISHED or SCHEDULED
+                        logger.warning(f"[PROCESSING RECOVERY] File {candidate['id']} has YouTube ID {cand_yt_id} but status not yet verified. Retaining in 02_PROCESSING (never returning to 01_READY).")
+                        continue
                     else:
                         # Orphaned in 02_PROCESSING without YouTube upload: safely return to 01_READY if valid
                         is_val, val_reason = is_valid_ready_short(candidate, db=db, allow_test_artifacts=self.upload_engine._is_test_mode())
@@ -1296,6 +1320,7 @@ class ShortsPipeline:
 
                 # Resolve topic_id to exclude from deduplication check (prevent candidate self-matching against its own PRODUCED topic)
                 cand_topic_id = c_props.get("topic_id")
+                event_id = c_props.get("event_id")
                 if not cand_topic_id and c_job_id:
                     j = db.query(Job).filter(Job.id == c_job_id).first()
                     if j and j.topic_id:
@@ -1313,7 +1338,6 @@ class ShortsPipeline:
                             if top:
                                 cand_topic_id = top.id
                 if not cand_topic_id:
-                    event_id = c_props.get("event_id")
                     if not event_id:
                         m_evt = re.search(r"evt_[a-z0-9_]+", candidate.get("name", ""))
                         if m_evt:
@@ -1332,6 +1356,7 @@ class ShortsPipeline:
                 matched_event = None
                 try:
                     from engines.deduplication_engine import DeduplicationRouter
+                    dedup_eng = DeduplicationRouter()
                     clean_preclaim_title = c_title.strip() if c_title else ""
                     dedup_res = dedup_eng.evaluate_candidate(
                         candidate_title=clean_preclaim_title,
@@ -1339,7 +1364,6 @@ class ShortsPipeline:
                         db=db,
                         exclude_topic_id=cand_topic_id,
                         exclude_job_id=c_job_id,
-                        exclude_title=clean_preclaim_title,
                         exclude_event_id=event_id
                     )
                     if not dedup_res.is_allowed:

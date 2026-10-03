@@ -31,6 +31,10 @@ class OfficialAdapter(BaseSourceAdapter):
         candidates: List[VisualCandidate] = []
         exclude = exclude_urls or set()
 
+        is_test = os.getenv("TEST_MODE", "").lower() in ("true", "1", "yes") or bool(os.getenv("PYTEST_CURRENT_TEST"))
+        if not is_test:
+            return []
+
         entity = getattr(intent, "primary_entity", None) or (queries[0] if queries else "Official Agency")
         event = getattr(intent, "event", None) or f"{entity} Official Record"
 

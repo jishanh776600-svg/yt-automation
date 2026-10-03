@@ -51,6 +51,7 @@ class VisualProvenance:
     event_ids: List[str] = field(default_factory=list)
     usage_count: int = 0
     last_used_at: Optional[str] = None
+    publication_date: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)

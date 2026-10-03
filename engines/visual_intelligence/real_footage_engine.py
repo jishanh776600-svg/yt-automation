@@ -395,6 +395,7 @@ class TemporalMomentRetriever:
     """
     Splits longer footage into overlapping 2-5s semantic windows and calculates
     temporal moment localization matching the claim duration.
+    Delegates to canonical TemporalMomentRetriever when local video media is available.
     """
 
     def localize_moment(self, candidate: FootageCandidate, target_duration: float = 2.2) -> Tuple[float, float]:
@@ -414,20 +415,42 @@ class TemporalMomentRetriever:
         if PhysicalVideoValidator.is_image_url(media_url):
             raise ValueError(f"TemporalMomentRetriever rejected candidate with image URL/path: {media_url}")
 
+        # If local video file is accessible, delegate to canonical timeline profiler
+        p = Path(media_url)
+        if p.exists() and p.is_file():
+            try:
+                from engines.visual_intelligence.temporal_extractor import TemporalMomentRetriever as CanonicalTMR
+                ctmr = CanonicalTMR()
+                profile = ctmr.profile_video_timeline(p)
+                peaks = ctmr.detect_action_peaks(profile)
+                if peaks:
+                    best_w = ctmr.build_context_window(
+                        peak_timestamp=peaks[0],
+                        target_duration=target_duration,
+                        source_duration=candidate.duration_sec,
+                        pre_roll_ratio=0.35
+                    )
+                    candidate.timestamp_start = best_w[0]
+                    candidate.timestamp_end = best_w[1]
+                    return best_w
+            except Exception as e:
+                logger.debug(f"[REAL_FOOTAGE] Canonical TMR delegation notice: {e}")
+
         tot_dur = max(target_duration, candidate.duration_sec)
         
         # If video is already compact, return start
         if tot_dur <= target_duration + 1.0:
-            return (0.0, target_duration)
+            candidate.timestamp_start = 0.0
+            candidate.timestamp_end = round(target_duration, 2)
+            return (0.0, candidate.timestamp_end)
 
-        # Overlapping window candidates
-        step = 2.0
+        # Overlapping window candidates: never default to first seconds on long videos
         window_size = target_duration
-        best_start = 1.0  # skip 0-1s static titles/black
+        best_start = 2.0 if tot_dur >= 8.0 else 0.5
         
-        # Moment localization heuristics: choose high-activity window
-        if tot_dur > 10.0:
-            best_start = 3.0  # Jump past broadcast lower-thirds or station ID
+        # Jump past broadcast lower-thirds or station ID
+        if tot_dur > 12.0:
+            best_start = 3.0
         if best_start + window_size > tot_dur:
             best_start = max(0.0, tot_dur - window_size)
 

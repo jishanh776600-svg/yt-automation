@@ -22,8 +22,9 @@ logger = logging.getLogger(__name__)
 class VisualQAGate:
     """Editorial and visual quality inspection gate."""
 
-    MAX_STATIC_RATIO = 0.50
-    MAX_GENERIC_STOCK_RATIO = 0.35
+    MAX_STATIC_RATIO = 0.20
+    MAX_GENERIC_STOCK_RATIO = 0.20
+    MAX_STOCK_OR_STATIC_CLIPS = 2  # Hardcoded: At most 1-2 stock/static images or stock videos allowed per Short
     MIN_AVG_MOTION_SCORE = 0.60
     MAX_CONSECUTIVE_BGM = 2
     MAX_CONSECUTIVE_VOICE = 2
@@ -60,7 +61,7 @@ class VisualQAGate:
         if near_dup_count > 0:
             reasons.append(f"Near-duplicate asset collision detected ({near_dup_count} near-identical visual pairs).")
 
-        # 3. Static ratio check
+        # 3. Static ratio & count check
         static_count = sum(1 for c in selected_candidates if not c.is_video)
         static_ratio = static_count / total
         if static_ratio > self.MAX_STATIC_RATIO and total > 2:
@@ -73,6 +74,18 @@ class VisualQAGate:
         generic_ratio = generic_count / total
         if generic_ratio > self.MAX_GENERIC_STOCK_RATIO and total > 3:
             reasons.append(f"Excessive generic stock: {generic_ratio*100:.1f}% exceeds {self.MAX_GENERIC_STOCK_RATIO*100:.1f}% ceiling.")
+
+        # 4b. Hardcoded Absolute Limit: Max 1-2 stock or static images/footage combined
+        total_stock_or_static = sum(
+            1 for c in selected_candidates 
+            if (not c.is_video) or (c.content_type in (VisualContentType.GENERIC_STOCK_VIDEO, VisualContentType.GENERIC_STOCK_IMAGE))
+            or (c.provenance and c.provenance.source in ("pexels", "pixabay"))
+        )
+        if total_stock_or_static > self.MAX_STOCK_OR_STATIC_CLIPS:
+            reasons.append(
+                f"Hardcoded stock/static ceiling violated: {total_stock_or_static} stock/static clips detected. "
+                f"Maximum allowed is {self.MAX_STOCK_OR_STATIC_CLIPS} per Short."
+            )
 
         # 5. Motion score check
         motion_scores = [c.motion_score for c in selected_candidates]

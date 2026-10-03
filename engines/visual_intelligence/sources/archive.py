@@ -50,6 +50,7 @@ class ArchiveAdapter(BaseSourceAdapter):
                     asset_id=cid,
                     source=self.source_name,
                     source_url=ref_url,
+                    media_url=ref_url,
                     creator="Prelinger Archives / Public Domain",
                     publisher="Internet Archive",
                     publication_date=getattr(intent, "date_context", "1954"),
@@ -68,6 +69,7 @@ class ArchiveAdapter(BaseSourceAdapter):
                     source_class=self.source_class,
                     source_name=self.source_name,
                     source_url=ref_url,
+                    media_url=ref_url,
                     title=f"Historic Archival: {entity} ({q})",
                     description=f"Authentic archival documentary footage regarding {entity}.",
                     content_type=VisualContentType.ARCHIVAL_VIDEO,
@@ -91,10 +93,11 @@ class ArchiveAdapter(BaseSourceAdapter):
         # Real-world safe online search via Archive.org Advanced Search REST API
         try:
             import requests
+            from ..models import SourceTier, SourceType, SourceContentClass
             url = "https://archive.org/advancedsearch.php"
             for q in queries[:2]:
                 params = {
-                    "q": f"{q} AND mediatype:(movies)",
+                    "q": f"({q}) AND mediatype:(movies)",
                     "fl[]": ["identifier", "title", "description", "creator", "year", "licenseurl"],
                     "rows": count,
                     "output": "json"
@@ -104,29 +107,62 @@ class ArchiveAdapter(BaseSourceAdapter):
                     docs = resp.json().get("response", {}).get("docs", [])
                     for d in docs:
                         ident = d.get("identifier")
+                        if not ident:
+                            continue
                         item_url = f"https://archive.org/details/{ident}"
                         if item_url in exclude:
                             continue
+
+                        # Resolve direct MP4 download link from metadata
+                        mp4_url = None
+                        try:
+                            meta_url = f"https://archive.org/metadata/{ident}/files"
+                            m_resp = requests.get(meta_url, timeout=4)
+                            if m_resp.status_code == 200:
+                                files = m_resp.json().get("result", [])
+                                mp4_files = [f.get("name") for f in files if f.get("name", "").lower().endswith(".mp4")]
+                                if mp4_files:
+                                    # Pick best or first mp4 file
+                                    best_mp4 = mp4_files[0]
+                                    for fn in mp4_files:
+                                        if any(res in fn.lower() for res in ["720p", "1080p", "h264"]):
+                                            best_mp4 = fn
+                                            break
+                                    mp4_url = f"https://archive.org/download/{ident}/{best_mp4}"
+                        except Exception as meta_err:
+                            logger.debug(f"[ARCHIVE] Metadata files fetch notice for '{ident}': {meta_err}")
+
+                        # If direct MP4 resolved, use it; otherwise fallback to item_url for WebVideoResolver
+                        media_url = mp4_url or item_url
+                        if media_url in exclude:
+                            continue
+
                         cid = f"cand_ia_{ident}"
                         prov = VisualProvenance(
                             asset_id=cid,
                             source=self.source_name,
                             source_url=item_url,
+                            media_url=media_url,
                             creator=d.get("creator", "Internet Archive Contributor"),
-                            publisher="Internet Archive",
+                            publisher="Internet Archive / Prelinger / Public Records",
                             publication_date=str(d.get("year", "")),
                             rights_status=RightsStatus.PUBLIC_DOMAIN,
                             license_name="Public Domain Mark 1.0",
                             content_type=VisualContentType.ARCHIVAL_VIDEO,
                             attribution_required=True,
                             attribution_text=f"Archival: Internet Archive ({ident})",
-                            confidence_score=0.95
+                            confidence_score=0.95,
+                            source_tier=SourceTier.TIER_2_ARCHIVAL_VIDEO,
+                            source_content_class=SourceContentClass.ARCHIVAL,
+                            archival_authenticity_exception=True,
+                            original_owner="Public Domain Archival Collection"
                         )
                         cand = VisualCandidate(
                             candidate_id=cid,
                             source_class=self.source_class,
                             source_name=self.source_name,
                             source_url=item_url,
+                            media_url=media_url,
                             title=d.get("title", q),
                             description=d.get("description", "")[:140],
                             content_type=VisualContentType.ARCHIVAL_VIDEO,
@@ -139,9 +175,16 @@ class ArchiveAdapter(BaseSourceAdapter):
                             is_video=True,
                             entity_tags=[entity],
                             event_tags=[event],
-                            provenance=prov
+                            provenance=prov,
+                            source_type=SourceType.ARCHIVAL,
+                            source_tier=SourceTier.TIER_2_ARCHIVAL_VIDEO,
+                            source_content_class=SourceContentClass.ARCHIVAL,
+                            archival_authenticity_exception=True
                         )
                         candidates.append(cand)
+                        exclude.add(item_url)
+                        if media_url:
+                            exclude.add(media_url)
         except Exception as e:
             logger.debug(f"Internet archive live search notice: {e}")
 

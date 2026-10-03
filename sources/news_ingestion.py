@@ -9,7 +9,10 @@ import logging
 from datetime import datetime, timezone
 from dataclasses import dataclass, asdict
 from typing import List, Dict, Any, Optional, Set
-import feedparser
+try:
+    import feedparser
+except ImportError:
+    feedparser = None
 from sqlalchemy.orm import Session
 
 from core.models import ArticleRecord

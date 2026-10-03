@@ -100,20 +100,31 @@ class AttemptLedger:
         error_message: str,
         root_cause: Optional[str] = None,
         recovery_action: Optional[str] = None,
-    ) -> ProductionAttemptRecord:
-        attempt.finished_at = datetime.utcnow()
-        attempt.status = "FAILED"
-        attempt.error_type = error_type
-        attempt.error_message = str(error_message)[:2000]
-        attempt.root_cause = str(root_cause or error_message)[:2000]
-        attempt.recovery_action = recovery_action
-        attempt.recovered = False
-        db.commit()
-        logger.warning(
-            f"[ATTEMPT_LEDGER] Attempt {attempt.id} FAILED: "
-            f"[{error_type}] {error_message[:120]} (Recovery Action: {recovery_action})"
-        )
-        return attempt
+    ) -> Optional[ProductionAttemptRecord]:
+        try:
+            if not attempt:
+                return None
+            att_id = getattr(attempt, "id", None)
+            if att_id:
+                live = db.query(ProductionAttemptRecord).filter_by(id=att_id).first()
+                if live:
+                    attempt = live
+            attempt.finished_at = datetime.utcnow()
+            attempt.status = "FAILED"
+            attempt.error_type = error_type
+            attempt.error_message = str(error_message)[:2000]
+            attempt.root_cause = str(root_cause or error_message)[:2000]
+            attempt.recovery_action = recovery_action
+            attempt.recovered = False
+            db.commit()
+            logger.warning(
+                f"[ATTEMPT_LEDGER] Attempt {attempt.id} FAILED: "
+                f"[{error_type}] {error_message[:120]} (Recovery Action: {recovery_action})"
+            )
+            return attempt
+        except Exception as f_err:
+            logger.warning(f"[ATTEMPT_LEDGER] Notice recording attempt failure: {f_err}")
+            return None
 
     @staticmethod
     def record_success(
@@ -121,26 +132,37 @@ class AttemptLedger:
         attempt: ProductionAttemptRecord,
         related_drive_file_id: Optional[str] = None,
         related_youtube_video_id: Optional[str] = None,
-    ) -> ProductionAttemptRecord:
-        attempt.finished_at = datetime.utcnow()
-        if attempt.retry_number > 0:
-            attempt.status = "RECOVERED"
-            attempt.recovered = True
-        else:
-            attempt.status = "SUCCESS"
-            attempt.recovered = False
+    ) -> Optional[ProductionAttemptRecord]:
+        try:
+            if not attempt:
+                return None
+            att_id = getattr(attempt, "id", None)
+            if att_id:
+                live = db.query(ProductionAttemptRecord).filter_by(id=att_id).first()
+                if live:
+                    attempt = live
+            attempt.finished_at = datetime.utcnow()
+            if getattr(attempt, "retry_number", 0) > 0:
+                attempt.status = "RECOVERED"
+                attempt.recovered = True
+            else:
+                attempt.status = "SUCCESS"
+                attempt.recovered = False
 
-        if related_drive_file_id:
-            attempt.related_drive_file_id = related_drive_file_id
-        if related_youtube_video_id:
-            attempt.related_youtube_video_id = related_youtube_video_id
+            if related_drive_file_id:
+                attempt.related_drive_file_id = related_drive_file_id
+            if related_youtube_video_id:
+                attempt.related_youtube_video_id = related_youtube_video_id
 
-        db.commit()
-        logger.info(
-            f"[ATTEMPT_LEDGER] Attempt {attempt.id} completed with status '{attempt.status}' "
-            f"(Retry: {attempt.retry_number}, Recovered: {attempt.recovered})"
-        )
-        return attempt
+            db.commit()
+            logger.info(
+                f"[ATTEMPT_LEDGER] Attempt {attempt.id} completed with status '{attempt.status}' "
+                f"(Retry: {attempt.retry_number}, Recovered: {attempt.recovered})"
+            )
+            return attempt
+        except Exception as s_err:
+            logger.warning(f"[ATTEMPT_LEDGER] Notice recording attempt success: {s_err}")
+            return None
 
     @staticmethod
     def record_incident(

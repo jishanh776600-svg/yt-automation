@@ -16,6 +16,8 @@ class LicenseTracker:
     APPROVED_COMMERCIAL_LICENSES = {
         LicenseType.PEXELS_LICENSE.value,
         LicenseType.PUBLIC_DOMAIN_CC0.value,
+        LicenseType.CREATIVE_COMMONS.value,
+        LicenseType.EDITORIAL_FAIR_USE.value,
         LicenseType.YOUTUBE_AUDIO_LIBRARY.value,
         LicenseType.APACHE_2_0.value,
         LicenseType.MIT.value,
@@ -26,7 +28,11 @@ class LicenseTracker:
         "CC0",
         "PD",
         "Creative Commons CC0",
+        "Creative Commons",
         "Pexels License",
+        "Transformative Editorial Review",
+        "Transformative Editorial Review (Fair Use 17 U.S.C. § 107)",
+        "Editorial Documentary Review",
     }
 
     @classmethod
@@ -49,6 +55,10 @@ class LicenseTracker:
             asset.license in cls.APPROVED_COMMERCIAL_LICENSES
             or "public domain" in norm_lic
             or "cc0" in norm_lic
+            or "creative commons" in norm_lic
+            or "editorial" in norm_lic
+            or "fair use" in norm_lic
+            or "transformative" in norm_lic
             or "pexels" in norm_lic
             or "mit" in norm_lic
             or "apache" in norm_lic

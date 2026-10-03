@@ -56,6 +56,38 @@ THEMATIC_EVENT_ANCHORS = {
     "window", "prague", "castle", "governor", "dung", "manure"
 }
 
+# Permanently banned topics and events (user blacklisted / already created)
+PERMANENT_BANNED_TOPIC_TERMS = [
+    {"lake nyos", "nyos", "limnic"},
+    {"titan", "oceangate", "submersible implosion"},
+    {"project azorian", "azorian", "k-129", "glomar explorer"},
+    {"zanzibar", "anglo-zanzibar", "shortest war"},
+    {"supermassive black hole", "event horizon", "photon sphere", "black hole physics"},
+    {"lake peigneur", "peigneur", "peigneur sinkhole", "salt mine collapse"},
+    {"mary celeste", "celeste", "ghost ship"},
+    {"kettle war", "kettle"},
+    {"boston molasses", "molasses flood", "molasses"},
+    {"dancing plague", "strasbourg", "frautoffea"},
+    {"pig war", "san juan island", "cutlar"},
+    {"great stink", "stink of london", "thames sewage"},
+    {"baarle-hertog", "baarle"},
+    {"roanoke", "croatoan", "lost colony"},
+    {"stray dog", "demir kapya", "petrich"},
+    {"halifax explosion", "mont-blanc", "imo"},
+    {"erfurt latrine", "erfurt", "latrine disaster"},
+    {"defenestration of prague", "defenestration"},
+    {"u-2 spy plane", "u-2 shootdown", "gary powers", "francis gary powers", "u2 spy plane"},
+    {"berlin wall", "checkpoint charlie", "berlin standoff 1961"},
+    {"cuban missile crisis", "cuba blockade 1962", "cuban quarantine"},
+    {"hindenburg", "hindenburg disaster", "zeppelin hindenburg", "lakehurst 1937"},
+    {"apollo 13", "oxygen tank explosion", "houston we have a problem"},
+    {"mount st helens", "st helens eruption", "lateral blast 1980"},
+    {"shuttle mir", "atlantis mir", "shuttle-mir docking 1995"},
+    {"darvaza", "door to hell", "karakum gas crater", "darvaza gas crater"},
+    {"kuwait oil fires", "kuwait fires", "big wind jet engine", "red adair kuwait"},
+    {"apollo 11 landing", "1202 alarm", "apollo 11 descent", "armstrong boulder field"}
+]
+
 # Canonical historical location dictionary for normalization
 HISTORICAL_LOCATION_ALIASES = {
     "erfurt": "erfurt",
@@ -603,6 +635,20 @@ class StoryDeduplicationEngine:
             corpus = []
 
         candidate_fp = self.build_fingerprint(candidate_title, candidate_summary, candidate_script)
+
+        # 0. Check Permanent Banned Topics
+        cand_text_lower = f"{candidate_title} {candidate_summary} {candidate_script}".lower()
+        for banned_group in PERMANENT_BANNED_TOPIC_TERMS:
+            if any(term in cand_text_lower for term in banned_group):
+                return DeduplicationResult(
+                    is_duplicate=True,
+                    classification="EXACT_DUPLICATE",
+                    matched_event_title=list(banned_group)[0],
+                    similarity_score=1.0,
+                    shared_elements=[f"Permanently Banned: {banned_group}"],
+                    reason=f"Candidate topic matches permanently banned/blacklisted topic: {banned_group}",
+                    is_allowed=False
+                )
 
         # 1. Deterministic Fingerprint Check against all items
         for existing in corpus:

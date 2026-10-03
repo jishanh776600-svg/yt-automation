@@ -231,49 +231,50 @@ class BGMSelector:
                     cnt += 1
             return cnt
 
-        scored: Dict[str, float] = {}
-
+        # 1. Compute pure Theme Match Score across the 4 approved categories
+        theme_scores: Dict[str, float] = {}
         for key, track in self._catalog.items():
-            base_score = 1.0
-
-            # 1. Category alignment (+4.0 per match)
+            t_score = 0.0
             if category and track.category_keywords:
                 cat_matches = _match_count(category, track.category_keywords)
-                base_score += cat_matches * 4.0
-
-            # 2. Title keyword matches (+2.5 per match)
+                t_score += cat_matches * 4.0
             if title and track.editorial_fit:
                 title_matches = _match_count(title, track.editorial_fit)
-                base_score += title_matches * 2.5
-
-            # 3. Script keyword matches (+1.0 per match, capped at 5)
+                t_score += title_matches * 2.5
             if script_text and track.editorial_fit:
                 script_matches = _match_count(script_text, track.editorial_fit)
-                base_score += min(script_matches, 5) * 1.0
+                t_score += min(script_matches, 5) * 1.0
+            theme_scores[key] = round(t_score, 2)
 
-            # 4. Tempo alignment if target tempo requested
-            if target_tempo_bpm and track.tempo_bpm:
-                tempo_diff = abs(track.tempo_bpm - target_tempo_bpm)
-                if tempo_diff <= 15:
-                    base_score += 1.5
-                elif tempo_diff > 35:
-                    base_score -= 1.0
+        # Find best theme category
+        sorted_themes = sorted(theme_scores.items(), key=lambda x: x[1], reverse=True)
+        top_cat, top_score = sorted_themes[0]
+        second_cat, second_score = sorted_themes[1] if len(sorted_themes) > 1 else (top_cat, 0.0)
 
-            # 5. Anti-monotony rotation penalty: penalize tracks used recently
+        # Rule: THEME MATCH > APPROVED TRACK > ANTI-REPETITION
+        # If top category has meaningful theme affinity (> 1.5 or clearly beats second by >= 0.8),
+        # lock strictly to top category. Anti-repetition CANNOT switch to an irrelevant category.
+        if top_score >= 1.5 or (top_score - second_score) >= 0.8:
+            selected_category = top_cat
+        else:
+            # Close tie: allow mild anti-repetition penalty to break ties between equally relevant categories
+            candidate_scores = {}
             recent_list = list(self._recent_usage)
-            if key in recent_list:
-                recency_index = recent_list[::-1].index(key)  # 0 = most recent
-                if recency_index == 0 and not allow_repeat:
-                    base_score -= 3.5  # Immediate consecutive repeat penalty
-                elif recency_index == 1:
-                    base_score -= 2.0
-                elif recency_index == 2:
-                    base_score -= 1.0
+            for k, sc in theme_scores.items():
+                adj = sc
+                if k in recent_list:
+                    rec_idx = recent_list[::-1].index(k)
+                    adj -= 0.5 if rec_idx == 0 else 0.2
+                candidate_scores[k] = adj
+            selected_category = max(candidate_scores.items(), key=lambda x: x[1])[0]
 
-            scored[key] = round(base_score, 2)
+        # Verify category is one of the 4 approved
+        if selected_category not in ("best_historical", "flux_ambient", "suspense_climax", "emotional_sad"):
+            selected_category = "best_historical"
 
-        # Select highest scored track
-        best_track = max(scored.items(), key=lambda x: x[1])[0]
-        self.record_usage(best_track)
-        logger.info(f"[BGM_SELECTOR] Selected '{best_track}' (Score: {scored[best_track]:.2f}, Recent History: {list(self._recent_usage)})")
-        return best_track
+        self.record_usage(selected_category)
+        logger.info(
+            f"[BGM_SELECTOR] Selected '{selected_category}' (ThemeScore: {theme_scores.get(selected_category, 0.0):.2f}, "
+            f"AllThemeScores: {theme_scores}, Recent History: {list(self._recent_usage)})"
+        )
+        return selected_category

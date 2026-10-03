@@ -18,7 +18,7 @@ from typing import List, Dict, Any, Optional
 
 from .editing_models import (
     EditingPlan, ShotEdit, SubtitleCue, SubtitleWord,
-    EditingStyleProfile, MotionType, TransitionType
+    EditingStyleProfile, MotionType, TransitionType, SubtitlePositionType
 )
 from .style_selector import SubtitleStyleSelector, EditingStyleSelector
 from .position_engine import SubtitlePositionEngine
@@ -102,10 +102,14 @@ class AdvancedEditorialEngine:
         curr_time = 0.0
         overlays_map = evidence_overlays_map or {}
 
+        # Check if shots_data already has synchronized durations from EditorialCompositionEngine
+        shots_sum = sum([float(s.get("duration", 0.0)) for s in shots_data])
+        has_synced_durations = (len(shots_data) > 0 and abs(shots_sum - total_duration) < 0.25)
+
         # 3. Build each ShotEdit
         for idx, s in enumerate(shots_data):
             shot_id = s.get("shot_id", f"shot_{idx+1}")
-            dur = durations[idx]
+            dur = float(s["duration"]) if (has_synced_durations and s.get("duration")) else durations[idx]
             role = s.get("narrative_stage", "SETUP")
             narration = s.get("narration_segment", "")
             s_time = round(curr_time, 2)
@@ -162,12 +166,9 @@ class AdvancedEditorialEngine:
                 intensity="CLIMAX" if role in ("CLIMAX", "REVEAL") else "MEDIUM"
             )
 
-            # G. Dynamic Subtitle Positioning (Avoiding lower-third overlay collision)
-            pos_type = self.position_engine.select_optimal_position(
-                evidence_overlay_present=bool(overlay_file),
-                text_length=len(narration),
-                is_dramatic_climax=(role == "CLIMAX")
-            )
+            # G. Stable Lower-Third Subtitle Positioning (Problem 7)
+            # Narration subtitles maintain a calm, stable lower-third position.
+            pos_type = SubtitlePositionType.BOTTOM_CENTER
             screen_x, screen_y, _, _ = self.position_engine.get_position_coordinates(pos_type)
 
             # H. Generate Subtitle Cue for this shot

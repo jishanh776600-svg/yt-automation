@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from config.settings import MUSIC_DIR, SFX_DIR, VOICE_DIR, RENDERS_DIR, FFMPEG_EXE, GEMINI_API_KEY, AI_PROVIDER_AVAILABLE
 from config.constants import (
     AUDIO_SAMPLE_RATE, TARGET_LUFS, TARGET_BGM_LUFS, BGM_MIX_VOLUME_DB,
-    BGM_FADE_IN_SEC, BGM_FADE_OUT_SEC, LicenseType
+    BGM_FADE_IN_SEC, BGM_FADE_OUT_SEC, BGM_START_OFFSET_SEC, LicenseType
 )
 from core.models import AssetRecord
 
@@ -295,7 +295,11 @@ class AudioMixer:
         fade_out_start = max(0.5, duration - BGM_FADE_OUT_SEC)
 
         # Primary: Normalize BGM bed to standardized target LUFS (-30.0 LUFS) with true peak ceiling
+        # Skip initial intro/silence in BGM file (BGM_START_OFFSET_SEC) so full musical energy hits from 0:00
+        bgm_start_s = BGM_START_OFFSET_SEC
+        bgm_end_s = bgm_start_s + duration
         filter_b = (
+            f"atrim=start={bgm_start_s}:end={bgm_end_s},asetpts=PTS-STARTPTS,"
             f"aloop=loop=-1:size=2e+09,atrim=0:{duration},"
             f"loudnorm=I={target_bgm_lufs}:LRA=11:tp=-3.0,"
             f"afade=t=in:ss=0:d={BGM_FADE_IN_SEC},"
@@ -314,6 +318,7 @@ class AudioMixer:
         if res.returncode != 0 or not output_bgm_only_path.exists() or output_bgm_only_path.stat().st_size < 1000:
             logger.warning(f"Loudnorm Stage B fallback for {source_music_path.name}")
             filter_fallback = (
+                f"atrim=start={bgm_start_s}:end={bgm_end_s},asetpts=PTS-STARTPTS,"
                 f"aloop=loop=-1:size=2e+09,atrim=0:{duration},"
                 f"volume={bgm_volume_db}dB,"
                 f"afade=t=in:ss=0:d={BGM_FADE_IN_SEC},"

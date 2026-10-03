@@ -137,11 +137,8 @@ class SubtitlePositionEngine:
         if evidence_overlay_present and not active_evidence_bbox:
             active_evidence_bbox = (80, 1260, 1000, 1540)
 
-        # High dramatic climax prefers eye-level CENTER if face does not occupy it
-        if is_dramatic_climax and not face_bbox:
-            chosen = SubtitlePositionType.CENTER
-            self._history.append(chosen)
-            return chosen
+        # Primary narration subtitles must maintain stable lower-third position (Problem 7)
+        # They do not jump around because of dramatic climax. Kinetic pops are handled on a separate layer.
 
         # Prioritized candidate positions to evaluate
         candidate_positions = [

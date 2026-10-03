@@ -580,3 +580,39 @@ class ProductionIncidentRecord(Base):
     regression_test = Column(String(128), nullable=True)
     git_commit_sha = Column(String(64), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class VisualUsageRecord(Base):
+    """
+    Step 5: Global Persistent Visual Memory and Cross-Job Usage Record.
+    Tracks footage usage across scenes, Shorts, production jobs, and QA jobs
+    to prevent repetitive visual presentation while maintaining semantic relevance.
+    """
+    __tablename__ = "visual_usages"
+
+    id = Column(String(64), primary_key=True)
+    source_url = Column(Text, nullable=False)
+    normalized_url = Column(String(512), nullable=False, index=True)
+    canonical_source_id = Column(String(128), nullable=True, index=True)
+    source_provider = Column(String(64), nullable=False, index=True)
+    source_type = Column(String(64), nullable=False)  # MOVIE, INTERNET_REAL, ARCHIVAL, STOCK
+    original_video_fingerprint = Column(String(128), nullable=True, index=True)
+    clip_fingerprint = Column(String(128), nullable=True, index=True)
+    temporal_start = Column(Float, default=0.0, nullable=False)
+    temporal_end = Column(Float, default=0.0, nullable=False)
+    duration = Column(Float, default=0.0, nullable=False)
+    width = Column(Integer, default=1080)
+    height = Column(Integer, default=1920)
+    framing_strategy = Column(String(64), nullable=True)
+    framing_crop_info = Column(Text, nullable=True)  # JSON {start_cx, end_cx, is_moving}
+    visual_hash = Column(String(256), nullable=True, index=True)  # Perceptual hash sequence
+    job_id = Column(String(64), nullable=True, index=True)
+    scene_id = Column(String(64), nullable=True, index=True)
+    topic_id = Column(String(64), nullable=True, index=True)
+    event_id = Column(String(64), nullable=True, index=True)
+    usage_classification = Column(String(32), default="PRODUCTION", nullable=False, index=True)  # PRODUCTION vs QA
+    usage_count = Column(Integer, default=1, nullable=False)
+    first_used_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_used_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    metadata_json = Column(Text, nullable=True)
+

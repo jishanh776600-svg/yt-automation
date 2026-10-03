@@ -12,15 +12,21 @@ Implements the Real-Footage-First Hierarchy:
 import logging
 from typing import List, Dict, Any, Optional, Set
 
-from .models import VisualIntent, VisualCandidate, VisualContentType, RightsStatus
+from .models import VisualIntent, VisualCandidate, VisualContentType, RightsStatus, SourceType
 from .sources.base import BaseSourceAdapter
+from .sources.nasa_svs import NasaSvsAdapter
+from .sources.archive import ArchiveAdapter
+from .sources.youtube_adapter import YouTubeAdapter
+from .sources.procedural_3d_adapter import Procedural3DAdapter
+from .sources.movie_adapter import MovieAdapter
 from .sources.pexels import PexelsAdapter
+from .sources.pixabay import PixabayAdapter
 from .sources.editorial import EditorialAdapter
 from .sources.wikimedia import WikimediaAdapter
-from .sources.archive import ArchiveAdapter
 from .sources.official import OfficialAdapter
 from .sources.contextual import ContextualAdapter
 from .sources.reaction import ReactionAdapter
+from config.settings import PIXABAY_API_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -28,50 +34,55 @@ logger = logging.getLogger(__name__)
 class SourceRouter:
     """
     Intelligent routing and multi-source query dispatch.
-    Prioritizes authentic real-world footage while using generic stock as a bounded fallback.
+    Implements the 5-Tier Provenance Ecosystem:
+      Tier 1: Direct High-Authority Video (NASA SVS, ESO, NOAA)
+      Tier 2: Archival / Institutional Video (Internet Archive, Prelinger)
+      Tier 3: Whitelisted Docudrama / Film Discovery (YouTube whitelisted channels)
+      Tier 4: Original Visual Creation (Procedural 3D around authentic evidence)
+      Tier 5: Constrained Supporting Stock (Pexels / Pixabay for macro nouns only)
     """
 
-    def __init__(self, pexels_api_key: Optional[str] = None):
+    def __init__(self, pexels_api_key: Optional[str] = None, pixabay_api_key: Optional[str] = None):
+        pb_key = pixabay_api_key or PIXABAY_API_KEY
         self.adapters: Dict[str, BaseSourceAdapter] = {
+            "nasa_svs": NasaSvsAdapter(),
+            "archive": ArchiveAdapter(),
+            "youtube_docudrama": YouTubeAdapter(),
+            "procedural_3d": Procedural3DAdapter(),
+            "movie": MovieAdapter(),
             "editorial": EditorialAdapter(),
             "official": OfficialAdapter(),
             "wikimedia": WikimediaAdapter(),
-            "archive": ArchiveAdapter(),
             "contextual": ContextualAdapter(),
             "reaction": ReactionAdapter(),
-            "pexels": PexelsAdapter(api_key=pexels_api_key)
+            "pexels": PexelsAdapter(api_key=pexels_api_key),
+            "pixabay": PixabayAdapter(api_key=pb_key)
         }
 
     def resolve_source_hierarchy(self, intent: VisualIntent) -> List[str]:
         """
-        Determines the priority order of adapters based on visual intent.
-        Niche-agnostic: relies entirely on structured intent fields (entity, event, claim, tone).
+        Determines the priority order of adapters based on visual intent and evidence requirements.
         """
-        v_intent = getattr(intent, "visual_intent", "")
-        req_type = getattr(intent, "required_visual_type", getattr(intent, "preferred_visual_type", None))
-        ev_req = getattr(intent, "evidence_required", False)
-        date_ctx = getattr(intent, "date_context", None)
-        p_entity = getattr(intent, "primary_entity", None)
-        evt = getattr(intent, "event", None)
+        combined = f"{intent.narration_text} {intent.primary_entity or ''} {intent.event or ''} {' '.join(intent.search_queries)}".lower()
 
-        # If reaction visual is explicitly desired and editorially sound
-        if v_intent == "REACTION" or req_type == VisualContentType.MEME_REACTION:
-            return ["reaction", "contextual", "editorial", "pexels"]
+        # 1. Space, astronomy, physics, cosmology -> Tier 1 (NASA SVS) first
+        if any(k in combined for k in ["black hole", "accretion", "space", "orbit", "planet", "galaxy", "star", "einstein", "gravity", "telescope", "cosmic"]):
+            return ["nasa_svs", "archive", "youtube_docudrama", "procedural_3d", "pexels"]
 
-        # If evidence/document is required (e.g. treaty, headline, court filing, stat)
-        if ev_req or req_type == VisualContentType.SCREENSHOT_DOCUMENT:
-            return ["contextual", "official", "wikimedia", "editorial", "pexels"]
+        # 2. Document, manuscript, cipher, paper, scientific figure -> Tier 4 (Procedural 3D on evidence) first
+        if any(k in combined for k in ["manuscript", "voynich", "beinecke", "cipher", "codex", "paper", "journal", "telemetry", "wow signal", "study"]):
+            return ["procedural_3d", "youtube_docudrama", "archive", "contextual", "pexels"]
 
-        # If archival / historical date context is specified
-        if date_ctx and any(c.isdigit() for c in str(date_ctx)):
-            return ["archive", "wikimedia", "official", "editorial", "pexels"]
+        # 3. Historical event, medieval, plague, tragedy, dramatic reenactment -> Tier 3 (Whitelisted Docudrama) first
+        if any(k in combined for k in ["1518", "plague", "dancing", "reenactment", "historical", "century", "tragedy", "king", "queen", "castle", "medieval"]):
+            return ["youtube_docudrama", "archive", "movie", "procedural_3d", "pexels"]
 
-        # Default real-world entity/event order
-        if p_entity or evt:
-            return ["editorial", "official", "wikimedia", "archive", "contextual", "pexels"]
+        # 4. 20th-century historical archive, military, newsreels, space missions -> Tier 2 (Internet Archive) first
+        if any(k in combined for k in ["19", "apollo", "war", "newsreel", "cold war", "soviet", "navy", "military", "vintage", "president"]):
+            return ["archive", "youtube_docudrama", "official", "procedural_3d", "pexels"]
 
-        # Fallback general hierarchy
-        return ["editorial", "wikimedia", "official", "archive", "contextual", "pexels"]
+        # Default 5-tier sequence: Institutional -> Archival -> Whitelisted Docudrama -> Procedural 3D -> Stock Last
+        return ["nasa_svs", "archive", "youtube_docudrama", "procedural_3d", "pexels"]
 
     def acquire_candidates(
         self,
@@ -83,13 +94,11 @@ class SourceRouter:
     ) -> List[VisualCandidate]:
         if count_per_beat is not None:
             count_per_tier = count_per_beat
-        """
-        Dispatches multi-source queries following the Real-Footage-First hierarchy.
-        Returns aggregated candidates enriched with provenance and rights classification.
-        """
+
         hierarchy = self.resolve_source_hierarchy(intent)
         candidates: List[VisualCandidate] = []
         seen_urls: Set[str] = set(exclude_urls or [])
+        rejection_log: List[Dict[str, str]] = []
 
         queries = list(intent.search_queries)
         if not queries:
@@ -109,7 +118,6 @@ class SourceRouter:
                     exclude_urls=seen_urls
                 )
 
-                # Filter out any unverified rights risk or misleading reactions
                 for cand in tier_candidates:
                     if cand.source_url in seen_urls:
                         continue
@@ -118,6 +126,7 @@ class SourceRouter:
                     if cand.content_type == VisualContentType.MEME_REACTION:
                         if not self._is_reaction_editorially_permitted(cand, intent):
                             logger.info(f"[SOURCE_ROUTER] Filtered out uncontextual reaction: '{cand.title}'")
+                            rejection_log.append({"candidate": cand.title, "reason": "uncontextual_reaction"})
                             continue
 
                     seen_urls.add(cand.source_url)
@@ -127,15 +136,16 @@ class SourceRouter:
                     break
 
             except Exception as e:
-                logger.warning(f"[SOURCE_ROUTER] Adapter '{source_key}' encountered notice: {e}")
+                logger.warning(f"[SOURCE_ROUTER] Adapter '{source_key}' notice: {e}")
+                rejection_log.append({"adapter": source_key, "reason": str(e)})
 
-        # Ensure we always have at least some candidates via fallback
-        if not candidates and "pexels" not in [c.source_name for c in candidates]:
-            try:
-                fb = self.adapters["pexels"].search(queries=queries, intent=intent, count=count_per_tier, exclude_urls=seen_urls)
-                candidates.extend(fb)
-            except Exception as e:
-                logger.warning(f"[SOURCE_ROUTER] Pexels fallback notice: {e}")
+        # FAIL-CLOSED CHECK: If zero acceptable candidates found
+        if not candidates:
+            claim_desc = getattr(intent, "claim_discussed", None) or getattr(intent, "narration_text", "")[:60]
+            logger.error(
+                f"[SOURCE_ROUTER] NO_ACCEPTABLE_VISUAL_EVIDENCE for claim: '{claim_desc}'. "
+                f"Searched tiers: {hierarchy}. Refusing to fill with generic stock filler."
+            )
 
         return candidates[:max_total_candidates]
 

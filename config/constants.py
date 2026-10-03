@@ -99,6 +99,8 @@ class CurrentAffairsCategory(str, Enum):
 class LicenseType(str, Enum):
     PEXELS_LICENSE = "Pexels License (Commercial $0)"
     PUBLIC_DOMAIN_CC0 = "Public Domain / CC0"
+    CREATIVE_COMMONS = "Creative Commons"
+    EDITORIAL_FAIR_USE = "Transformative Editorial Review (Fair Use 17 U.S.C. § 107)"
     YOUTUBE_AUDIO_LIBRARY = "YouTube Audio Library (Monetizable $0)"
     APACHE_2_0 = "Apache 2.0"
     MIT = "MIT"
@@ -162,7 +164,7 @@ class ContentNiche(str, Enum):
 # Extended to 27s to accommodate Kokoro's natural pacing for 55-70 word scripts.
 # YouTube Shorts up to 60s are allowed; 22-27s is the verified engagement sweet spot.
 MIN_DURATION_SEC = 22.0
-MAX_DURATION_SEC = 27.0
+MAX_DURATION_SEC = 28.5
 TARGET_DURATION_SEC = 24.0
 
 # Audio Standards
@@ -174,6 +176,7 @@ MUSIC_DUCK_DB = -24.0
 SFX_LEVEL_DB = -18.0
 BGM_FADE_IN_SEC = 0.8
 BGM_FADE_OUT_SEC = 1.5
+BGM_START_OFFSET_SEC = 14.0  # Skip initial silence/low buildup in BGM audio files so full energy hits from 0:00 in video
 
 # Voiceover Pause Calibration (Restored to Natural Original Bella Delivery)
 VOICEOVER_PAUSE_MULTIPLIER: float = 1.00
@@ -198,10 +201,10 @@ MAX_AUDIO_LOUDNESS_LUFS = -10.0
 MAX_TRUE_PEAK_DBTP = -0.5
 MIN_BGM_RMS_ENERGY = 0.005  # Ensures BGM is physically audible in final render
 
-# Script Constraints (58-72 words optimal for 22-25s natural Bella delivery)
-MIN_WORD_COUNT = 55
-MAX_WORD_COUNT = 75
-OPTIMAL_WORD_COUNT = 64
+# Script Constraints (50-56 words hard constraint, optimal 52-54 for 22-24s Bella delivery)
+MIN_WORD_COUNT = 50
+MAX_WORD_COUNT = 56
+OPTIMAL_WORD_COUNT = 53
 
 # API Free Limits (Default Safety Buffers)
 PEXELS_FREE_LIMIT_HOURLY = 200

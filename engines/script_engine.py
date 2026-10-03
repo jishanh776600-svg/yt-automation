@@ -26,202 +26,256 @@ FORBIDDEN_CLICHES = [
     "unbelievable true story",
     "events spiraled",
     "events rapidly spiraled",
+    "events rapidly spiraled out of control",
     "shocked historians",
+    "what happened next shocked historians",
     "changed history forever",
     "history changed forever",
+    "history would never be the same",
+    "the shocking truth",
     "you won't believe",
     "believe it or not",
     "did you know",
     "what happened next",
     "things got worse",
+    "things quickly escalated",
+    "everything changed",
+    "little did they know",
+    "for reasons unknown",
+    "something strange happened",
+    "this unbelievable story",
+    "and that's why",
+    "that's the mystery",
+    "which brings us back",
+    "now you know",
     "mind-blowing",
     "an unbelievable event",
     "this shocking event"
 ]
 
+# Forbidden opening patterns (no dates, years, locations, or rhetorical openers)
+FORBIDDEN_HOOK_OPENINGS = [
+    re.compile(r"^(?:in\s+)?(?:1\d{3}|20\d{2}|[5-9]\d{2})\b", re.IGNORECASE),
+    re.compile(r"^(?:in\s+|on\s+)?(?:january|february|march|april|may|june|july|august|september|october|november|december)\b", re.IGNORECASE),
+    re.compile(r"^in\s+(?:the\s+)?(?:year\s+)?\d{1,4}\b", re.IGNORECASE),
+    re.compile(r"^in\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s*[,—\.]", re.IGNORECASE),
+    re.compile(r"^(?:back\s+in|during|did\s+you\s+know|have\s+you\s+ever|imagine|what\s+if|today|this\s+is\s+the\s+story\s+of|let\s+me\s+tell\s+you)\b", re.IGNORECASE),
+]
+
+FORBIDDEN_LOOP_CLICHES = [
+    re.compile(r"\band that'?s why\b", re.IGNORECASE),
+    re.compile(r"\bthat'?s the mystery\b", re.IGNORECASE),
+    re.compile(r"\bwhich brings us back\b", re.IGNORECASE),
+    re.compile(r"\bnow you know\b", re.IGNORECASE),
+]
+
+
+def sanitize_script_text(text: str) -> str:
+    """Strips markdown styling, stage directions, and extraneous whitespace for clean TTS text."""
+    if not text:
+        return ""
+    clean = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    clean = re.sub(r"\*([^*]+)\*", r"\1", clean)
+    clean = re.sub(r"__([^_]+)__", r"\1", clean)
+    clean = re.sub(r"_([^_]+)_", r"\1", clean)
+    clean = re.sub(r"#{1,6}\s*", "", clean)
+    clean = re.sub(r"`([^`]+)`", r"\1", clean)
+    clean = re.sub(r"\[[^\]]*\]", "", clean)
+    clean = re.sub(r"\([^)]*\)", "", clean)
+    clean = re.sub(r"\s+", " ", clean).strip()
+    return clean
+
+
+def contains_markdown_leakage(text: str) -> bool:
+    """Returns True if raw text contains markdown syntax or bracketed directions."""
+    if not text:
+        return False
+    return bool(re.search(r"(\*\*|\*|__|_|#{1,6}|`|\[|\])", text))
+
+
 # High-Retention Curated Seed Scripts (Pre-verified for seed topics)
 CURATED_SCRIPTS = {
     "Red Sea Maritime Chokepoint Crisis": {
-        "hook": "Twelve percent of global seaborne trade is being diverted around an entire continent.",
-        "context": "Commercial shipping through the Bab-el-Mandeb strait faced missile and drone swarms.",
-        "escalation": "Allied naval task forces deployed guided missile destroyers to shoot down inbound threats.",
-        "reveal": "Container freight rates tripled within weeks as giant freighters rerouted around Africa.",
-        "loop_twist": "A single chokepoint twenty miles wide exposed the fragile vulnerability of modern commerce."
+        "hook": "Missile strikes diverted twelve percent of world shipping.",
+        "context": "Merchant vessels traversing the Bab-el-Mandeb strait faced relentless drone attack swarms.",
+        "escalation": "Allied naval destroyers intercepted dozens of anti-ship ballistic missiles in defense.",
+        "reveal": "Commercial freight rates tripled as container ships rerouted thousands of miles.",
+        "loop_twist": "A twenty-mile maritime bottleneck exposed the fragile vulnerability of modern trade."
     },
     "Baltic Undersea Infrastructure Security": {
-        "hook": "Beneath the Baltic Sea, severed data cables triggered an emergency naval response.",
-        "context": "Critical telecommunication lines and energy pipelines were severed in international waters.",
-        "escalation": "Maritime patrol aircraft and mine-countermeasure ships deployed sonar to inspect the seabed.",
-        "reveal": "Investigators tracked suspicious commercial vessels dragging anchors across undersea conduits.",
-        "loop_twist": "Modern hybrid warfare showed that cutting deep sea cables can paralyze nations without firing a shot."
+        "hook": "Severed undersea cables triggered an emergency naval response.",
+        "context": "Critical telecommunication lines and energy conduits were cut across international waters.",
+        "escalation": "Maritime patrol aircraft and mine-hunting ships deployed sonar sweeps across the seabed.",
+        "reveal": "Investigators tracked commercial vessels dragging heavy anchors over submarine cables.",
+        "loop_twist": "Hybrid maritime warfare demonstrated that cutting cables can silently disrupt entire continents."
     },
     "Strait of Hormuz Naval Interceptions": {
-        "hook": "One fifth of the world's petroleum supply passes through a single twenty-one-mile bottleneck.",
-        "context": "Armed gunboats and naval helicopters shadowed commercial oil tankers entering the Persian Gulf.",
-        "escalation": "Warships deployed electronic countermeasures as boarding teams attempted to seize merchant vessels.",
-        "reveal": "International maritime patrols established guarded transit corridors with continuous air cover.",
-        "loop_twist": "Any escalation in these narrow waters can destabilize global energy markets in minutes."
+        "hook": "Gunboat boardings threatened twenty percent of global oil.",
+        "context": "Naval forces patrolled the twenty-one-mile bottleneck connecting the Persian Gulf.",
+        "escalation": "Armed speedboats and helicopters shadowed tankers, attempting hostile vessel seizures.",
+        "reveal": "Escort warships deployed electronic countermeasures and continuous air patrols to protect commerce.",
+        "loop_twist": "Any escalation in these narrow waters can instantly shock global energy markets."
     },
     "Taiwan Strait Freedom of Navigation Patrols": {
-        "hook": "Guided-missile destroyers sailed straight through the world's most contested international waterway.",
-        "context": "Naval forces executed freedom of navigation transits through the hundred-mile-wide Taiwan Strait.",
-        "escalation": "Dozens of fighter aircraft and shadowing frigates tracked every nautical mile of the passage.",
-        "reveal": "High-resolution radar arrays locked coordinates while surveillance drones monitored flight paths.",
-        "loop_twist": "This narrow channel remains the central friction point shaping the global balance of power."
+        "hook": "Warships sailed through the world's tensest maritime strait.",
+        "context": "Allied destroyers conducted freedom of navigation operations across the hundred-mile passage.",
+        "escalation": "Dozens of fighter jets and shadowing frigates tracked every nautical mile.",
+        "reveal": "Radar arrays tracked continuous missile locks while surveillance aircraft circled overhead.",
+        "loop_twist": "This narrow waterway remains the primary friction point shaping global security."
     },
     "The Kettle War of 1784": {
-        "hook": "In 1784, a European war ended with a shattered soup kettle.",
-        "context": "The Holy Roman Empire sent warships to challenge Dutch ports.",
-        "escalation": "A Dutch flagship fired one warning cannon shot across the harbor.",
-        "reveal": "The shot struck an iron kettle, spraying boiling soup on deck.",
-        "loop_twist": "Terrified, the imperial fleet surrendered without a single casualty."
+        "hook": "A single soup kettle stopped a war.",
+        "context": "Warships advanced under full sail to break a vital harbor blockade.",
+        "escalation": "Defending soldiers aimed and fired a single cannon shot across the water.",
+        "reveal": "The blast struck only an ordinary brass soup kettle.",
+        "loop_twist": "Terrified commanders surrendered, proving one soup kettle can halt an entire invasion."
     },
     "The Liechtensteiner Army of 1866": {
-        "hook": "An eighty-man army marched to war and returned with eighty-one soldiers.",
-        "context": "In 1866, Liechtenstein sent eighty men to guard an alpine pass.",
-        "escalation": "They patrolled the quiet border without seeing any combat.",
-        "reveal": "Trekking home, they befriended an Italian officer who joined them.",
-        "loop_twist": "They suffered negative one casualties in history's most wholesome war."
+        "hook": "An eighty-man army returned with eighty-one soldiers.",
+        "context": "Liechtenstein deployed eighty soldiers to defend an isolated mountain pass.",
+        "escalation": "They patrolled the quiet alpine border for weeks without seeing any combat.",
+        "reveal": "Marching home, they befriended an Italian officer who chose to enlist with them.",
+        "loop_twist": "Their legendary military campaign concluded with negative one total combat casualties."
     },
     "The Kentucky Meat Shower of 1876": {
-        "hook": "In 1876, fresh red meat mysteriously rained from a clear sky.",
-        "context": "On a sunny afternoon in Kentucky, a farmer made soap outside.",
-        "escalation": "Suddenly, large chunks of fresh meat fell across the farm.",
-        "reveal": "Scientists concluded startled vultures had regurgitated their meal mid-flight.",
-        "loop_twist": "Two brave locals tasted the sky meat, calling it venison."
+        "hook": "Fresh meat mysteriously rained from a clear sky.",
+        "context": "On a sunny afternoon in 1876, a farmer made soap outdoors.",
+        "escalation": "Large chunks of fresh meat fell directly across the entire property.",
+        "reveal": "Scientists concluded startled vultures had regurgitated their heavy meal mid-flight.",
+        "loop_twist": "Brave Kentucky neighbors actually tasted the sky meat, identifying it as venison."
     },
     "The Balloon Duel of Paris (1808)": {
-        "hook": "In 1808, two Frenchmen fought history's only balloon duel.",
-        "context": "Two gentlemen loved the same opera singer and demanded a duel.",
-        "escalation": "They soared two thousand feet above Paris armed with blunderbusses.",
-        "reveal": "One shot punctured his rival's balloon, sending it plunging down.",
-        "loop_twist": "The victor landed safely, yet the singer refused his hand."
+        "hook": "Rival duelists fought in soaring hot air balloons.",
+        "context": "In 1808, two Frenchmen loved the same opera singer and demanded combat.",
+        "escalation": "Armed with blunderbusses, they soared two thousand feet directly over Paris.",
+        "reveal": "One shot punctured the opposing balloon envelope, sending his rival plunging downward.",
+        "loop_twist": "The victorious duelist landed safely, yet the young opera singer refused him."
     },
     "The Cadaver Synod of 897": {
-        "hook": "In 897, a dead pope's rotting corpse was put on trial.",
-        "context": "Pope Stephen ordered the body of Pope Formosus exhumed.",
-        "escalation": "They dressed the decaying corpse in vestments with a defense lawyer.",
-        "reveal": "Found guilty, the corpse had three fingers severed and dumped away.",
-        "loop_twist": "Enraged Roman citizens rioted and threw Pope Stephen into prison."
+        "hook": "A dead pope stood trial for serious treason.",
+        "context": "Pope Stephen exhumed the decaying corpse of his bitter rival Formosus.",
+        "escalation": "They dressed the rotting body in vestments and assigned court defense counsel.",
+        "reveal": "Found guilty, the corpse had three fingers severed and was dumped away.",
+        "loop_twist": "Outraged Roman citizens revolted and threw the vengeful accuser into prison."
     },
     "The Battle of Karansebes (1788)": {
-        "hook": "In 1788, an army of one hundred thousand men fought itself.",
-        "context": "Austrian cavalry bought schnapps and refused to share with infantry.",
-        "escalation": "A drunken brawl erupted, someone shouted Turks, and panic spread.",
-        "reveal": "Artillery fired into the camp, believing the enemy had struck.",
-        "loop_twist": "When real Turks arrived, they found thousands of dead soldiers."
+        "hook": "One hundred thousand soldiers accidentally attacked themselves.",
+        "context": "Austrian cavalry bought barrels of schnapps and refused to share with infantry.",
+        "escalation": "A drunken midnight brawl erupted, terrified men screamed Turks, and panic spread.",
+        "reveal": "Artillery fired straight into the camp, believing the enemy had arrived.",
+        "loop_twist": "When opposing forces reached the camp, they discovered thousands of dead soldiers."
     },
     "The Lake Peigneur Sinkhole (1980)": {
-        "hook": "A thirteen-hundred-acre lake vanished into an underground salt mine.",
-        "context": "In 1980, an oil rig accidentally drilled into a Louisiana salt cavern.",
-        "escalation": "Water dissolved the salt, creating a whirlpool that swallowed eleven barges.",
-        "reveal": "The draining lake temporarily reversed the Gulf of Mexico flow.",
-        "loop_twist": "Miraculously, all fifty-five workers escaped without a single casualty."
+        "hook": "A giant lake vanished into a salt mine.",
+        "context": "In 1980, an oil rig accidentally drilled straight into an underground salt cavern.",
+        "escalation": "Rushing water dissolved the cavern, creating a whirlpool that swallowed eleven barges.",
+        "reveal": "The draining lake generated a waterfall and temporarily reversed the Gulf flow.",
+        "loop_twist": "Remarkably, all fifty-five oil workers escaped safely without a single casualty."
     },
     "The War of the Stray Dog (1925)": {
-        "hook": "In 1925, Greece and Bulgaria went to war over a runaway dog.",
-        "context": "A Greek soldier chased his stray dog across the border.",
-        "escalation": "Bulgarian sentries shot him, sparking military mobilization on both sides.",
-        "reveal": "Greece invaded before the League of Nations ordered an immediate ceasefire.",
-        "loop_twist": "Greece was fined forty-five thousand pounds for the canine clash."
+        "hook": "Two sovereign nations fought over a stray dog.",
+        "context": "A Greek soldier chased his runaway puppy directly across the Bulgarian border.",
+        "escalation": "Bulgarian sentries fired, triggering military mobilization on both sides.",
+        "reveal": "An armed invasion followed before the League ordered an immediate ceasefire.",
+        "loop_twist": "The invading country was fined forty-five thousand pounds for the canine clash."
     },
     "The Aroostook War": {
-        "hook": "In 1838, America and Britain mobilized troops over stolen timber.",
-        "context": "Lumberjacks from Maine and New Brunswick clashed in a disputed valley.",
-        "escalation": "Both sides deployed armed militias and prepared for full-scale war.",
-        "reveal": "General Winfield Scott negotiated a truce before shots were fired.",
-        "loop_twist": "The only casualties of the entire war were two men mauled by bears."
+        "hook": "Two rival nations mobilized troops over stolen timber.",
+        "context": "American and British lumberjacks clashed furiously along a disputed border river valley.",
+        "escalation": "Both governments deployed armed infantry battalions and prepared for full-scale combat.",
+        "reveal": "Diplomats quickly negotiated a peaceful treaty before any combat shots were fired.",
+        "loop_twist": "The only casualties of the confrontation were two soldiers mauled by bears."
     },
     "The 38-Minute Anglo-Zanzibar War (1896)": {
-        "hook": "The shortest war in human history lasted less than forty minutes.",
-        "context": "In 1896, a rebel sultan seized power in Zanzibar against British demands.",
-        "escalation": "Three Royal Navy cruisers opened fire on the palace with explosive shells.",
-        "reveal": "In thirty-eight minutes, five hundred defenders fell, and the sultan fled.",
-        "loop_twist": "By morning tea, the war was completely over."
+        "hook": "The shortest war lasted thirty-eight minutes.",
+        "context": "In 1896, a defiant sultan seized royal power against British diplomatic demands.",
+        "escalation": "Three Royal Navy warships opened explosive bombardment directly upon the fortified palace.",
+        "reveal": "Five hundred defending fighters fell in minutes before the royal flag was lowered.",
+        "loop_twist": "By morning tea, the entire conflict was completely and unconditionally over."
     },
     "The Great Stink of London (1858)": {
-        "hook": "In 1858, the smell of London became so toxic it shut down Parliament.",
-        "context": "A scorching heatwave boiled tons of raw sewage in the River Thames.",
-        "escalation": "Lawmakers soaked curtains in lime, but the overwhelming stench caused severe nausea.",
-        "reveal": "Politicians panicked and passed an emergency bill to fund a modern sewer network.",
-        "loop_twist": "That foul summer created the world's first modern sanitation system."
+        "hook": "Toxic river stench completely shut down British Parliament.",
+        "context": "A severe heatwave in 1858 boiled millions of gallons of raw river sewage.",
+        "escalation": "Politicians soaked curtains in chloride of lime, yet lawmakers fled from overwhelming nausea.",
+        "reveal": "Panicked lawmakers swiftly passed legislation creating London's massive underground sewer system.",
+        "loop_twist": "That unbearable summer stench established the foundation for modern urban sanitation."
     },
     "The Strange Town of Baarle-Hertog": {
-        "hook": "This European town has borders cutting straight through people's living rooms.",
+        "hook": "Borders cut straight through people's living rooms.",
         "context": "Baarle is split into twenty-four puzzle pieces between Belgium and the Netherlands.",
-        "escalation": "A single house can have its front door in Belgium and its kitchen in Holland.",
-        "reveal": "During lockdowns, Dutch cafes closed while Belgian tables in the same room stayed open.",
+        "escalation": "A single home can have its front door in Belgium and kitchen in Holland.",
+        "reveal": "During lockdowns, Dutch cafes closed while Belgian tables in the room stayed open.",
         "loop_twist": "Your nationality literally depends on where your front door opens."
     },
     "The London Beer Flood of 1814": {
-        "hook": "In October 1814, a fifteen-foot wave of beer destroyed a London neighborhood.",
-        "context": "At the Meux Brewery, a massive wooden fermentation vat suddenly burst open.",
-        "escalation": "Over three hundred thousand gallons of porter surged through the streets like a tidal wave.",
-        "reveal": "The tsunami collapsed building walls, flooded basements, and claimed eight lives.",
+        "hook": "A fifteen-foot beer wave destroyed an entire neighborhood.",
+        "context": "At a London brewery, a massive wooden fermentation vat suddenly ruptured open.",
+        "escalation": "Three hundred thousand gallons of porter surged through cobblestone streets like a tsunami.",
+        "reveal": "The deluge collapsed brick buildings, flooded basements, and claimed eight human lives.",
         "loop_twist": "A jury declared the bizarre catastrophe an unavoidable act of God."
     },
     "The Boston Molasses Flood of 1919": {
-        "hook": "A two-million-gallon wave of boiling molasses once destroyed Boston.",
-        "context": "In 1919, a massive fifty-foot steel tank suddenly burst in the North End.",
-        "escalation": "A thirty-five mile per hour sticky tsunami crushed buildings and overturned trains.",
-        "reveal": "Twenty-one people died, and the entire city smelled sweet for decades.",
-        "loop_twist": "On hot summer days, locals swear you can still smell the molasses."
+        "hook": "Boiling molasses destroyed an entire city district.",
+        "context": "In 1919, a massive fifty-foot steel storage tank suddenly burst in Boston.",
+        "escalation": "A thirty-five mile per hour sticky wave crushed nearby structures and overturned trains.",
+        "reveal": "Twenty-one people died, and the entire metropolitan district smelled sweet for decades.",
+        "loop_twist": "On scorching summer afternoons, residents swear you can still smell the molasses."
     },
     "The Pig War of San Juan Island (1859)": {
-        "hook": "America and Britain almost went to war over a single potato-eating pig.",
-        "context": "In 1859, an American farmer shot a British pig foraging in his garden.",
-        "escalation": "Both nations deployed five warships and nearly two thousand heavily armed troops.",
-        "reveal": "Military commanders refused to fire the first shot over a farm animal.",
-        "loop_twist": "The only casualty in the entire standoff was the pig."
+        "hook": "Two rival empires fought over a garden pig.",
+        "context": "An American settler shot a British pig foraging inside his potato garden.",
+        "escalation": "Both superpowers deployed warships and hundreds of soldiers to the disputed island.",
+        "reveal": "Commanders refused to fire a single shot over a farm animal.",
+        "loop_twist": "The only casualty in the entire military standoff was the pig."
     },
     "The Lost Roanoke Colony Mystery": {
-        "hook": "An entire American colony vanished without leaving a single trace.",
-        "context": "In 1587, over one hundred English settlers arrived on Roanoke Island.",
-        "escalation": "When rescue ships returned three years later, every home and person had disappeared.",
-        "reveal": "The only clue was the mysterious word CROATOAN carved into a post.",
-        "loop_twist": "To this day, not a single skeleton has ever been found."
+        "hook": "An entire American colony vanished without a trace.",
+        "context": "In 1587, over one hundred English settlers arrived on isolated Roanoke Island.",
+        "escalation": "When supply ships returned three years later, every home and colonist had disappeared.",
+        "reveal": "The only clue was the word CROATOAN carved into a post.",
+        "loop_twist": "Centuries later, not a single human skeleton has ever been found."
     },
     "The Dancing Plague of Strasbourg (1518)": {
-        "hook": "In 1518, hundreds of people danced in the streets until collapsing from exhaustion.",
-        "context": "A woman in Strasbourg began dancing, and within days, four hundred joined her.",
-        "escalation": "Doctors mistakenly prescribed more dancing, hiring musicians to play day and night.",
-        "reveal": "Dozens died before the bizarre frenzy mysteriously vanished.",
-        "loop_twist": "Modern science still cannot explain what drove them to dance."
+        "hook": "Hundreds danced until they collapsed from physical exhaustion.",
+        "context": "A woman stepped into the street and began dancing uncontrollably for days.",
+        "escalation": "Physicians prescribed continuous dancing, hiring musicians to play day and night.",
+        "reveal": "Dozens died from heart attacks and strokes before the mania mysteriously ceased.",
+        "loop_twist": "Centuries later, modern medical science still cannot explain the bizarre dancing frenzy."
     },
     "The Unsinkable Violet Jessop": {
-        "hook": "This woman survived three of the deadliest shipwreck disasters in history.",
-        "context": "Violet Jessop was a nurse serving aboard White Star Line ocean liners.",
-        "escalation": "She survived the Olympic crash, escaped the sinking Titanic, and survived the Britannic explosion.",
-        "reveal": "Even jumping into propeller blades couldn't end her life.",
-        "loop_twist": "She retired peacefully at eighty-four, nicknamed Miss Unsinkable."
+        "hook": "One woman survived three famous shipwreck disasters.",
+        "context": "Violet Jessop worked as a nurse aboard White Star Line ocean liners.",
+        "escalation": "She survived the Olympic crash, escaped the Titanic, and survived the Britannic.",
+        "reveal": "Jumping into the sea, she was struck by propeller blades but survived.",
+        "loop_twist": "She retired peacefully at eighty-four, forever remembered as Miss Unsinkable."
     },
     "The Erfurt Latrine Disaster of 1184": {
-        "hook": "In July 1184, sixty European nobles died in the most humiliating disaster in history.",
-        "context": "King Henry VI convened a royal peace summit on the second floor of Erfurt Cathedral.",
-        "escalation": "The heavy wooden floor suddenly snapped under the weight of the assembled nobles.",
-        "reveal": "Dozens plunged straight through into the vast liquid cesspool beneath the building.",
-        "loop_twist": "The king only survived by clinging desperately to an iron window grate."
+        "hook": "Sixty European nobles plunged into a cathedral cesspool.",
+        "context": "King Henry convened a peace summit inside Erfurt Cathedral in 1184.",
+        "escalation": "The wooden floor suddenly snapped under the weight of the gathered nobility.",
+        "reveal": "Dozens fell directly through into the deep liquid cesspool below.",
+        "loop_twist": "The king survived by clinging desperately to an iron window grate."
     },
     "The Defenestrations of Prague": {
-        "hook": "Three separate times in European history, politicians were hurled out of castle windows.",
-        "context": "In 1618, Bohemian rebels marched into Prague Castle to confront royal governors.",
-        "escalation": "After a furious argument, they tossed two regents and their secretary seventy feet down.",
-        "reveal": "All three remarkably survived by landing in a massive pile of horse manure.",
-        "loop_twist": "That seventy-foot plunge sparked the catastrophic Thirty Years War."
+        "hook": "Rebels threw royal governors seventy feet out windows.",
+        "context": "In 1618, Protestant rebels marched into Prague Castle to confront imperial representatives.",
+        "escalation": "After a furious argument, they tossed two regents and their secretary outside.",
+        "reveal": "All three men remarkably survived falling seventy feet into a dung heap.",
+        "loop_twist": "That humiliating seventy-foot plunge ignited the catastrophic Thirty Years War."
     },
     "The Cataclysmic Explosion of Krakatoa in 1883": {
-        "hook": "In 1883, a volcanic eruption created the loudest sound in history.",
-        "context": "Krakatoa exploded with fifteen thousand times the power of Hiroshima.",
-        "escalation": "Shockwaves circled Earth four times, shattering eardrums forty miles away.",
-        "reveal": "The entire island collapsed into the sea, blacking out the skies.",
-        "loop_twist": "Yet today, an active volcano rises relentlessly from that crater."
+        "hook": "A volcanic eruption produced the loudest sound recorded.",
+        "context": "Krakatoa detonated with fifteen thousand times the explosive force of nuclear bombs.",
+        "escalation": "Atmospheric shockwaves circled Earth four times, rupturing sailors' eardrums forty miles away.",
+        "reveal": "The volcanic island collapsed into the sea, darkening global skies for weeks.",
+        "loop_twist": "Today, an active volcanic cone rises relentlessly from that submerged crater."
     },
     "The Great Emu War of 1932": {
-        "hook": "In 1932, Australia declared war on wild birds.",
-        "context": "Soldiers arrived with machine guns against twenty thousand destructive emus.",
-        "escalation": "Yet the birds scattered into split-second ambushes, dodging every heavy volley.",
-        "reveal": "After weeks of humiliating chaos, the army withdrew in defeat.",
-        "loop_twist": "The soldiers retreated, completely outmaneuvered by flightless birds."
+        "hook": "An elite military unit surrendered to flightless birds.",
+        "context": "Australian soldiers arrived armed with heavy machine guns against twenty thousand emus.",
+        "escalation": "The birds quickly split into small ambush groups, outmaneuvering every tactical attack.",
+        "reveal": "After weeks of humiliating failure, the commanding defense minister ordered complete withdrawal.",
+        "loop_twist": "The military retreated completely defeated, leaving the wild emus victorious in battle."
     }
 }
 
@@ -287,6 +341,11 @@ class ScriptCritic:
         feedback = []
         cliches_detected = []
 
+        # 0. Markdown Leakage & Clean Text Gate
+        has_markdown = contains_markdown_leakage(full_text)
+        if has_markdown:
+            feedback.append("Markdown syntax or bracketed directions detected in script text. Spoken narration must be clean plain text.")
+
         # 1. Check Forbidden Clichés (-50 penalty if found)
         full_lower = full_text.lower()
         cliches_to_check = active_profile.forbidden_cliches if (active_profile and active_profile.forbidden_cliches) else FORBIDDEN_CLICHES
@@ -295,28 +354,50 @@ class ScriptCritic:
                 cliches_detected.append(cliche)
                 feedback.append(f"Forbidden AI cliché detected: '{cliche}'. Must be rephrased naturally.")
 
-        # 2. Hook Quality (20 pts)
+        # 1b. Check Forbidden Loop Clichés
+        for pattern in FORBIDDEN_LOOP_CLICHES:
+            if pattern.search(loop_twist) or pattern.search(full_text):
+                matched_cliche = pattern.pattern.replace(r"\b", "").replace(r"'?s", "'s")
+                cliches_detected.append(matched_cliche)
+                feedback.append(f"Forbidden loop cliché detected: '{matched_cliche}'. Natural loop must reconnect without artificial phrases.")
+
+        is_historical = (active_profile is None or active_profile.name == "HISTORICAL")
+
+        # 2. Hook Quality (20 pts) - Hard Constraint: Strictly 1 to 8 words, no date/location openings for HISTORICAL
         hook_score = 0.0
         hook_words = hook.split()
-        if 5 <= len(hook_words) <= 15:
-            hook_score += 10.0
-        else:
-            feedback.append(f"Hook length ({len(hook_words)} words) is outside optimal 6-14 word range.")
+        hook_len = len(hook_words)
 
-        # High curiosity markers (dates, numbers, strong actions, visceral nouns from profile)
+        hook_forbidden_start = False
+        max_hook_len = 8 if is_historical else 16
+        if is_historical:
+            for pattern in FORBIDDEN_HOOK_OPENINGS:
+                if pattern.search(hook):
+                    hook_forbidden_start = True
+                    feedback.append(f"Forbidden hook opening detected: '{hook[:35]}...'. Hook must begin immediately with contradiction/shock/paradox, never dates, years, locations, or rhetorical questions.")
+                    break
+
+            if not (1 <= hook_len <= 8):
+                feedback.append(f"Hook length ({hook_len} words) is outside strict 1-8 word limit.")
+        else:
+            if not (1 <= hook_len <= max_hook_len):
+                feedback.append(f"Hook length ({hook_len} words) is outside acceptable limit ({max_hook_len} words max).")
+
+        # High curiosity markers (contradiction, action, tension from profile)
         hook_marker_matched = False
         markers = active_profile.hook_markers if (active_profile and active_profile.hook_markers) else [
-            r"\b(1\d{3}|20\d{2}|thousands|hundreds|minutes|miles|tons|first|only|deadliest|disaster|war|king|crisis)\b"
+            r"\b(thousands|hundreds|minutes|miles|tons|first|only|deadliest|disaster|war|king|crisis|shattered|surrendered|marched|returned|exploded|burst|vanished|danced|survived|plunged|retreated)\b"
         ]
         for marker_pattern in markers:
             if re.search(marker_pattern, hook, re.IGNORECASE):
                 hook_marker_matched = True
                 break
 
-        if hook_marker_matched:
-            hook_score += 10.0
-        elif len(hook_words) >= 5:
-            hook_score += 5.0
+        if (1 <= hook_len <= max_hook_len) and not hook_forbidden_start:
+            if hook_marker_matched:
+                hook_score += 20.0
+            else:
+                hook_score += 15.0
 
         # 3. Information Gap & Curiosity (15 pts)
         info_gap_score = 15.0
@@ -328,47 +409,49 @@ class ScriptCritic:
         narrative_score = 0.0
         if context and escalation and reveal:
             narrative_score += 10.0
-        if len(context.split()) >= 8 and len(escalation.split()) >= 8:
+        if len(context.split()) >= 6 and len(escalation.split()) >= 6:
             narrative_score += 5.0
         else:
             feedback.append("Context or escalation lacks sufficient narrative development.")
 
-        # 5. Spoken Cadence & Sentence Rhythm (15 pts)
+        # 5. Spoken Cadence & Word Count (15 pts) - Hard Constraint: Strictly 50 to 56 words
         cadence_score = 0.0
         sentences = [s.strip() for s in re.split(r"[.!?]", full_text) if s.strip()]
         avg_sent_len = word_count / max(1, len(sentences))
-        if 6.0 <= avg_sent_len <= 14.0:
+        if 5.0 <= avg_sent_len <= 15.0:
             cadence_score += 10.0
         else:
             feedback.append(f"Average sentence length ({avg_sent_len:.1f} words) is suboptimal for spoken rhythm.")
 
-        min_words = active_profile.min_words if active_profile else MIN_WORD_COUNT
-        max_words = active_profile.max_words if active_profile else MAX_WORD_COUNT
+        min_words = MIN_WORD_COUNT if is_historical else (active_profile.min_words if active_profile else MIN_WORD_COUNT)
+        max_words = MAX_WORD_COUNT if is_historical else (active_profile.max_words if active_profile else MAX_WORD_COUNT)
 
-        if min_words <= word_count <= (max_words + 3):
+        word_count_valid = (min_words <= word_count <= max_words)
+        if word_count_valid:
             cadence_score += 5.0
         else:
-            feedback.append(f"Total word count ({word_count}) outside calibrated {min_words}-{max_words + 3} word target.")
+            feedback.append(f"Total word count ({word_count}) outside strict {min_words}-{max_words} word bounds.")
 
         # 6. Concrete Specificity (10 pts)
         specificity_score = 0.0
         specific_matches = re.findall(r"\b([A-Z][a-z]+|\d{1,4}|[A-Z]{2,})\b", full_text)
-        if len(specific_matches) >= 5:
+        if len(specific_matches) >= 4:
             specificity_score = 10.0
-        elif len(specific_matches) >= 3:
+        elif len(specific_matches) >= 2:
             specificity_score = 6.0
         else:
             feedback.append("Script lacks concrete specific entities, numbers, or locations.")
 
         # 7. Payoff & Resolution (10 pts)
         payoff_score = 0.0
-        if len(reveal.split()) >= 6 and len(loop_twist.split()) >= 5:
-            payoff_score = 10.0
+        if len(reveal.split()) >= 5 and len(loop_twist.split()) >= 5:
+            payoff_score += 10.0
+        elif len(reveal.split()) >= 3 and len(loop_twist.split()) >= 3:
+            payoff_score += 5.0
         else:
-            payoff_score = 5.0
-            feedback.append("Reveal or ending twist is too abrupt.")
+            feedback.append("Reveal or loop twist resolution is too abrupt.")
 
-        # 8. Multi-Tier Fact Verification (15 pts) - Hard Quality Gate
+        # 8. Factual Alignment (15 pts)
         fact_score = 15.0
         fact_passed = True
         if research_data:
@@ -388,7 +471,10 @@ class ScriptCritic:
         passed = (
             (total_score >= 80.0)
             and (len(cliches_detected) == 0)
-            and (min_words <= word_count <= (max_words + 3))
+            and (not hook_forbidden_start)
+            and (not has_markdown)
+            and (1 <= hook_len <= max_hook_len)
+            and word_count_valid
             and fact_passed
         )
 
@@ -433,31 +519,34 @@ class ScriptEngine:
         research_data: Optional[Dict[str, Any]] = None,
         profile: Optional[ContentProfile] = None
     ) -> List[Dict[str, Any]]:
-        """Generates 3 distinct hook candidates (Date-Anchor, In-Medias-Res, Unexpected Consequence)."""
+        """Generates 3 distinct hook candidates (Contradiction, In-Medias-Res, Shock-Fact) strictly 1-8 words."""
         active_profile = profile or self.profile or get_active_profile()
         res_summary = research_data.get("summary", topic.summary) if research_data else topic.summary
 
         if not AI_PROVIDER_AVAILABLE:
-            # Fallback curated candidates
+            # Fallback curated candidates (strictly 1-8 words, no date openers)
             return [
-                {"type": "Date-Anchor", "hook": f"In {topic.title}, an extraordinary event occurred.", "score": 75.0},
-                {"type": "In-Medias-Res", "hook": f"When crisis struck in {topic.title}, nobody expected the outcome.", "score": 70.0},
-                {"type": "Unexpected-Detail", "hook": f"The documented truth behind {topic.title} changed everything.", "score": 72.0}
+                {"type": "Contradiction", "hook": "The documented truth shocked everyone.", "score": 75.0},
+                {"type": "In-Medias-Res", "hook": "Disaster struck without any warning.", "score": 70.0},
+                {"type": "Shock-Fact", "hook": "One impossible event changed everything.", "score": 72.0}
             ]
 
         try:
             from core.gemini_client import get_gemini_client
             gemini_client = get_gemini_client()
             prompt = (
-                f"Generate 3 distinct, high-curiosity hook sentences (6-13 words each) for a YouTube Short about: '{topic.title}'.\n"
+                f"Generate 3 distinct, high-curiosity hook sentences (STRICTLY 1-8 words each) for a YouTube Short about: '{topic.title}'.\n"
                 f"Context: {res_summary}\n"
                 f"Target Audience: {active_profile.target_audience}\n"
                 f"Tone: {active_profile.tone}\n"
-                f"Strict Rules:\n"
-                f"- No clickbait tropes, no generic fillers (e.g. 'Did you know', 'You won't believe').\n"
-                f"- Hook 1: Date/Anchor (Primary event, clash, or timeframe)\n"
-                f"- Hook 2: In-Medias-Res / Action First (Immediate event or critical tension)\n"
-                f"- Hook 3: Unexpected Specific Consequence or Strategic Implication\n"
+                f"Strict Invariants:\n"
+                f"- STRICTLY 1 to 8 words per hook. Count your words!\n"
+                f"- Must begin immediately with contradiction, paradox, or shock fact.\n"
+                f"- NEVER begin with a year, date, month, or location (e.g. 'In 1784...', 'In London...').\n"
+                f"- No rhetorical questions or generic fillers ('Did you know', 'You won't believe', 'Imagine').\n"
+                f"- Hook 1: Contradiction / Paradox First\n"
+                f"- Hook 2: In-Medias-Res / Immediate Crisis Action\n"
+                f"- Hook 3: Shocking Specific Fact\n"
                 f"Output strictly valid JSON with key 'hooks' containing a list of 3 strings."
             )
             from config.settings import GEMINI_MODEL
@@ -470,27 +559,28 @@ class ScriptEngine:
             raw_hooks = data.get("hooks", [])
             
             candidates = []
-            types = ["Date-Anchor", "In-Medias-Res", "Unexpected-Consequence"]
+            types = ["Contradiction", "In-Medias-Res", "Shock-Fact"]
             for i, h in enumerate(raw_hooks[:3]):
+                clean_h = sanitize_script_text(h)
                 h_type = types[i] if i < len(types) else "Variant"
-                mock_script = {"hook": h, "context": "Context", "escalation": "Escalation", "reveal": "Reveal", "loop_twist": "Twist"}
+                mock_script = {"hook": clean_h, "context": "Context verified.", "escalation": "Details developing.", "reveal": "Monitors reported.", "loop_twist": "Records confirm."}
                 eval_res = self.critic.evaluate(mock_script, research_data, profile=active_profile)
                 candidates.append({
                     "type": h_type,
-                    "hook": h,
+                    "hook": clean_h,
                     "score": eval_res.hook_score + (10.0 if len(eval_res.cliches_detected) == 0 else 0.0)
                 })
             
             candidates.sort(key=lambda x: x["score"], reverse=True)
             return candidates if candidates else [
-                {"type": "Date-Anchor", "hook": f"The documented history of {topic.title} holds a remarkable truth.", "score": 75.0}
+                {"type": "Contradiction", "hook": "The documented truth shocked everyone.", "score": 75.0}
             ]
         except Exception as e:
             if "QuotaExhausted" in type(e).__name__ or "quota" in str(e).lower() or "429" in str(e):
                 raise e
             logger.warning(f"Hook candidate generation notice: {e}")
             return [
-                {"type": "Date-Anchor", "hook": f"In {topic.title}, a remarkable event unfolded.", "score": 75.0}
+                {"type": "Contradiction", "hook": "The documented truth shocked everyone.", "score": 75.0}
             ]
 
     def _draft_script_pass(
@@ -520,10 +610,14 @@ class ScriptEngine:
         if revision_feedback:
             formatted_fb = []
             for fb in revision_feedback:
-                if "outside calibrated" in fb.lower() or "word count" in fb.lower():
-                    formatted_fb.append(f"- WORD COUNT CORRECTION: {fb}. Target exactly {active_profile.target_words} across all 5 stages combined. Do not introduce new claims.")
+                if "outside" in fb.lower() or "word count" in fb.lower():
+                    formatted_fb.append(f"- WORD COUNT CORRECTION: {fb}. Target strictly {active_profile.min_words}-{active_profile.max_words} words (aim for {active_profile.target_words}) across all 5 stages combined.")
+                elif "hook" in fb.lower():
+                    formatted_fb.append(f"- HOOK CORRECTION: {fb}. Strictly 1-8 words, contradiction/shock only, zero dates or locations at start.")
                 elif "unsupported claim" in fb.lower():
                     formatted_fb.append(f"- FACTUAL CORRECTION: {fb}. Remove or rewrite this claim strictly using provided research.")
+                elif "markdown" in fb.lower():
+                    formatted_fb.append("- FORMATTING: Remove all markdown asterisks, hashes, and brackets. Return clean spoken text only.")
                 else:
                     formatted_fb.append(f"- REVISE: {fb}")
             feedback_instruction = (
@@ -534,7 +628,7 @@ class ScriptEngine:
             )
 
         cliches_str = ", ".join(repr(c) for c in active_profile.forbidden_cliches[:5])
-        extra_inst = f"\n6. ADDITIONAL STRATEGY:\n   - {active_profile.additional_instructions}\n" if active_profile.additional_instructions else ""
+        extra_inst = f"\n7. ADDITIONAL STRATEGY:\n   - {active_profile.additional_instructions}\n" if active_profile.additional_instructions else ""
 
         prompt = (
             f"{active_profile.system_role_instruction}\n"
@@ -545,28 +639,32 @@ class ScriptEngine:
             f"Selected Opening Hook (0-2s): \"{selected_hook}\"\n\n"
             f"{verified_facts_text}\n\n"
             f"{learned_guidance}\n"
-            f"\nPRODUCTION CONTRACT & SPECIFICATION:\n"
-            f"1. TARGET DURATION: 21–25 seconds spoken narration.\n"
-            f"2. WORD COUNT SPECIFICATION (CRITICAL):\n"
-            f"   - HARD MINIMUM: {active_profile.min_words} words\n"
-            f"   - HARD MAXIMUM: {active_profile.max_words} words\n"
-            f"   - PREFERRED TARGET: {active_profile.target_words} total across all 5 stages combined.\n"
-            f"3. 5-STAGE NARRATIVE STRUCTURE:\n"
-            f"   - hook: {active_profile.beat_descriptions.get('hook', 'Immediate curiosity/tension gap (6-14 words).')}\n"
-            f"   - context: {active_profile.beat_descriptions.get('context', 'Rapid setting and background grounding.')}\n"
-            f"   - escalation: {active_profile.beat_descriptions.get('escalation', 'Rising stakes, intensifying conflict or progression.')}\n"
-            f"   - reveal: {active_profile.beat_descriptions.get('reveal', 'The definitive payoff/climax.')}\n"
-            f"   - loop_twist: {active_profile.beat_descriptions.get('loop_twist', 'Complete final resolution and loop-compatible ending statement.')}\n"
-            f"4. FACTUAL POLICY (CRITICAL QUALITY GATE):\n"
+            f"\nHARD PRODUCTION CONTRACT & SPECIFICATION:\n"
+            f"1. TARGET DURATION: 21–24 seconds spoken narration.\n"
+            f"2. HARD WORD COUNT BOUNDS (MANDATORY):\n"
+            f"   - STRICT MINIMUM: {active_profile.min_words} words\n"
+            f"   - STRICT MAXIMUM: {active_profile.max_words} words\n"
+            f"   - OPTIMAL TARGET: {active_profile.target_words} total across all 5 stages combined.\n"
+            f"   - Any script with fewer than {active_profile.min_words} or more than {active_profile.max_words} words will be REJECTED.\n"
+            f"3. 5-STAGE RETENTION STRUCTURE:\n"
+            f"   - hook: Strictly 1-8 words. Immediate contradiction, paradox, or shock. NEVER begin with a year, date, month, location, or 'Did you know'.\n"
+            f"   - context: Rapid setting and background grounding with forward momentum.\n"
+            f"   - escalation: Rising stakes, intensifying conflict or bizarre progression.\n"
+            f"   - reveal: The peak absurdity, definitive payoff, or climax.\n"
+            f"   - loop_twist: Seamless loop resolution reconnecting to the opening premise. NO artificial phrases like 'And that's why' or 'Now you know'.\n"
+            f"4. CLEAN SPOKEN TEXT (NO MARKDOWN):\n"
+            f"   - Plain spoken text ONLY. Strictly NO Markdown (*, **, _, #), stage directions, or bracketed instructions.\n"
+            f"5. FACTUAL POLICY (CRITICAL QUALITY GATE):\n"
             f"   - {active_profile.factual_policy}\n"
-            f"5. STYLE & CADENCE:\n"
+            f"6. STYLE & CADENCE:\n"
             f"   - {active_profile.preferred_cadence}\n"
             f"   - NO AI CLICHÉS: NEVER use {cliches_str}.\n"
             f"{extra_inst}"
             f"SELF-CHECK BEFORE RETURNING JSON:\n"
-            f"   - Verify total word count is {active_profile.min_words}-{active_profile.max_words} words (aim for {active_profile.target_words}).\n"
-            f"   - Verify all 5 narrative keys exist.\n"
-            f"   - Verify all facts are 100% grounded in supplied research.\n"
+            f"   - Count words: Total word count MUST be between {active_profile.min_words} and {active_profile.max_words} words.\n"
+            f"   - Verify hook is 1-8 words and does NOT start with a date or location.\n"
+            f"   - Verify zero markdown formatting in values.\n"
+            f"   - Verify all 5 narrative keys exist: hook, context, escalation, reveal, loop_twist.\n"
             f"{feedback_instruction}\n"
             f"Output strictly valid JSON with keys: hook, context, escalation, reveal, loop_twist"
         )
@@ -598,6 +696,12 @@ class ScriptEngine:
             if not data:
                 cleaned = raw_text.replace("```json", "").replace("```", "").strip()
                 data = json.loads(cleaned)
+
+        if data and isinstance(data, dict):
+            for k in ["hook", "context", "escalation", "reveal", "loop_twist"]:
+                if k in data:
+                    data[k] = sanitize_script_text(str(data[k]))
+
         return data
 
     def generate_script(
@@ -923,17 +1027,19 @@ class ScriptEngine:
             f"5. MEANINGFULLY DISTINCT NARRATIVES:\n"
             f"   - Do NOT reuse the same story, facts, angle, hook structure, or opening phrase across scripts.\n"
             f"   - Each script must have a distinct hook archetype, unique dramatic tension, and different tone.\n"
-            f"6. 5-STAGE NARRATIVE STRUCTURE (for each script):\n"
-            f"   - hook: {active_profile.beat_descriptions.get('hook', 'Immediate curiosity/tension gap (6-14 words).')}\n"
-            f"   - context: {active_profile.beat_descriptions.get('context', 'Clear, rapid setting and grounding with forward momentum.')}\n"
-            f"   - escalation: {active_profile.beat_descriptions.get('escalation', 'Rising stakes, intensifying conflict or progression.')}\n"
-            f"   - reveal: {active_profile.beat_descriptions.get('reveal', 'The definitive payoff/climax.')}\n"
-            f"   - loop_twist: {active_profile.beat_descriptions.get('loop_twist', 'Complete final resolution and loop-compatible ending statement.')}\n"
-            f"7. STRICT FACTUAL GROUNDING:\n"
+            f"6. 5-STAGE RETENTION STRUCTURE (for each script):\n"
+            f"   - hook: Strictly 1-8 words. Immediate contradiction, paradox, or shock. NEVER start with a year, date, month, or location.\n"
+            f"   - context: Clear, rapid setting and grounding with forward momentum.\n"
+            f"   - escalation: Rising stakes, intensifying conflict or progression.\n"
+            f"   - reveal: The definitive payoff/climax.\n"
+            f"   - loop_twist: Complete final resolution and seamless loop-compatible ending statement. Zero artificial loop phrases.\n"
+            f"7. CLEAN SPOKEN TEXT (NO MARKDOWN):\n"
+            f"   - Plain spoken text ONLY. Strictly NO Markdown (*, **, _, #), stage directions, or bracketed instructions.\n"
+            f"8. STRICT FACTUAL GROUNDING:\n"
             f"   - {active_profile.factual_policy}\n"
-            f"8. FORBIDDEN AI CLICHÉS IN ALL SCRIPTS:\n"
+            f"9. FORBIDDEN AI CLICHÉS IN ALL SCRIPTS:\n"
             f"   - NEVER use {cliches_str}.\n"
-            f"9. STYLE & CADENCE:\n"
+            f"10. STYLE & CADENCE:\n"
             f"   - {active_profile.preferred_cadence}\n\n"
             f"OUTPUT FORMAT — strictly valid JSON object matching this exact schema:\n"
             f"{{\n"
@@ -952,7 +1058,8 @@ class ScriptEngine:
             f"SELF-CHECK BEFORE RETURNING:\n"
             f"- Verify 'scripts' list has EXACTLY {n} elements.\n"
             f"- Verify each element has all 5 keys: hook, context, escalation, reveal, loop_twist.\n"
-            f"- Verify every script word count is between {active_profile.min_words} and {active_profile.max_words} words."
+            f"- Verify every script word count is between {active_profile.min_words} and {active_profile.max_words} words.\n"
+            f"- Verify every hook is 1-8 words and does NOT start with a date or location."
         )
 
         raw_text = ""
@@ -1019,6 +1126,10 @@ class ScriptEngine:
             if missing:
                 failures.append(f"Missing required keys: {sorted(missing)}")
                 return False, failures
+
+            # Sanitize all fields
+            for k in REQUIRED_KEYS:
+                script_dict[k] = sanitize_script_text(str(script_dict.get(k, "")))
 
             # Word count check
             full_text = " ".join(str(script_dict.get(k, "")).strip() for k in ["hook", "context", "escalation", "reveal", "loop_twist"])

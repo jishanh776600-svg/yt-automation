@@ -150,11 +150,11 @@ HISTORICAL_PROFILE = ContentProfile(
         "Craft punchy, voiceover-optimized scripts that hook viewers instantly and loop seamlessly."
     ),
     beat_descriptions={
-        "hook": "Immediate curiosity gap (6-14 words). Mention the year, number, or absurd premise. No filler.",
+        "hook": "Immediate shock or contradiction hook (1-8 words). Start inside the impossible situation, paradox, or surprising fact. ZERO dates, years, months, locations, or rhetorical questions.",
         "context": "Rapid setting and character introduction with forward momentum.",
         "escalation": "The bizarre turn of events that made the situation worse or stranger.",
         "reveal": "The peak of the absurdity or the surprising climax.",
-        "loop_twist": "A clever punchline that wraps the story and seamlessly loops back to the hook."
+        "loop_twist": "A clever punchline that wraps the story and seamlessly loops back to the hook. No artificial phrases like 'And that's why'."
     },
     factual_policy=(
         "Use ONLY documented historical facts supported by primary/encyclopedic research. "
@@ -165,22 +165,36 @@ HISTORICAL_PROFILE = ContentProfile(
         "unbelievable true story",
         "events spiraled",
         "events rapidly spiraled",
+        "events rapidly spiraled out of control",
         "shocked historians",
+        "what happened next shocked historians",
         "changed history forever",
+        "history would never be the same",
+        "the shocking truth",
         "you won't believe",
         "believe it or not",
         "did you know",
         "what happened next",
         "things got worse",
+        "things quickly escalated",
+        "everything changed",
+        "little did they know",
+        "for reasons unknown",
+        "something strange happened",
+        "this unbelievable story",
+        "and that's why",
+        "that's the mystery",
+        "which brings us back",
+        "now you know",
         "mind-blowing"
     ],
     hook_markers=[
-        r"\b(1\d{3}|20\d{2}|thousands|hundreds|minutes|miles|tons|first|only|deadliest|disaster|war|king|crisis)\b"
+        r"\b(thousands|hundreds|minutes|miles|tons|first|only|deadliest|disaster|war|king|crisis|shattered|surrendered|marched|returned|exploded|burst|vanished|danced|survived|plunged|retreated)\b"
     ],
     preferred_cadence="Natural spoken American English. Short, punchy sentences (6-12 words/sentence). Zero filler.",
-    min_words=45,
-    max_words=68,
-    target_words="50-55 words",
+    min_words=50,
+    max_words=56,
+    target_words="52-54 words",
     discovery_profile=HISTORICAL_DISCOVERY_PROFILE,
     deduplication_policy="historical_year_location",
     research_strategy="wikipedia",

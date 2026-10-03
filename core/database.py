@@ -27,7 +27,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.close()
 
 
-SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=engine))
 
 
 def rebind_engine(new_db_path):
@@ -46,7 +46,7 @@ def rebind_engine(new_db_path):
         echo=False,
         connect_args={"check_same_thread": False, "timeout": 30.0}
     )
-    SessionLocal.configure(bind=engine)
+    SessionLocal.configure(bind=engine, expire_on_commit=False)
 
 
 def init_db(target_engine=None):

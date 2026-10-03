@@ -8,7 +8,10 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 import requests
-import trafilatura
+try:
+    import trafilatura
+except ImportError:
+    trafilatura = None
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +46,8 @@ class ArticleExtractor:
                 retrieval_status="SUCCESS",
                 error_message="Empty HTML content"
             )
+        if not trafilatura:
+            return ExtractionResult(extraction_status="SKIPPED", error_message="trafilatura not installed")
 
         try:
             bare = trafilatura.bare_extraction(
