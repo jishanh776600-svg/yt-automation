@@ -13,12 +13,22 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "01 — PROJECT MASTER/Project Overview.md",
+                "file": "AL-AMR/00 - Master Dashboard.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Project Overview"
+              "title": "00 - Master Dashboard"
+            }
+          },
+          {
+            "id": "92cec74ab9591665",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "New tab"
             }
           }
         ]
@@ -99,7 +109,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Learning/strategy_insights.md",
+                "file": "AL-AMR/00 - Master Dashboard.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -174,8 +184,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -189,6 +198,12 @@
   },
   "active": "7f2a539852c6a5a1",
   "lastOpenFiles": [
+    "Untitled",
+    "Untitled.base",
+    "Untitled.canvas",
+    "Untitled.md",
+    "clipping",
+    "01 — PROJECT MASTER/Project Overview.md",
     "10 - Decisions & Engineering Principles.md",
     "Index.md",
     "02 - Production Pipeline.md",
@@ -203,7 +218,6 @@
     "02 — ARCHITECTURE/Cloud & Storage Topology.md",
     "01 — PROJECT MASTER/Vision & Editorial Philosophy.md",
     "01 — PROJECT MASTER/Roadmap & Observation Strategy.md",
-    "01 — PROJECT MASTER/Project Overview.md",
     "01 — PROJECT MASTER/Operating Principles & Invariants.md",
     "10 — CHANGELOG/System Master Changelog.md",
     "09 — INCIDENTS & FIXES/Incident 8 — Cloud Lock Deadlock & Seed Exhaustion.md",
@@ -213,8 +227,6 @@
     "07 — MISSION CONTROL/Health Check & System Diagnostics.md",
     "07 — MISSION CONTROL/Render Dashboard & Operator Queue.md",
     "07 — MISSION CONTROL/Operational State & Inventory.md",
-    "06 — INTELLIGENCE/Decommissioned Current-Affairs Architecture.md",
-    "06 — INTELLIGENCE/Closed-Loop Telemetry & Learning Engine.md",
     "10 — CHANGELOG",
     "09 — INCIDENTS & FIXES",
     "08 — TESTING",
@@ -222,8 +234,6 @@
     "06 — INTELLIGENCE",
     "05 — PUBLISHING",
     "04 — CONTENT PRODUCTION",
-    "03 — AUTONOMOUS OPERATIONS",
-    "02 — ARCHITECTURE",
-    "01 — PROJECT MASTER"
+    "03 — AUTONOMOUS OPERATIONS"
   ]
 }

@@ -1,0 +1,521 @@
+[
+  {
+    "index": 1,
+    "key": "short_1_mystery",
+    "subject_category": "Historical mystery / disappearance",
+    "topic_title": "The Ghost Ship Mary Celeste Disappearance (1872)",
+    "job_id": "job_comm_final_1_378424",
+    "final_state": "READY_TO_UPLOAD",
+    "success": true,
+    "execution_time_sec": 0.45,
+    "stages": [
+      {
+        "stage": "VISUAL_PLAN",
+        "status": "SUCCESS",
+        "duration_sec": 0.05
+      },
+      {
+        "stage": "ASSETS",
+        "status": "SUCCESS",
+        "duration_sec": 0.1
+      },
+      {
+        "stage": "TTS",
+        "status": "SUCCESS",
+        "duration_sec": 0.05
+      },
+      {
+        "stage": "AUDIO",
+        "status": "SUCCESS",
+        "duration_sec": 0.05
+      },
+      {
+        "stage": "RENDER",
+        "status": "SUCCESS",
+        "duration_sec": 0.1
+      },
+      {
+        "stage": "QA",
+        "status": "SUCCESS",
+        "duration_sec": 0.05
+      },
+      {
+        "stage": "READY",
+        "status": "SUCCESS",
+        "duration_sec": 0.05
+      }
+    ],
+    "render_validation": {
+      "is_valid": true,
+      "width": 1080,
+      "height": 1920,
+      "duration": 24.0,
+      "fps": 30.0,
+      "codec": "h264",
+      "file_size_bytes": 39513081,
+      "aspect_ratio": "1080:1920"
+    },
+    "qa_passed": true,
+    "qa_score": 1.0,
+    "qa_notes": null,
+    "assets_used_count": 10,
+    "shot_telemetry": [
+      {
+        "asset_id": "ast_59bc8e42c249",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_393eb5de90.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'Mary Celeste 1872 merchant ship Mary Celest'"
+      },
+      {
+        "asset_id": "ast_98f2b072e718",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_ea1884704a.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'Mary Celeste 1872 merchant ship Mary Celest'"
+      },
+      {
+        "asset_id": "ast_de7d7c3341ee",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_3531f7f0e4.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'Atlantic Ocean 1872 merchant ship Mary Celest'"
+      },
+      {
+        "asset_id": "ast_accdcce1a786",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_28f74e72c8.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'Mary Celeste 1872 merchant ship Mary Celest'"
+      },
+      {
+        "asset_id": "ast_cf722c6e1336",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_d81d8f0e68.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'Mary Celeste 1872 merchant ship Mary Celest'"
+      },
+      {
+        "asset_id": "ast_0ccd5de8168a",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_88ce046ffe.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'Mary Celeste 1872 merchant ship Mary Celest'"
+      },
+      {
+        "asset_id": "ast_1b27262af720",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_ddb0f89271.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'Mary Celeste 1872 merchant ship Mary Celest'"
+      },
+      {
+        "asset_id": "ast_a0cc686e7c32",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_29d11eb4d1.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'Mary Celeste 1872 merchant ship Mary Celest'"
+      },
+      {
+        "asset_id": "ast_66b21146458e",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_61d28a007d.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'Mary Celeste 1872 merchant ship Mary Celest'"
+      },
+      {
+        "asset_id": "ast_a62f07843110",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_29dd3daf35.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'Mary Celeste 1872 merchant ship Mary Celest'"
+      }
+    ]
+  },
+  {
+    "index": 2,
+    "key": "short_2_disaster",
+    "subject_category": "Bizarre historical event / disaster",
+    "topic_title": "The London Beer Flood of 1814",
+    "job_id": "job_comm_final_2_7f27fb",
+    "final_state": "READY_TO_UPLOAD",
+    "success": true,
+    "execution_time_sec": 1302.54,
+    "stages": [
+      {
+        "stage": "VISUAL_PLAN",
+        "status": "SUCCESS",
+        "duration_sec": 0.02
+      },
+      {
+        "stage": "ASSETS",
+        "status": "SUCCESS",
+        "duration_sec": 1197.11
+      },
+      {
+        "stage": "TTS",
+        "status": "SUCCESS",
+        "duration_sec": 15.75
+      },
+      {
+        "stage": "AUDIO",
+        "status": "SUCCESS",
+        "duration_sec": 17.32
+      },
+      {
+        "stage": "RENDER",
+        "status": "SUCCESS",
+        "duration_sec": 71.67
+      },
+      {
+        "stage": "QA",
+        "status": "SUCCESS",
+        "duration_sec": 0.66
+      },
+      {
+        "stage": "READY",
+        "status": "SUCCESS",
+        "duration_sec": 0.0
+      }
+    ],
+    "render_validation": {
+      "is_valid": true,
+      "width": 1080,
+      "height": 1920,
+      "duration": 24.0,
+      "fps": 30.0,
+      "codec": "h264",
+      "file_size_bytes": 39853171,
+      "aspect_ratio": "1080:1920"
+    },
+    "qa_passed": true,
+    "qa_score": 1.0,
+    "qa_notes": null,
+    "assets_used_count": 10,
+    "shot_telemetry": [
+      {
+        "asset_id": "ast_55bf66090d23",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_85f6ab5e73.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'London 1814 London struck water fifte'"
+      },
+      {
+        "asset_id": "ast_bd5ea2eaeab9",
+        "source": "real_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_5f5ce768dd.mp4",
+        "provenance": "Acquired via real_video_pool for query 'London struck London'"
+      },
+      {
+        "asset_id": "ast_cc5f126e6f66",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_dbfa33ee19.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'London 1814 London struck water fifte'"
+      },
+      {
+        "asset_id": "ast_fa69df516bb5",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_661f248265.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'Meux 1814 London struck water fifte'"
+      },
+      {
+        "asset_id": "ast_bbba041885e3",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_fcbf29c552.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'London 1814 London struck water fifte'"
+      },
+      {
+        "asset_id": "ast_b9e323b6b984",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_037cd11c6b.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'London 1814 London struck water fifte'"
+      },
+      {
+        "asset_id": "ast_1f8ffa561fb4",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_c9d84ac463.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'London 1814 London struck water fifte'"
+      },
+      {
+        "asset_id": "ast_4fc2797d6dff",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_e2eca8d4a0.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'London 1814 London struck water fifte'"
+      },
+      {
+        "asset_id": "ast_4aef8c01960e",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_b2820074c7.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'London flooded London'"
+      },
+      {
+        "asset_id": "ast_2b664e5a7436",
+        "source": "real_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_1bd326ae04.mp4",
+        "provenance": "Acquired via real_video_pool for query 'Act ruled London'"
+      }
+    ]
+  },
+  {
+    "index": 3,
+    "key": "short_3_archaeology",
+    "subject_category": "Unusual war / archaeological event",
+    "topic_title": "The Antikythera Mechanism: Ancient Greek Computer (1901)",
+    "job_id": "job_comm_final_3_95fff6",
+    "final_state": "READY_TO_UPLOAD",
+    "success": true,
+    "execution_time_sec": 425.41,
+    "stages": [
+      {
+        "stage": "VISUAL_PLAN",
+        "status": "SUCCESS",
+        "duration_sec": 0.01
+      },
+      {
+        "stage": "ASSETS",
+        "status": "SUCCESS",
+        "duration_sec": 297.71
+      },
+      {
+        "stage": "TTS",
+        "status": "SUCCESS",
+        "duration_sec": 15.96
+      },
+      {
+        "stage": "AUDIO",
+        "status": "SUCCESS",
+        "duration_sec": 11.67
+      },
+      {
+        "stage": "RENDER",
+        "status": "SUCCESS",
+        "duration_sec": 98.98
+      },
+      {
+        "stage": "QA",
+        "status": "SUCCESS",
+        "duration_sec": 1.07
+      },
+      {
+        "stage": "READY",
+        "status": "SUCCESS",
+        "duration_sec": 0.0
+      }
+    ],
+    "render_validation": {
+      "is_valid": true,
+      "width": 1080,
+      "height": 1920,
+      "duration": 26.733333,
+      "fps": 30.0,
+      "codec": "h264",
+      "file_size_bytes": 45833504,
+      "aspect_ratio": "1080:1920"
+    },
+    "qa_passed": true,
+    "qa_score": 1.0,
+    "qa_notes": null,
+    "assets_used_count": 10,
+    "shot_telemetry": [
+      {
+        "asset_id": "ast_7ea8a02f51cf",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_f157d2d806.mp4",
+        "provenance": "Acquired via archival_video_pool for query '1901 divers found corroded bro'"
+      },
+      {
+        "asset_id": "ast_ae9dfd64df6f",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_9b56ae6fdd.mp4",
+        "provenance": "Acquired via archival_video_pool for query '1901 divers found corroded bro'"
+      },
+      {
+        "asset_id": "ast_efba2f1538c8",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_54a8445ccc.mp4",
+        "provenance": "Acquired via archival_video_pool for query 'Roman 1901 divers found corroded bro'"
+      },
+      {
+        "asset_id": "ast_d415f46aac4b",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_8ef12d087e.mp4",
+        "provenance": "Acquired via archival_video_pool for query '1901 divers found corroded bro'"
+      },
+      {
+        "asset_id": "ast_e3aba33a77e7",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_9393d733d9.mp4",
+        "provenance": "Acquired via archival_video_pool for query '1901 divers found corroded bro'"
+      },
+      {
+        "asset_id": "ast_860714750655",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_af8ccc613d.mp4",
+        "provenance": "Acquired via archival_video_pool for query '1901 divers found corroded bro'"
+      },
+      {
+        "asset_id": "ast_d19ec7ed559c",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_f8b5ef500b.mp4",
+        "provenance": "Acquired via archival_video_pool for query '1901 divers found corroded bro'"
+      },
+      {
+        "asset_id": "ast_a86b95c55922",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_c83e0c9bc9.mp4",
+        "provenance": "Acquired via archival_video_pool for query '1901 divers found corroded bro'"
+      },
+      {
+        "asset_id": "ast_73f8b6475157",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_402bca263a.mp4",
+        "provenance": "Acquired via archival_video_pool for query '1901 divers found corroded bro'"
+      },
+      {
+        "asset_id": "ast_c90ce7b58cb0",
+        "source": "archival_video_pool",
+        "license": "Pexels License (Commercial $0)",
+        "width": 1080,
+        "height": 1920,
+        "duration": 2.4,
+        "is_video": true,
+        "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_ec0a7559b5.mp4",
+        "provenance": "Acquired via archival_video_pool for query '1901 divers found corroded bro'"
+      }
+    ]
+  }
+]

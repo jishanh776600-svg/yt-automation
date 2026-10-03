@@ -1,4 +1,4 @@
-﻿---
+---
 aliases:
   - AL-AMR Dashboard
   - Master Dashboard

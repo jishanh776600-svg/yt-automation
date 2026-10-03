@@ -1,4 +1,4 @@
-﻿"""
+"""
 Comprehensive Deterministic Tests for Niche-Agnostic Content Strategy Architecture.
 
 Verifies:
@@ -305,9 +305,9 @@ class TestNicheAgnosticScripting(unittest.TestCase):
 
         critic_hist = ScriptCritic(profile=HISTORICAL_PROFILE)
         script_hist = {
-            "hook": "In 1784, an Austrian army mistakenly opened fire on its own cavalry.",
+            "hook": "An army opened fire on its own cavalry.",
             "context": "Soldiers bought barrels of schnapps and refused to share with arriving infantry.",
-            "escalation": "A drunken skirmish erupted and panic spread through the camp in darkness.",
+            "escalation": "A drunken brawl erupted and panic spread through the camp in darkness.",
             "reveal": "Artillery batteries fired on friendly lines believing the enemy had invaded.",
             "loop_twist": "Thousands fell before dawn without seeing a single opposing enemy soldier."
         }

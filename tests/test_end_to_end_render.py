@@ -18,6 +18,8 @@ from core.models import Job, Topic, RenderOutput, QAReport, UploadRecord
 class TestEndToEndPipeline(unittest.TestCase):
 
     def setUp(self):
+        import os
+        os.environ["TEST_MODE"] = "true"
         self.pipeline = ShortsPipeline()
         self.db = SessionLocal()
 

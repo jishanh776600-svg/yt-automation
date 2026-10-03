@@ -1,0 +1,125 @@
+{
+  "final_mp4": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\renders\\short_job_faa67a186924_1080x1920.mp4",
+  "total_duration": 26.7,
+  "width": 1080,
+  "height": 1920,
+  "fps": 30.0,
+  "total_frames": 801,
+  "total_shots": 5,
+  "moving_shots": 5,
+  "talking_head_shots": 0,
+  "watermark_shots": 0,
+  "contact_sheet": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\output\\qa_step8g\\contact_sheet_step8g_qa.jpg",
+  "shots": [
+    {
+      "shot_index": 1,
+      "shot_id": "shot_01",
+      "timeline_interval": [
+        0.0,
+        5.0
+      ],
+      "duration": 5.0,
+      "search_query": "black hole accretion disk visualization 13326",
+      "narrative_stage": "HOOK",
+      "source_platform": "youtube",
+      "source_tier": "TIER_1_DIRECT_INSTITUTIONAL",
+      "source_content_class": "INSTITUTIONAL_VISUALIZATION",
+      "source_url": "https://www.youtube.com/watch?v=dGEIsnBRWGs",
+      "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_e0ab60782f.mp4",
+      "is_moving_video": true,
+      "mean_pixel_delta": 5.1,
+      "mean_sharpness": 584.2,
+      "has_presenter_talking_head": false,
+      "has_persistent_watermark": false,
+      "visual_description": "Supermassive black hole accretion disk simulation in deep space with warped light"
+    },
+    {
+      "shot_index": 2,
+      "shot_id": "shot_02",
+      "timeline_interval": [
+        5.0,
+        10.0
+      ],
+      "duration": 5.0,
+      "search_query": "orbiting a bare black hole visualization 14620",
+      "narrative_stage": "CONTEXT",
+      "source_platform": "nasa_svs",
+      "source_tier": "TIER_1_DIRECT_INSTITUTIONAL",
+      "source_content_class": "INSTITUTIONAL_VISUALIZATION",
+      "source_url": "https://svs.gsfc.nasa.gov/vis/a010000/a014900/a014916/NASA_GRB_Sequence_Final_v01.mp4",
+      "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_4f6572869d.mp4",
+      "is_moving_video": true,
+      "mean_pixel_delta": 5.28,
+      "mean_sharpness": 664.4,
+      "has_presenter_talking_head": false,
+      "has_persistent_watermark": false,
+      "visual_description": "Swirling accretion disk of plasma spinning at near light speed"
+    },
+    {
+      "shot_index": 3,
+      "shot_id": "shot_03",
+      "timeline_interval": [
+        10.0,
+        15.0
+      ],
+      "duration": 5.0,
+      "search_query": "approaching a black hole visualization 14619",
+      "narrative_stage": "ESCALATION",
+      "source_platform": "youtube",
+      "source_tier": "TIER_1_DIRECT_INSTITUTIONAL",
+      "source_content_class": "INSTITUTIONAL_VISUALIZATION",
+      "source_url": "https://www.youtube.com/watch?v=QqsLTNkzvaY",
+      "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\framed_e7e3b676cf.mp4",
+      "is_moving_video": true,
+      "mean_pixel_delta": 2.75,
+      "mean_sharpness": 909.6,
+      "has_presenter_talking_head": false,
+      "has_persistent_watermark": false,
+      "visual_description": "Relativistic Doppler beaming asymmetry and light bending around black hole"
+    },
+    {
+      "shot_index": 4,
+      "shot_id": "shot_04",
+      "timeline_interval": [
+        15.0,
+        20.0
+      ],
+      "duration": 5.0,
+      "search_query": "Albert Einstein general relativity manuscript paper study",
+      "narrative_stage": "REVEAL",
+      "source_platform": "procedural_3d",
+      "source_tier": "TIER_1_DIRECT_INSTITUTIONAL",
+      "source_content_class": "INSTITUTIONAL_VISUALIZATION",
+      "source_url": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\cand_proc3d_6d8d1a6a_evidence_motion.mp4",
+      "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\cand_proc3d_6d8d1a6a_evidence_motion.mp4",
+      "is_moving_video": true,
+      "mean_pixel_delta": 2.09,
+      "mean_sharpness": 664.8,
+      "has_presenter_talking_head": false,
+      "has_persistent_watermark": false,
+      "visual_description": "Scientific paper on general relativity and gravitational field equations"
+    },
+    {
+      "shot_index": 5,
+      "shot_id": "shot_05",
+      "timeline_interval": [
+        20.0,
+        25.0
+      ],
+      "duration": 5.0,
+      "search_query": "spacetime time dilation Schwarzschild metric relativity simulation",
+      "narrative_stage": "TWIST",
+      "source_platform": "procedural_3d",
+      "source_tier": "TIER_1_DIRECT_INSTITUTIONAL",
+      "source_content_class": "INSTITUTIONAL_VISUALIZATION",
+      "source_url": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\cand_proc3d_984a4467_evidence_motion.mp4",
+      "local_path": "C:\\Users\\jisha\\OneDrive\\Desktop\\yt automation\\data\\assets\\cand_proc3d_984a4467_evidence_motion.mp4",
+      "is_moving_video": true,
+      "mean_pixel_delta": 2.84,
+      "mean_sharpness": 749.1,
+      "has_presenter_talking_head": false,
+      "has_persistent_watermark": false,
+      "visual_description": "Schwarzschild metric relativistic proper time dilation calculation and spacetime curvature"
+    }
+  ]
+}

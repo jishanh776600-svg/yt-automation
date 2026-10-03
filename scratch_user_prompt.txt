@@ -1,0 +1,517 @@
+<USER_REQUEST>
+STEP 8 — REAL VISUAL QUALITY CORRECTION
+
+YOU ARE THE IMPLEMENTATION AGENT.
+
+🚨🚨🚨 ABSOLUTE RULE — NO TESTS 🚨🚨🚨
+
+DO NOT CREATE TESTS.
+
+DO NOT RUN TESTS.
+
+DO NOT SPEND TIME ON TESTING.
+
+Specifically:
+
+❌ NO pytest
+❌ NO unit tests
+❌ NO regression tests
+❌ NO integration tests
+❌ NO test suites
+❌ NO synthetic fixtures
+❌ NO mock test videos
+❌ NO test-only scripts
+❌ NO broad validation suites
+❌ NO writing new test files
+❌ NO running existing test suites
+
+I do NOT want hours spent on tests.
+
+This step is about fixing the ACTUAL PRODUCTION PIPELINE.
+
+The ONLY validation allowed is:
+
+REAL PRODUCTION CODE
+→ ONE REAL QA SHORT
+→ INSPECT THE ACTUAL FINAL MP4
+
+Do not create a test suite around it.
+
+==================================================
+OBJECTIVE
+==================================================
+
+I personally inspected the THREE ACTUAL rendered Shorts.
+
+They are better than the previous version, but there are still serious production-quality problems.
+
+Fix the ACTUAL production implementation.
+
+Do not generate another theoretical architecture report.
+
+Do not optimize for passing tests.
+
+Optimize for the actual video that the viewer sees.
+
+==================================================
+PROBLEM 1 — YOUTUBE CREATOR / EXPLAINER FOOTAGE
+==================================================
+
+One of the rendered Shorts literally contains footage of a male YouTube creator explaining the SAME SUBJECT.
+
+This is unacceptable.
+
+We need:
+
+"FOOTAGE SHOWING THE SUBJECT/EVENT"
+
+NOT:
+
+"FOOTAGE OF SOMEONE EXPLAINING THE SUBJECT/EVENT"
+
+Reject visual moments containing:
+
+- YouTube creators talking to camera
+- talking heads
+- educational presenters
+- reaction videos
+- podcasts
+- interviews
+- lectures
+- studio presenters
+- documentary presenters
+- "explainer" videos
+- "top facts" creators
+- commentary channels
+- review channels
+- other creator narration.
+
+IMPORTANT:
+
+Do NOT simply reject every YouTube video.
+
+A YouTube source is allowed if the selected temporal segment contains genuine relevant real-world footage.
+
+Example:
+
+YouTube video:
+"Explaining the Lake Nyos disaster"
+
+If timestamp 00:32 shows the creator talking:
+
+REJECT THAT MOMENT.
+
+If timestamp 03:17 contains genuine archival footage of the Lake Nyos aftermath:
+
+THAT MOMENT MAY BE ACCEPTABLE.
+
+The decision must happen at the TEMPORAL MOMENT level.
+
+==================================================
+PROBLEM 2 — VISUAL MISMATCH
+==================================================
+
+Some footage is only vaguely related to the narration.
+
+Fix semantic matching.
+
+Hierarchy:
+
+1. EXACT SUBJECT / EVENT
+2. DIRECT PHYSICAL CONSEQUENCE
+3. AUTHENTIC HISTORICAL / ARCHIVAL CONTEXT
+4. CLOSE CONTEXTUAL FOOTAGE
+5. GENERIC FOOTAGE
+
+Prefer 1 over 2, 2 over 3, etc.
+
+Generic footage should NOT win simply because it has high visual quality.
+
+Example:
+
+Narration:
+"The lake suddenly released a massive cloud of CO₂."
+
+GOOD:
+- actual Lake Nyos footage
+- documented aftermath
+- relevant disaster footage
+- actual lake/area footage
+
+BAD:
+- random lake
+- random fog
+- random laboratory
+- generic scientist
+- YouTuber explaining CO₂.
+
+==================================================
+PROBLEM 3 — BLURRY FOOTAGE
+==================================================
+
+Some selected clips are visibly blurry/low quality.
+
+Do not allow obviously poor footage into the final render merely because it is semantically relevant.
+
+Evaluate:
+
+- resolution
+- sharpness
+- compression artifacts
+- pixelation
+- motion clarity
+- crop quality
+- usable visual detail.
+
+Use relevance AND quality.
+
+Conceptually:
+
+FINAL SCORE =
+RELEVANCE × USABLE QUALITY
+
+A relevant clip that is unusably blurry should be rejected when a usable alternative exists.
+
+Do NOT simply reject all historical low-resolution footage.
+
+Authentic archival footage can be lower quality when it is genuinely important and no better source exists.
+
+==================================================
+PROBLEM 4 — WATERMARKS / SOURCE BRANDING
+==================================================
+
+Reject footage containing obvious:
+
+- channel logos
+- creator watermarks
+- broadcaster branding
+- TikTok/Shorts/Reels marks
+- usernames
+- promotional overlays
+- persistent modern source branding.
+
+One rendered Short contained visible channel branding.
+
+That should not have passed.
+
+Natural historical labels or authentic archival markings are different and may remain when appropriate.
+
+==================================================
+PROBLEM 5 — REPEATED CLIPS
+==================================================
+
+The rendered Shorts still reuse visual material.
+
+Prevent:
+
+- same source interval repeated;
+- same extracted clip repeated;
+- near-identical temporal moment repeated;
+- same footage with a different crop;
+- same visual fingerprint appearing multiple times.
+
+Deduplication must operate at:
+
+SOURCE
+→ TEMPORAL RANGE
+→ EXTRACTED CLIP
+→ VISUAL FINGERPRINT
+→ FRAMED CLIP
+→ FINAL COMPOSITION
+
+If sufficient relevant footage is unavailable:
+
+USE FEWER SHOTS.
+
+Do NOT insert unrelated footage simply to reach a shot-count target.
+
+Relevance > quantity.
+
+==================================================
+PROBLEM 6 — MAPS / GRAPHICS / STATIC MATERIAL
+==================================================
+
+The final videos still contain things such as:
+
+- maps
+- animated maps
+- explanatory graphics
+- infographic animations
+- book/document visuals
+- presentation material
+- static explanatory imagery.
+
+We want REAL MOVING VIDEO.
+
+A camera moving over a static image does NOT magically make it real footage.
+
+Reject:
+
+- slideshow imagery
+- static maps
+- image-with-zoom
+- image-with-pan
+- presentation slides
+- infographic filler
+- static documents used as visual filler.
+
+A genuine moving shot of a real person physically handling a document/map may be acceptable if it directly matches the narration.
+
+==================================================
+PROBLEM 7 — SUBTITLES
+==================================================
+
+Inspect the ACTUAL subtitle implementation.
+
+We need two independent layers:
+
+1. NORMAL NARRATION SUBTITLES
+2. KINETIC EMPHASIS / KEYWORD POPS
+
+Narration subtitles must have a stable lower-third position.
+
+They must NOT randomly jump around the screen because the visual framing changes.
+
+Maintain safe margins.
+
+Keyword pops must not collide with narration subtitles.
+
+Do not display the same text twice unnecessarily.
+
+Fix the actual position/timing logic rather than adding random offsets.
+
+==================================================
+PROBLEM 8 — BGM IS WRONG
+==================================================
+
+CRITICAL:
+
+ONLY THESE FOUR APPROVED BGM TRACK CATEGORIES EXIST:
+
+1. best_historical
+   History / war / empires / political history
+
+2. flux_ambient
+   Mystery / artifacts / ciphers / dark discoveries / science discovery
+
+3. suspense_climax
+   Danger / tension / pursuit / thriller / escalation
+
+4. emotional_sad
+   Tragedy / loss / memorial / human suffering
+
+NO OTHER BGM MAY EVER BE SELECTED.
+
+The existing anti-repetition logic MUST NOT cause an irrelevant category to be selected.
+
+Correct priority:
+
+THEME MATCH
+>
+APPROVED TRACK
+>
+ANTI-REPETITION
+
+NOT:
+
+ANTI-REPETITION
+>
+THEME.
+
+If the correct category was recently used:
+
+select another approved track from the SAME correct category if available.
+
+Never select an irrelevant category merely because it has not been used recently.
+
+Preserve:
+
+- BGM bed ≈ -30 LUFS
+- final master ≈ -14 LUFS
+- zero SFX
+- existing audio architecture.
+
+==================================================
+PROBLEM 9 — VISUAL SOURCE QUALITY
+==================================================
+
+The retrieval system should distinguish:
+
+REAL EVENT FOOTAGE
+vs
+VIDEO ABOUT THE EVENT.
+
+It should also distinguish:
+
+PHYSICAL SUBJECT
+vs
+GENERIC ASSOCIATION.
+
+For each candidate, consider:
+
+- exact entity
+- action
+- environment
+- event
+- historical context
+- temporal relevance
+- source type
+- visual quality
+- creator/presenter probability
+- watermark probability
+- static/graphic probability.
+
+The scoring system must NOT let generic semantic similarity overpower exact scene relevance.
+
+==================================================
+DO NOT HARD-CODE A GIANT KEYWORD LIST
+==================================================
+
+Do not solve this by adding hundreds of topic-specific keywords.
+
+Build general semantic/source-role logic.
+
+The system should work for:
+
+- historical mysteries
+- bizarre events
+- disasters
+- wars
+- discoveries
+- archaeology
+- recent events
+- documented current events.
+
+==================================================
+PRESERVE EVERYTHING THAT ALREADY WORKS
+==================================================
+
+DO NOT modify:
+
+- scheduler
+- publishing rules
+- YouTube limits
+- Drive lifecycle
+- database semantics
+- TTS
+- script generation
+- topic architecture
+- visual retrieval Steps 1–7 unnecessarily
+- visual memory architecture unnecessarily
+- temporal extraction architecture unnecessarily
+- framing architecture unnecessarily
+- composition architecture unnecessarily.
+
+Only fix the actual failure points identified above.
+
+==================================================
+NO TESTS — AGAIN
+==================================================
+
+I explicitly do NOT want you spending hours testing.
+
+DO NOT:
+
+- create tests;
+- run tests;
+- create fixtures;
+- build a test framework;
+- run regression suites;
+- run pytest;
+- run broad automated validation.
+
+If you need to inspect something, inspect the REAL production code.
+
+If you need to verify something, use the REAL production pipeline.
+
+==================================================
+ONE REAL QA RENDER ONLY
+==================================================
+
+After implementing the fixes:
+
+Generate EXACTLY ONE real QA Short.
+
+This is NOT a test.
+
+It is an actual production-style Short rendered through the real pipeline.
+
+Do NOT generate three more Shorts.
+
+Do NOT generate synthetic videos.
+
+Do NOT create test fixtures.
+
+Inspect the actual final MP4 visually.
+
+==================================================
+REAL MP4 ACCEPTANCE
+==================================================
+
+The one real QA Short must be checked directly for:
+
+- real moving footage;
+- no creator talking-head footage;
+- no explainer footage;
+- no obvious visual mismatch;
+- no obviously blurry footage;
+- no unnecessary maps/graphics;
+- no static-image animation;
+- no source watermarks;
+- no repeated temporal clips;
+- correct subtitles;
+- correct approved BGM;
+- sensible BGM theme;
+- 9:16 framing;
+- correct pacing.
+
+The FINAL MP4 is the source of truth.
+
+Do NOT claim success because logs say:
+
+"candidate selected"
+
+or
+
+"scene validated"
+
+or
+
+"video-only=true".
+
+I care about what is actually visible in the rendered Short.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Report only:
+
+1. What production code was changed.
+2. What caused each actual failure.
+3. How each failure was fixed.
+4. The ONE real QA Short produced.
+5. Final MP4 path.
+6. Actual shot count.
+7. Shot-by-shot visual summary.
+8. Any remaining visible problem.
+9. BGM category + exact approved track selected.
+10. Subtitle behavior.
+11. Any failure encountered during implementation, including exact error/root cause/correction.
+
+DO NOT report a test count.
+
+DO NOT report "X tests passed".
+
+DO NOT spend time running tests.
+
+The goal is simple:
+
+MAKE THE ACTUAL SHORT LOOK GOOD.
+
+NO TESTS.
+ONE REAL RENDER.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-01T00:35:58+05:30.
+</ADDITIONAL_METADATA>

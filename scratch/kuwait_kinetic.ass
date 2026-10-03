@@ -1,0 +1,75 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial Black,86,&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,8,4,2,60,60,500,1
+Style: Punch,Arial Black,90,&H0000D7FF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,110,110,0,0,1,9,5,2,60,60,500,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:00.44,Default,,0,0,0,,{\c&H0000FFFF&\fscx115\fscy115}600{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}BURNING{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}OIL{\c&H00FFFFFF&}
+Dialogue: 0,0:00:00.44,0:00:00.76,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}600{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}BURNING{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}OIL{\c&H00FFFFFF&}
+Dialogue: 0,0:00:00.76,0:00:01.06,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}600{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}BURNING{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}OIL{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:01.06,0:00:01.44,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}WELLS{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}TURNED{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:01.44,0:00:01.74,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}WELLS{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}TURNED{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:01.74,0:00:01.92,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}WELLS{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}TURNED{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}THE{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:01.92,0:00:02.18,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}DESERT{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}SKY{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}-PITCHED{\c&H00FFFFFF&}
+Dialogue: 0,0:00:02.18,0:00:02.60,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}DESERT{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}SKY{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}-PITCHED{\c&H00FFFFFF&}
+Dialogue: 0,0:00:02.60,0:00:02.90,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}DESERT{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}SKY{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}-PITCHED{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:02.90,0:00:03.16,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}BLACK{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}AT{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}NOON.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:03.16,0:00:03.34,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}BLACK{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}AT{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}NOON.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:03.34,0:00:03.54,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}BLACK{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}AT{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}NOON.{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:04.00,0:00:04.34,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}RETREATING{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}FORCES{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}DETONATED{\c&H00FFFFFF&}
+Dialogue: 0,0:00:04.34,0:00:04.82,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}RETREATING{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}FORCES{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}DETONATED{\c&H00FFFFFF&}
+Dialogue: 0,0:00:04.82,0:00:05.36,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}RETREATING{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}FORCES{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}DETONATED{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:05.36,0:00:05.52,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}THE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}KUWAITI{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}OIL{\c&H00FFFFFF&}
+Dialogue: 0,0:00:05.52,0:00:05.90,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}KUWAITI{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}OIL{\c&H00FFFFFF&}
+Dialogue: 0,0:00:05.90,0:00:06.08,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}KUWAITI{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}OIL{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:06.08,0:00:06.96,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}FIELDS,{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}SPEWING{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}SIX{\c&H00FFFFFF&}
+Dialogue: 0,0:00:06.96,0:00:07.22,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}FIELDS,{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}SPEWING{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}SIX{\c&H00FFFFFF&}
+Dialogue: 0,0:00:07.22,0:00:07.56,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}FIELDS,{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}SPEWING{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}SIX{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:07.56,0:00:07.88,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}MILLION{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}BARRELS{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}OF{\c&H00FFFFFF&}
+Dialogue: 0,0:00:07.88,0:00:08.24,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}MILLION{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}BARRELS{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}OF{\c&H00FFFFFF&}
+Dialogue: 0,0:00:08.24,0:00:08.46,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}MILLION{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}BARRELS{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}OF{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:08.46,0:00:08.68,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}CRUDE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}INTO{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}TOWERING{\c&H00FFFFFF&}
+Dialogue: 0,0:00:08.68,0:00:09.00,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}CRUDE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}INTO{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}TOWERING{\c&H00FFFFFF&}
+Dialogue: 0,0:00:09.00,0:00:09.48,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}CRUDE{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}INTO{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}TOWERING{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:09.48,0:00:09.94,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}INFERNOS{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}EVERY{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}DAY.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:09.94,0:00:10.32,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}INFERNOS{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}EVERY{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}DAY.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:10.32,0:00:10.58,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}INFERNOS{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}EVERY{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}DAY.{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:11.04,0:00:11.28,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}STANDARD{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}WATER{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}HOSES{\c&H00FFFFFF&}
+Dialogue: 0,0:00:11.28,0:00:11.58,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}STANDARD{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}WATER{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}HOSES{\c&H00FFFFFF&}
+Dialogue: 0,0:00:11.58,0:00:11.96,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}STANDARD{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}WATER{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}HOSES{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:11.96,0:00:12.50,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}INSTANTLY{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}EVAPORATED{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}BEFORE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:12.50,0:00:13.16,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}INSTANTLY{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}EVAPORATED{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}BEFORE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:13.16,0:00:13.48,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}INSTANTLY{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}EVAPORATED{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}BEFORE{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:13.48,0:00:13.80,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}REACHING{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}FLAMES.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:13.80,0:00:13.98,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}REACHING{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}THE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}FLAMES.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:13.98,0:00:14.28,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}REACHING{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}FLAMES.{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:14.86,0:00:15.44,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}FIREFIGHTERS{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}MOUNTED{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}DUOMAI{\c&H00FFFFFF&}
+Dialogue: 0,0:00:15.44,0:00:15.76,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}FIREFIGHTERS{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}MOUNTED{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}DUOMAI{\c&H00FFFFFF&}
+Dialogue: 0,0:00:15.76,0:00:16.24,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}FIREFIGHTERS{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}MOUNTED{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}DUOMAI{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:16.24,0:00:16.46,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}G{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}-21{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}JET{\c&H00FFFFFF&}
+Dialogue: 0,0:00:16.46,0:00:16.78,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}G{\c&H00FFFFFF&} {\c&H0000FFFF&\fscx115\fscy115}-21{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}JET{\c&H00FFFFFF&}
+Dialogue: 0,0:00:16.78,0:00:17.22,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}G{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}-21{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}JET{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:17.22,0:00:17.58,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}ENGINES{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}TO{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}SOVIET{\c&H00FFFFFF&}
+Dialogue: 0,0:00:17.58,0:00:18.08,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}ENGINES{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}TO{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}SOVIET{\c&H00FFFFFF&}
+Dialogue: 0,0:00:18.08,0:00:18.48,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}ENGINES{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}TO{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}SOVIET{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:18.48,0:00:18.78,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}TANK{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}CHASSIS,{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}BLASTING{\c&H00FFFFFF&}
+Dialogue: 0,0:00:18.78,0:00:19.72,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}TANK{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}CHASSIS,{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}BLASTING{\c&H00FFFFFF&}
+Dialogue: 0,0:00:19.72,0:00:20.06,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}TANK{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}CHASSIS,{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}BLASTING{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:20.06,0:00:20.60,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}THOUSAND{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}GALLON{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}WATER{\c&H00FFFFFF&}
+Dialogue: 0,0:00:20.60,0:00:20.90,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}THOUSAND{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}GALLON{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}WATER{\c&H00FFFFFF&}
+Dialogue: 0,0:00:20.90,0:00:21.26,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}THOUSAND{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}GALLON{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}WATER{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:21.26,0:00:21.76,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}HURRICANES{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}AND{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}HIGH{\c&H00FFFFFF&}
+Dialogue: 0,0:00:21.76,0:00:22.38,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}HURRICANES{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}AND{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}HIGH{\c&H00FFFFFF&}
+Dialogue: 0,0:00:22.38,0:00:22.60,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}HURRICANES{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}AND{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}HIGH{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:22.60,0:00:23.20,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}EXPLOSIVES{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}TO{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}SNUFF{\c&H00FFFFFF&}
+Dialogue: 0,0:00:23.20,0:00:23.52,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}EXPLOSIVES{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}TO{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}SNUFF{\c&H00FFFFFF&}
+Dialogue: 0,0:00:23.52,0:00:23.80,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}EXPLOSIVES{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}TO{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}SNUFF{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:23.80,0:00:23.92,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}THE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}BLOWOUTS.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:23.92,0:00:24.46,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}BLOWOUTS.{\c&H00FFFFFF&\fscx100\fscy100}

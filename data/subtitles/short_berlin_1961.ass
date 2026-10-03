@@ -1,0 +1,75 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial Black,86,&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,8,4,2,60,60,500,1
+Style: Punch,Arial Black,90,&H0000D7FF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,110,110,0,0,1,9,5,2,60,60,500,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:00.10,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}IN{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}AUGUST{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}1961,{\c&H00FFFFFF&}
+Dialogue: 0,0:00:00.10,0:00:00.34,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}IN{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}AUGUST{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}1961,{\c&H00FFFFFF&}
+Dialogue: 0,0:00:00.34,0:00:01.30,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}IN{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}AUGUST{\c&H00FFFFFF&} {\c&H0000FFFF&\fscx115\fscy115}1961,{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:02.34,0:00:02.52,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}EAST{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}GERMAN{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}SOLDIERS{\c&H00FFFFFF&}
+Dialogue: 0,0:00:02.52,0:00:02.86,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}EAST{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}GERMAN{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}SOLDIERS{\c&H00FFFFFF&}
+Dialogue: 0,0:00:02.86,0:00:03.48,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}EAST{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}GERMAN{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}SOLDIERS{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:03.48,0:00:03.74,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}TORE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}UP{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}BERLIN'S{\c&H00FFFFFF&}
+Dialogue: 0,0:00:03.74,0:00:03.96,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}TORE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}UP{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}BERLIN'S{\c&H00FFFFFF&}
+Dialogue: 0,0:00:03.96,0:00:04.48,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}TORE{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}UP{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}BERLIN'S{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:04.48,0:00:04.66,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}STREETS{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}OVERNIGHT{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}WITH{\c&H00FFFFFF&}
+Dialogue: 0,0:00:04.66,0:00:05.10,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}STREETS{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}OVERNIGHT{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}WITH{\c&H00FFFFFF&}
+Dialogue: 0,0:00:05.10,0:00:05.38,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}STREETS{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}OVERNIGHT{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}WITH{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:05.38,0:00:05.76,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}BARBED{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}WIRE{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}AND{\c&H00FFFFFF&}
+Dialogue: 0,0:00:05.76,0:00:06.14,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}BARBED{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}WIRE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}AND{\c&H00FFFFFF&}
+Dialogue: 0,0:00:06.14,0:00:06.36,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}BARBED{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}WIRE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}AND{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:06.36,0:00:07.70,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}CONCRETE.{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}FAMILIES{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}WOKE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:07.70,0:00:08.00,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}CONCRETE.{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}FAMILIES{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}WOKE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:08.00,0:00:08.24,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}CONCRETE.{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}FAMILIES{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}WOKE{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:08.24,0:00:08.46,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}UP{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}TRAPPED{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}ON{\c&H00FFFFFF&}
+Dialogue: 0,0:00:08.46,0:00:08.72,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}UP{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}TRAPPED{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}ON{\c&H00FFFFFF&}
+Dialogue: 0,0:00:08.72,0:00:08.96,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}UP{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}TRAPPED{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}ON{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:08.96,0:00:09.34,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}OPPOSITE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}SIDES{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}OF{\c&H00FFFFFF&}
+Dialogue: 0,0:00:09.34,0:00:09.74,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}OPPOSITE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}SIDES{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}OF{\c&H00FFFFFF&}
+Dialogue: 0,0:00:09.74,0:00:09.94,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}OPPOSITE{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}SIDES{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}OF{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:09.94,0:00:10.04,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}THE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}BORDER.{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}TWO{\c&H00FFFFFF&}
+Dialogue: 0,0:00:10.02,0:00:10.92,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}BORDER.{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}TWO{\c&H00FFFFFF&}
+Dialogue: 0,0:00:10.92,0:00:11.07,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}BORDER.{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}TWO{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:11.06,0:00:11.20,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}MONTHS{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}LATER{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}AT{\c&H00FFFFFF&}
+Dialogue: 0,0:00:11.20,0:00:11.62,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}MONTHS{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}LATER{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}AT{\c&H00FFFFFF&}
+Dialogue: 0,0:00:11.62,0:00:11.82,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}MONTHS{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}LATER{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}AT{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:11.82,0:00:12.46,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}CHECKPOINT,{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}CHARLIE,{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}AMERICAN{\c&H00FFFFFF&}
+Dialogue: 0,0:00:12.46,0:00:13.36,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}CHECKPOINT,{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}CHARLIE,{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}AMERICAN{\c&H00FFFFFF&}
+Dialogue: 0,0:00:13.36,0:00:13.78,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}CHECKPOINT,{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}CHARLIE,{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}AMERICAN{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:13.78,0:00:14.00,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}AND{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}SOVIET{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}TANKS{\c&H00FFFFFF&}
+Dialogue: 0,0:00:14.00,0:00:14.34,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}AND{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}SOVIET{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}TANKS{\c&H00FFFFFF&}
+Dialogue: 0,0:00:14.34,0:00:14.76,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}AND{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}SOVIET{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}TANKS{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:14.76,0:00:15.06,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}FACED{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}OFF{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}BARREL{\c&H00FFFFFF&}
+Dialogue: 0,0:00:15.06,0:00:15.42,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}FACED{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}OFF{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}BARREL{\c&H00FFFFFF&}
+Dialogue: 0,0:00:15.42,0:00:15.68,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}FACED{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}OFF{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}BARREL{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:15.68,0:00:15.82,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}TO{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}BARREL{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}JUST{\c&H00FFFFFF&}
+Dialogue: 0,0:00:15.82,0:00:16.08,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}TO{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}BARREL{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}JUST{\c&H00FFFFFF&}
+Dialogue: 0,0:00:16.08,0:00:16.34,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}TO{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}BARREL{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}JUST{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:16.34,0:00:16.74,Default,,0,0,0,,{\c&H0000FFFF&\fscx115\fscy115}50{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}YARDS{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}APART.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:16.74,0:00:17.02,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}50{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}YARDS{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}APART.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:17.02,0:00:17.44,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}50{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}YARDS{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}APART.{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:18.10,0:00:18.38,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}FOR{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}16{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}TERRIFYING{\c&H00FFFFFF&}
+Dialogue: 0,0:00:18.38,0:00:18.80,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}FOR{\c&H00FFFFFF&} {\c&H0000FFFF&\fscx115\fscy115}16{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}TERRIFYING{\c&H00FFFFFF&}
+Dialogue: 0,0:00:18.80,0:00:19.38,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}FOR{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}16{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}TERRIFYING{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:19.38,0:00:20.56,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}HOURS,{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}WORLD{\c&H00FFFFFF&}
+Dialogue: 0,0:00:20.56,0:00:20.66,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}HOURS,{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}THE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}WORLD{\c&H00FFFFFF&}
+Dialogue: 0,0:00:20.62,0:00:20.82,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}HOURS,{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}WORLD{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:20.82,0:00:21.14,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}STOOD{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}INCHES{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}FROM{\c&H00FFFFFF&}
+Dialogue: 0,0:00:21.14,0:00:21.52,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}STOOD{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}INCHES{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}FROM{\c&H00FFFFFF&}
+Dialogue: 0,0:00:21.52,0:00:21.86,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}STOOD{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}INCHES{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}FROM{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:21.86,0:00:22.16,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}WORLD{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}WAR{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}III{\c&H00FFFFFF&}
+Dialogue: 0,0:00:22.16,0:00:22.38,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}WORLD{\c&H00FFFFFF&} {\c&H0000FFFF&\fscx115\fscy115}WAR{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}III{\c&H00FFFFFF&}
+Dialogue: 0,0:00:22.38,0:00:22.80,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}WORLD{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}WAR{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}III{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:22.80,0:00:23.44,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}UNTIL{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}DIPLOMATIC{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}BACKSHADOWS{\c&H00FFFFFF&}
+Dialogue: 0,0:00:23.44,0:00:23.90,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}UNTIL{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}DIPLOMATIC{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}BACKSHADOWS{\c&H00FFFFFF&}
+Dialogue: 0,0:00:23.90,0:00:24.66,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}UNTIL{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}DIPLOMATIC{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}BACKSHADOWS{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:24.66,0:00:25.14,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}AVERTED{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}CATASTROPHE.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:25.14,0:00:25.72,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}AVERTED{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}CATASTROPHE.{\c&H00FFFFFF&\fscx100\fscy100}

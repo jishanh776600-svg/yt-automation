@@ -136,6 +136,14 @@ class TestComprehensiveAutonomousPipeline(unittest.TestCase):
             id="upl_c_sched", job_id="job_c_sched", youtube_video_id="YT_C_SCHED", title="Sched", description="Test",
             status="SCHEDULED", privacy_status="private", scheduled_publish_at=now_utc + timedelta(hours=1)
         ))
+        from datetime import time as dtime
+        for day_offset in [1, 2]:
+            t_date = (now_utc + timedelta(days=day_offset)).date()
+            for h in [6, 11, 15]:
+                self.db.add(UploadRecord(
+                    id=f"upl_c_tom_{day_offset}_{h}", job_id=f"job_c_tom_{day_offset}_{h}", youtube_video_id=f"YT_C_TOM_{day_offset}_{h}", title=f"Tom {day_offset}_{h}", description="Test",
+                    status="SCHEDULED", privacy_status="private", scheduled_publish_at=datetime.combine(t_date, dtime(h, 0))
+                ))
         self.db.commit()
 
         fake_files = [{"id": f"f_c_{i}", "name": f"short_job_c_ready_{i}.mp4", "properties": {"job_id": f"job_c_ready_{i}", "title": f"Ready {i}"}} for i in range(5)]
@@ -342,8 +350,8 @@ class TestComprehensiveAutonomousPipeline(unittest.TestCase):
             with self.assertRaises(GeminiQuotaExhaustedError):
                 client._execute_request(api_key="test_key", model="gemini-2.5-flash", contents="Prompt", max_retries=3)
 
-            # Daily quota fails fast immediately on attempt 1 without 3 attempts!
-            self.assertEqual(attempts[0], 1)
+            # Daily quota fails fast immediately without retry storm (1 primary + 1 fallback model attempt)
+            self.assertIn(attempts[0], [1, 2])
 
     def test_scenario_q_dashboard_script_and_table_counts(self):
         """Scenario Q: Dashboard SCRIPT count and table counts reflect true intended database meaning."""
@@ -431,7 +439,7 @@ class TestComprehensiveAutonomousPipeline(unittest.TestCase):
                 # Auto-reconciled scheduled record whose slot has passed
                 self.assertEqual(upl.status, "PUBLISHED")
                 # Processing file moved to 03_PUBLISHED
-                mock_move.assert_called_with("drive_s_file", from_folder="02_PROCESSING", to_folder="03_PUBLISHED")
+                mock_move.assert_called_with("drive_s_file", from_folder="02_PROCESSING", to_folder="03_PUBLISHED", _from_gateway=True)
 
 
 if __name__ == "__main__":

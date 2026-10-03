@@ -1,0 +1,85 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial Black,86,&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,8,4,2,60,60,500,1
+Style: Punch,Arial Black,90,&H0000D7FF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,110,110,0,0,1,9,5,2,60,60,500,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:00.22,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}NEIL{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}ARMSTRONG{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}HAD{\c&H00FFFFFF&}
+Dialogue: 0,0:00:00.22,0:00:00.62,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}NEIL{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}ARMSTRONG{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}HAD{\c&H00FFFFFF&}
+Dialogue: 0,0:00:00.62,0:00:00.96,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}NEIL{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}ARMSTRONG{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}HAD{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:00.96,0:00:01.28,Default,,0,0,0,,{\c&H0000FFFF&\fscx115\fscy115}30{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}SECONDS{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}OF{\c&H00FFFFFF&}
+Dialogue: 0,0:00:01.28,0:00:01.66,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}30{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}SECONDS{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}OF{\c&H00FFFFFF&}
+Dialogue: 0,0:00:01.66,0:00:01.81,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}30{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}SECONDS{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}OF{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:01.80,0:00:01.98,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}FUEL{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}LEFT{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}WHILE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:01.98,0:00:02.36,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}FUEL{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}LEFT{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}WHILE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:02.36,0:00:02.56,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}FUEL{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}LEFT{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}WHILE{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:02.56,0:00:02.96,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}STARING{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}AT{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}A{\c&H00FFFFFF&}
+Dialogue: 0,0:00:02.96,0:00:03.12,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}STARING{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}AT{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}A{\c&H00FFFFFF&}
+Dialogue: 0,0:00:03.12,0:00:03.27,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}STARING{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}AT{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}A{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:03.18,0:00:03.48,Default,,0,0,0,,{\c&H0000FFFF&\fscx115\fscy115}DEADLY{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}BOULDER{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}FIELD.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:03.48,0:00:03.84,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}DEADLY{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}BOULDER{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}FIELD.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:03.84,0:00:04.28,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}DEADLY{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}BOULDER{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}FIELD.{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:04.66,0:00:04.82,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}THREE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}MINUTES{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}BEFORE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:04.82,0:00:05.02,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}THREE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}MINUTES{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}BEFORE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:05.02,0:00:05.32,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}THREE{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}MINUTES{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}BEFORE{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:05.32,0:00:05.70,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}TOUCHDOWN{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}ON{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:05.70,0:00:05.98,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}TOUCHDOWN{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}ON{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:05.98,0:00:06.13,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}TOUCHDOWN{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}ON{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}THE{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:06.06,0:00:06.26,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}LUNAR{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}SURFACE,{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:06.26,0:00:07.22,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}LUNAR{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}SURFACE,{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:07.22,0:00:07.37,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}LUNAR{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}SURFACE,{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}THE{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:07.28,0:00:07.56,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}APOLLO{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}GUIDANCE{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}COMPUTER{\c&H00FFFFFF&}
+Dialogue: 0,0:00:07.56,0:00:08.04,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}APOLLO{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}GUIDANCE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}COMPUTER{\c&H00FFFFFF&}
+Dialogue: 0,0:00:08.04,0:00:08.52,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}APOLLO{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}GUIDANCE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}COMPUTER{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:08.52,0:00:09.14,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}FLASHED{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}CONTINUOUS{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}12{\c&H00FFFFFF&}
+Dialogue: 0,0:00:09.14,0:00:09.62,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}FLASHED{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}CONTINUOUS{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}12{\c&H00FFFFFF&}
+Dialogue: 0,0:00:09.62,0:00:09.90,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}FLASHED{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}CONTINUOUS{\c&H00FFFFFF&} {\c&H0000FFFF&\fscx115\fscy115}12{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:09.90,0:00:10.12,Default,,0,0,0,,{\c&H0000FFFF&\fscx115\fscy115}-0{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}-2{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}OVERLOAD{\c&H00FFFFFF&}
+Dialogue: 0,0:00:10.12,0:00:10.34,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}-0{\c&H00FFFFFF&} {\c&H0000FFFF&\fscx115\fscy115}-2{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}OVERLOAD{\c&H00FFFFFF&}
+Dialogue: 0,0:00:10.34,0:00:10.76,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}-0{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}-2{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}OVERLOAD{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:10.76,0:00:11.74,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}ALARMS.{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}MISSION{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}CONTROL{\c&H00FFFFFF&}
+Dialogue: 0,0:00:11.74,0:00:12.00,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}ALARMS.{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}MISSION{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}CONTROL{\c&H00FFFFFF&}
+Dialogue: 0,0:00:12.00,0:00:12.38,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}ALARMS.{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}MISSION{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}CONTROL{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:12.38,0:00:12.76,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}REFUSED{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}TO{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}ABORT,{\c&H00FFFFFF&}
+Dialogue: 0,0:00:12.76,0:00:13.06,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}REFUSED{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}TO{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}ABORT,{\c&H00FFFFFF&}
+Dialogue: 0,0:00:13.06,0:00:13.34,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}REFUSED{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}TO{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}ABORT,{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:13.80,0:00:13.94,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}BUT{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}AUTOPILOT{\c&H00FFFFFF&}
+Dialogue: 0,0:00:13.94,0:00:14.08,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}BUT{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}THE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}AUTOPILOT{\c&H00FFFFFF&}
+Dialogue: 0,0:00:14.08,0:00:14.64,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}BUT{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}AUTOPILOT{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:14.64,0:00:14.84,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}WAS{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}STEERING{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:14.84,0:00:15.10,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}WAS{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}STEERING{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&}
+Dialogue: 0,0:00:15.10,0:00:15.28,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}WAS{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}STEERING{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}THE{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:15.28,0:00:15.46,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}FOUR{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}-TON{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}LANDER{\c&H00FFFFFF&}
+Dialogue: 0,0:00:15.46,0:00:15.66,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}FOUR{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}-TON{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}LANDER{\c&H00FFFFFF&}
+Dialogue: 0,0:00:15.66,0:00:16.08,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}FOUR{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}-TON{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}LANDER{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:16.08,0:00:16.38,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}STRAIGHT{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}INTO{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}A{\c&H00FFFFFF&}
+Dialogue: 0,0:00:16.38,0:00:16.68,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}STRAIGHT{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}INTO{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}A{\c&H00FFFFFF&}
+Dialogue: 0,0:00:16.68,0:00:16.83,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}STRAIGHT{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}INTO{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}A{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:16.80,0:00:16.98,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}CAR{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}-SIZED{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}CRATER.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:16.98,0:00:17.42,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}CAR{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}-SIZED{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}CRATER.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:17.42,0:00:17.74,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}CAR{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}-SIZED{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}CRATER.{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:18.18,0:00:18.38,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}ARMSTRONG{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}SEIZED{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}MANUAL{\c&H00FFFFFF&}
+Dialogue: 0,0:00:18.38,0:00:18.98,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}ARMSTRONG{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}SEIZED{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}MANUAL{\c&H00FFFFFF&}
+Dialogue: 0,0:00:18.98,0:00:19.36,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}ARMSTRONG{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}SEIZED{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}MANUAL{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:19.36,0:00:19.74,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}THRUSTER{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}CONTROL,{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}SKIMMED{\c&H00FFFFFF&}
+Dialogue: 0,0:00:19.74,0:00:20.82,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}THRUSTER{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}CONTROL,{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}SKIMMED{\c&H00FFFFFF&}
+Dialogue: 0,0:00:20.82,0:00:21.16,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}THRUSTER{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}CONTROL,{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}SKIMMED{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:21.16,0:00:21.44,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}PAST{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}JAGGED{\c&H00FFFFFF&}
+Dialogue: 0,0:00:21.44,0:00:21.62,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}PAST{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}THE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}JAGGED{\c&H00FFFFFF&}
+Dialogue: 0,0:00:21.62,0:00:22.00,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}PAST{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}JAGGED{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:22.00,0:00:22.84,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}ROCKS,{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}AND{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}TOUCHDOWN{\c&H00FFFFFF&}
+Dialogue: 0,0:00:22.84,0:00:22.94,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}ROCKS,{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}AND{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}TOUCHDOWN{\c&H00FFFFFF&}
+Dialogue: 0,0:00:22.94,0:00:23.28,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}ROCKS,{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}AND{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}TOUCHDOWN{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:23.28,0:00:23.70,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}WITH{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}FUEL{\c&H00FFFFFF&}
+Dialogue: 0,0:00:23.70,0:00:23.82,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}WITH{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}THE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}FUEL{\c&H00FFFFFF&}
+Dialogue: 0,0:00:23.82,0:00:24.10,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}WITH{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}THE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}FUEL{\c&H00FFFFFF&\fscx100\fscy100}
+Dialogue: 0,0:00:24.10,0:00:24.40,Default,,0,0,0,,{\c&H0000D7FF&\fscx115\fscy115}GAUGE{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}READING{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}ZERO.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:24.40,0:00:24.80,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}GAUGE{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}READING{\c&H00FFFFFF&\fscx100\fscy100} {\c&H00E0E0E0&\fscx100\fscy100}ZERO.{\c&H00FFFFFF&}
+Dialogue: 0,0:00:24.80,0:00:25.16,Default,,0,0,0,,{\c&H00E0E0E0&\fscx100\fscy100}GAUGE{\c&H00FFFFFF&} {\c&H00E0E0E0&\fscx100\fscy100}READING{\c&H00FFFFFF&} {\c&H0000D7FF&\fscx115\fscy115}ZERO.{\c&H00FFFFFF&\fscx100\fscy100}
