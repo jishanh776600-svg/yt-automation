@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "FAILED",
-  "block_reason": "Scripting error: Journalistic script rejected by ValidationGate: [\"VerificationState is DEVELOPING but script lacks attribution language (e.g. 'according to', 'reported').\"]",
+  "outcome": "BLOCKED",
+  "block_reason": null,
   "requested_deficit": 6,
   "produced_count": 0,
   "initial_stock": 0,
   "final_stock": 0,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-10-03T07:28:19.973075Z"
+  "timestamp": "2026-10-03T12:49:42.132523Z"
 }
