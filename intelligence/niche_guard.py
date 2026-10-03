@@ -31,6 +31,7 @@ class NicheRejectionReason(str, Enum):
     INSUFFICIENT_HISTORICAL_CONTEXT = "INSUFFICIENT_HISTORICAL_CONTEXT"
     POLITICAL_CONTENT = "POLITICAL_CONTENT"
     GENERIC_NEWS = "GENERIC_NEWS"
+    DRY_ACADEMIC_PAPERS = "DRY_ACADEMIC_PAPERS"
 
 
 @dataclass
@@ -166,6 +167,31 @@ PATTERNS_PRESS_RELEASE = [
     r"\bpress release\b",
     r"\bpeer-reviewed study\b",
     r"\bjournal publication\b",
+]
+
+# Dry Academic Digs & Routine Archaeological Survey Reports (Zero Viral Shorts Appeal)
+PATTERNS_DRY_ACADEMIC = [
+    r"\b(early )?medieval monastery (studied|examined|surveyed|excavated)\b",
+    r"\bmonastery studied\b",
+    r"\bmonastery (excavated|surveyed|analyzed)\b",
+    r"\brailroad worker camp\b",
+    r"\bworker camp found\b",
+    r"\bcamp found in\b",
+    r"\bfield school\b",
+    r"\barchaeological survey\b",
+    r"\bpottery sherds?\b",
+    r"\broutine excavation\b",
+    r"\bceramic fragments?\b",
+    r"\bgeophysical survey\b",
+    r"\bradiocarbon dating confirmed\b",
+    r"\bcharcoal samples?\b",
+    r"\bmidden deposit(s)?\b",
+    r"\blithic scatter\b",
+    r"\btest pit(s)?\b",
+    r"\btrench (uncovers|reveals)\b",
+    r"\bexcavation report\b",
+    r"\bexcavators document\b",
+    r"\bpreliminary findings\b",
 ]
 
 # Generic Physics, Astronomy, Paleontology Lab Studies Without Historical Human Context
@@ -413,6 +439,19 @@ class NicheGuard:
                     is_allowed=False,
                     reason=reason,
                     rejection_code=NicheRejectionReason.PRESS_RELEASE_SCIENCE.value,
+                    niche_fit_score=0.0
+                )
+
+        # F. Dry Routine Academic Digs / Worker Camps / Non-Viral Surveys
+        for pat in PATTERNS_DRY_ACADEMIC:
+            m = re.search(pat, combined, re.IGNORECASE)
+            if m:
+                reason = f"REJECTED_DRY_ACADEMIC_PAPERS: matched non-viral routine academic pattern '{m.group(0)}'"
+                logger.info(f"[TOPIC NICHE] candidate='{candidate_repr}' decision=REJECT reason={NicheRejectionReason.DRY_ACADEMIC_PAPERS.value} score=0.0")
+                return NicheDecision(
+                    is_allowed=False,
+                    reason=reason,
+                    rejection_code=NicheRejectionReason.DRY_ACADEMIC_PAPERS.value,
                     niche_fit_score=0.0
                 )
 

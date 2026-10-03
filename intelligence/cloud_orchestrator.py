@@ -691,7 +691,9 @@ class CloudProductionOrchestrator:
                         "bilateral", "diplomat", "press briefing", "parliament", "treaty",
                         "ground forces", "national security", "spokesman", "memorandum", "tariffs",
                         "quantum computer", "particle physics", "gene editing", "crispr", "clinical trial",
-                        "synthetic biology", "materials science", "semiconductor", "battery technology"
+                        "synthetic biology", "materials science", "semiconductor", "battery technology",
+                        "monastery studied", "worker camp", "field school", "archaeological survey",
+                        "pottery sherds", "lithic scatter", "test pit", "excavation report", "preliminary findings"
                     ]
                     score = 0.0
                     for hi in high_interest:
@@ -699,7 +701,7 @@ class CloudProductionOrchestrator:
                             score += 2.5
                     for dp in dry_academic_or_political:
                         if dp in t:
-                            score -= 4.0
+                            score -= 8.0
                     return score
 
                 target_candidates_count = max(needed * 4, 12)

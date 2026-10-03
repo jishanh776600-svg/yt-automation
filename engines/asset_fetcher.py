@@ -205,7 +205,7 @@ class AssetFetcher:
             "SOURCE_D_REACT": ReactionMemeAdapter()
         }
         from engines.visual_intelligence.internet_retrieval import InternetVideoRetriever
-        self.internet_retriever = InternetVideoRetriever(cache_dir=self.cache_dir, allow_stock_fallback=True)
+        self.internet_retriever = InternetVideoRetriever(cache_dir=self.cache_dir, allow_stock_fallback=False)
         from engines.visual_intelligence.memory import VisualMemoryManager
         self.visual_memory_manager = VisualMemoryManager()
 
