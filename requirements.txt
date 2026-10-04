@@ -28,6 +28,7 @@ edge-tts>=6.1.9
 # Video Rendering & Subtitles
 imageio-ffmpeg>=0.5.1
 Pillow>=10.0.0
+opencv-python-headless>=4.8.0.74
 
 # Web Dashboard (Optional)
 fastapi>=0.110.0
