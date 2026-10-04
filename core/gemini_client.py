@@ -195,6 +195,7 @@ class GeminiClient:
         self.sleeper = sleeper
         self._provider_lock = threading.Lock()
         self._exhausted_providers: set = set()
+        self._model_redirects: dict = {}
         self.active_provider = "primary"
 
     def mark_provider_exhausted(self, provider_name: str) -> None:
@@ -214,6 +215,7 @@ class GeminiClient:
         """Resets provider exhaustion tracking (useful for test isolation and new daily cycles)."""
         with self._provider_lock:
             self._exhausted_providers.clear()
+            self._model_redirects.clear()
             self.active_provider = "primary"
 
     reset_provider_exhaustion = reset_provider_status
@@ -295,7 +297,7 @@ class GeminiClient:
         if base_delay is None:
             base_delay = 0.05 if is_test else 4.0
 
-        current_model = model
+        current_model = self._model_redirects.get(model, model)
         last_exception = None
 
         for attempt in range(1, max_retries + 1):
@@ -331,6 +333,9 @@ class GeminiClient:
                             f"[GEMINI_FALLBACK] Daily quota exhausted for model '{current_model}' on {provider_name.upper()} provider. "
                             f"Switching immediately to fallback model '{GEMINI_FALLBACK_MODEL}'..."
                         )
+                        with self._provider_lock:
+                            self._model_redirects[model] = GEMINI_FALLBACK_MODEL
+                            self._model_redirects[current_model] = GEMINI_FALLBACK_MODEL
                         current_model = GEMINI_FALLBACK_MODEL
                         continue
                     # Fail fast out of this provider on daily quota exhaustion
@@ -938,6 +943,8 @@ class GeminiClient:
             prov_type = prov.get("type", "gemini")
             prov_key = prov["api_key"]
             prov_model = prov["model"]
+            if prov_type == "gemini":
+                prov_model = self._model_redirects.get(prov_model, prov_model)
 
             self.active_provider = prov_name
             logger.info(f"[AI_REQUEST] Dispatching request to provider '{prov_name.upper()}' (model: '{prov_model}')...")

@@ -309,12 +309,35 @@ class StoryDeduplicationEngine:
         seen_titles = set()
         clean_exclude_title = exclude_title.lower().strip() if exclude_title else None
 
-        # 1. Existing Topics with active jobs / uploads or approved/scheduled status
-        active_jobs = db.query(Job).all()
+        # 1. Existing Topics with active jobs / uploads or produced/scheduled/completed status
+        ACTIVE_JOB_STATES = {
+            "SCRIPTING", "GENERATING_AUDIO", "FETCHING_VISUALS", "RENDERING", "RUNNING_QA", "UPLOADING", "READY_TO_UPLOAD"
+        }
+        active_jobs = db.query(Job).filter(Job.state.in_(ACTIVE_JOB_STATES)).all()
         active_topic_ids = {j.topic_id for j in active_jobs if j.topic_id}
-        topics = db.query(Topic).filter(
-            (Topic.id.in_(active_topic_ids)) | (Topic.status.in_(["APPROVED", "PRODUCED", "SCHEDULED", "QUEUED"]))
-        ).all()
+
+        # Topics that have actually been produced or scheduled or are currently active
+        topics = list(db.query(Topic).filter(
+            (Topic.id.in_(active_topic_ids)) | (Topic.status.in_(["PRODUCED", "SCHEDULED", "COMPLETED"]))
+        ).all())
+
+        # Also include any topics that have a rendered video passing QA
+        try:
+            from core.models import RenderedVideoRecord
+            passed_renders = db.query(RenderedVideoRecord).filter_by(qa_status="PASSED").all()
+            rendered_topic_ids = {r.manifest_id for r in passed_renders if r.manifest_id}
+            rendered_event_ids = {r.event_id for r in passed_renders if r.event_id}
+            if rendered_topic_ids or rendered_event_ids:
+                extra_topics = db.query(Topic).filter(
+                    (Topic.id.in_(rendered_topic_ids)) | (Topic.event_id.in_(rendered_event_ids))
+                ).all()
+                existing_topic_ids = {t.id for t in topics}
+                for et in extra_topics:
+                    if et.id not in existing_topic_ids:
+                        topics.append(et)
+                        existing_topic_ids.add(et.id)
+        except Exception:
+            pass
         for t in topics:
             if exclude_topic_id and (t.id == exclude_topic_id or (t.event_id and t.event_id == exclude_topic_id)):
                 continue
@@ -422,7 +445,7 @@ class StoryDeduplicationEngine:
             existing_thematic = existing_fp.action_stems.intersection(THEMATIC_EVENT_ANCHORS)
             shared_thematic = candidate_thematic.intersection(existing_thematic)
 
-            if shared_thematic or len(shared_entities) >= 1 or len(shared_stems) >= 2:
+            if shared_thematic or (len(shared_entities) >= 1 and bool(shared_locations)):
                 if not ("cholera" in candidate_fp.summary_text.lower() and "stink" in existing_fp.summary_text.lower()):
                     shared_desc = [f"Year: {list(shared_years)}", f"Anchors: {list(shared_thematic | shared_entities)}"]
                     return DeduplicationResult(

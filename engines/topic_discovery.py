@@ -70,6 +70,174 @@ CURATED_GEOPOLITICAL_SEEDS = [
 
 CURATED_HISTORICAL_SEEDS = [
     {
+        "title": "The Ghost Blimp L-8 of Daly City (1942)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In August 1942, a US Navy blimp drifted silently over San Francisco and crash-landed in Daly City with its radio operational and parachutes onboard, but both pilots had vanished into thin air.",
+        "curiosity": 9.9, "visual_potential": 9.7, "historical_interest": 9.6, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The Vanishing of Flight 19 over the Atlantic (1945)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In December 1945, five US Navy Avenger torpedo bombers on a routine training flight vanished off the coast of Florida, followed hours later by the total disappearance of the rescue flying boat sent to find them.",
+        "curiosity": 9.9, "visual_potential": 9.7, "historical_interest": 9.6, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The Solway Firth Spaceman Photograph (1964)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In May 1964, a British firefighter photographed his young daughter on a lonely marsh in Cumbria, only for Kodak technicians to confirm a mysterious figure in a white spacesuit was visible directly behind her head.",
+        "curiosity": 9.8, "visual_potential": 9.6, "historical_interest": 9.3, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Lost Army of Cambyses in the Sahara (524 BC)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In 524 BC, Persian King Cambyses sent an army of fifty thousand warriors into the western Egyptian desert to destroy the Oracle of Amun, only for the entire force to be swallowed without a trace by a cataclysmic sandstorm.",
+        "curiosity": 9.9, "visual_potential": 9.8, "historical_interest": 9.8, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Mysterious Disappearance of Frederick Valentich (1978)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In October 1978, a 20-year-old pilot flying a Cessna over Bass Strait, Australia, radioed air traffic control describing a metallic craft orbiting his plane with strange green lights before his transmission ended with metallic scraping sounds.",
+        "curiosity": 9.9, "visual_potential": 9.6, "historical_interest": 9.4, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The Bizarre Lake Anjikuni Vanishing (1930)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In November 1930, a Canadian fur trapper arrived at an Inuit settlement near Lake Anjikuni to find cooking pots still hanging over cold hearths and rifles propped against tents, but every single villager had vanished.",
+        "curiosity": 9.8, "visual_potential": 9.4, "historical_interest": 9.3, "storytelling": 9.8, "uniqueness": 9.8
+    },
+    {
+        "title": "The Mystery of the Sarah Joe Ghost Boat (1979)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In February 1979, five fishermen vanished in a sudden gale off Maui in their 17-foot skiff Sarah Joe, only for the tiny boat to be found nine years later on a desolate atoll 2,200 miles away alongside a shallow grave.",
+        "curiosity": 9.9, "visual_potential": 9.5, "historical_interest": 9.4, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The Taos Hum Resonance Mystery",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "Since the early 1990s, residents in the historic high desert town of Taos, New Mexico, have been tormented by a relentless low-frequency drone that acoustic engineers and seismologists have failed to trace to any mechanical source.",
+        "curiosity": 9.7, "visual_potential": 9.2, "historical_interest": 9.3, "storytelling": 9.6, "uniqueness": 9.8
+    },
+    {
+        "title": "The Vela Satellite Mystery Flash (1979)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In September 1979, a US Vela surveillance satellite detected a distinct double-flash signature of an atmospheric nuclear detonation over the southern Indian Ocean, but no country ever claimed responsibility.",
+        "curiosity": 9.8, "visual_potential": 9.5, "historical_interest": 9.6, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Mysterious Faces of Belmez (1971)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In August 1971, a Spanish homemaker in Belmez de la Moraleda noticed a human face spontaneously forming in her concrete kitchen floor, which shifted expressions and returned even after the floor was destroyed and repoured.",
+        "curiosity": 9.8, "visual_potential": 9.4, "historical_interest": 9.3, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Lost Dutchman Gold Mine Enigma",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "Deep in Arizona's rugged Superstition Mountains, a legendary 19th-century gold cache discovered by German immigrant Jacob Waltz remains hidden despite hundreds of prospectors who died or disappeared searching for it.",
+        "curiosity": 9.7, "visual_potential": 9.5, "historical_interest": 9.5, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Disappearance of Percy Fawcett in the Amazon (1925)",
+        "category": HistoricalCategory.FORGOTTEN_FIGURES.value,
+        "summary": "In May 1925, legendary British explorer Percy Fawcett entered the uncharted Mato Grosso jungle in search of the Lost City of Z and was never seen again, prompting dozens of doomed rescue expeditions.",
+        "curiosity": 9.8, "visual_potential": 9.7, "historical_interest": 9.6, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Rendlesham Forest Military Incident (1980)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In late December 1980, dozens of US Air Force personnel stationed at RAF Woodbridge in Suffolk investigated glowing metallic craft landing inside the pine forest, recording abnormal radiation readings and physical indentation burns.",
+        "curiosity": 9.8, "visual_potential": 9.5, "historical_interest": 9.5, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Kelly-Hopkinsville Farmhouse Siege (1955)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In August 1955, eleven family members in rural Kentucky engaged in an intense four-hour gun battle against small glowing metallic creatures that hovered outside windows and walked on the roof before state police arrived to investigate.",
+        "curiosity": 9.8, "visual_potential": 9.6, "historical_interest": 9.4, "storytelling": 9.8, "uniqueness": 9.8
+    },
+    {
+        "title": "The Mystery of the Maryborough Meteorite (2015)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In 2015, an Australian gold prospector in Maryborough Regional Park tried for years to crack open an unusually heavy reddish rock using saws, drills, and acid, only for geologists to identify it as a 4.6-billion-year-old iron meteorite.",
+        "curiosity": 9.8, "visual_potential": 9.4, "historical_interest": 9.4, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Baltic Sea Anomaly Sonar Mystery (2011)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In June 2011, Swedish treasure hunters diving in the northern Baltic Sea captured sonar scans of a massive disc-shaped underwater object with distinct right-angled hallways and strange electronic interference.",
+        "curiosity": 9.8, "visual_potential": 9.6, "historical_interest": 9.3, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Mysterious Disappearance of the Hansa Kogge (1392)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In the autumn of 1392, a heavily laden Hanseatic trading cog vanished between Danzig and Visby during a calm sea with no storm recorded, leaving floating wooden casks but no bodies.",
+        "curiosity": 9.8, "visual_potential": 9.4, "historical_interest": 9.4, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Phantom Island of Bermeja",
+        "category": HistoricalCategory.LOST_PLACES.value,
+        "summary": "Mapped meticulously by Spanish cartographers in the Gulf of Mexico for three centuries, the island of Bermeja vanished completely from oceanographic charts in 1997 when Mexican survey ships found only open deep ocean.",
+        "curiosity": 9.8, "visual_potential": 9.5, "historical_interest": 9.4, "storytelling": 9.6, "uniqueness": 9.8
+    },
+    {
+        "title": "The Ghost Schooner Jenny Frozen in the Drake Passage (1840)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In 1840, a British whaling vessel discovered an intact schooner trapped in Antarctic pack ice, where inspectors found seven frozen crewmen and the captain sitting at his desk with his pen frozen in hand.",
+        "curiosity": 9.9, "visual_potential": 9.7, "historical_interest": 9.5, "storytelling": 9.9, "uniqueness": 9.9
+    },
+    {
+        "title": "The Mysterious Lake Vostok Buried Biosphere",
+        "category": HistoricalCategory.LOST_PLACES.value,
+        "summary": "Sealed beneath two and a half miles of Antarctic glacial ice for over fifteen million years, a massive subterranean freshwater lake was tapped by Russian scientists who detected unique bacterial DNA found nowhere else on Earth.",
+        "curiosity": 9.8, "visual_potential": 9.6, "historical_interest": 9.4, "storytelling": 9.6, "uniqueness": 9.8
+    },
+    {
+        "title": "The Mysterious Disappearance of the Waratah (1909)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In July 1909, the 500-foot British passenger steamship SS Waratah vanished without a trace off the coast of South Africa carrying 211 passengers, with no wreckage or bodies ever found.",
+        "curiosity": 9.8, "visual_potential": 9.6, "historical_interest": 9.5, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Silent City Phantom Mirage of Alaska (1888)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In 1888, prospector Richard Willoughby photographed an immense phantom city with towers and cathedrals hovering over the Muir Glacier, sparking expeditions to find the lost Arctic civilization.",
+        "curiosity": 9.8, "visual_potential": 9.7, "historical_interest": 9.4, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Roman Head of Tecaxic-Calixtlahuaca Mystery",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In 1933, Mexican archaeologists unearthing a pre-Columbian burial under intact pyramid floors near Toluca discovered a terracotta figurine head sculpted in 2nd-century Roman style.",
+        "curiosity": 9.8, "visual_potential": 9.5, "historical_interest": 9.7, "storytelling": 9.6, "uniqueness": 9.9
+    },
+    {
+        "title": "The Mysterious Disappearance of the Witchcraft Yacht (1967)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In December 1967, an experienced yachtsman and his luxury cabin cruiser Witchcraft called the Coast Guard to report hitting an unknown object one mile off Miami, but vanished completely before rescue arrived nineteen minutes later.",
+        "curiosity": 9.8, "visual_potential": 9.5, "historical_interest": 9.4, "storytelling": 9.8, "uniqueness": 9.8
+    },
+    {
+        "title": "The Ghost Train of St. Louis (1906)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In 1906, rail workers and station dispatchers in Saskatchewan witnessed the blinding headlamp of an unscheduled locomotive barreling down single-track lines, which vanished into thin air before collision.",
+        "curiosity": 9.8, "visual_potential": 9.5, "historical_interest": 9.3, "storytelling": 9.7, "uniqueness": 9.8
+    },
+    {
+        "title": "The Mysterious Bronze Age Nebra Sky Disc",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "Unearthed in 1999 by illegal treasure hunters in Saxony-Anhalt, a 3,600-year-old bronze plate inlaid with gold astronomical symbols proved Bronze Age Europeans possessed advanced astronomical knowledge.",
+        "curiosity": 9.8, "visual_potential": 9.6, "historical_interest": 9.7, "storytelling": 9.6, "uniqueness": 9.9
+    },
+    {
+        "title": "The Disappearance of the Danish Cadets on the Kobenhavn (1928)",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "In December 1928, the massive five-masted Danish sailing ship Kobenhavn, manned by forty-five young naval cadets, vanished between Buenos Aires and Australia after sending its final radio check-in.",
+        "curiosity": 9.8, "visual_potential": 9.6, "historical_interest": 9.5, "storytelling": 9.8, "uniqueness": 9.9
+    },
+    {
+        "title": "The Bizarre Brown Mountain Lights of North Carolina",
+        "category": HistoricalCategory.HISTORICAL_MYSTERIES.value,
+        "summary": "For over a century, unexplained fiery orbs have risen and danced across the rocky peaks of Brown Mountain, baffling US Geological Survey scientists who ruled out car headlights, marsh gas, and train locomotives.",
+        "curiosity": 9.7, "visual_potential": 9.5, "historical_interest": 9.4, "storytelling": 9.6, "uniqueness": 9.8
+    },
+    {
         "title": "The Great Stink of London (1858)",
         "category": HistoricalCategory.DOCUMENTED_DISASTERS.value,
         "summary": "In the blazing summer of 1858, the Thames River in London smelled so overpoweringly toxic that Parliament had to soak their curtains in lime chloride and hastily rebuild the entire modern sewage network.",
