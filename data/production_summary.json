@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "PARTIAL",
+  "outcome": "FAILED",
   "block_reason": null,
   "requested_deficit": 6,
-  "produced_count": 2,
+  "produced_count": 0,
   "initial_stock": 0,
-  "final_stock": 2,
+  "final_stock": 0,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-10-03T19:12:25.818695Z"
+  "timestamp": "2026-10-04T10:43:19.881451Z"
 }
