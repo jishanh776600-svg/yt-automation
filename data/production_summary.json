@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "FAILED",
-  "block_reason": null,
+  "outcome": "SUCCEEDED",
+  "block_reason": "Scripting error: Journalistic script rejected by ValidationGate: [\"Forbidden hook opening detected in journalistic script: 'In December 1945 five US Navy Aveng...'.\"]; Scripting error: Journalistic script rejected by ValidationGate: [\"Forbidden hook opening detected in journalistic script: 'In February 1979 five fishermen van...'.\"]; QA Failed: ['Continuous black frames detected (0.60s >= 0.5s threshold).']",
   "requested_deficit": 6,
-  "produced_count": 0,
+  "produced_count": 6,
   "initial_stock": 0,
-  "final_stock": 0,
+  "final_stock": 6,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-10-04T10:43:19.881451Z"
+  "timestamp": "2026-10-04T12:28:29.257593Z"
 }
