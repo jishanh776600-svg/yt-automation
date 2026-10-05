@@ -75,6 +75,7 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          YOUTUBE_PROXY: ${{ secrets.YOUTUBE_PROXY }}
           TOKEN_JSON: ${{ secrets.TOKEN_JSON }}
           CLIENT_SECRET_JSON: ${{ secrets.CLIENT_SECRET_JSON }}
         run: |
@@ -94,6 +95,9 @@ jobs:
           fi
           if [ -n "${NVIDIA_API_KEY}" ]; then
             echo "NVIDIA_API_KEY=${NVIDIA_API_KEY}" >> .env
+          fi
+          if [ -n "${YOUTUBE_PROXY}" ]; then
+            echo "YOUTUBE_PROXY=${YOUTUBE_PROXY}" >> .env
           fi
           echo "TEST_MODE=false" >> .env
           echo "KOKORO_VOICE=${{ inputs.active_voice || 'af_bella' }}" >> .env

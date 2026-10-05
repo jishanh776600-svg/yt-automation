@@ -512,6 +512,9 @@ class AssetFetcher:
             'extractor_args': extractor_args_mobile,
             'http_headers': mobile_headers,
         }
+        proxy_url = os.environ.get("YOUTUBE_PROXY") or os.environ.get("ALL_PROXY")
+        if proxy_url:
+            ydl_opts['proxy'] = proxy_url
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -528,6 +531,8 @@ class AssetFetcher:
                 'extractor_args': extractor_args_mobile,
                 'http_headers': mobile_headers,
             }
+            if proxy_url:
+                fb_opts['proxy'] = proxy_url
             try:
                 with yt_dlp.YoutubeDL(fb_opts) as ydl_fb:
                     ydl_fb.download([clean_target_url])

@@ -28,6 +28,7 @@ import urllib.request
 import urllib.error
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
+import uuid
 from typing import Dict, List, Optional, Tuple, Any
 
 from intelligence.visual_models import (
@@ -526,6 +527,9 @@ class RealFootageVideoAdapter(BaseVisualAdapter):
             "socket_timeout": self.timeout_seconds,
             "no_warnings": True,
         }
+        proxy_url = os.environ.get("YOUTUBE_PROXY") or os.environ.get("ALL_PROXY")
+        if proxy_url:
+            ydl_opts["proxy"] = proxy_url
 
         # Strict filters:
         # 1. NO Indian or Bollywood cinema (Strict user rule: 'except indian or bolltwood')
@@ -658,6 +662,190 @@ PexelsFallbackAdapter = RealFootageVideoAdapter
 
 
 # ---------------------------------------------------------------------------
+# NASA & ESA Ultra-HD Video Archive Adapter
+# ---------------------------------------------------------------------------
+
+class NASAVideoAdapter(BaseVisualAdapter):
+    """
+    NASA & ESA Ultra-HD / 4K Real Space, Exploration, and Earth Science Archive.
+    Official open REST API, zero-bot detection, authentic moving documentary footage.
+    """
+
+    SEARCH_ENDPOINT = "https://images-api.nasa.gov/search"
+
+    def __init__(self, timeout_seconds: float = 8.0):
+        super().__init__(
+            name="NASAVideoAdapter",
+            source_type="OFFICIAL_GOVERNMENT",
+            timeout_seconds=timeout_seconds,
+        )
+
+    def search(
+        self,
+        query: str,
+        event_id: str,
+        beat_id: str,
+        target_entities: Optional[List[str]] = None,
+        target_locations: Optional[List[str]] = None,
+        event_date_hint: Optional[str] = None,
+        max_results: int = 4,
+    ) -> List[VisualEvidenceCandidate]:
+        clean_q = re.sub(r"[^\w\s]", " ", query).strip()
+        clean_q = re.sub(r"\b(cinematic|movie scene|4k|1080p|film|clip)\b", "", clean_q, flags=re.I).strip()
+        if not clean_q or len(clean_q) < 3:
+            return []
+
+        url = f"{self.SEARCH_ENDPOINT}?q={urllib.parse.quote_plus(clean_q)}&media_type=video"
+        data = self._http_get_json(url)
+        if not data:
+            return []
+
+        items = data.get("collection", {}).get("items", [])
+        candidates: List[VisualEvidenceCandidate] = []
+        for item in items[:max_results * 2]:
+            d_list = item.get("data", [])
+            if not d_list:
+                continue
+            d = d_list[0]
+            nasa_id = d.get("nasa_id", uuid.uuid4().hex[:8])
+            title = d.get("title", "")
+            desc = d.get("description", "")
+            coll_href = item.get("href")
+            if not coll_href:
+                continue
+
+            media_list = self._http_get_json(coll_href)
+            if not media_list or not isinstance(media_list, list):
+                continue
+
+            mp4s = [u for u in media_list if isinstance(u, str) and u.lower().endswith(".mp4")]
+            if not mp4s:
+                continue
+
+            # Prefer ~orig.mp4 or ~1080p, then mobile
+            orig_mp4 = next((u for u in mp4s if "~orig.mp4" in u or "1080" in u), mp4s[0])
+
+            cand = VisualEvidenceCandidate(
+                visual_id=f"nasa_{nasa_id}",
+                event_id=event_id,
+                beat_id=beat_id,
+                source_type="OFFICIAL_GOVERNMENT",
+                source_publisher="NASA / Official Space Archive",
+                source_url=f"https://images.nasa.gov/details/{nasa_id}",
+                media_url=orig_mp4,
+                title=title or "NASA Archival Video",
+                description=desc[:300] if desc else title,
+                visual_type="VIDEO",
+                authenticity=VisualAuthenticity.EVENT_RELATED.value,
+                licensing_status=VisualLicensingStatus.PUBLIC_DOMAIN.value,
+                confidence=0.95,
+                retrieval_status="AVAILABLE",
+            )
+            candidates.append(cand)
+            if len(candidates) >= max_results:
+                break
+        return candidates
+
+
+# ---------------------------------------------------------------------------
+# Internet Archive Moving Image Video Adapter
+# ---------------------------------------------------------------------------
+
+class InternetArchiveVideoAdapter(BaseVisualAdapter):
+    """
+    Internet Archive (archive.org) Moving Image & Documentary Archive.
+    Authentic historical newsreels and cinematic documentaries with direct MP4 streams.
+    """
+
+    SEARCH_ENDPOINT = "https://archive.org/advancedsearch.php"
+
+    def __init__(self, timeout_seconds: float = 8.0):
+        super().__init__(
+            name="InternetArchiveVideoAdapter",
+            source_type="ARCHIVE",
+            timeout_seconds=timeout_seconds,
+        )
+
+    def search(
+        self,
+        query: str,
+        event_id: str,
+        beat_id: str,
+        target_entities: Optional[List[str]] = None,
+        target_locations: Optional[List[str]] = None,
+        event_date_hint: Optional[str] = None,
+        max_results: int = 3,
+    ) -> List[VisualEvidenceCandidate]:
+        clean_q = re.sub(r"[^\w\s]", " ", query).strip()
+        clean_q = re.sub(r"\b(cinematic|movie scene|4k|1080p|film|clip)\b", "", clean_q, flags=re.I).strip()
+        if not clean_q or len(clean_q) < 3:
+            return []
+
+        search_q = f"({clean_q}) AND mediatype:(movies)"
+        params = {
+            "q": search_q,
+            "fl[]": ["identifier", "title", "description"],
+            "rows": max_results * 2,
+            "page": 1,
+            "output": "json",
+        }
+        query_string = urllib.parse.urlencode(params, doseq=True)
+        url = f"{self.SEARCH_ENDPOINT}?{query_string}"
+        data = self._http_get_json(url)
+        if not data:
+            return []
+
+        docs = data.get("response", {}).get("docs", [])
+        candidates: List[VisualEvidenceCandidate] = []
+        for doc in docs[:max_results]:
+            ident = doc.get("identifier")
+            if not ident:
+                continue
+            title = doc.get("title", "")
+            desc = doc.get("description", "")
+            if isinstance(desc, list):
+                desc = " ".join(desc)
+
+            meta_url = f"https://archive.org/metadata/{ident}/files"
+            meta_data = self._http_get_json(meta_url)
+            if not meta_data:
+                continue
+
+            files = meta_data.get("result", [])
+            mp4_file = None
+            for f in files:
+                name = f.get("name", "")
+                if name.lower().endswith(".mp4"):
+                    mp4_file = name
+                    break
+
+            if not mp4_file:
+                continue
+
+            direct_mp4 = f"https://archive.org/download/{ident}/{urllib.parse.quote(mp4_file)}"
+            cand = VisualEvidenceCandidate(
+                visual_id=f"ia_{ident[:16]}",
+                event_id=event_id,
+                beat_id=beat_id,
+                source_type="ARCHIVE",
+                source_publisher="Internet Archive / Historical Moving Images",
+                source_url=f"https://archive.org/details/{ident}",
+                media_url=direct_mp4,
+                title=title or "Historical Documentary Video",
+                description=desc[:300] if desc else title,
+                visual_type="VIDEO",
+                authenticity=VisualAuthenticity.EVENT_RELATED.value,
+                licensing_status=VisualLicensingStatus.PUBLIC_DOMAIN.value,
+                confidence=0.90,
+                retrieval_status="AVAILABLE",
+            )
+            candidates.append(cand)
+            if len(candidates) >= max_results:
+                break
+        return candidates
+
+
+# ---------------------------------------------------------------------------
 # Visual Source Manager / Multi-Source Orchestrator
 # ---------------------------------------------------------------------------
 
@@ -665,13 +853,17 @@ class VisualSourceManager:
     """
     Orchestrates candidate retrieval across all registered visual adapters
     in priority order:
-      1. RealFootageVideoAdapter (Moving Video Clips First)
-      2. WikimediaCommonsAdapter (Archival Images/Reels)
+      1. RealFootageVideoAdapter (YouTube Cinema / Documentary Video Clips First)
+      2. NASAVideoAdapter (NASA & ESA Ultra-HD Space/Exploration Moving Footage)
+      3. InternetArchiveVideoAdapter (Historical & Archival Moving Footage)
+      4. WikimediaCommonsAdapter (Archival Images/Reels - lowest fallback)
     """
 
     def __init__(self, adapters: Optional[List[BaseVisualAdapter]] = None):
         self.adapters = adapters if adapters is not None else [
             RealFootageVideoAdapter(),
+            NASAVideoAdapter(),
+            InternetArchiveVideoAdapter(),
             WikimediaCommonsAdapter(),
         ]
         self.provider_durations: Dict[str, float] = {a.name: 0.0 for a in self.adapters}
