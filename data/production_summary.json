@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "SUCCEEDED",
-  "block_reason": "Scripting error: Journalistic script rejected by ValidationGate: [\"Forbidden hook opening detected in journalistic script: 'In December 1945 five US Navy Aveng...'.\"]; Scripting error: Journalistic script rejected by ValidationGate: [\"Forbidden hook opening detected in journalistic script: 'In February 1979 five fishermen van...'.\"]; QA Failed: ['Continuous black frames detected (0.60s >= 0.5s threshold).']",
+  "outcome": "FAILED",
+  "block_reason": "Insufficient real footage: 0 clips found (< 4 required); Insufficient real footage: 0 clips found (< 4 required); Insufficient real footage: 0 clips found (< 4 required); Insufficient real footage: 0 clips found (< 4 required); Insufficient real footage: 0 clips found (< 4 required); Insufficient real footage: 0 clips found (< 4 required); Insufficient real footage: 1 clips found (< 4 required); Insufficient real footage: 0 clips found (< 4 required); Insufficient real footage: 0 clips found (< 4 required); Insufficient real footage: 0 clips found (< 4 required); Insufficient real footage: 0 clips found (< 4 required); Insufficient real footage: 0 clips found (< 4 required); Insufficient real footage: 0 clips found (< 4 required); Insufficient real footage: 0 clips found (< 4 required)",
   "requested_deficit": 6,
-  "produced_count": 6,
+  "produced_count": 0,
   "initial_stock": 0,
-  "final_stock": 6,
+  "final_stock": 0,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-10-04T12:28:29.257593Z"
+  "timestamp": "2026-10-05T13:52:07.547329Z"
 }
