@@ -21,6 +21,7 @@ data/*.bin
 
 # Media Caches (Render outputs are temporary)
 data/renders/
+renders/
 data/voice/
 data/visuals/
 data/assets/
