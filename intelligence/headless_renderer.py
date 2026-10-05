@@ -180,13 +180,16 @@ class HeadlessComposer:
         asset_path: Optional[Path],
         output_path: Path,
         topic_title: str = "",
+        custom_duration: Optional[float] = None,
+        start_ss: float = 0.0,
+        punch_in: bool = False,
     ) -> Path:
         """
         Renders a single beat clip reframed to 1080x1920 vertical with proper duration.
         """
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        dur = max(0.5, beat.duration_seconds)
+        dur = max(0.5, custom_duration if custom_duration is not None else beat.duration_seconds)
 
         # 1. Handle missing asset -> Script card fallback is strictly prohibited
         if not asset_path or not Path(asset_path).exists():
@@ -205,22 +208,26 @@ class HeadlessComposer:
             overlay_path = output_path.parent / f"prov_{beat.beat_id}.png"
             ProvenanceOverlayGenerator.create_badge(credit, overlay_path)
 
-        # 2. Render Video Clip
+        # 2. Render Video Clip (Zero Looping, Precise -ss Seeking)
         if suffix in [".mp4", ".mov", ".webm", ".mkv"]:
+            scale_w = int(self.config.width * 1.15) if punch_in else self.config.width
+            scale_h = int(self.config.height * 1.15) if punch_in else self.config.height
+
             if overlay_path and overlay_path.exists():
                 vf_filter = (
-                    f"[0:v]scale={self.config.width}:{self.config.height}:force_original_aspect_ratio=increase,"
+                    f"[0:v]scale={scale_w}:{scale_h}:force_original_aspect_ratio=increase,"
                     f"crop={self.config.width}:{self.config.height}:(iw-{self.config.width})/2:(ih-{self.config.height})/2,setsar=1[bg];"
                     f"[1:v]scale=900:70[ov];"
                     f"[bg][ov]overlay=90:1700:format=yuv420p[v]"
                 )
                 cmd = [
                     self.config.ffmpeg_exe, "-y",
-                    "-stream_loop", "-1",
-                    "-ss", "0",
+                    "-loglevel", "error",
+                    "-ss", f"{start_ss:.2f}",
                     "-i", str(asset_path),
+                    "-loop", "1",
                     "-i", str(overlay_path),
-                    "-t", str(dur),
+                    "-t", f"{dur:.2f}",
                     "-filter_complex", vf_filter,
                     "-map", "[v]",
                     "-c:v", "libx264",
@@ -233,17 +240,16 @@ class HeadlessComposer:
                 ]
             else:
                 vf_filter = (
-                    f"scale={self.config.width}:{self.config.height}:force_original_aspect_ratio=increase,"
+                    f"scale={scale_w}:{scale_h}:force_original_aspect_ratio=increase:flags=lanczos,"
                     f"crop={self.config.width}:{self.config.height}:(iw-{self.config.width})/2:(ih-{self.config.height})/2,"
                     f"setsar=1,format=yuv420p"
                 )
                 cmd = [
                     self.config.ffmpeg_exe, "-y",
                     "-loglevel", "error",
-                    "-stream_loop", "-1",
-                    "-ss", "0",
+                    "-ss", f"{start_ss:.2f}",
                     "-i", str(asset_path),
-                    "-t", str(dur),
+                    "-t", f"{dur:.2f}",
                     "-vf", vf_filter,
                     "-c:v", "libx264",
                     "-preset", "fast",
@@ -263,9 +269,9 @@ class HeadlessComposer:
                 cmd_fb = [
                     self.config.ffmpeg_exe, "-y",
                     "-loglevel", "error",
-                    "-stream_loop", "-1",
+                    "-ss", f"{start_ss:.2f}",
                     "-i", str(asset_path),
-                    "-t", str(dur),
+                    "-t", f"{dur:.2f}",
                     "-vf", f"scale={self.config.width}:{self.config.height}:force_original_aspect_ratio=increase,crop={self.config.width}:{self.config.height},format=yuv420p",
                     "-c:v", "libx264",
                     "-preset", "ultrafast",
@@ -415,17 +421,10 @@ class HeadlessComposer:
                 raw_p = fetch_summary.asset_path_by_beat.get(beat.beat_id)
                 asset_p = Path(raw_p) if raw_p and _is_valid_render_asset(Path(raw_p)) else None
                 if not asset_p:
-                    if valid_pool:
-                        asset_p = valid_pool[fallback_idx % len(valid_pool)]
-                        fallback_idx += 1
-                        logger.warning(
-                            f"Beat '{beat.beat_id}' had missing/invalid asset; assigned pool fallback visual: {asset_p}"
-                        )
-                    else:
-                        raise RuntimeError(
-                            f"Visual asset missing or invalid for beat '{beat.beat_id}' and no valid visual assets available in manifest pool. "
-                            f"Script card fallback is strictly prohibited."
-                        )
+                    raise RuntimeError(
+                        f"ZERO_REPETITION_RULE: Visual asset missing or failed download for beat '{beat.beat_id}'. "
+                        f"Recycling or looping existing clips across beats is strictly prohibited."
+                    )
                 last_asset_path = asset_p
             beat_asset_map[beat.beat_id] = asset_p
 
@@ -435,12 +434,62 @@ class HeadlessComposer:
             idx, b = idx_beat
             clip_file = session_tmp / f"clip_{idx:02d}_{b.beat_id}.mp4"
             asset_p = beat_asset_map.get(b.beat_id)
-            self.render_beat_clip(
-                beat=b,
-                asset_path=asset_p,
-                output_path=clip_file,
-                topic_title=topic_title,
-            )
+            total_dur = max(0.5, b.duration_seconds)
+
+            # Strict Sub-2-Second Cut Rule: Every shot on screen must be <= 2.0s
+            if total_dur > 2.0:
+                dur1 = round(total_dur / 2.0, 2)
+                dur2 = round(total_dur - dur1, 2)
+                sub1_file = session_tmp / f"sub_{idx:02d}_1.mp4"
+                sub2_file = session_tmp / f"sub_{idx:02d}_2.mp4"
+
+                # Sub-shot 1: from offset 0.0s
+                self.render_beat_clip(
+                    beat=b,
+                    asset_path=asset_p,
+                    output_path=sub1_file,
+                    topic_title=topic_title,
+                    custom_duration=dur1,
+                    start_ss=0.0,
+                    punch_in=False,
+                )
+
+                # Sub-shot 2: use same asset with punch-in to prevent cross-beat visual leakage
+                self.render_beat_clip(
+                    beat=b,
+                    asset_path=asset_p,
+                    output_path=sub2_file,
+                    topic_title=topic_title,
+                    custom_duration=dur2,
+                    start_ss=round(dur1, 2),
+                    punch_in=True,
+                )
+
+                sub_concat = session_tmp / f"sub_concat_{idx:02d}.txt"
+                p1_str = sub1_file.resolve().as_posix()
+                p2_str = sub2_file.resolve().as_posix()
+                with open(sub_concat, "w", encoding="utf-8") as f:
+                    f.write(f"file '{p1_str}'\n")
+                    f.write(f"file '{p2_str}'\n")
+
+                cmd_cat = [
+                    self.config.ffmpeg_exe, "-y", "-loglevel", "error",
+                    "-f", "concat", "-safe", "0",
+                    "-i", str(sub_concat),
+                    "-c", "copy",
+                    str(clip_file)
+                ]
+                subprocess.run(cmd_cat, check=True)
+            else:
+                self.render_beat_clip(
+                    beat=b,
+                    asset_path=asset_p,
+                    output_path=clip_file,
+                    topic_title=topic_title,
+                    custom_duration=total_dur,
+                    start_ss=0.0,
+                    punch_in=False,
+                )
             return idx, clip_file
 
         max_workers = min(4, max(1, os.cpu_count() or 2))

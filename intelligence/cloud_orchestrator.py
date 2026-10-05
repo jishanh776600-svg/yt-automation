@@ -195,7 +195,33 @@ class CloudProductionOrchestrator:
             telemetry.duplicates_skipped += 1
             return None
 
+        # 1.5 Pre-Script Footage Scouting Gate (Reversed Pipeline)
+        # Verify internet footage availability BEFORE writing script.
+        # Zero stock fallback. If clips < 4 -> Drop topic immediately!
+        telemetry.transition_stage(PipelineStage.VISUAL_RETRIEVAL, f"Scouting available footage for {event_id}")
+        t_scout0 = time.perf_counter()
+        scout_res = self.evidence_engine.scout_topic_footage(event_card, min_required_clips=4)
+        scout_dur = time.perf_counter() - t_scout0
+        telemetry.stage_durations["pre_scouting"] = scout_dur
+
+        if not scout_res.get("is_approved", False):
+            logger.warning(
+                f"[REVERSED_PIPELINE_DROP] Dropping topic '{event_card.canonical_title}' [{event_id}]: "
+                f"Only {scout_res.get('clip_count', 0)} verified clips found (< 4 minimum). "
+                f"Zero stock fallback policy enforced."
+            )
+            telemetry.failure_reasons.append(
+                f"Insufficient real footage: {scout_res.get('clip_count', 0)} clips found (< 4 required)"
+            )
+            return None
+
+        logger.info(
+            f"[REVERSED_PIPELINE_APPROVED] Topic '{event_card.canonical_title}' passed footage gate! "
+            f"Status: {scout_res.get('status')} ({scout_res.get('clip_count')} clips available)."
+        )
+
         # 2. Journalistic Scripting (Phase 3)
+        # Script is written knowing authentic footage is confirmed!
         telemetry.transition_stage(PipelineStage.SCRIPTING, f"Generating script for {event_id}")
         t0 = time.perf_counter()
         try:

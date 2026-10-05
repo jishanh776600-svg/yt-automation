@@ -187,7 +187,7 @@ class GeminiClient:
             self.nvidia_api_key = nvidia_api_key if nvidia_api_key is not None else NVIDIA_API_KEY
         self.primary_model = GEMINI_MODEL
         self.secondary_model = secondary_model or GEMINI_MODEL_SECONDARY or GEMINI_MODEL
-        self.groq_model = groq_model or GROQ_MODEL or "llama-3.1-8b-instant"
+        self.groq_model = groq_model or GROQ_MODEL or "qwen/qwen3.8-27b"
         self.openrouter_model = openrouter_model or OPENROUTER_MODEL or "meta-llama/llama-3.3-70b-instruct"
         self.deepseek_model = deepseek_model or DEEPSEEK_MODEL or "deepseek-v4-pro"
         self.nvidia_model = nvidia_model or NVIDIA_MODEL or "nvidia/nemotron-3.5-lightning-30b-a3b"

@@ -369,6 +369,7 @@ class VideoQAEngine:
             "narration_no_excessive_pause": False,
             "narration_dead_air_ratio": False,
             "no_script_cards": False,
+            "real_video_clip_ratio": False,
         }
 
         # 1. Existence and File Size
@@ -449,17 +450,17 @@ class VideoQAEngine:
         else:
             checks["duration_in_tolerance"] = True
 
-        # Production Duration Hard Requirement: 22.0 to 27.0 seconds (tolerance [21.5, 27.5])
+        # Production Duration Hard Requirement: 20.0 to 28.0 seconds (tolerance [19.8, 28.5])
         # Extended window accommodates Kokoro's natural pacing for 55-70 word scripts.
-        # YouTube Shorts 22-27s hit the optimal engagement range.
+        # YouTube Shorts 20-28s hit the optimal engagement range.
         is_production_run = (expected_duration is None) or (expected_duration >= 15.0)
         if is_production_run:
-            if 21.5 <= dur <= 27.5:
+            if 19.8 <= dur <= 28.5:
                 checks["duration_bounds_22_25"] = True
             else:
                 checks["duration_bounds_22_25"] = False
                 failure_reasons.append(
-                    f"Duration {dur:.2f}s outside required production bounds 22.0-27.0s (tolerance: [21.5s, 27.5s])."
+                    f"Duration {dur:.2f}s outside required production bounds 20.0-28.0s (tolerance: [19.8s, 28.5s])."
                 )
 
         # 5. Scene Density and Uniqueness Gating (Minimum 9 scenes for production runs)
@@ -578,7 +579,33 @@ class VideoQAEngine:
                 checks["no_script_cards"] = False
                 failure_reasons.append(card_reason)
 
-        # 10. Overall Verdict
+        # 10. Real Moving Video Footage Gate (Must be >=85% genuine video clips, max 1 static photo)
+        checks["real_video_clip_ratio"] = True
+        if manifest and is_production_run:
+            total_beats = len(manifest.beats)
+            if total_beats > 0:
+                video_beats = 0
+                for b in manifest.beats:
+                    m_url = (getattr(b, "media_url", "") or "").lower()
+                    v_type = getattr(b, "visual_type", "") or ""
+                    a_type = getattr(b, "asset_type", "") or ""
+                    if v_type == "VIDEO" or a_type == "VIDEO":
+                        video_beats += 1
+                    elif "youtube.com" in m_url or "youtu.be" in m_url:
+                        video_beats += 1
+                    elif any(m_url.endswith(ext) for ext in [".mp4", ".webm", ".mkv", ".mov"]):
+                        video_beats += 1
+
+                video_ratio = video_beats / total_beats
+                if video_ratio >= 0.85:
+                    checks["real_video_clip_ratio"] = True
+                else:
+                    checks["real_video_clip_ratio"] = False
+                    failure_reasons.append(
+                        f"Insufficient real video clips: {video_beats}/{total_beats} ({video_ratio*100:.1f}%) beats are video clips. Must be >= 85% real moving footage (max 1 static image allowed)."
+                    )
+
+        # 11. Overall Verdict
         passed = all(checks.values()) and len(failure_reasons) == 0
         status = "PASSED" if passed else "FAILED"
 

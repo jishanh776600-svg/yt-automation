@@ -107,7 +107,7 @@ class AICouncilEngine:
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "User-Agent": f"AL-AMR-Council/{provider}"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
         payload = {
             "model": model,
@@ -170,12 +170,30 @@ class AICouncilEngine:
         )
 
         output_text = ""
-        provider_used = "openrouter"
-        model_used = "deepseek/deepseek-chat"
+        provider_used = "groq"
+        model_used = "qwen/qwen3.8-27b"
 
-        # Try OpenRouter DeepSeek first (ultra-reliable), then NVIDIA NIM, then Gemini fallback
-        try:
-            if self.openrouter_key:
+        # Try Groq first (blazing fast, reliable), then OpenRouter, NVIDIA, Gemini
+        if self.groq_key:
+            try:
+                raw_groq = self._call_llm(
+                    provider="groq",
+                    url="https://api.groq.com/openai/v1/chat/completions",
+                    key=self.groq_key,
+                    model="qwen/qwen3.8-27b",
+                    prompt=prompt,
+                    temperature=0.7,
+                    max_tokens=600,
+                    timeout=8.0
+                )
+                output_text = re.sub(r"<think>.*?</think>", "", raw_groq, flags=re.DOTALL).strip()
+            except Exception as e:
+                logger.warning(f"DeepSeek via Groq failed: {e}. Trying fallback...")
+
+        if not output_text and self.openrouter_key:
+            try:
+                provider_used = "openrouter"
+                model_used = "deepseek/deepseek-chat"
                 output_text = self._call_llm(
                     provider="openrouter",
                     url="https://openrouter.ai/api/v1/chat/completions",
@@ -186,18 +204,18 @@ class AICouncilEngine:
                     max_tokens=600,
                     timeout=4.0
                 )
-        except Exception as e:
-            logger.warning(f"DeepSeek via OpenRouter failed: {e}. Trying fallback...")
+            except Exception as e:
+                logger.warning(f"DeepSeek via OpenRouter failed: {e}. Trying fallback...")
 
         if not output_text and self.nvidia_key:
             try:
                 provider_used = "nvidia"
-                model_used = "deepseek-ai/deepseek-v4-flash-0731"
+                model_used = "deepseek-ai/deepseek-v4.1-flash"
                 output_text = self._call_llm(
                     provider="nvidia",
                     url="https://integrate.api.nvidia.com/v1/chat/completions",
                     key=self.nvidia_key,
-                    model="deepseek-ai/deepseek-v4-flash-0731",
+                    model="deepseek-ai/deepseek-v4.1-flash",
                     prompt=prompt,
                     temperature=0.7,
                     max_tokens=600,
@@ -268,12 +286,30 @@ class AICouncilEngine:
         )
 
         output_text = ""
-        provider_used = "openrouter"
-        model_used = "moonshotai/kimi-k3"
+        provider_used = "groq"
+        model_used = "qwen/qwen3.8-27b"
 
-        # Try OpenRouter Kimi K3, then NVIDIA, then Gemini
-        try:
-            if self.openrouter_key:
+        # Try Groq first, then OpenRouter, then NVIDIA, then Gemini
+        if self.groq_key:
+            try:
+                raw_groq = self._call_llm(
+                    provider="groq",
+                    url="https://api.groq.com/openai/v1/chat/completions",
+                    key=self.groq_key,
+                    model="qwen/qwen3.8-27b",
+                    prompt=prompt,
+                    temperature=0.6,
+                    max_tokens=600,
+                    timeout=8.0
+                )
+                output_text = re.sub(r"<think>.*?</think>", "", raw_groq, flags=re.DOTALL).strip()
+            except Exception as e:
+                logger.warning(f"Kimi via Groq failed: {e}. Trying fallback...")
+
+        if not output_text and self.openrouter_key:
+            try:
+                provider_used = "openrouter"
+                model_used = "moonshotai/kimi-k3"
                 output_text = self._call_llm(
                     provider="openrouter",
                     url="https://openrouter.ai/api/v1/chat/completions",
@@ -284,18 +320,18 @@ class AICouncilEngine:
                     max_tokens=600,
                     timeout=4.0
                 )
-        except Exception as e:
-            logger.warning(f"Kimi via OpenRouter failed: {e}. Trying fallback...")
+            except Exception as e:
+                logger.warning(f"Kimi via OpenRouter failed: {e}. Trying fallback...")
 
         if not output_text and self.nvidia_key:
             try:
                 provider_used = "nvidia"
-                model_used = "moonshotai/kimi-k3"
+                model_used = "deepseek-ai/deepseek-v4.1-flash"
                 output_text = self._call_llm(
                     provider="nvidia",
                     url="https://integrate.api.nvidia.com/v1/chat/completions",
                     key=self.nvidia_key,
-                    model="moonshotai/kimi-k3",
+                    model="deepseek-ai/deepseek-v4.1-flash",
                     prompt=prompt,
                     temperature=0.6,
                     max_tokens=600,
@@ -303,24 +339,6 @@ class AICouncilEngine:
                 )
             except Exception as e:
                 logger.warning(f"Kimi via NVIDIA failed: {e}.")
-
-        if not output_text and self.groq_key:
-            try:
-                provider_used = "groq"
-                model_used = "qwen/qwen3.6-27b"
-                raw_groq = self._call_llm(
-                    provider="groq",
-                    url="https://api.groq.com/openai/v1/chat/completions",
-                    key=self.groq_key,
-                    model="qwen/qwen3.6-27b",
-                    prompt=prompt,
-                    temperature=0.6,
-                    max_tokens=600,
-                    timeout=8.0
-                )
-                output_text = re.sub(r"<think>.*?</think>", "", raw_groq, flags=re.DOTALL).strip()
-            except Exception as e:
-                logger.warning(f"Kimi via Groq failed: {e}.")
 
         if not output_text:
             from core.gemini_client import get_gemini_client
@@ -383,18 +401,18 @@ class AICouncilEngine:
         )
         output_text = ""
         provider_used = "groq"
-        model_used = "qwen/qwen3.6-27b"
+        model_used = "qwen/qwen3.8-27b"
 
         # 1. Try Groq Qwen (ultra-fast, high reliability)
         if not output_text and self.groq_key:
             try:
                 provider_used = "groq"
-                model_used = "qwen/qwen3.6-27b"
+                model_used = "qwen/qwen3.8-27b"
                 raw_groq = self._call_llm(
                     provider="groq",
                     url="https://api.groq.com/openai/v1/chat/completions",
                     key=self.groq_key,
-                    model="qwen/qwen3.6-27b",
+                    model="qwen/qwen3.8-27b",
                     prompt=prompt,
                     temperature=0.5,
                     max_tokens=600,
@@ -604,7 +622,7 @@ class AICouncilEngine:
                         provider="groq",
                         url="https://api.groq.com/openai/v1/chat/completions",
                         key=self.groq_key,
-                        model="qwen/qwen3.6-27b",
+                        model="qwen/qwen3.8-27b",
                         prompt=prompt,
                         temperature=0.15,
                         max_tokens=500,

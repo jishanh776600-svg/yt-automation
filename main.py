@@ -959,15 +959,13 @@ class ShortsPipeline:
                 import shutil
                 shutil.copy2(temp_download_path, dest_video)
 
-                upload_rec = self.upload_engine.schedule_short(
+                upload_rec = self.upload_engine.publish_direct_public(
                     db=db,
                     job=job,
                     render=render_output,
-                    metadata=metadata,
-                    scheduled_publish_at=scheduled_slot
+                    metadata=metadata
                 )
-                # NON-NEGOTIABLE INVARIANT 4: Scheduled video belongs in 02_PROCESSING until publication
-                StateMachine.transition(db, job, JobState.SCHEDULED, f"TEST_MODE verified: Scheduled for {scheduled_slot.isoformat()}Z")
+                StateMachine.transition(db, job, JobState.PUBLISHED, f"TEST_MODE verified: Published direct public (ID: {upload_rec.youtube_video_id})")
                 AttemptLedger.record_success(
                     db=db,
                     attempt=attempt,
@@ -975,34 +973,82 @@ class ShortsPipeline:
                     related_youtube_video_id=getattr(upload_rec, "youtube_video_id", None) or "TEST_MODE_ID"
                 )
                 console.print(Panel.fit(
-                    f"[bold green][+] Test Scheduled Publisher Success![/bold green]\n"
+                    f"[bold green][+] Test Direct Public Publisher Success![/bold green]\n"
                     f"Title: [bold]{title}[/bold]\n"
-                    f"Assigned Slot: [bold cyan]{scheduled_slot.strftime('%Y-%m-%d %H:%M')} UTC[/bold cyan]\n"
                     f"Drive File ID: {file_id}\n"
-                    f"Vault Folder: [bold cyan]02_PROCESSING (Scheduled)[/bold cyan]\n"
+                    f"Vault Folder: [bold cyan]03_PUBLISHED[/bold cyan]\n"
                     f"YouTube Upload: [bold cyan]BYPASSED (TEST_MODE=true)[/bold cyan]",
                     border_style="green"
                 ))
                 return upload_rec
 
-            # Production YouTube scheduled upload
-            upload_rec = self.upload_engine.schedule_short(
-                db=db,
-                job=job,
-                render=render_output,
-                metadata=metadata,
-                scheduled_publish_at=scheduled_slot
-            )
+            # Production YouTube Direct Public upload with 6-minute retry loop for resilience
+            max_publish_attempts = 3
+            retry_delay_sec = 360  # 6 minutes
+            upload_rec = None
+            last_pub_err = None
+
+            for attempt_idx in range(1, max_publish_attempts + 1):
+                try:
+                    logger.info(f"[DIRECT_PUBLISH] Attempt {attempt_idx}/{max_publish_attempts} uploading '{title}' as public...")
+                    upload_rec = self.upload_engine.publish_direct_public(
+                        db=db,
+                        job=job,
+                        render=render_output,
+                        metadata=metadata
+                    )
+                    if upload_rec and getattr(upload_rec, "youtube_video_id", None):
+                        logger.info(f"[DIRECT_PUBLISH] Video {upload_rec.youtube_video_id} successfully published to YouTube!")
+                        break
+                except Exception as p_err:
+                    last_pub_err = p_err
+                    err_str = str(p_err).lower()
+                    # Do not retry fatal non-retryable issues (daily limit reached or explicit duplicate)
+                    if "daily_limit_exceeded" in err_str or "daily limit reached" in err_str:
+                        logger.warning(f"[DIRECT_PUBLISH] Daily limit reached: {p_err}. Halting retry.")
+                        raise p_err
+                    
+                    if attempt_idx < max_publish_attempts:
+                        logger.warning(
+                            f"[DIRECT_PUBLISH_RETRY] Upload failed on attempt {attempt_idx}/{max_publish_attempts}: {p_err}. "
+                            f"Retrying in {retry_delay_sec}s (6 minutes) to prevent slot loss..."
+                        )
+                        console.print(
+                            f"[bold yellow][!] YouTube direct upload glitch ({p_err}). Retrying in 6 minutes "
+                            f"(Attempt {attempt_idx + 1}/{max_publish_attempts})...[/bold yellow]"
+                        )
+                        time.sleep(retry_delay_sec)
+                    else:
+                        logger.error(f"[DIRECT_PUBLISH] All {max_publish_attempts} upload attempts failed: {p_err}")
+                        raise p_err
+
+            if not upload_rec:
+                raise last_pub_err or RuntimeError(f"Direct publish failed for {title}")
+
+            # Relocate video file from 02_PROCESSING to 03_PUBLISHED in Drive Vault immediately
+            try:
+                from core.lifecycle_gateway import vault_transition_to_published
+                vault_transition_to_published(
+                    file_id=file_id,
+                    youtube_video_id=upload_rec.youtube_video_id,
+                    db=db,
+                    drive_engine=self.drive_engine,
+                    job_id=job.id,
+                    caller="main._schedule_single_drive_file.direct_publish"
+                )
+                logger.info(f"[DIRECT_PUBLISH] File {file_id} moved to 03_PUBLISHED via gateway.")
+            except Exception as gw_err:
+                logger.warning(f"[DIRECT_PUBLISH_GATEWAY] Notice during transition for {file_id}: {gw_err}")
 
             try:
                 self.drive_engine.set_file_properties(file_id, {
                     "job_id": job.id,
                     "youtube_video_id": upload_rec.youtube_video_id,
-                    "upload_status": "SCHEDULED",
-                    "scheduled_publish_at": scheduled_slot.isoformat() + "Z"
+                    "upload_status": "PUBLISHED",
+                    "published_at": (upload_rec.published_at or datetime.utcnow()).isoformat() + "Z"
                 })
             except Exception as prop_err:
-                logger.warning(f"Could not attach Drive scheduling properties: {prop_err}")
+                logger.warning(f"Could not attach Drive publishing properties: {prop_err}")
 
             self.experiment_manager.link_experiment_to_upload(
                 db,
@@ -1019,12 +1065,11 @@ class ShortsPipeline:
             )
 
             console.print(Panel.fit(
-                f"[bold green][+] True YouTube Scheduled Short Successfully Uploaded & Verified![/bold green]\n"
+                f"[bold green][+] True YouTube Direct Public Short LIVE & Verified![/bold green]\n"
                 f"Title: [bold]{title}[/bold]\n"
                 f"YouTube ID: [bold yellow]{upload_rec.youtube_video_id}[/bold yellow]\n"
-                f"Assigned UTC Slot: [bold cyan]{scheduled_slot.strftime('%Y-%m-%d %H:%M')} UTC[/bold cyan]\n"
-                f"Privacy Status: [bold magenta]PRIVATE (Will auto-release on YouTube)[/bold magenta]\n"
-                f"Drive State: [bold cyan]02_PROCESSING (Tracked until public)[/bold cyan]",
+                f"Privacy Status: [bold green]PUBLIC (Live Instant in Shorts Feed)[/bold green]\n"
+                f"Drive State: [bold cyan]03_PUBLISHED[/bold cyan]",
                 border_style="green"
             ))
             return upload_rec
@@ -1439,10 +1484,11 @@ class ShortsPipeline:
                     current_folder=cand_folder
                 )
                 if upload_rec:
+                    pub_ts = upload_rec.scheduled_publish_at or upload_rec.published_at or datetime.utcnow()
                     scheduled_results.append({
                         "job_id": upload_rec.job_id,
                         "youtube_video_id": upload_rec.youtube_video_id,
-                        "scheduled_publish_at": upload_rec.scheduled_publish_at.isoformat() + "Z",
+                        "scheduled_publish_at": pub_ts.isoformat() + "Z",
                         "title": upload_rec.title
                     })
 
@@ -1712,28 +1758,22 @@ class ShortsPipeline:
                 ))
                 return True
 
-            # PRODUCTION YOUTUBE-SIDE SCHEDULED PUBLISHING
-            from engines.scheduler_engine import PublicationScheduler
-            scheduler = PublicationScheduler()
-            next_slot = scheduler.calculate_next_available_slot(db)
-
-            StateMachine.transition(db, job, JobState.READY_TO_UPLOAD, "Ready for scheduled publishing")
-            StateMachine.transition(db, job, JobState.UPLOADING, f"Uploading to YouTube (Scheduled for {next_slot.strftime('%Y-%m-%d %H:%M')} UTC)")
-            upload_rec = self.upload_engine.schedule_short(
+            # PRODUCTION DIRECT REAL-TIME PUBLIC PUBLISHING
+            StateMachine.transition(db, job, JobState.READY_TO_UPLOAD, "Ready for direct public publishing")
+            StateMachine.transition(db, job, JobState.UPLOADING, "Uploading to YouTube (Instant Direct Public)")
+            upload_rec = self.upload_engine.publish_direct_public(
                 db=db,
                 job=job,
                 render=render_output,
-                metadata=metadata,
-                scheduled_publish_at=next_slot
+                metadata=metadata
             )
 
-            StateMachine.transition(db, job, JobState.SCHEDULED, f"Scheduled on YouTube for {next_slot.isoformat()}Z (ID: {upload_rec.youtube_video_id})")
+            StateMachine.transition(db, job, JobState.PUBLISHED, f"Published direct public on YouTube (ID: {upload_rec.youtube_video_id})")
             console.print(Panel.fit(
-                f"[bold green][+] Production Cycle Complete (Scheduled)![/bold green]\n"
+                f"[bold green][+] Production Cycle Complete (Direct Public)! [/bold green]\n"
                 f"Output Video: {render_output.video_path}\n"
                 f"YouTube Status: {upload_rec.status} ({upload_rec.youtube_video_id})\n"
-                f"Scheduled Release: {next_slot.strftime('%Y-%m-%d %H:%M')} UTC\n"
-                f"Visibility: PRIVATE -> AUTO-PUBLIC (Verified)",
+                f"Visibility: DIRECT PUBLIC (Instant Live in Shorts Feed)",
                 border_style="green"
             ))
             return True

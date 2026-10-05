@@ -689,6 +689,306 @@ class UploadEngine:
             logger.error(f"YouTube scheduling failed for job {job.id}: {e}")
             raise e
 
+    def publish_direct_public(
+        self,
+        db: Session,
+        job: Job,
+        render: RenderOutput,
+        metadata: Dict[str, Any]
+    ) -> UploadRecord:
+        """
+        Direct Real-Time Publishing Architecture (Replaces API Scheduling).
+        Uploads YouTube Short with 100% immediate public visibility (privacyStatus="public", NO publishAt).
+        Provides algorithmic freshness velocity and eliminates scheduled cold-start lag.
+        """
+        upload_id = f"upl_{uuid.uuid4().hex[:12]}"
+        video_path = Path(render.video_path)
+
+        # 1. Multi-Layer Idempotency Check: Verify if this Job, Title, or Topic already has an active/completed upload
+        norm_title = metadata.get("title", "").strip().lower()
+        existing = db.query(UploadRecord).filter(
+            (UploadRecord.job_id == job.id) |
+            (UploadRecord.title.ilike(norm_title))
+        ).filter(
+            UploadRecord.status.in_(["PUBLISHED", "SUCCESS", "TEST_VERIFIED"])
+        ).first()
+
+        if existing and existing.youtube_video_id:
+            logger.info(
+                f"[IDEMPOTENCY] Video for Job {job.id} / Title '{metadata.get('title')}' is already published "
+                f"({existing.youtube_video_id}, status={existing.status}). Returning existing record."
+            )
+            job.state = JobState.PUBLISHED.value
+            db.commit()
+            return existing
+
+        # 2. Hard Production Invariant: Daily Ceiling Guard (count published today)
+        from config.constants import DAILY_SHORTS_LIMIT
+        from datetime import time as dtime
+        now_utc = datetime.utcnow()
+        today_date = now_utc.date()
+        day_start = datetime.combine(today_date, dtime.min)
+        day_end = datetime.combine(today_date, dtime.max)
+
+        pub_count = db.query(UploadRecord).filter(
+            UploadRecord.status.in_(["PUBLISHED", "SUCCESS"]),
+            UploadRecord.published_at >= day_start,
+            UploadRecord.published_at <= day_end
+        ).count()
+
+        if pub_count >= DAILY_SHORTS_LIMIT:
+            raise ValueError(
+                f"[DAILY_LIMIT_EXCEEDED] Target UTC date {today_date} already has {pub_count}/{DAILY_SHORTS_LIMIT} "
+                f"published releases. Refusing release beyond daily ceiling."
+            )
+
+        # 3. Test Mode Handling
+        if self._is_test_mode():
+            logger.info(f"[TEST_MODE/DIRECT_PUBLIC] Staging Direct Public YouTube Short '{metadata['title']}'.")
+            clean_desc = self.sanitize_public_description(metadata.get("description", ""))
+            record = UploadRecord(
+                id=upload_id,
+                job_id=job.id,
+                youtube_video_id=f"TEST_DIRECT_{uuid.uuid4().hex[:8]}",
+                title=metadata["title"],
+                description=clean_desc,
+                tags="",
+                privacy_status="public",
+                scheduled_publish_at=None,
+                published_at=datetime.utcnow(),
+                status="PUBLISHED",
+                reconciliation_metadata="TEST_MODE direct public publishing verified"
+            )
+            db.add(record)
+            job.state = JobState.PUBLISHED.value
+            db.commit()
+            return record
+
+        # 4. Production Direct YouTube API Upload
+        self.validate_media_integrity(video_path)
+
+        try:
+            from googleapiclient.discovery import build
+            from googleapiclient.http import MediaFileUpload
+            from google.oauth2.credentials import Credentials
+            import time
+            import random
+            from googleapiclient.errors import HttpError
+            import socket
+            import http.client
+            import ssl
+
+            token_path = PROJECT_ROOT / "token.json"
+            if not token_path.exists():
+                raise FileNotFoundError(f"OAuth token.json not found at {token_path}. Run authentication setup.")
+
+            creds = Credentials.from_authorized_user_file(str(token_path))
+            youtube = build("youtube", "v3", credentials=creds)
+
+            # Crash-Safe Pre-Upload Check
+            orphan_id, orphan_reason = self.recover_orphaned_upload(
+                youtube=youtube,
+                job=job,
+                metadata=metadata,
+                scheduled_publish_at=None
+            )
+            if orphan_id:
+                logger.warning(
+                    f"[ORPHAN_RECOVERY] Found pre-existing video on channel (ID: {orphan_id}, Reason: {orphan_reason}) "
+                    f"for job {job.id}. Reconciling without duplicate upload."
+                )
+                clean_desc = self.sanitize_public_description(metadata.get("description", ""))
+                record = UploadRecord(
+                    id=upload_id,
+                    job_id=job.id,
+                    youtube_video_id=orphan_id,
+                    title=metadata["title"],
+                    description=clean_desc,
+                    tags="",
+                    privacy_status="public",
+                    scheduled_publish_at=None,
+                    published_at=datetime.utcnow(),
+                    status="PUBLISHED",
+                    reconciliation_metadata=f"Recovered post-crash from YouTube channel ({orphan_reason})"
+                )
+                db.add(record)
+                job.state = JobState.PUBLISHED.value
+                db.commit()
+                return record
+
+            clean_description = self.sanitize_public_description(metadata.get("description", ""))
+
+            # Direct Instant Public Body:
+            # - privacyStatus: "public"
+            # - NO publishAt parameter (100% eliminated)
+            # - categoryId: "24" (Entertainment)
+            body = {
+                "snippet": {
+                    "title": metadata["title"][:100],
+                    "description": clean_description[:5000],
+                    "categoryId": "24"
+                },
+                "status": {
+                    "privacyStatus": "public",
+                    "selfDeclaredMadeForKids": False,
+                    "embeddable": True
+                }
+            }
+
+            logger.info(f"[YOUTUBE_API] Uploading video '{metadata['title']}' directly to PUBLIC (8MB chunks)...")
+            media = MediaFileUpload(
+                str(video_path),
+                mimetype="video/mp4",
+                chunksize=8 * 1024 * 1024,
+                resumable=True
+            )
+            request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
+
+            response = None
+            max_chunk_attempts = 5
+            retry_net_errors = (
+                socket.error,
+                http.client.RemoteDisconnected,
+                http.client.IncompleteRead,
+                ssl.SSLError,
+                OSError
+            )
+
+            while response is None:
+                chunk_error = None
+                for attempt in range(1, max_chunk_attempts + 1):
+                    try:
+                        status, response = request.next_chunk()
+                        if status:
+                            logger.info(f"[YOUTUBE_UPLOAD] Direct upload progress: {int(status.progress() * 100)}%")
+                        chunk_error = None
+                        break
+                    except HttpError as http_err:
+                        status_code = http_err.resp.status if hasattr(http_err, "resp") else 0
+                        if status_code in (500, 502, 503, 504, 429):
+                            chunk_error = http_err
+                            backoff_sec = min(60.0, (2 ** attempt) + random.uniform(0.1, 1.0))
+                            logger.warning(
+                                f"[YOUTUBE_UPLOAD] Transient HTTP {status_code} on chunk (Attempt {attempt}/{max_chunk_attempts}). "
+                                f"Retrying in {backoff_sec:.1f}s..."
+                            )
+                            time.sleep(backoff_sec)
+                        else:
+                            logger.error(f"[YOUTUBE_UPLOAD] Permanent HTTP {status_code} during upload: {http_err}")
+                            raise http_err
+                    except retry_net_errors as net_err:
+                        chunk_error = net_err
+                        backoff_sec = min(60.0, (2 ** attempt) + random.uniform(0.1, 1.0))
+                        logger.warning(
+                            f"[YOUTUBE_UPLOAD] Network error on chunk ({net_err}) (Attempt {attempt}/{max_chunk_attempts}). "
+                            f"Retrying in {backoff_sec:.1f}s..."
+                        )
+                        time.sleep(backoff_sec)
+                if chunk_error is not None:
+                    logger.error(f"[YOUTUBE_UPLOAD] Chunk upload failed after {max_chunk_attempts} retry attempts.")
+                    raise chunk_error
+
+            yt_id = response.get("id") if response else None
+            if not yt_id:
+                raise ValueError("YouTube API response did not contain a valid video ID.")
+
+            logger.info(f"[YOUTUBE_API] Video uploaded directly (ID: {yt_id}). Performing API read-back verification...")
+
+            # Explicit API Read-Back Verification
+            verify_res = youtube.videos().list(part="status,snippet", id=yt_id).execute()
+            items = verify_res.get("items", [])
+            if not items:
+                raise ValueError(f"CRITICAL: Read-back verification failed. Video ID {yt_id} not found on YouTube.")
+
+            status_obj = items[0].get("status", {})
+            actual_privacy = status_obj.get("privacyStatus", "unknown")
+
+            # Ensure privacyStatus is public
+            if actual_privacy != "public":
+                logger.warning(f"Video {yt_id} privacy is '{actual_privacy}', correcting to 'public'...")
+                update_body = {
+                    "id": yt_id,
+                    "status": {
+                        "privacyStatus": "public",
+                        "selfDeclaredMadeForKids": False
+                    }
+                }
+                youtube.videos().update(part="status", body=update_body).execute()
+
+            clean_desc = self.sanitize_public_description(metadata.get("description", ""))
+            pub_now = datetime.utcnow()
+            record = UploadRecord(
+                id=upload_id,
+                job_id=job.id,
+                youtube_video_id=yt_id,
+                title=metadata["title"],
+                description=clean_desc,
+                tags="",
+                privacy_status="public",
+                scheduled_publish_at=None,
+                published_at=pub_now,
+                status="PUBLISHED",
+                reconciliation_metadata=f"Instant Direct Public upload verified (ID: {yt_id})"
+            )
+            db.add(record)
+            job.state = JobState.PUBLISHED.value
+            db.commit()
+
+            logger.info(f"[+] DIRECT PUBLIC YOUTUBE SHORT LIVE: ID {yt_id} at {pub_now.isoformat()}Z")
+            return record
+
+        except Exception as e:
+            # Post-failure Channel Reconciliation
+            if not self._is_test_mode():
+                try:
+                    from googleapiclient.discovery import build
+                    from google.oauth2.credentials import Credentials
+                    token_path = PROJECT_ROOT / "token.json"
+                    if token_path.exists():
+                        creds = Credentials.from_authorized_user_file(str(token_path))
+                        yt_check = build("youtube", "v3", credentials=creds)
+                        search_res = yt_check.search().list(
+                            part="snippet",
+                            forMine=True,
+                            q=metadata["title"][:50],
+                            type="video",
+                            maxResults=5
+                        ).execute()
+                        for item in search_res.get("items", []):
+                            item_title = item.get("snippet", {}).get("title", "").strip().lower()
+                            item_desc = item.get("snippet", {}).get("description", "")
+                            is_exact_title = (item_title == norm_title)
+                            is_job_match = (f"[JOB_ID: {job.id}]" in item_desc) or (job.id in item_desc)
+                            if is_job_match or is_exact_title:
+                                rec_id = item.get("id", {}).get("videoId")
+                                if rec_id:
+                                    logger.warning(
+                                        f"[RECOVERY] Exception during upload ({e}), but video was created on YouTube (ID: {rec_id}). Reconciling."
+                                    )
+                                    clean_desc = self.sanitize_public_description(metadata.get("description", ""))
+                                    record = UploadRecord(
+                                        id=upload_id,
+                                        job_id=job.id,
+                                        youtube_video_id=rec_id,
+                                        title=metadata["title"],
+                                        description=clean_desc,
+                                        tags="",
+                                        privacy_status="public",
+                                        scheduled_publish_at=None,
+                                        published_at=datetime.utcnow(),
+                                        status="PUBLISHED",
+                                        reconciliation_metadata=f"Recovered after network failure during upload (ID: {rec_id})"
+                                    )
+                                    db.add(record)
+                                    job.state = JobState.PUBLISHED.value
+                                    db.commit()
+                                    return record
+                except Exception as rec_err:
+                    logger.warning(f"[RECOVERY] Post-failure channel search skipped: {rec_err}")
+
+            logger.error(f"YouTube direct publish failed for job {job.id}: {e}")
+            raise e
+
     def reconcile_scheduled_uploads(self, db: Session) -> List[Dict[str, Any]]:
         """
         Reconciles all SCHEDULED uploads against YouTube.

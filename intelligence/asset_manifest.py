@@ -506,6 +506,16 @@ class ManifestQualityGate:
                 if beat.eligibility == ManifestLicensingEligibility.REJECTED.value:
                     errors.append(f"Beat {beat.beat_id} assigns a REJECTED visual")
 
+        # Zero Visual Repetition Hard Invariant: Every beat MUST have a UNIQUE visual asset!
+        visual_ids_used = [b.selected_visual_id for b in manifest.beats if b.selected_visual_id]
+        unique_visuals = set(visual_ids_used)
+        if len(visual_ids_used) > len(unique_visuals):
+            duplicates = [vid for vid in unique_visuals if visual_ids_used.count(vid) > 1]
+            errors.append(
+                f"ZERO_REPETITION_VIOLATION: Visual assets {duplicates} are reused across beats! "
+                f"Manifest requires {len(manifest.beats)} strictly unique visual assets, got only {len(unique_visuals)}."
+            )
+
         is_valid = len(errors) == 0
         manifest.validation_status = ManifestValidationStatus.VALID.value if is_valid else ManifestValidationStatus.INVALID.value
         return is_valid, errors
@@ -574,6 +584,7 @@ class AssetManifestEngine:
         manifest_used_visual_ids: Set[str] = set()
         last_selected_visual_id: Optional[str] = None
         consecutive_reuse_count = 0
+        total_images_assigned = 0
         all_package_candidates: List[VisualEvidenceCandidate] = [
             cand
             for bp in plan_by_beat.values()
@@ -601,37 +612,39 @@ class AssetManifestEngine:
                 # Check primary candidate
                 primary = beat_plan.selected_candidate
                 if primary and primary.retrieval_status == "AVAILABLE":
-                    # Condition A: Consecutive reuse exceeds limit -> force alternative
-                    if (
-                        primary.visual_id == last_selected_visual_id
-                        and consecutive_reuse_count >= self.MAX_CONSECUTIVE_REUSE
-                    ):
+                    # Condition A: Never reuse the exact same visual consecutively if an alternative exists
+                    if primary.visual_id == last_selected_visual_id:
                         alt_found = None
                         for alt in pool:
-                            if alt.visual_id != primary.visual_id and alt.retrieval_status == "AVAILABLE" and alt.match_score >= 0.40:
+                            if alt.visual_id != primary.visual_id and alt.retrieval_status == "AVAILABLE":
                                 alt_found = alt
                                 break
-
+                        if not alt_found and all_package_candidates:
+                            for alt in all_package_candidates:
+                                if alt.visual_id != last_selected_visual_id and alt.visual_id not in used_visual_counts:
+                                    alt_found = alt
+                                    break
                         if alt_found:
                             selected_cand = alt_found
                             selection_reason = (
                                 f"Selected alternative visual {alt_found.visual_id} to prevent "
-                                f"excessive consecutive repetition of {primary.visual_id}"
+                                f"consecutive repetition of {primary.visual_id}"
                             )
                         else:
                             selected_cand = primary
-                            selection_reason = f"Primary visual {primary.visual_id} reused (no valid alternative in pool)"
-                    # Condition B: Consecutive reuse within limit allowed
-                    elif primary.visual_id == last_selected_visual_id:
-                        selected_cand = primary
-                        selection_reason = f"Primary visual {primary.visual_id} consecutive reuse allowed"
-                    # Condition C: Non-consecutive reuse (already used earlier in Short) -> prefer unused alternative
+                            selection_reason = f"Primary visual {primary.visual_id} reused (no alternative in pool)"
+                    # Condition B: Non-consecutive reuse -> prefer unused alternative from pool or package
                     elif primary.visual_id in used_visual_counts:
                         unused_alt = None
                         for alt in pool:
-                            if alt.visual_id not in used_visual_counts and alt.retrieval_status == "AVAILABLE" and alt.match_score >= 0.35:
+                            if alt.visual_id not in used_visual_counts and alt.retrieval_status == "AVAILABLE":
                                 unused_alt = alt
                                 break
+                        if not unused_alt and all_package_candidates:
+                            for alt in all_package_candidates:
+                                if alt.visual_id not in used_visual_counts and alt.retrieval_status == "AVAILABLE":
+                                    unused_alt = alt
+                                    break
                         if unused_alt:
                             selected_cand = unused_alt
                             selection_reason = f"Selected fresh alternative visual {unused_alt.visual_id} to prevent intra-short duplicate"
@@ -658,6 +671,38 @@ class AssetManifestEngine:
                 if unused_from_pkg:
                     selected_cand = unused_from_pkg[0]
                     selection_reason = f"Selected fresh package candidate {selected_cand.visual_id} to ensure visual uniqueness"
+
+            # Strict 90%+ moving video quota: Max 1 static image across entire Short (<= 10%)
+            def _is_video_cand(c: Optional[VisualEvidenceCandidate]) -> bool:
+                if not c:
+                    return False
+                m_url = (getattr(c, "media_url", "") or "").lower()
+                v_type = getattr(c, "visual_type", "")
+                return v_type == "VIDEO" or "youtube.com" in m_url or "youtu.be" in m_url or any(m_url.endswith(ext) for ext in [".mp4", ".webm", ".mov", ".mkv"])
+
+            if selected_cand and not _is_video_cand(selected_cand):
+                if total_images_assigned >= 1:
+                    # An image was already assigned; swap with an available moving video!
+                    found_video = None
+                    for alt in (pool if pool else []):
+                        if _is_video_cand(alt) and alt.retrieval_status == "AVAILABLE":
+                            found_video = alt
+                            break
+                    if not found_video and all_package_candidates:
+                        for alt in all_package_candidates:
+                            if _is_video_cand(alt) and alt.visual_id not in used_visual_counts:
+                                found_video = alt
+                                break
+                    if not found_video and all_package_candidates:
+                        for alt in all_package_candidates:
+                            if _is_video_cand(alt):
+                                found_video = alt
+                                break
+                    if found_video:
+                        selected_cand = found_video
+                        selection_reason = f"Enforced 90%+ moving video quota: replaced image with video {found_video.visual_id}"
+                else:
+                    total_images_assigned += 1
 
             # 3. Licensing & Eligibility Classification
             eligibility = ManifestLicensingEligibility.UNKNOWN.value
@@ -741,6 +786,11 @@ class AssetManifestEngine:
             elif idx > 0 and assignments and assignments[-1].selected_visual_id == selected_vid:
                 transition = EditTransitionType.HOLD.value
 
+            # Ensure video clips from stream archives have distinct start offsets per beat
+            assigned_media_url = selected_cand.media_url if selected_cand else None
+            if assigned_media_url and ("youtube.com" in assigned_media_url or "youtu.be" in assigned_media_url) and "#t=" not in assigned_media_url:
+                assigned_media_url = f"{assigned_media_url}#t={(idx % 6) * 5 + 6}"
+
             # 6. Assemble Beat Assignment
             assignment = BeatVisualAssignment(
                 beat_id=beat.beat_id,
@@ -758,7 +808,7 @@ class AssetManifestEngine:
                 claim_ids=list(beat.claim_ids),
                 source_publisher=selected_cand.source_publisher if selected_cand else None,
                 source_url=selected_cand.source_url if selected_cand else None,
-                media_url=selected_cand.media_url if selected_cand else None,
+                media_url=assigned_media_url,
                 confidence=selected_cand.confidence if selected_cand else 1.0,
                 is_reused=is_reused,
                 reuse_count=reuse_cnt,

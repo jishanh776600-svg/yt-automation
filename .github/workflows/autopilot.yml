@@ -69,9 +69,31 @@ jobs:
         run: |
           python -m core.database_sync download
 
-      - name: Claim and Schedule Ready Shorts from Google Drive Vault
+      - name: Claim and Publish Ready Shorts from Google Drive Vault (with 6-min retry)
         run: |
-          python main.py --schedule-ready
+          MAX_RETRIES=3
+          RETRY_DELAY=360  # 6 minutes
+          SUCCESS=0
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "=== Publishing Attempt $i/$MAX_RETRIES ==="
+            if python main.py --schedule-ready; then
+              echo "✅ Direct public publishing succeeded on attempt $i!"
+              SUCCESS=1
+              break
+            else
+              echo "⚠️ Publishing failed on attempt $i."
+              if [ "$i" -lt "$MAX_RETRIES" ]; then
+                echo "⏳ Waiting $RETRY_DELAY seconds (6 minutes) before retry $i..."
+                sleep $RETRY_DELAY
+              fi
+            fi
+          done
+
+          if [ "$SUCCESS" -ne 1 ]; then
+            echo "❌ All $MAX_RETRIES publishing attempts failed."
+            exit 1
+          fi
 
       - name: Upload & Synchronize Database to Cloud Vault
         if: always()

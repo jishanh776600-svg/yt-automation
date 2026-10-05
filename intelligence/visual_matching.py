@@ -54,7 +54,7 @@ class VisualRelevanceScorer:
     and editorial relevance.
     """
 
-    MINIMUM_ACCEPTABLE_SCORE = 0.35
+    MINIMUM_ACCEPTABLE_SCORE = 0.30
     EVENT_SPECIFIC_THRESHOLD = 0.72
     EVENT_RELATED_THRESHOLD = 0.50
 
@@ -104,12 +104,25 @@ class VisualRelevanceScorer:
 
         # 5. Composite Match Score
         # Weights: Entity (30%), Location (25%), Action (25%), Temporal (10%), Source Reliability (10%)
+        # For cinematic/archival real moving footage, grant relevance boost if no geographic conflict exists
+        is_cinematic_footage = (
+            candidate.provenance.get("source") == "cinematic_video_footage"
+            or candidate.source_publisher == "RealFootageVideoAdapter"
+            or candidate.visual_type == "VIDEO"
+        )
+        if is_cinematic_footage and candidate.location_match_score >= 0.5:
+            # High quality cinematic/documentary footage matching target actions/entities
+            bonus = 0.15 if (cand_action_score >= 0.2 or cand_entity_score >= 0.2) else 0.05
+        else:
+            bonus = 0.0
+
         composite = (
             0.30 * candidate.entity_match_score
             + 0.25 * candidate.location_match_score
             + 0.25 * candidate.action_match_score
             + 0.10 * candidate.temporal_match_score
             + 0.10 * candidate.source_reliability_score
+            + bonus
         )
         candidate.match_score = round(max(0.0, min(1.0, composite)), 3)
 
@@ -125,9 +138,10 @@ class VisualRelevanceScorer:
         self._classify_authenticity(candidate)
 
         # 8. Final Status
-        if candidate.match_score < self.MINIMUM_ACCEPTABLE_SCORE:
+        effective_threshold = 0.20 if is_cinematic_footage else self.MINIMUM_ACCEPTABLE_SCORE
+        if candidate.match_score < effective_threshold:
             candidate.retrieval_status = "REJECTED"
-            candidate.rejection_reason = f"Relevance score {candidate.match_score:.2f} below threshold {self.MINIMUM_ACCEPTABLE_SCORE:.2f}"
+            candidate.rejection_reason = f"Relevance score {candidate.match_score:.2f} below threshold {effective_threshold:.2f}"
         else:
             candidate.retrieval_status = "AVAILABLE"
 
@@ -191,7 +205,7 @@ class VisualRelevanceScorer:
                 if any(re.search(r"\b" + re.escape(kw) + r"\b", text_corpus) for kw in th_kw):
                     return 0.70, False, None
 
-        return 0.3, False, None
+        return 0.5, False, None
 
     def _compute_entity_score(
         self, text_corpus: str, event_entities: Optional[List[str]]

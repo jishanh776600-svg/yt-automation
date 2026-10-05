@@ -17,7 +17,7 @@ Core Invariants:
 import logging
 import re
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any, Set
 
 from intelligence.event_card import EventCard
 from intelligence.journalistic_script import ScriptDocument, ScriptBeat
@@ -107,6 +107,7 @@ class VisualEvidenceRetrievalEngine:
         elif hasattr(event_card, "occurred_at") and event_card.occurred_at:
             event_time = event_card.occurred_at
 
+        allocated_visual_ids: Set[str] = set()
         for idx, beat in enumerate(script_doc.beats):
             plan_beat = self._process_beat(
                 beat=beat,
@@ -118,7 +119,10 @@ class VisualEvidenceRetrievalEngine:
                 event_actions=event_actions,
                 event_time=event_time,
                 max_candidates_per_tier=max_candidates_per_tier,
+                allocated_visual_ids=allocated_visual_ids,
             )
+            if plan_beat.selected_candidate:
+                allocated_visual_ids.add(plan_beat.selected_candidate.visual_id)
             beat_plans.append(plan_beat)
 
         evidence_plan = VisualEvidencePlan(
@@ -148,6 +152,7 @@ class VisualEvidenceRetrievalEngine:
         event_actions: List[str],
         event_time: Optional[datetime],
         max_candidates_per_tier: int,
+        allocated_visual_ids: Optional[Set[str]] = None,
     ) -> BeatVisualPlan:
         """Processes candidate retrieval and evidence selection for a single beat."""
         # 1. Determine search queries
@@ -186,10 +191,17 @@ class VisualEvidenceRetrievalEngine:
         # Fallback query expansion if no visual candidates found for specific beat query
         if not raw_candidates:
             fallback_queries = []
+            if hasattr(event_card, "important_objects") and event_card.important_objects:
+                for obj in event_card.important_objects:
+                    fallback_queries.append(f"{obj} movie scene 4k")
+                    fallback_queries.append(f"{obj} cinematic 1080p")
+            if hasattr(event_card, "entities") and event_card.entities:
+                for ent in event_card.entities:
+                    fallback_queries.append(f"{ent} cinematic 4k")
             if hasattr(event_card, "future_footage_queries") and event_card.future_footage_queries:
-                fallback_queries.extend(event_card.future_footage_queries)
+                fallback_queries.extend([f"{q} movie scene" for q in event_card.future_footage_queries])
             if hasattr(event_card, "visual_entities") and event_card.visual_entities:
-                fallback_queries.extend(event_card.visual_entities)
+                fallback_queries.extend([f"{ve} cinematic 4k" for ve in event_card.visual_entities])
             beat_words = [
                 w for w in re.sub(r"[^\w\s]", " ", beat.text).split()
                 if len(w) > 3 and w.lower() not in (
@@ -198,10 +210,9 @@ class VisualEvidenceRetrievalEngine:
                 )
             ]
             if beat_words:
-                fallback_queries.append(" ".join(beat_words[:2]))
-            title = getattr(event_card, "canonical_title", getattr(event_card, "title", ""))
-            if title:
-                fallback_queries.append(title[:40])
+                fallback_queries.append(f"{' '.join(beat_words[:2])} cinematic movie scene 4k")
+            primary_loc = event_locations[0] if event_locations else "California"
+            fallback_queries.append(f"{primary_loc} aerial drone 4k 60fps")
 
             # Rotate fallback queries based on beat sequence so each beat searches a distinct scene!
             offset = (sequence - 1) % len(fallback_queries) if fallback_queries else 0
@@ -242,7 +253,7 @@ class VisualEvidenceRetrievalEngine:
             )
             scored_candidates.append(scored)
 
-        # 4. Rank candidates
+        # 4. Rank candidates - Strongly prioritize moving VIDEO clips over static images
         tier_weights = {
             "OFFICIAL_GOVERNMENT": 1.0,
             "WIRE_SERVICE": 0.9,
@@ -250,21 +261,24 @@ class VisualEvidenceRetrievalEngine:
             "ARCHIVE": 0.5,
         }
 
-        def sort_key(c: VisualEvidenceCandidate) -> Tuple[int, float, float]:
+        def sort_key(c: VisualEvidenceCandidate) -> Tuple[int, int, float, float]:
             is_avail = 1 if c.retrieval_status == "AVAILABLE" else 0
+            m_url = getattr(c, "media_url", "") or ""
+            is_video = 1 if (getattr(c, "visual_type", "") == "VIDEO" or "youtube.com" in m_url or "youtu.be" in m_url or any(m_url.lower().endswith(ext) for ext in [".mp4", ".webm", ".mkv"])) else 0
             tier_w = tier_weights.get(c.source_type, 0.5)
-            return (is_avail, tier_w, c.match_score)
+            return (is_avail, is_video, tier_w, c.match_score)
 
         sorted_candidates = sorted(scored_candidates, key=sort_key, reverse=True)
 
-        # 5. Select top candidate and assign coverage
+        # 5. Select top candidate and assign coverage (strictly prefer unallocated candidates to guarantee zero looping)
         available = [c for c in sorted_candidates if c.retrieval_status == "AVAILABLE"]
+        fresh_available = [c for c in available if c.visual_id not in (allocated_visual_ids or set())]
+        top_cand = fresh_available[0] if fresh_available else (available[0] if available else None)
         
         selected_candidate: Optional[VisualEvidenceCandidate] = None
         coverage_type = VisualCoverageType.NO_VISUAL.value
 
-        if available:
-            top_cand = available[0]
+        if top_cand:
             selected_candidate = top_cand
 
             if top_cand.authenticity == VisualAuthenticity.EVENT_SPECIFIC.value:
@@ -286,3 +300,87 @@ class VisualEvidenceRetrievalEngine:
             candidate_pool=sorted_candidates[:6],
             target_query=primary_query,
         )
+
+    def scout_topic_footage(
+        self,
+        event_card: EventCard,
+        min_required_clips: int = 4
+    ) -> Dict[str, Any]:
+        """
+        PRE-SCRIPT FOOTAGE SCOUTING ENGINE (REVERSED PIPELINE):
+        Before generating a script, scouts the internet across YouTube (news, docudramas, movies)
+        and Wikimedia Commons to verify authentic, high-definition footage availability.
+        
+        Scoring Decision:
+          >= 8 clips -> GREEN  (Rich authentic moving footage available)
+          4-7 clips  -> YELLOW (Usable with movie/documentary supplements)
+          < 4 clips  -> RED    (DROP TOPIC IMMEDIATELY - Zero stock fallback allowed)
+        """
+        event_id = getattr(event_card, "event_id", "unknown_event")
+        title = getattr(event_card, "canonical_title", getattr(event_card, "headline", ""))
+        logger.info(f"[FOOTAGE_SCOUT] Scouting available internet footage for '{title}' [{event_id}]...")
+
+        # Form multi-angle scouting queries
+        search_angles = []
+        clean_title = re.sub(r"[^\w\s-]", " ", title).strip()
+        search_angles.append(clean_title)
+        search_angles.append(f"{clean_title} documentary")
+        search_angles.append(f"{clean_title} movie scene 4k")
+
+        if hasattr(event_card, "entities") and event_card.entities:
+            for ent in event_card.entities[:2]:
+                if len(ent) > 3:
+                    search_angles.append(f"{ent} 4k film clip")
+        if hasattr(event_card, "important_objects") and event_card.important_objects:
+            for obj in event_card.important_objects[:2]:
+                if len(obj) > 3:
+                    search_angles.append(f"{obj} cinematic 1080p")
+        if hasattr(event_card, "where") and event_card.where:
+            loc = event_card.where.location_name or event_card.where.city or event_card.where.country
+            if loc and loc not in ["Historical Mystery", "Weird Science"]:
+                search_angles.append(f"{loc} aerial drone 4k")
+
+        scouted_candidates: List[VisualEvidenceCandidate] = []
+        seen_media = set()
+
+        for query in search_angles:
+            if len(scouted_candidates) >= 12:
+                break
+            results = self.source_manager.retrieve_candidates(
+                query=query,
+                event_id=event_id,
+                beat_id="scout",
+                target_entities=getattr(event_card, "entities", []),
+                target_locations=[event_card.where.location_name] if hasattr(event_card, "where") and event_card.where else [],
+                max_candidates_per_tier=4
+            )
+            for c in results:
+                m_url = getattr(c, "media_url", "")
+                if m_url and m_url not in seen_media and c.retrieval_status == "AVAILABLE":
+                    seen_media.add(m_url)
+                    scouted_candidates.append(c)
+
+        clip_count = len(scouted_candidates)
+        if clip_count >= 8:
+            status = "GREEN"
+            is_approved = True
+        elif clip_count >= min_required_clips:
+            status = "YELLOW"
+            is_approved = True
+        else:
+            status = "RED"
+            is_approved = False
+
+        logger.info(
+            f"[FOOTAGE_SCOUT] Topic '{title}': Found {clip_count} verified clips -> Status: {status} "
+            f"(Approved: {is_approved})"
+        )
+
+        return {
+            "status": status,
+            "is_approved": is_approved,
+            "clip_count": clip_count,
+            "candidates": scouted_candidates,
+            "topic_title": title,
+            "event_id": event_id
+        }

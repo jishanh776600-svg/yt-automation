@@ -207,6 +207,10 @@ class AssetFetcher:
                     duration_ms=dur,
                 )
 
+        # 1.5. YouTube / Real Video Stream download via yt-dlp
+        if "youtube.com" in clean_url or "youtu.be" in clean_url:
+            return self._download_video_clip_ytdlp(clean_url, start_t=start_t)
+
         # 2. Initial SSRF validation
         safe, reason = SafeURLValidator.is_safe_url(clean_url, resolve_dns=True)
         if not safe:
@@ -441,40 +445,154 @@ class AssetFetcher:
                 error_message=f"Unexpected failure: {exc}",
             )
 
+    def _download_video_clip_ytdlp(self, url: str, start_t: float) -> AssetFetchResult:
+        """Downloads an exact 3-4s video clip segment from a video stream via yt-dlp."""
+        import yt_dlp
+        import uuid
+
+        target_dir = self.media_cache.blobs_dir
+        target_dir.mkdir(parents=True, exist_ok=True)
+        unique_prefix = f"yt_{uuid.uuid4().hex[:10]}"
+        out_template = str(target_dir / f"{unique_prefix}.%(ext)s")
+
+        # Determine safe clip segment bounds (ensure clip_start never exceeds video duration)
+        clean_target_url = url.split("#t=")[0]
+        video_dur = 60.0
+        try:
+            probe_opts = {'quiet': True, 'skip_download': True, 'socket_timeout': 8, 'no_warnings': True}
+            with yt_dlp.YoutubeDL(probe_opts) as ydl_probe:
+                info_p = ydl_probe.extract_info(clean_target_url, download=False)
+                if info_p and info_p.get("duration"):
+                    video_dur = float(info_p["duration"])
+        except Exception:
+            pass
+
+        max_start = max(0.0, video_dur - 7.0)
+        # Skip opening intro/title cards (avoid 0-15s black screens and logos)
+        min_start = 15.0 if video_dur >= 35.0 else 0.0
+        if "#t=" in url:
+            try:
+                raw_offset = float(url.split("#t=")[-1])
+                clip_start = max(min_start, min(raw_offset, max_start))
+            except Exception:
+                clip_start = min(min_start + 5.0, max_start)
+        else:
+            url_hash_val = int(hashlib.md5(url.encode()).hexdigest()[:6], 16)
+            if max_start <= min_start:
+                clip_start = 0.0
+            else:
+                available_span = max(1, int(max_start - min_start))
+                clip_start = min_start + float(url_hash_val % available_span)
+        clip_end = min(video_dur, clip_start + 7.0)
+
+        ydl_opts = {
+            'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+            'download_ranges': yt_dlp.utils.download_range_func(None, [(clip_start, clip_end)]),
+            'outtmpl': out_template,
+            'quiet': True,
+            'force_keyframes_at_cuts': True,
+            'no_warnings': True,
+            'socket_timeout': 15,
+        }
+
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([clean_target_url])
+        except Exception as e_range:
+            logger.info(f"download_ranges cut failed ({e_range}), trying full download fallback with ffmpeg post-trim...")
+            # Fallback: simple download format without download_ranges
+            fb_opts = {
+                'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+                'outtmpl': out_template,
+                'quiet': True,
+                'no_warnings': True,
+                'socket_timeout': 15,
+            }
+            try:
+                with yt_dlp.YoutubeDL(fb_opts) as ydl_fb:
+                    ydl_fb.download([clean_target_url])
+            except Exception as e_fb:
+                logger.warning(f"yt-dlp clip extraction failed for {url}: {e_fb}")
+                dur = (time.perf_counter() - start_t) * 1000
+                return AssetFetchResult(
+                    url=url,
+                    status=AssetFetchStatus.FAILED_NETWORK,
+                    duration_ms=dur,
+                    error_message=str(e_fb),
+                )
+
+        matches = list(target_dir.glob(f"{unique_prefix}.*"))
+        if not matches:
+            dur = (time.perf_counter() - start_t) * 1000
+            return AssetFetchResult(
+                url=url,
+                status=AssetFetchStatus.FAILED_NETWORK,
+                duration_ms=dur,
+                error_message="yt-dlp produced no output file",
+            )
+
+        downloaded_file = matches[0]
+        m_type = "video/mp4" if downloaded_file.suffix == ".mp4" else "video/webm"
+        cached_path, sha256 = self.media_cache.put_file(
+            url=url,
+            source_path=downloaded_file,
+            mime_type=m_type
+        )
+        size_b = cached_path.stat().st_size
+
+        dur = (time.perf_counter() - start_t) * 1000
+        return AssetFetchResult(
+            url=url,
+            status=AssetFetchStatus.SUCCESS,
+            local_path=cached_path,
+            sha256=sha256,
+            mime_type=m_type,
+            size_bytes=size_b,
+            duration_ms=dur,
+        )
+
     def fetch_manifest_assets(
         self,
         manifest: ProductionAssetManifest,
     ) -> ManifestFetchSummary:
         """
         Retrieves all visual assets assigned in a ProductionAssetManifest.
-        Maps local paths back to beats.
+        Maps local paths back to beats. If an asset fails, tries alternative candidate URLs.
         """
         summary = ManifestFetchSummary(manifest_id=manifest.manifest_id)
 
         for beat in manifest.beats:
-            media_url = beat.media_url
-            if not media_url:
-                summary.asset_path_by_beat[beat.beat_id] = None
-                continue
+            urls_to_try = []
+            if beat.media_url:
+                urls_to_try.append(beat.media_url)
+            if beat.source_url and beat.source_url not in urls_to_try:
+                urls_to_try.append(beat.source_url)
 
             summary.total_requested += 1
+            fetched_p = None
 
-            # Check if this URL was already fetched in this batch
-            if media_url in summary.results:
-                prev_res = summary.results[media_url]
-                summary.asset_path_by_beat[beat.beat_id] = prev_res.local_path
-                continue
+            for m_url in urls_to_try:
+                if not m_url:
+                    continue
+                if m_url in summary.results:
+                    prev_res = summary.results[m_url]
+                    if prev_res.local_path:
+                        fetched_p = prev_res.local_path
+                        break
 
-            res = self.fetch_url(media_url)
-            summary.results[media_url] = res
+                res = self.fetch_url(m_url)
+                summary.results[m_url] = res
+                if res.status in (AssetFetchStatus.SUCCESS, AssetFetchStatus.CACHE_HIT) and res.local_path:
+                    summary.successful += 1
+                    if res.status == AssetFetchStatus.CACHE_HIT:
+                        summary.cache_hits += 1
+                    else:
+                        summary.downloads += 1
+                    fetched_p = res.local_path
+                    break
 
-            if res.status in (AssetFetchStatus.SUCCESS, AssetFetchStatus.CACHE_HIT):
-                summary.successful += 1
-                if res.status == AssetFetchStatus.CACHE_HIT:
-                    summary.cache_hits += 1
-                else:
-                    summary.downloads += 1
-                summary.asset_path_by_beat[beat.beat_id] = res.local_path
+            if fetched_p:
+                summary.asset_path_by_beat[beat.beat_id] = fetched_p
             else:
                 summary.failed += 1
                 summary.asset_path_by_beat[beat.beat_id] = None
