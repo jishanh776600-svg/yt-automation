@@ -526,9 +526,20 @@ class RealFootageVideoAdapter(BaseVisualAdapter):
             "skip_download": True,
             "socket_timeout": self.timeout_seconds,
             "no_warnings": True,
+            "extractor_args": {"youtube": {"player_client": ["android", "ios", "mweb"]}},
         }
-        proxy_url = os.environ.get("YOUTUBE_PROXY") or os.environ.get("ALL_PROXY")
+        proxy_url = os.environ.get("YOUTUBE_PROXY") or os.environ.get("ALL_PROXY") or ""
+        if not proxy_url:
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    sock.settimeout(0.3)
+                    if sock.connect_ex(("127.0.0.1", 1080)) == 0:
+                        proxy_url = "socks5h://127.0.0.1:1080"
+            except Exception:
+                pass
         if proxy_url:
+            if proxy_url.startswith("socks5://"):
+                proxy_url = "socks5h://" + proxy_url[len("socks5://"):]
             ydl_opts["proxy"] = proxy_url
 
         # Strict filters:

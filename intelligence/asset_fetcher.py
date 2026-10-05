@@ -16,6 +16,9 @@ Security & Cloud Autonomy Invariants:
 import hashlib
 import io
 import logging
+import os
+import shutil
+import socket
 import time
 import urllib.parse
 import uuid
@@ -457,25 +460,49 @@ class AssetFetcher:
 
         # Determine safe clip segment bounds (ensure clip_start never exceeds video duration)
         clean_target_url = url.split("#t=")[0]
-        extractor_args_mobile = {
-            'youtube': {
-                'player_client': ['mweb', 'android', 'ios'],
-            }
-        }
-        mobile_headers = {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
-        }
+
+        # Resolve egress proxy (explicit setting, env var, or local WARP sidecar auto-detection)
+        proxy_url = (
+            os.environ.get("YOUTUBE_PROXY")
+            or os.environ.get("AUTOCLIP_PROXY")
+            or os.environ.get("YTDLP_PROXY")
+            or os.environ.get("ALL_PROXY")
+            or ""
+        ).strip()
+        if not proxy_url:
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    sock.settimeout(0.3)
+                    if sock.connect_ex(("127.0.0.1", 1080)) == 0:
+                        proxy_url = "socks5h://127.0.0.1:1080"
+                        logger.info("Auto-detected local WARP SOCKS5 proxy on 127.0.0.1:1080")
+            except Exception:
+                pass
+        if proxy_url and proxy_url.startswith("socks5://"):
+            proxy_url = "socks5h://" + proxy_url[len("socks5://"):]
+
+        # Detect external JavaScript runtime (Deno, Node)
+        js_runtimes = {}
+        for candidate in ("deno", "node", "nodejs", "bun"):
+            if shutil.which(candidate):
+                js_runtimes = {candidate: {}}
+                logger.info(f"Discovered JavaScript runtime '{candidate}' for yt-dlp challenges")
+                break
 
         video_dur = 60.0
+        probe_opts = {
+            'quiet': True,
+            'skip_download': True,
+            'socket_timeout': 15,
+            'no_warnings': True,
+            'extractor_args': {'youtube': {'player_client': ['android', 'ios', 'mweb']}},
+        }
+        if proxy_url:
+            probe_opts['proxy'] = proxy_url
+        if js_runtimes:
+            probe_opts['js_runtimes'] = js_runtimes
+
         try:
-            probe_opts = {
-                'quiet': True,
-                'skip_download': True,
-                'socket_timeout': 10,
-                'no_warnings': True,
-                'extractor_args': extractor_args_mobile,
-                'http_headers': mobile_headers,
-            }
             with yt_dlp.YoutubeDL(probe_opts) as ydl_probe:
                 info_p = ydl_probe.extract_info(clean_target_url, download=False)
                 if info_p and info_p.get("duration"):
@@ -501,50 +528,81 @@ class AssetFetcher:
                 clip_start = min_start + float(url_hash_val % available_span)
         clip_end = min(video_dur, clip_start + 7.0)
 
-        ydl_opts = {
-            'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
-            'download_ranges': yt_dlp.utils.download_range_func(None, [(clip_start, clip_end)]),
-            'outtmpl': out_template,
-            'quiet': True,
-            'force_keyframes_at_cuts': True,
-            'no_warnings': True,
-            'socket_timeout': 20,
-            'extractor_args': extractor_args_mobile,
-            'http_headers': mobile_headers,
-        }
-        proxy_url = os.environ.get("YOUTUBE_PROXY") or os.environ.get("ALL_PROXY")
-        if proxy_url:
-            ydl_opts['proxy'] = proxy_url
+        # Multi-strategy acquisition order matching autoclip & Obsidian architecture:
+        # 1. Cloud-resilient InnerTube client (visionos avoids datacenter bot checks)
+        # 2. Mobile InnerTube client (android, ios)
+        # 3. Web & MWeb InnerTube with PoToken provider
+        # 4. TV client
+        # 5. Default unconstrained
+        strategies = [
+            ("cloud_visionos", {"youtube": {"player_client": ["visionos"]}}),
+            ("mobile_innertube", {"youtube": {"player_client": ["android", "ios"]}}),
+            ("pot_provider", {"youtube": {"player_client": ["web", "mweb"], "fetch_pot": ["always"]}}),
+            ("tv_innertube", {"youtube": {"player_client": ["tv"]}}),
+            ("default_unconstrained", None),
+        ]
 
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([clean_target_url])
-        except Exception as e_range:
-            logger.info(f"download_ranges cut failed ({e_range}), trying full download fallback with ffmpeg post-trim...")
-            # Fallback: simple download format without download_ranges
-            fb_opts = {
-                'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+        download_success = False
+        last_error = None
+
+        for strat_name, extractor_args in strategies:
+            ydl_opts = {
+                'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+                'download_ranges': yt_dlp.utils.download_range_func(None, [(clip_start, clip_end)]),
                 'outtmpl': out_template,
                 'quiet': True,
+                'force_keyframes_at_cuts': True,
                 'no_warnings': True,
-                'socket_timeout': 20,
-                'extractor_args': extractor_args_mobile,
-                'http_headers': mobile_headers,
+                'socket_timeout': 25,
             }
             if proxy_url:
-                fb_opts['proxy'] = proxy_url
+                ydl_opts['proxy'] = proxy_url
+            if js_runtimes:
+                ydl_opts['js_runtimes'] = js_runtimes
+            if extractor_args:
+                ydl_opts['extractor_args'] = extractor_args
+
             try:
-                with yt_dlp.YoutubeDL(fb_opts) as ydl_fb:
-                    ydl_fb.download([clean_target_url])
-            except Exception as e_fb:
-                logger.warning(f"yt-dlp clip extraction failed for {url}: {e_fb}")
-                dur = (time.perf_counter() - start_t) * 1000
-                return AssetFetchResult(
-                    url=url,
-                    status=AssetFetchStatus.FAILED_NETWORK,
-                    duration_ms=dur,
-                    error_message=str(e_fb),
-                )
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([clean_target_url])
+                download_success = True
+                logger.info(f"Successfully downloaded clip using strategy '{strat_name}'")
+                break
+            except Exception as e_range:
+                last_error = e_range
+                # If download_ranges fails on cut, try simple format fallback under same strategy
+                fb_opts = {
+                    'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+                    'outtmpl': out_template,
+                    'quiet': True,
+                    'no_warnings': True,
+                    'socket_timeout': 25,
+                }
+                if proxy_url:
+                    fb_opts['proxy'] = proxy_url
+                if js_runtimes:
+                    fb_opts['js_runtimes'] = js_runtimes
+                if extractor_args:
+                    fb_opts['extractor_args'] = extractor_args
+                try:
+                    with yt_dlp.YoutubeDL(fb_opts) as ydl_fb:
+                        ydl_fb.download([clean_target_url])
+                    download_success = True
+                    logger.info(f"Successfully downloaded fallback clip using strategy '{strat_name}'")
+                    break
+                except Exception as e_fb:
+                    last_error = e_fb
+                    continue
+
+        if not download_success:
+            dur = (time.perf_counter() - start_t) * 1000
+            logger.warning(f"yt-dlp clip extraction failed for {url} across all strategies: {last_error}")
+            return AssetFetchResult(
+                url=url,
+                status=AssetFetchStatus.FAILED_NETWORK,
+                duration_ms=dur,
+                error_message=str(last_error),
+            )
 
         matches = list(target_dir.glob(f"{unique_prefix}.*"))
         if not matches:

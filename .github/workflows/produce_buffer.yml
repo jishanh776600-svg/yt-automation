@@ -66,6 +66,38 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Set up Deno for yt-dlp challenge execution
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Start Cloudflare WARP Egress Sidecar
+        run: |
+          docker run --name warp -d \
+            --cap-add NET_ADMIN \
+            --sysctl net.ipv6.conf.all.disable_ipv6=0 \
+            --sysctl net.ipv4.conf.all.src_valid_mark=1 \
+            -p 127.0.0.1:1080:1080 \
+            caomingjun/warp
+          
+          echo "Waiting for WARP egress sidecar to initialize..."
+          for i in {1..20}; do
+            TRACE=$(curl -s --socks5-hostname 127.0.0.1:1080 https://cloudflare.com/cdn-cgi/trace 2>/dev/null || true)
+            if echo "$TRACE" | grep -q "warp=on\|warp=plus"; then
+              echo "WARP egress sidecar active (attempt $i)."
+              echo "$TRACE" | grep -E '^(ip|loc|warp)='
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Start Proof-of-Origin Token Provider Server
+        run: |
+          docker run --name bgutil-provider --network host -d --init \
+            brainicism/bgutil-ytdlp-pot-provider
+          sleep 5
+          curl -s http://127.0.0.1:4416/ping || true
+
       - name: Restore OAuth Credentials & Environment Secrets
         env:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
@@ -98,6 +130,8 @@ jobs:
           fi
           if [ -n "${YOUTUBE_PROXY}" ]; then
             echo "YOUTUBE_PROXY=${YOUTUBE_PROXY}" >> .env
+          else
+            echo "YOUTUBE_PROXY=socks5h://127.0.0.1:1080" >> .env
           fi
           echo "TEST_MODE=false" >> .env
           echo "KOKORO_VOICE=${{ inputs.active_voice || 'af_bella' }}" >> .env
@@ -141,3 +175,11 @@ jobs:
           git add data/assets/ data/captions/ data/production_summary.json data/LEARNING_LOG.md 2>/dev/null || true
           git commit -m "Auto-update producer database records [skip ci]" || echo "No changes to commit"
           git push origin main || echo "Push skipped"
+
+      - name: Container Logs (WARP & POT Provider)
+        if: always()
+        run: |
+          echo "=== WARP EGRESS LOGS ==="
+          docker logs warp 2>/dev/null || true
+          echo "=== POT PROVIDER LOGS ==="
+          docker logs bgutil-provider 2>/dev/null || true
