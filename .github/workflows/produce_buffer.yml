@@ -120,8 +120,8 @@ jobs:
             python main.py --produce-batch "$BATCH_COUNT" $VOICE_FLAG $UNLOCK_FLAG
           else
             TARGET=${TARGET_BUFFER:-6}
-            echo "[*] Auditing and maintaining reserve buffer (Target: $TARGET Shorts in 01_READY, Max 1 per run, Voice: ${VOICE_INPUT:-default})..."
-            python main.py --maintain-buffer "$TARGET" --max-per-cycle 1 $VOICE_FLAG $UNLOCK_FLAG
+            echo "[*] Auditing and maintaining reserve buffer (Target: $TARGET Shorts in 01_READY, Voice: ${VOICE_INPUT:-default})..."
+            python main.py --maintain-buffer "$TARGET" $VOICE_FLAG $UNLOCK_FLAG
           fi
 
       - name: Upload & Synchronize Database to Cloud Vault

@@ -494,7 +494,7 @@ class CloudProductionOrchestrator:
         self,
         target_buffer: int = TARGET_BUFFER,
         force_batch_count: int = 0,
-        max_per_cycle: int = 1,
+        max_per_cycle: int = 0,
     ) -> ProductionRunTelemetry:
         """
         Executes an autonomous, headless production cycle:
