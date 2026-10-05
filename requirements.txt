@@ -14,6 +14,7 @@ schedule>=1.2.0
 rich>=13.7.0
 feedparser>=6.0.12
 trafilatura>=2.0.0
+yt-dlp>=2024.8.6
 fastembed>=0.8.0
 
 # Database
