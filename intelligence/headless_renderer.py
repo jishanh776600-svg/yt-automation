@@ -421,10 +421,16 @@ class HeadlessComposer:
                 raw_p = fetch_summary.asset_path_by_beat.get(beat.beat_id)
                 asset_p = Path(raw_p) if raw_p and _is_valid_render_asset(Path(raw_p)) else None
                 if not asset_p:
-                    raise RuntimeError(
-                        f"ZERO_REPETITION_RULE: Visual asset missing or failed download for beat '{beat.beat_id}'. "
-                        f"Recycling or looping existing clips across beats is strictly prohibited."
-                    )
+                    used_paths = set(p for p in beat_asset_map.values() if p)
+                    unused_pool = [p for p in valid_pool if p not in used_paths and _is_valid_render_asset(p)]
+                    if unused_pool:
+                        asset_p = unused_pool[0]
+                        logger.info(f"Substituted unused candidate from valid_pool for beat '{beat.beat_id}'")
+                    else:
+                        raise RuntimeError(
+                            f"ZERO_REPETITION_RULE: Visual asset missing or failed download for beat '{beat.beat_id}'. "
+                            f"Recycling or looping existing clips across beats is strictly prohibited."
+                        )
                 last_asset_path = asset_p
             beat_asset_map[beat.beat_id] = asset_p
 

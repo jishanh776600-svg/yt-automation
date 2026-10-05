@@ -457,9 +457,25 @@ class AssetFetcher:
 
         # Determine safe clip segment bounds (ensure clip_start never exceeds video duration)
         clean_target_url = url.split("#t=")[0]
+        extractor_args_mobile = {
+            'youtube': {
+                'player_client': ['mweb', 'android', 'ios'],
+            }
+        }
+        mobile_headers = {
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+        }
+
         video_dur = 60.0
         try:
-            probe_opts = {'quiet': True, 'skip_download': True, 'socket_timeout': 8, 'no_warnings': True}
+            probe_opts = {
+                'quiet': True,
+                'skip_download': True,
+                'socket_timeout': 10,
+                'no_warnings': True,
+                'extractor_args': extractor_args_mobile,
+                'http_headers': mobile_headers,
+            }
             with yt_dlp.YoutubeDL(probe_opts) as ydl_probe:
                 info_p = ydl_probe.extract_info(clean_target_url, download=False)
                 if info_p and info_p.get("duration"):
@@ -492,7 +508,9 @@ class AssetFetcher:
             'quiet': True,
             'force_keyframes_at_cuts': True,
             'no_warnings': True,
-            'socket_timeout': 15,
+            'socket_timeout': 20,
+            'extractor_args': extractor_args_mobile,
+            'http_headers': mobile_headers,
         }
 
         try:
@@ -506,7 +524,9 @@ class AssetFetcher:
                 'outtmpl': out_template,
                 'quiet': True,
                 'no_warnings': True,
-                'socket_timeout': 15,
+                'socket_timeout': 20,
+                'extractor_args': extractor_args_mobile,
+                'http_headers': mobile_headers,
             }
             try:
                 with yt_dlp.YoutubeDL(fb_opts) as ydl_fb:

@@ -709,7 +709,7 @@ class ShortsPipeline:
         ))
         return telemetry.videos_deposited, summary
 
-    def maintain_buffer(self, target_stock: int = 6, force_unlock: bool = False) -> Tuple[int, Dict[str, Any]]:
+    def maintain_buffer(self, target_stock: int = 6, force_unlock: bool = False, max_per_cycle: int = 1) -> Tuple[int, Dict[str, Any]]:
         """
         BUFFER MANAGER: Checks current ready stock in Drive '01_READY'.
         If stock < target_stock, dynamically calculates deficit per iteration and generates
@@ -743,7 +743,7 @@ class ShortsPipeline:
             voice_id="af_bella",
             force_unlock=force_unlock
         )
-        telemetry = orchestrator.run_production_cycle(target_buffer=clamped_target)
+        telemetry = orchestrator.run_production_cycle(target_buffer=clamped_target, max_per_cycle=max_per_cycle)
 
         summary = {
             "action": "MAINTAIN_BUFFER",
@@ -1819,6 +1819,7 @@ def main():
     parser.add_argument("--cloud-produce", type=int, default=0, help="Run Phase 7 CloudProductionOrchestrator to produce N shorts")
     parser.add_argument("--dry-run", action="store_true", help="Execute in dry-run mode without external mutations")
     parser.add_argument("--force-unlock", action="store_true", help="Force-break any existing cloud locks in Drive and release local locks")
+    parser.add_argument("--max-per-cycle", type=int, default=1, help="Maximum number of Shorts to produce in a single maintenance cycle (default: 1)")
     args = parser.parse_args()
 
     pipeline = ShortsPipeline(voice=args.voice)
@@ -1917,7 +1918,11 @@ def main():
         console.print("[bold green][+] Forcibly released all cloud and local locks.[/bold green]")
         sys.exit(0)
     elif args.maintain_buffer > 0:
-        res = pipeline.maintain_buffer(target_stock=args.maintain_buffer, force_unlock=args.force_unlock or args.force)
+        res = pipeline.maintain_buffer(
+            target_stock=args.maintain_buffer,
+            force_unlock=args.force_unlock or args.force,
+            max_per_cycle=args.max_per_cycle
+        )
         count = res[0] if isinstance(res, tuple) else res
         summary = res[1] if isinstance(res, tuple) else {}
         sys.stdout.flush()

@@ -197,21 +197,21 @@ class CloudProductionOrchestrator:
 
         # 1.5 Pre-Script Footage Scouting Gate (Reversed Pipeline)
         # Verify internet footage availability BEFORE writing script.
-        # Zero stock fallback. If clips < 4 -> Drop topic immediately!
+        # Zero stock fallback. If clips < 8 -> Drop topic immediately to prevent manifest repetition!
         telemetry.transition_stage(PipelineStage.VISUAL_RETRIEVAL, f"Scouting available footage for {event_id}")
         t_scout0 = time.perf_counter()
-        scout_res = self.evidence_engine.scout_topic_footage(event_card, min_required_clips=4)
+        scout_res = self.evidence_engine.scout_topic_footage(event_card, min_required_clips=8)
         scout_dur = time.perf_counter() - t_scout0
         telemetry.stage_durations["pre_scouting"] = scout_dur
 
         if not scout_res.get("is_approved", False):
             logger.warning(
                 f"[REVERSED_PIPELINE_DROP] Dropping topic '{event_card.canonical_title}' [{event_id}]: "
-                f"Only {scout_res.get('clip_count', 0)} verified clips found (< 4 minimum). "
+                f"Only {scout_res.get('clip_count', 0)} verified clips found (< 8 minimum). "
                 f"Zero stock fallback policy enforced."
             )
             telemetry.failure_reasons.append(
-                f"Insufficient real footage: {scout_res.get('clip_count', 0)} clips found (< 4 required)"
+                f"Insufficient real footage: {scout_res.get('clip_count', 0)} clips found (< 8 required)"
             )
             return None
 
@@ -494,6 +494,7 @@ class CloudProductionOrchestrator:
         self,
         target_buffer: int = TARGET_BUFFER,
         force_batch_count: int = 0,
+        max_per_cycle: int = 1,
     ) -> ProductionRunTelemetry:
         """
         Executes an autonomous, headless production cycle:
@@ -585,7 +586,8 @@ class CloudProductionOrchestrator:
             if force_batch_count > 0:
                 needed = min(force_batch_count, MAX_BATCH_PRODUCTION_CEILING)
             else:
-                needed = min(deficit, MAX_BATCH_PRODUCTION_CEILING)
+                cycle_cap = max_per_cycle if max_per_cycle > 0 else MAX_BATCH_PRODUCTION_CEILING
+                needed = min(deficit, cycle_cap)
 
             if force_batch_count == 0 and (initial_stock >= target_buffer or deficit == 0 or needed == 0):
                 logger.info(
@@ -854,6 +856,13 @@ class CloudProductionOrchestrator:
                     if rec or self.is_dry_run:
                         produced_this_run += 1
                         logger.info(f"[PRODUCING_DEFICIT] [+] Successfully produced candidate '{cand_title}' ({produced_this_run}/{needed})")
+                        # Incremental Drive DB sync immediately after each short is deposited!
+                        if self.drive_engine and not TEST_MODE and not self.is_dry_run:
+                            try:
+                                upload_canonical_database(drive_engine=self.drive_engine)
+                                logger.info(f"[INCREMENTAL_SYNC] Canonical DB synced to Drive immediately after producing '{cand_title}'")
+                            except Exception as sync_e:
+                                logger.warning(f"Incremental DB sync error: {sync_e}")
                     else:
                         logger.warning(f"[PRODUCING_DEFICIT] [!] Candidate '{cand_title}' was rejected or skipped. Trying next candidate from pool...")
 
