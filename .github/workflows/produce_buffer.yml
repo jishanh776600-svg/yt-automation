@@ -8,8 +8,8 @@ name: YouTube Shorts Cloud Buffer Producer
 
 on:
   schedule:
-    # 2-hour buffer audit & replenishment (every 2 hours, 24/7)
-    - cron: '0 */2 * * *'
+    # 30-minute buffer audit & replenishment (every 30 mins, 24/7)
+    - cron: '*/30 * * * *'
   workflow_dispatch:
     inputs:
       target_buffer:
