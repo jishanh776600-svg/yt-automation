@@ -172,7 +172,7 @@ jobs:
         run: |
           git config --global user.name 'YouTube Producer Bot'
           git config --global user.email 'bot@github-actions.local'
-          git add data/assets/ data/captions/ data/production_summary.json data/LEARNING_LOG.md 2>/dev/null || true
+          git add data/assets/ data/captions/ data/production_summary.json data/LEARNING_LOG.md data/movie_series_state.json 2>/dev/null || true
           git commit -m "Auto-update producer database records [skip ci]" || echo "No changes to commit"
           git push origin main || echo "Push skipped"
 

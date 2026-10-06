@@ -125,3 +125,73 @@ class TestMovieProductionOrchestrator:
         mock_db.query.return_value.filter.return_value.first.return_value = None
         
         assert orchestrator.is_movie_already_produced(movie, mock_db) is False
+
+    def test_movie_part_idempotency_check(self):
+        orchestrator = CloudProductionOrchestrator(is_dry_run=True)
+        manager = MovieCatalogManager()
+        movie = manager.get_movie_by_title("Wrong Turn")
+
+        mock_db = MagicMock()
+        mock_db.query.return_value.filter_by.return_value.first.return_value = None
+        assert orchestrator.is_movie_part_already_produced(movie, part_number=1, db=mock_db) is False
+
+
+class TestMovieSeriesManager:
+    """Tests for the 2-movie parallel series manager."""
+
+    def test_series_manager_initial_slots(self, tmp_path):
+        from intelligence.movie_series_manager import MovieSeriesManager
+        state_file = tmp_path / "movie_series_state.json"
+        sm = MovieSeriesManager(state_file=state_file)
+
+        m1, part1, total1 = sm.get_active_movie_for_slot(1)
+        m2, part2, total2 = sm.get_active_movie_for_slot(2)
+
+        assert m1 is not None
+        assert m2 is not None
+        assert m1.title != m2.title
+        assert part1 == 1
+        assert part2 == 1
+        assert total1 == 10
+
+    def test_advance_part_and_series_completion(self, tmp_path):
+        from intelligence.movie_series_manager import MovieSeriesManager
+        state_file = tmp_path / "movie_series_state.json"
+        sm = MovieSeriesManager(state_file=state_file, default_parts_per_movie=3)
+
+        # Part 1 -> Part 2
+        new_part, is_comp = sm.advance_part_for_slot(1)
+        assert new_part == 2
+        assert is_comp is False
+
+        # Part 2 -> Part 3
+        new_part, is_comp = sm.advance_part_for_slot(1)
+        assert new_part == 3
+        assert is_comp is False
+
+        # Part 3 (final) -> Completes and promotes next movie
+        new_part, is_comp = sm.advance_part_for_slot(1)
+        assert new_part == 1
+        assert is_comp is True
+
+
+class TestAutonomousMovieDownloader:
+    """Tests for AutonomousMovieDownloader."""
+
+    def test_downloader_initialization(self, tmp_path):
+        from engines.autonomous_movie_downloader import AutonomousMovieDownloader
+        downloader = AutonomousMovieDownloader(target_dir=tmp_path, min_duration_seconds=300)
+        assert downloader.target_dir == tmp_path
+        assert downloader.min_duration == 300
+
+
+class TestMovieLongformEngine:
+    """Tests for MovieLongformEngine."""
+
+    def test_longform_engine_initialization(self):
+        from engines.movie_longform_engine import MovieLongformEngine
+        longform = MovieLongformEngine(voice_id="af_bella", target_width=1920, target_height=1080)
+        assert longform.width == 1920
+        assert longform.height == 1080
+        assert longform.voice_id == "af_bella"
+

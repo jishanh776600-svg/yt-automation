@@ -90,6 +90,9 @@ from engines.movie_script_engine import MovieScriptEngine, MovieShortsScript
 from intelligence.movie_footage_adapter import MovieFootageAdapter
 from intelligence.scene_slicer import SceneSlicer
 from intelligence.frame_inspector import FrameInspector
+from intelligence.movie_series_manager import MovieSeriesManager
+from engines.autonomous_movie_downloader import AutonomousMovieDownloader
+from engines.movie_longform_engine import MovieLongformEngine
 
 logger = logging.getLogger("alamr.cloud_orchestrator")
 
@@ -136,6 +139,13 @@ class CloudProductionOrchestrator:
         self.movie_footage_adapter = MovieFootageAdapter()
         self.scene_slicer = SceneSlicer()
         self.frame_inspector = FrameInspector()
+        self.series_manager = MovieSeriesManager()
+        self.movie_downloader = AutonomousMovieDownloader()
+        self.movie_longform_engine = MovieLongformEngine(
+            downloader=self.movie_downloader,
+            script_engine=self.movie_script_engine,
+            voice_id=self.voice_id
+        )
 
     def check_environment_secrets(self) -> Tuple[bool, List[str]]:
         """
@@ -211,24 +221,44 @@ class CloudProductionOrchestrator:
 
         return False
 
+    def is_movie_part_already_produced(self, movie: MovieEntry, part_number: int, db: Any) -> bool:
+        """Checks if a specific episodic part of a movie has already been produced and passed QA."""
+        part_slug = f"movie_{re.sub(r'[^a-zA-Z0-9_]', '_', movie.title.lower())}_{movie.year}_pt{part_number}"
+        existing_render = db.query(RenderedVideoRecord).filter_by(
+            event_id=part_slug, qa_status="PASSED"
+        ).first()
+        if existing_render:
+            return True
+
+        topic = db.query(Topic).filter_by(event_id=part_slug).first()
+        if topic and topic.status in ("PRODUCED", "READY_TO_UPLOAD", "PUBLISHED"):
+            return True
+
+        return False
+
     def produce_single_movie_recap(
         self,
         movie: MovieEntry,
         telemetry: ProductionRunTelemetry,
         db: Any,
+        slot_index: int = 1,
+        part_number: Optional[int] = None,
+        total_parts: Optional[int] = None,
     ) -> Optional[RenderedVideoRecord]:
         """
         End-to-end production pipeline for a 52-58s Thriller/Survival Movie Recap Short:
-        Scripting -> Kokoro Voiceover -> Targeted Movie Footage Retrieval -> 
+        Scripting -> Kokoro Voiceover -> Autonomous 720p Movie Retrieval -> 
         Scene Slicing (1080x1920 vertical, muted audio, 1.04x zoom) -> Frame Inspection -> 
         Assembly & Rendering -> Video QA -> Vault Deposit.
         """
-        movie_event_id = f"movie_{re.sub(r'[^a-zA-Z0-9_]', '_', movie.title.lower())}_{movie.year}"
-        movie_display_title = f"{movie.title} ({movie.year})"
+        active_part = part_number or 1
+        active_total = total_parts or 10
+        movie_event_id = f"movie_{re.sub(r'[^a-zA-Z0-9_]', '_', movie.title.lower())}_{movie.year}_pt{active_part}"
+        movie_display_title = f"{movie.title} - Part {active_part} | Ending Explained #shorts"
 
         # 1. Idempotency Check
-        if self.is_movie_already_produced(movie, db):
-            logger.info(f"Skipping movie [{movie_display_title}]: already produced and verified.")
+        if self.is_movie_part_already_produced(movie, active_part, db):
+            logger.info(f"Skipping movie part [{movie_display_title}]: already produced and verified.")
             telemetry.duplicates_skipped += 1
             return None
 
@@ -236,7 +266,9 @@ class CloudProductionOrchestrator:
         telemetry.transition_stage(PipelineStage.SCRIPTING, f"Writing 55s thriller recap for {movie_display_title}")
         t_script0 = time.perf_counter()
         try:
-            movie_script: MovieShortsScript = self.movie_script_engine.generate_shorts_script(movie)
+            movie_script: MovieShortsScript = self.movie_script_engine.generate_shorts_script(
+                movie, part_number=active_part, total_parts=active_total
+            )
         except Exception as script_err:
             logger.error(f"Movie script generation error for {movie_display_title}: {script_err}")
             telemetry.failure_reasons.append(f"Movie script error: {script_err}")
@@ -309,25 +341,41 @@ class CloudProductionOrchestrator:
         sliced_clip_paths: List[Path] = []
 
         # Find official video sources for this movie
-        discovered_candidates: List[Any] = []
-        for q in movie.footage_search_queries[:3]:
-            cands = self.movie_footage_adapter.search_movie_scenes(
-                movie=movie,
-                scene_keyword=q,
-                beat_id=f"scout_{manifest_id}",
-                max_results=2
-            )
-            discovered_candidates.extend(cands)
-
-        # Download primary movie footage clips
+        # 4a. 100% Autonomous 720p Feature Film Acquisition
+        source_movie_path = self.movie_downloader.download_movie_720p(movie)
         downloaded_source_videos: List[Path] = []
-        for cand in discovered_candidates:
-            if cand.media_url:
-                res = self.asset_fetcher.fetch_url(cand.media_url)
-                if res.status in (AssetFetchStatus.SUCCESS, AssetFetchStatus.CACHE_HIT) and res.local_path:
-                    downloaded_source_videos.append(Path(res.local_path))
-                    if len(downloaded_source_videos) >= 3:
-                        break
+        part_offset_base = 0.0
+        part_span = 90.0
+
+        if source_movie_path and source_movie_path.exists():
+            downloaded_source_videos.append(source_movie_path)
+            meta = self.movie_downloader.get_video_metadata(source_movie_path)
+            total_dur = meta.get("duration_sec", 5400.0)
+            part_span = max(60.0, total_dur / max(1, active_total))
+            part_offset_base = float((active_part - 1) * part_span)
+            logger.info(
+                f"[MOVIE_SLICE] Sourcing beats from 720p film '{source_movie_path.name}' "
+                f"for Part {active_part}/{active_total} (Window: {part_offset_base:.1f}s - {part_offset_base + part_span:.1f}s)"
+            )
+        else:
+            # Fallback to targeted official scene search
+            discovered_candidates: List[Any] = []
+            for q in movie.footage_search_queries[:3]:
+                cands = self.movie_footage_adapter.search_movie_scenes(
+                    movie=movie,
+                    scene_keyword=q,
+                    beat_id=f"scout_{manifest_id}",
+                    max_results=2
+                )
+                discovered_candidates.extend(cands)
+
+            for cand in discovered_candidates:
+                if cand.media_url:
+                    res = self.asset_fetcher.fetch_url(cand.media_url)
+                    if res.status in (AssetFetchStatus.SUCCESS, AssetFetchStatus.CACHE_HIT) and res.local_path:
+                        downloaded_source_videos.append(Path(res.local_path))
+                        if len(downloaded_source_videos) >= 3:
+                            break
 
         # Slice movie clips into vertical cuts
         for idx, beat in enumerate(movie_script.beats):
@@ -340,7 +388,7 @@ class CloudProductionOrchestrator:
 
             if downloaded_source_videos:
                 source_video = downloaded_source_videos[idx % len(downloaded_source_videos)]
-                slice_offset = float((idx * 4.5) % 90.0)
+                slice_offset = float(part_offset_base + ((idx * 5.0) % max(10.0, part_span - beat_dur)))
                 slice_ok = self.scene_slicer.slice_clip(
                     source_media_path=source_video,
                     output_path=beat_clip_file,
@@ -359,7 +407,7 @@ class CloudProductionOrchestrator:
                 start_time=curr_start,
                 end_time=curr_end,
                 duration_seconds=beat_dur,
-                selected_visual_id=f"movie_{movie.title.lower()}_{idx}",
+                selected_visual_id=f"movie_{movie.title.lower()}_pt{active_part}_{idx}",
                 coverage_type="DIRECT_EVIDENCE",
                 authenticity=VisualAuthenticity.EVENT_SPECIFIC.value,
                 licensing_status=VisualLicensingStatus.EDITORIAL_FAIR_USE.value,
@@ -428,6 +476,13 @@ class CloudProductionOrchestrator:
                 telemetry.videos_deposited += 1
         else:
             telemetry.videos_deposited += 1
+
+        # Advance episodic series track upon successful deposit
+        try:
+            new_part, is_completed = self.series_manager.advance_part_for_slot(slot_index)
+            logger.info(f"[SERIES_MANAGER] Slot {slot_index} advanced to Part {new_part} (Series complete: {is_completed})")
+        except Exception as sm_err:
+            logger.warning(f"Notice advancing series manager: {sm_err}")
 
         # 8. Persist Records to SQLite
         self.composer.persist_rendered_record(record, db_session=db)
@@ -907,46 +962,41 @@ class CloudProductionOrchestrator:
                 f"(Current ready: {initial_stock}, Target: {target_buffer}, Deficit: {deficit}, Force: {force_batch_count})"
             )
 
-            # 5. Movie Catalog Selection & Replenishment
-            telemetry.transition_stage(PipelineStage.INGESTING, "Selecting unproduced movies from curated catalog")
+            # 5. Parallel 2-Movie Episodic Selection & Replenishment
+            telemetry.transition_stage(PipelineStage.INGESTING, "Selecting episodic parts for parallel 2-movie pipeline")
             db = SessionLocal()
             try:
-                all_movies = self.movie_catalog.get_all_movies()
-                unproduced_movies: List[MovieEntry] = [
-                    m for m in all_movies if not self.is_movie_already_produced(m, db)
-                ]
-
-                # Shuffle unproduced movies for variety
-                import random
-                random.shuffle(unproduced_movies)
-
-                logger.info(
-                    f"[MOVIE_DISCOVERY] Catalog contains {len(all_movies)} movies. "
-                    f"{len(unproduced_movies)} unproduced candidates available."
-                )
-
-                if not unproduced_movies:
-                    logger.warning("All movies in catalog have already been produced!")
-                    telemetry.failure_reasons.append("Movie catalog exhausted")
-                    telemetry.complete(status="FAILED")
-                    return telemetry
-
-                # 6. Produce Up to Deficit
                 produced_this_run = 0
-                logger.info(f"[PRODUCING_DEFICIT] Producing {needed} Movie Recap Short(s) to fulfill reserve...")
-                for movie_entry in unproduced_movies:
-                    if produced_this_run >= needed:
-                        break
+                logger.info(f"[PRODUCING_DEFICIT] Producing {needed} Movie Recap Short(s) across Slot 1 & Slot 2...")
+                for prod_i in range(needed):
+                    # Alternate between Slot 1 (Track 1) and Slot 2 (Track 2)
+                    target_slot = 1 if (prod_i % 2 == 0) else 2
+                    movie, curr_part, total_p = self.series_manager.get_active_movie_for_slot(target_slot)
+
+                    # Advance if this part has already been produced
+                    attempts = 0
+                    while self.is_movie_part_already_produced(movie, curr_part, db) and attempts < total_p:
+                        logger.info(f"Movie part {movie.title} Part {curr_part} already produced. Advancing...")
+                        curr_part, _ = self.series_manager.advance_part_for_slot(target_slot)
+                        movie, curr_part, total_p = self.series_manager.get_active_movie_for_slot(target_slot)
+                        attempts += 1
 
                     logger.info(
-                        f"[PRODUCING_DEFICIT] [{produced_this_run + 1}/{needed}] Producing movie recap for "
-                        f"'{movie_entry.title} ({movie_entry.year})'..."
+                        f"[PRODUCING_DEFICIT] [{produced_this_run + 1}/{needed}] Slot {target_slot}: Producing "
+                        f"'{movie.title} - Part {curr_part}/{total_p}'..."
                     )
-                    rec = self.produce_single_movie_recap(movie_entry, telemetry, db)
+                    rec = self.produce_single_movie_recap(
+                        movie=movie,
+                        telemetry=telemetry,
+                        db=db,
+                        slot_index=target_slot,
+                        part_number=curr_part,
+                        total_parts=total_p,
+                    )
                     if rec or self.is_dry_run:
                         produced_this_run += 1
                         logger.info(
-                            f"[PRODUCING_DEFICIT] [+] Successfully produced '{movie_entry.title}' "
+                            f"[PRODUCING_DEFICIT] [+] Successfully produced '{movie.title} - Part {curr_part}' "
                             f"({produced_this_run}/{needed})"
                         )
                         # Incremental Drive DB sync immediately after each short is deposited!
@@ -955,14 +1005,13 @@ class CloudProductionOrchestrator:
                                 upload_canonical_database(drive_engine=self.drive_engine)
                                 logger.info(
                                     f"[INCREMENTAL_SYNC] Canonical DB synced to Drive immediately after "
-                                    f"producing '{movie_entry.title}'"
+                                    f"producing '{movie.title} - Part {curr_part}'"
                                 )
                             except Exception as sync_e:
                                 logger.warning(f"Incremental DB sync error: {sync_e}")
                     else:
                         logger.warning(
-                            f"[PRODUCING_DEFICIT] [!] Movie '{movie_entry.title}' failed or skipped. "
-                            f"Trying next candidate from catalog..."
+                            f"[PRODUCING_DEFICIT] [!] Movie '{movie.title} - Part {curr_part}' failed or skipped."
                         )
 
                 telemetry.final_ready_stock = self.get_ready_stock_count()

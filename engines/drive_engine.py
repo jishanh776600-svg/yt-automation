@@ -22,7 +22,7 @@ from core.retry import retry_call
 logger = logging.getLogger(__name__)
 
 VAULT_ROOT_NAME = "YouTube_Shorts_Vault"
-SUBFOLDERS = ["00_SYSTEM", "01_READY", "02_PROCESSING", "03_PUBLISHED", "04_FAILED", "05_KNOWLEDGE"]
+SUBFOLDERS = ["00_SYSTEM", "01_READY", "01_READY_LONG", "02_PROCESSING", "03_PUBLISHED", "04_FAILED", "05_KNOWLEDGE"]
 MIN_VALID_SHORT_BYTES = 5 * 1024 * 1024  # 5 MB minimum for real 1080x1920 vertical Short
 
 
@@ -332,6 +332,7 @@ class DriveVaultEngine:
             "root": None,
             "00_SYSTEM": None,
             "01_READY": None,
+            "01_READY_LONG": None,
             "02_PROCESSING": None,
             "03_PUBLISHED": None,
             "04_FAILED": None,

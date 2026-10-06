@@ -90,17 +90,20 @@ class MovieScriptEngine:
     def generate_shorts_script(
         self,
         movie: MovieEntry,
+        part_number: int = 1,
+        total_parts: int = 10,
         max_attempts: int = 3
     ) -> MovieShortsScript:
         """
         Generates a 52-58 second (~130-145 words) breathless movie recap short
-        composed of 14-16 rapid-cut visual beats.
+        composed of 14-16 rapid-cut visual beats for Part X of the movie series.
         """
-        logger.info(f"[MOVIE_SCRIPT] Generating 55s Thriller Short for: {movie.title} ({movie.year})")
+        logger.info(f"[MOVIE_SCRIPT] Generating 55s Thriller Short for: {movie.title} ({movie.year}) - Part {part_number}/{total_parts}")
 
         prompt = f"""
 You are a master cinematic thriller storyteller creating an intense 55-second YouTube Short recap for the movie:
 Title: {movie.title} ({movie.year})
+Episodic Segment: Part {part_number} of {total_parts}
 Director: {movie.director}
 Subgenre: {movie.subgenre}
 Premise: {movie.premise_summary}
@@ -108,16 +111,19 @@ Main Threat: {movie.threat_or_antagonist}
 Key Scenes: {json.dumps(movie.key_setpieces)}
 
 STRICT EDITORIAL REQUIREMENTS:
-1. WORD COUNT: Exactly 130 to 142 words total. (Crucial: 125 words minimum, 145 words maximum).
-2. TONE: Dark, breathless, present-tense narrative. Do NOT sound like an AI review ("In this movie...").
+1. FOCUS: This is Part {part_number} of a {total_parts}-part series covering {movie.title}.
+   Cover the intense developments of segment {part_number}/{total_parts}.
+   End with a breathless cliffhanger compelling the viewer to watch the next part!
+2. WORD COUNT: Exactly 130 to 142 words total. (Crucial: 125 words minimum, 145 words maximum).
+3. TONE: Dark, breathless, present-tense narrative. Do NOT sound like an AI review ("In this movie...").
    Sound like a narrator recounting a terrifying real nightmare:
    "Three friends take a wrong turn down a deserted mountain road. Bad mistake."
-3. BEAT STRUCTURE: Output exactly 14 to 16 short beats.
-   - Beats 1-2 (0-8s): The Hook / The fatal premise.
-   - Beats 3-6 (8-22s): The trap sprung / Stranded / entering forbidden territory.
-   - Beats 7-11 (22-42s): The hunt / Realization of the monsters / rising horror.
+4. BEAT STRUCTURE: Output exactly 14 to 16 short beats.
+   - Beats 1-2 (0-8s): The Hook / The urgent situation.
+   - Beats 3-6 (8-22s): Rising tension / trap springing / entering forbidden territory.
+   - Beats 7-11 (22-42s): The hunt / realization of danger / gruesome discovery.
    - Beats 12-15 (42-55s): Desperate fight / shocking discovery / cliffhanger twist.
-4. FOR EACH BEAT provide:
+5. FOR EACH BEAT provide:
    - "text": Spoken voiceover line (7-11 words).
    - "visual_description": Exact physical scene from {movie.title} to show on screen.
    - "search_keywords": 3-4 specific search keywords to find this exact movie clip.
@@ -125,7 +131,7 @@ STRICT EDITORIAL REQUIREMENTS:
 
 Return valid JSON strictly adhering to this schema:
 {{
-  "headline": "Short punchy title (under 60 chars)",
+  "headline": "{movie.title} - Part {part_number} | Ending Explained #shorts",
   "hook": "Opening sentence",
   "cliffhanger_or_twist": "Closing punchline",
   "beats": [
@@ -191,11 +197,16 @@ Return valid JSON strictly adhering to this schema:
                 logger.error(f"[MOVIE_SCRIPT] Attempt {attempt} failed: {e}")
 
         # Deterministic curated fallback if AI rate limit or word count variance
-        return self._build_deterministic_recap(movie)
+        return self._build_deterministic_recap(movie, part_number=part_number, total_parts=total_parts)
 
-    def _build_deterministic_recap(self, movie: MovieEntry) -> MovieShortsScript:
+    def _build_deterministic_recap(
+        self,
+        movie: MovieEntry,
+        part_number: int = 1,
+        total_parts: int = 10
+    ) -> MovieShortsScript:
         """High-craft deterministic fallback for Wrong Turn or catalog movies."""
-        logger.info(f"[MOVIE_SCRIPT] Deploying curated deterministic recap for {movie.title}")
+        logger.info(f"[MOVIE_SCRIPT] Deploying curated deterministic recap for {movie.title} - Part {part_number}/{total_parts}")
         
         if "wrong turn" in movie.title.lower():
             raw_beats = [
@@ -254,7 +265,7 @@ Return valid JSON strictly adhering to this schema:
             beats=beats,
             total_words=total_words,
             estimated_duration_sec=sum(b.duration_estimate_sec for b in beats),
-            headline=f"{movie.title} ({movie.year}) - The Ultimate Survival Nightmare",
+            headline=f"{movie.title} - Part {part_number} | Ending Explained #shorts",
             hook=beats[0].text,
             cliffhanger_or_twist=beats[-1].text
         )

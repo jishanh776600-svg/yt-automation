@@ -912,8 +912,8 @@ class GeminiClient:
 
     def generate_content(
         self,
-        model: str,
-        contents: Any,
+        model: Optional[str] = None,
+        contents: Optional[Any] = None,
         max_retries: int = 3,
         base_delay: Optional[float] = None,
         max_delay: float = 60.0,
@@ -924,6 +924,11 @@ class GeminiClient:
         Primary Gemini -> Secondary Gemini -> Groq -> OpenRouter -> BluesMinds DeepSeek -> NVIDIA Nemotron.
         Skips previously exhausted providers to prevent retry amplification.
         """
+        if contents is None and "prompt" in kwargs:
+            contents = kwargs.pop("prompt")
+        if not model:
+            model = self.primary_model
+
         all_providers = self._get_configured_providers(requested_model=model)
         if not all_providers:
             raise ValueError("No valid AI provider credentials (GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY, DEEPSEEK_API_KEY, NVIDIA_API_KEY) configured.")

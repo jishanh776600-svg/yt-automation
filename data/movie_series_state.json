@@ -1,0 +1,19 @@
+{
+  "track_1": {
+    "slot_index": 1,
+    "movie_title": "Wrong Turn",
+    "movie_year": 2003,
+    "current_part": 1,
+    "total_parts": 10,
+    "is_completed": false
+  },
+  "track_2": {
+    "slot_index": 2,
+    "movie_title": "The Hills Have Eyes",
+    "movie_year": 2006,
+    "current_part": 1,
+    "total_parts": 10,
+    "is_completed": false
+  },
+  "completed_movies": []
+}
