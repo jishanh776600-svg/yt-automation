@@ -394,7 +394,10 @@ class CloudProductionOrchestrator:
                     output_path=beat_clip_file,
                     start_sec=slice_offset,
                     duration_sec=beat_dur,
-                    subtle_zoom=True
+                    subtle_zoom=True,
+                    layout_mode="letterbox",
+                    movie_title=movie.title,
+                    part_number=active_part,
                 )
                 if slice_ok and beat_clip_file.exists():
                     resolved_p = str(beat_clip_file)

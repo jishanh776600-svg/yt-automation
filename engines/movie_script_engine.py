@@ -111,20 +111,24 @@ Main Threat: {movie.threat_or_antagonist}
 Key Scenes: {json.dumps(movie.key_setpieces)}
 
 STRICT EDITORIAL REQUIREMENTS:
-1. FOCUS: This is Part {part_number} of a {total_parts}-part series covering {movie.title}.
+1. LANGUAGE LEVEL: SIMPLE, CLEAR, EVERYDAY ENGLISH (Easily understandable worldwide).
+   - Use simple words that anyone with basic English can understand.
+   - Absolutely NO difficult vocabulary, poetic words, or complex grammar.
+   - Use short, direct, punchy sentences (Subject -> Verb -> Object).
+   - Example tone:
+     "Six friends take a wrong turn on a mountain road. A hidden wire cuts their tires. Stranded with no phone signal, they walk into the deep forest. They find an old wooden cabin. Inside, they make a horrifying discovery. Suddenly, a rusty truck stops outside. The owners are back."
+2. FOCUS: This is Part {part_number} of a {total_parts}-part series covering {movie.title}.
    Cover the intense developments of segment {part_number}/{total_parts}.
-   End with a breathless cliffhanger compelling the viewer to watch the next part!
-2. WORD COUNT: Exactly 130 to 142 words total. (Crucial: 125 words minimum, 145 words maximum).
-3. TONE: Dark, breathless, present-tense narrative. Do NOT sound like an AI review ("In this movie...").
-   Sound like a narrator recounting a terrifying real nightmare:
-   "Three friends take a wrong turn down a deserted mountain road. Bad mistake."
-4. BEAT STRUCTURE: Output exactly 14 to 16 short beats.
+   End with a simple, high-curiosity cliffhanger compelling the viewer to watch Part {part_number + 1 if part_number < total_parts else 'the conclusion'}!
+3. WORD COUNT: Exactly 130 to 142 words total. (Crucial: 125 words minimum, 145 words maximum).
+4. TONE: Dark, breathless, present-tense suspense. Do NOT sound like an AI review ("In this movie...").
+5. BEAT STRUCTURE: Output exactly 14 to 16 short beats.
    - Beats 1-2 (0-8s): The Hook / The urgent situation.
    - Beats 3-6 (8-22s): Rising tension / trap springing / entering forbidden territory.
    - Beats 7-11 (22-42s): The hunt / realization of danger / gruesome discovery.
    - Beats 12-15 (42-55s): Desperate fight / shocking discovery / cliffhanger twist.
-5. FOR EACH BEAT provide:
-   - "text": Spoken voiceover line (7-11 words).
+6. FOR EACH BEAT provide:
+   - "text": Spoken voiceover line (7-11 simple words).
    - "visual_description": Exact physical scene from {movie.title} to show on screen.
    - "search_keywords": 3-4 specific search keywords to find this exact movie clip.
    - "tension_level": "DREAD", "HIGH", "EXTREME", or "SHOCK".
@@ -270,7 +274,11 @@ Return valid JSON strictly adhering to this schema:
             cliffhanger_or_twist=beats[-1].text
         )
 
-    def _extract_json(self, text: str) -> str:
+    def _extract_json(self, raw_input: Any) -> str:
+        if hasattr(raw_input, "text"):
+            text = str(raw_input.text)
+        else:
+            text = str(raw_input)
         text = text.strip()
         if text.startswith("```json"):
             text = text[7:]
@@ -311,9 +319,10 @@ Focus: {ch_desc}
 Target Word Count: Exactly {target_words} words.
 
 CRITICAL RULES:
-1. Present-tense cinematic storytelling ("They step inside...", "The door slams shut...").
-2. High tension, dark atmospheric tone. Zero generic AI clichés.
-3. Every scene beat must be visually concrete.
+1. SIMPLE & CLEAR ENGLISH: Use plain, conversational, and direct English that anyone globally can easily follow. Avoid difficult vocabulary or complex sentences. Talk like an intense storyteller explaining the story to a friend.
+2. Present-tense cinematic storytelling ("They step inside...", "The door slams shut...").
+3. High tension, dark atmospheric tone. Zero generic AI clichés.
+4. Every scene beat must be visually concrete.
 
 Respond strictly in JSON format:
 {{

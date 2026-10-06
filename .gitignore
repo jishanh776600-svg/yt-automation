@@ -55,5 +55,6 @@ data/database/*
 data/locks/
 data/cache/
 data/vault/
+data/study_reference/
 .agents/
 

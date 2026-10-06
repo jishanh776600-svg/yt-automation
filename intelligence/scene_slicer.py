@@ -37,11 +37,16 @@ class SceneSlicer:
         output_path: Path,
         start_sec: float = 0.0,
         duration_sec: float = 3.0,
-        subtle_zoom: bool = True
+        subtle_zoom: bool = True,
+        layout_mode: str = "letterbox",
+        movie_title: Optional[str] = None,
+        part_number: Optional[int] = None,
     ) -> bool:
         """
         Slices a 2.5s-3.5s segment from source media, strips all original audio,
-        centers/crops to 9:16 vertical (1080x1920), and applies subtle dynamic transformation.
+        and transforms into 9:16 vertical (1080x1920) using either the Elite Explained
+        letterbox layout (authentic 16:9 centered with top/bottom movie title labels)
+        or dynamic center crop.
         """
         if not source_media_path.exists():
             logger.error(f"[SCENE_SLICER] Source media does not exist: {source_media_path}")
@@ -52,16 +57,40 @@ class SceneSlicer:
         # Enforce strict 3.5s maximum cut ceiling for fair-use Content ID protection
         clamped_duration = max(2.0, min(3.2, duration_sec))
 
-        # Dynamic scale & crop filter for vertical 9:16
-        # Takes 16:9 movie footage, scales height to 1920, and center-crops width to 1080
-        # If subtle_zoom is true, adds a tiny 1.03x scale to prevent exact frame hash matching
-        scale_filter = (
-            f"scale=1080*1.04:1920*1.04:force_original_aspect_ratio=increase,"
-            f"crop={self.target_width}:{self.target_height}"
-        ) if subtle_zoom else (
-            f"scale={self.target_width}:{self.target_height}:force_original_aspect_ratio=increase,"
-            f"crop={self.target_width}:{self.target_height}"
-        )
+        if layout_mode == "letterbox":
+            # Elite Explained viral format: 16:9 movie footage centered on 1080x1920 vertical canvas
+            font_candidates = [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "C\\:/Windows/Fonts/arialbd.ttf",
+                "C\\:/Windows/Fonts/arial.ttf",
+            ]
+            valid_font = None
+            for fc in font_candidates:
+                raw_path = fc.replace("\\:", ":")
+                if Path(raw_path).exists():
+                    valid_font = fc
+                    break
+
+            base_filter = (
+                f"scale={self.target_width}:608:force_original_aspect_ratio=decrease,"
+                f"pad={self.target_width}:{self.target_height}:(ow-iw)/2:(oh-ih)/2:black"
+            )
+            if valid_font and movie_title:
+                clean_title = movie_title.upper().replace("'", "")
+                top_label = f"Part {part_number} | Movie Name" if part_number else "Movie Name"
+                draw_top = f"drawtext=fontfile='{valid_font}':text='{top_label}':fontcolor=white:fontsize=38:x=(w-text_w)/2:y=540"
+                draw_bottom = f"drawtext=fontfile='{valid_font}':text='{clean_title}':fontcolor=white:fontsize=56:x=(w-text_w)/2:y=1340"
+                scale_filter = f"{base_filter},{draw_top},{draw_bottom}"
+            else:
+                scale_filter = base_filter
+        else:
+            scale_filter = (
+                f"scale=1080*1.04:1920*1.04:force_original_aspect_ratio=increase,"
+                f"crop={self.target_width}:{self.target_height}"
+            ) if subtle_zoom else (
+                f"scale={self.target_width}:{self.target_height}:force_original_aspect_ratio=increase,"
+                f"crop={self.target_width}:{self.target_height}"
+            )
 
         cmd = [
             self.ffmpeg, "-y",
