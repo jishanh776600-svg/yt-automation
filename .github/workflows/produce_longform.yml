@@ -116,41 +116,41 @@ jobs:
           SPECIFIC_MOVIE="${{ inputs.movie_title }}"
           VOICE="${{ inputs.active_voice || 'af_bella' }}"
           python -c "
-import sys
-from intelligence.cloud_orchestrator import CloudProductionOrchestrator
-from core.movie_catalog import MovieCatalogManager
-from engines.drive_engine import DriveVaultEngine
-from core.database import SessionLocal
+          import sys
+          from intelligence.cloud_orchestrator import CloudProductionOrchestrator
+          from core.movie_catalog import MovieCatalogManager
+          from engines.drive_engine import DriveVaultEngine
+          from core.database import SessionLocal
 
-drive = DriveVaultEngine()
-orchestrator = CloudProductionOrchestrator(drive_engine=drive, voice_id='$VOICE')
-catalog = MovieCatalogManager()
+          drive = DriveVaultEngine()
+          orchestrator = CloudProductionOrchestrator(drive_engine=drive, voice_id='$VOICE')
+          catalog = MovieCatalogManager()
 
-chosen = None
-if '$SPECIFIC_MOVIE':
-    chosen = catalog.get_movie_by_title('$SPECIFIC_MOVIE')
-if not chosen:
-    all_movies = catalog.get_all_movies()
-    db = SessionLocal()
-    unproduced = [m for m in all_movies if not orchestrator.is_movie_already_produced(m, db)]
-    db.close()
-    if unproduced:
-        chosen = unproduced[0]
+          chosen = None
+          if '$SPECIFIC_MOVIE':
+              chosen = catalog.get_movie_by_title('$SPECIFIC_MOVIE')
+          if not chosen:
+              all_movies = catalog.get_all_movies()
+              db = SessionLocal()
+              unproduced = [m for m in all_movies if not orchestrator.is_movie_already_produced(m, db)]
+              db.close()
+              if unproduced:
+                  chosen = unproduced[0]
 
-if not chosen:
-    print('[!] No suitable movie found for long-form explainer.')
-    sys.exit(0)
+          if not chosen:
+              print('[!] No suitable movie found for long-form explainer.')
+              sys.exit(0)
 
-print(f'[*] Commencing 10-18 min long-form explainer for: {chosen.title} ({chosen.year})')
-mp4_path = orchestrator.movie_longform_engine.produce_longform_explainer(chosen)
-if mp4_path and mp4_path.exists():
-    print(f'[+] Explainer rendered successfully: {mp4_path.name}')
-    file_id = orchestrator.movie_longform_engine.deposit_longform_to_vault(mp4_path, chosen, drive)
-    print(f'[+] Deposited into 01_READY_LONG Drive vault (ID: {file_id})')
-else:
-    print('[-] Long-form explainer production did not complete.')
-    sys.exit(1)
-"
+          print(f'[*] Commencing 10-18 min long-form explainer for: {chosen.title} ({chosen.year})')
+          mp4_path = orchestrator.movie_longform_engine.produce_longform_explainer(chosen)
+          if mp4_path and mp4_path.exists():
+              print(f'[+] Explainer rendered successfully: {mp4_path.name}')
+              file_id = orchestrator.movie_longform_engine.deposit_longform_to_vault(mp4_path, chosen, drive)
+              print(f'[+] Deposited into 01_READY_LONG Drive vault (ID: {file_id})')
+          else:
+              print('[-] Long-form explainer production did not complete.')
+              sys.exit(1)
+          "
 
       - name: Upload & Synchronize Database to Cloud Vault
         if: always()
