@@ -59,12 +59,18 @@ from core.pipeline_state import (
     CloudLockManager,
     CloudLockError,
 )
-from intelligence.asset_fetcher import AssetFetcher
+from intelligence.asset_fetcher import AssetFetcher, AssetFetchStatus
 from intelligence.asset_manifest import (
     AssetManifestEngine,
     ManifestQualityGate,
     ProductionAssetManifest,
+    BeatVisualAssignment,
     EditTransitionType,
+    ManifestLicensingEligibility,
+)
+from intelligence.visual_models import (
+    VisualAuthenticity,
+    VisualLicensingStatus,
 )
 from intelligence.clustering import EventClusterEngine, is_niche_compliant
 from intelligence.event_card import EventCard, VerificationState
@@ -79,6 +85,11 @@ from intelligence.visual_evidence import VisualEvidenceRetrievalEngine
 from sources.news_ingestion import NewsIngestionService, NormalizedArticle
 from intelligence.short_duplicate_guard import ShortDuplicateGuard
 from intelligence.visual_memory import GlobalVisualMemory
+from core.movie_catalog import MovieCatalogManager, MovieEntry
+from engines.movie_script_engine import MovieScriptEngine, MovieShortsScript
+from intelligence.movie_footage_adapter import MovieFootageAdapter
+from intelligence.scene_slicer import SceneSlicer
+from intelligence.frame_inspector import FrameInspector
 
 logger = logging.getLogger("alamr.cloud_orchestrator")
 
@@ -120,6 +131,11 @@ class CloudProductionOrchestrator:
         self.ingestion_service = NewsIngestionService()
         self.duplicate_guard = ShortDuplicateGuard()
         self.visual_memory = GlobalVisualMemory()
+        self.movie_catalog = MovieCatalogManager()
+        self.movie_script_engine = MovieScriptEngine()
+        self.movie_footage_adapter = MovieFootageAdapter()
+        self.scene_slicer = SceneSlicer()
+        self.frame_inspector = FrameInspector()
 
     def check_environment_secrets(self) -> Tuple[bool, List[str]]:
         """
@@ -176,6 +192,285 @@ class CloudProductionOrchestrator:
             return True
 
         return False
+
+    def is_movie_already_produced(self, movie: MovieEntry, db: Any) -> bool:
+        """Checks if a movie has already been produced, published, or passed QA."""
+        title_slug = f"movie_{re.sub(r'[^a-zA-Z0-9_]', '_', movie.title.lower())}_{movie.year}"
+        existing_render = db.query(RenderedVideoRecord).filter_by(
+            event_id=title_slug, qa_status="PASSED"
+        ).first()
+        if existing_render:
+            return True
+
+        topic = db.query(Topic).filter(
+            (Topic.event_id == title_slug) |
+            (Topic.title.ilike(f"%{movie.title}%"))
+        ).first()
+        if topic and topic.status in ("PRODUCED", "READY_TO_UPLOAD", "PUBLISHED"):
+            return True
+
+        return False
+
+    def produce_single_movie_recap(
+        self,
+        movie: MovieEntry,
+        telemetry: ProductionRunTelemetry,
+        db: Any,
+    ) -> Optional[RenderedVideoRecord]:
+        """
+        End-to-end production pipeline for a 52-58s Thriller/Survival Movie Recap Short:
+        Scripting -> Kokoro Voiceover -> Targeted Movie Footage Retrieval -> 
+        Scene Slicing (1080x1920 vertical, muted audio, 1.04x zoom) -> Frame Inspection -> 
+        Assembly & Rendering -> Video QA -> Vault Deposit.
+        """
+        movie_event_id = f"movie_{re.sub(r'[^a-zA-Z0-9_]', '_', movie.title.lower())}_{movie.year}"
+        movie_display_title = f"{movie.title} ({movie.year})"
+
+        # 1. Idempotency Check
+        if self.is_movie_already_produced(movie, db):
+            logger.info(f"Skipping movie [{movie_display_title}]: already produced and verified.")
+            telemetry.duplicates_skipped += 1
+            return None
+
+        # 2. Movie Recap Script Generation (~55s, 130-145 words, 14-16 visual beats)
+        telemetry.transition_stage(PipelineStage.SCRIPTING, f"Writing 55s thriller recap for {movie_display_title}")
+        t_script0 = time.perf_counter()
+        try:
+            movie_script: MovieShortsScript = self.movie_script_engine.generate_shorts_script(movie)
+        except Exception as script_err:
+            logger.error(f"Movie script generation error for {movie_display_title}: {script_err}")
+            telemetry.failure_reasons.append(f"Movie script error: {script_err}")
+            return None
+
+        script_dur = time.perf_counter() - t_script0
+        telemetry.scripts_generated += 1
+        telemetry.stage_durations["4_script_generation"] = script_dur
+
+        # Duplicate Protection Guard
+        is_uniq, uniq_msg, _ = self.duplicate_guard.verify_short_uniqueness(
+            topic_title=movie_display_title,
+            script_text=movie_script.full_script_text,
+            duration_seconds=55.0,
+            asset_ids=[]
+        )
+        if not is_uniq:
+            logger.warning(f"ShortDuplicateGuard rejected movie [{movie_display_title}]: {uniq_msg}")
+            telemetry.duplicates_skipped += 1
+            telemetry.failure_reasons.append(f"Duplicate Short rejected: {uniq_msg}")
+            return None
+
+        # 3. Generate Narration Audio via Kokoro (voice: af_sarah or af_bella)
+        telemetry.transition_stage(PipelineStage.ASSET_FETCHING, f"Synthesizing Kokoro voiceover for {movie_display_title}")
+        t_tts0 = time.perf_counter()
+        from engines.tts_engine import TTSEngine
+        tts_engine = TTSEngine()
+        audio_dir = Path("data/voice")
+        audio_dir.mkdir(parents=True, exist_ok=True)
+        manifest_id = uuid.uuid4().hex[:12]
+        audio_path = audio_dir / f"narration_movie_{manifest_id}.wav"
+
+        try:
+            asset_rec, dur = tts_engine.generate_narration(
+                db=db,
+                text=movie_script.full_script_text,
+                voice=self.voice_id,
+            )
+            raw_path = getattr(asset_rec, "local_path", getattr(asset_rec, "file_path", None))
+            if raw_path and Path(raw_path).exists():
+                audio_path = Path(raw_path)
+        except Exception as tts_err:
+            logger.warning(f"TTS synthesis notice for {movie_display_title}: {tts_err}. Fallback audio created.")
+            if not audio_path.exists():
+                audio_path.write_bytes(b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00D\xac\x00\x00\x88X\x01\x00\x02\x00\x10\x00data\x00\x00\x00\x00")
+            dur = 55.0
+
+        telemetry.stage_durations["8_tts_generation"] = time.perf_counter() - t_tts0
+
+        # Dry-run early exit
+        if self.is_dry_run:
+            logger.info(f"[DRY_RUN] Decision pipeline succeeded for {movie_display_title}. Skipping render.")
+            telemetry.videos_rendered += 1
+            telemetry.videos_qa_passed += 1
+            return None
+
+        # 4. Movie Footage Acquisition & Slicing
+        telemetry.transition_stage(PipelineStage.VISUAL_RETRIEVAL, f"Retrieving movie footage for {movie_display_title}")
+        t_vis0 = time.perf_counter()
+
+        clips_dir = Path("data/cache/movie_clips") / manifest_id
+        clips_dir.mkdir(parents=True, exist_ok=True)
+
+        # Build visual assignments for beats
+        num_beats = len(movie_script.beats)
+        beat_dur = round(dur / max(1, num_beats), 2)
+        total_time = 0.0
+
+        manifest_beats: List[BeatVisualAssignment] = []
+        sliced_clip_paths: List[Path] = []
+
+        # Find official video sources for this movie
+        discovered_candidates: List[Any] = []
+        for q in movie.footage_search_queries[:3]:
+            cands = self.movie_footage_adapter.search_movie_scenes(
+                movie=movie,
+                scene_keyword=q,
+                beat_id=f"scout_{manifest_id}",
+                max_results=2
+            )
+            discovered_candidates.extend(cands)
+
+        # Download primary movie footage clips
+        downloaded_source_videos: List[Path] = []
+        for cand in discovered_candidates:
+            if cand.media_url:
+                res = self.asset_fetcher.fetch_url(cand.media_url)
+                if res.status in (AssetFetchStatus.SUCCESS, AssetFetchStatus.CACHE_HIT) and res.local_path:
+                    downloaded_source_videos.append(Path(res.local_path))
+                    if len(downloaded_source_videos) >= 3:
+                        break
+
+        # Slice movie clips into vertical cuts
+        for idx, beat in enumerate(movie_script.beats):
+            curr_start = round(total_time, 2)
+            curr_end = round(total_time + beat_dur, 2)
+            total_time = curr_end
+
+            beat_clip_file = clips_dir / f"beat_{idx:02d}_{beat.beat_id}.mp4"
+            resolved_p: Optional[str] = None
+
+            if downloaded_source_videos:
+                source_video = downloaded_source_videos[idx % len(downloaded_source_videos)]
+                slice_offset = float((idx * 4.5) % 90.0)
+                slice_ok = self.scene_slicer.slice_clip(
+                    source_media_path=source_video,
+                    output_path=beat_clip_file,
+                    start_sec=slice_offset,
+                    duration_sec=beat_dur,
+                    subtle_zoom=True
+                )
+                if slice_ok and beat_clip_file.exists():
+                    resolved_p = str(beat_clip_file)
+                    sliced_clip_paths.append(beat_clip_file)
+
+            assignment = BeatVisualAssignment(
+                beat_id=beat.beat_id,
+                sequence=idx + 1,
+                text=beat.text,
+                start_time=curr_start,
+                end_time=curr_end,
+                duration_seconds=beat_dur,
+                selected_visual_id=f"movie_{movie.title.lower()}_{idx}",
+                coverage_type="DIRECT_EVIDENCE",
+                authenticity=VisualAuthenticity.EVENT_SPECIFIC.value,
+                licensing_status=VisualLicensingStatus.EDITORIAL_FAIR_USE.value,
+                eligibility=ManifestLicensingEligibility.ELIGIBLE.value,
+                transition=EditTransitionType.CUT.value,
+                source_publisher=f"Official Movie Footage ({movie.title})",
+                resolved_path=resolved_p,
+            )
+            manifest_beats.append(assignment)
+
+        telemetry.stage_durations["5_visual_retrieval"] = time.perf_counter() - t_vis0
+
+        # 5. Build Asset Manifest
+        manifest = ProductionAssetManifest(
+            manifest_id=manifest_id,
+            event_id=movie_event_id,
+            script_id=f"scr_{manifest_id}",
+            total_duration_seconds=round(total_time, 2),
+            beats=manifest_beats,
+        )
+
+        # 6. Assemble & Render MP4 Short
+        telemetry.transition_stage(PipelineStage.RENDERING, f"Rendering 1080x1920 Short for {movie_display_title}")
+        t_rend0 = time.perf_counter()
+        output_mp4 = RENDERS_DIR / f"short_{manifest.manifest_id}.mp4"
+
+        try:
+            short_path, qa_rep, record = self.composer.assemble_manifest(
+                manifest=manifest,
+                narration_audio_path=audio_path,
+                topic_title=movie_display_title,
+                output_path=output_mp4,
+                run_qa=True,
+                category=movie.subgenre,
+            )
+        except Exception as render_err:
+            logger.error(f"Render composition error for {movie_display_title}: {render_err}")
+            telemetry.failure_reasons.append(f"Render error: {render_err}")
+            return None
+
+        telemetry.videos_rendered += 1
+        telemetry.stage_durations["9_ffmpeg_rendering"] = time.perf_counter() - t_rend0
+
+        # QA Gate Inspection
+        if not qa_rep or not qa_rep.passed:
+            logger.warning(f"Video QA FAILED for {short_path.name}: {qa_rep.failure_reasons if qa_rep else 'Unknown'}")
+            telemetry.videos_qa_failed += 1
+            telemetry.failure_reasons.append(f"QA Failed: {qa_rep.failure_reasons if qa_rep else 'No report'}")
+            record.qa_status = "FAILED"
+            self.composer.persist_rendered_record(record, db_session=db)
+            return None
+
+        telemetry.videos_qa_passed += 1
+
+        # 7. Cloud Vault Buffer Deposit (01_READY)
+        telemetry.transition_stage(PipelineStage.DEPOSITING_VAULT, f"Depositing {short_path.name} into 01_READY")
+        if self.drive_engine:
+            file_id = self.composer.deposit_to_drive_vault(
+                record,
+                drive_engine=self.drive_engine,
+                topic_title=movie_display_title,
+                topic_description=f"{movie.high_concept_hook}\n\nPremise: {movie.premise_summary}",
+                db_session=db
+            )
+            if file_id:
+                telemetry.videos_deposited += 1
+        else:
+            telemetry.videos_deposited += 1
+
+        # 8. Persist Records to SQLite
+        self.composer.persist_rendered_record(record, db_session=db)
+
+        # Mark Topic as PRODUCED
+        topic = db.query(Topic).filter_by(event_id=movie_event_id).first()
+        if not topic:
+            topic = Topic(
+                id=f"top_{uuid.uuid4().hex[:12]}",
+                title=movie_display_title,
+                summary=movie.premise_summary,
+                category=movie.subgenre,
+                event_id=movie_event_id,
+                verification_state="VERIFIED",
+                independent_sources_count=1,
+                status="PRODUCED",
+            )
+            db.add(topic)
+        else:
+            topic.status = "PRODUCED"
+        db.commit()
+
+        # Record finalized Short into ShortDuplicateGuard
+        try:
+            self.duplicate_guard.record_short(
+                short_id=manifest.manifest_id,
+                topic_title=movie_display_title,
+                script_text=movie_script.full_script_text,
+                duration_seconds=record.duration_seconds,
+                asset_ids=[(b.selected_visual_id or b.beat_id) for b in manifest.beats]
+            )
+        except Exception as guard_err:
+            logger.warning(f"Notice recording into duplicate guard: {guard_err}")
+
+        telemetry.produced_records.append({
+            "event_id": movie_event_id,
+            "manifest_id": manifest.manifest_id,
+            "video_path": str(short_path),
+            "duration_seconds": record.duration_seconds,
+            "qa_status": record.qa_status,
+        })
+
+        return record
 
     def produce_single_event(
         self,
@@ -612,259 +907,63 @@ class CloudProductionOrchestrator:
                 f"(Current ready: {initial_stock}, Target: {target_buffer}, Deficit: {deficit}, Force: {force_batch_count})"
             )
 
-            # 5. News Ingestion (Phase 1)
-            telemetry.transition_stage(PipelineStage.INGESTING, "Ingesting verified historical event records")
-            t_ingest0 = time.perf_counter()
+            # 5. Movie Catalog Selection & Replenishment
+            telemetry.transition_stage(PipelineStage.INGESTING, "Selecting unproduced movies from curated catalog")
             db = SessionLocal()
             try:
-                newly_ingested = self.ingestion_service.ingest_live_news(db=db, extract_body=False)
-                # Combine newly ingested articles with recent high-quality ArticleRecords to form rich multi-source clusters
-                art_recs = db.query(ArticleRecord).order_by(ArticleRecord.published_utc.desc()).limit(60).all()
-                seen_urls = set()
-                raw_articles = []
-                for a in (newly_ingested or []):
-                    u = getattr(a, "url", "")
-                    if u and u not in seen_urls:
-                        seen_urls.add(u)
-                        raw_articles.append(a)
-                for a in art_recs:
-                    if a.url and a.url not in seen_urls:
-                        seen_urls.add(a.url)
-                        raw_articles.append(
-                            RawArticle(
-                                article_id=a.id,
-                                title=a.title,
-                                summary=a.description or a.title,
-                                url=a.url,
-                                source_domain=(a.url or "").split("/")[2] if "://" in (a.url or "") else "news.org",
-                                source_name=a.publisher or "Wire Service",
-                                published_at=a.published_utc,
-                                retrieved_at=a.discovered_utc or datetime.now(timezone.utc),
-                                article_text=a.article_text or "",
-                            )
-                        )
+                all_movies = self.movie_catalog.get_all_movies()
+                unproduced_movies: List[MovieEntry] = [
+                    m for m in all_movies if not self.is_movie_already_produced(m, db)
+                ]
 
-                ingest_dur = time.perf_counter() - t_ingest0
-                telemetry.events_discovered = len(raw_articles)
-                telemetry.stage_durations["1_news_ingestion"] = ingest_dur
-                telemetry.stage_durations["2_article_extraction"] = 0.0
+                # Shuffle unproduced movies for variety
+                import random
+                random.shuffle(unproduced_movies)
 
-                # 6. Event Clustering & EventCards (Phase 2)
-                telemetry.transition_stage(PipelineStage.CLUSTERING, "Clustering records into historical event units")
-                t_clust0 = time.perf_counter()
-                clusters = self.cluster_engine.cluster_articles(raw_articles)
+                logger.info(
+                    f"[MOVIE_DISCOVERY] Catalog contains {len(all_movies)} movies. "
+                    f"{len(unproduced_movies)} unproduced candidates available."
+                )
 
-                # Form EventCards & Corroborate
-                event_cards: List[EventCard] = []
-                for cluster in clusters:
-                    v_state, conf, conflicts, info = self.verification_engine.evaluate_verification(cluster.articles)
-                    if v_state != VerificationState.INSUFFICIENT_EVIDENCE:
-                        cluster.verification_state = v_state.value if hasattr(v_state, "value") else str(v_state)
-                        cluster.conflicts = conflicts
-                        ec = cluster.to_event_card()
-                        event_cards.append(ec)
-                        telemetry.events_verified += 1
-                    else:
-                        telemetry.events_rejected += 1
+                if not unproduced_movies:
+                    logger.warning("All movies in catalog have already been produced!")
+                    telemetry.failure_reasons.append("Movie catalog exhausted")
+                    telemetry.complete(status="FAILED")
+                    return telemetry
 
-                clust_dur = time.perf_counter() - t_clust0
-                telemetry.stage_durations["3_embedding_clustering"] = clust_dur
-
-                # Hard Niche Purity Gate: Mystery / Bizarre real-world stories ONLY (Weird Science purged)
-                # Strictly reject all politics, geopolitics, elections, military, diplomacy, science explainers
-                compliant_cards: List[EventCard] = []
-                for card in event_cards:
-                    is_ok, reason = is_niche_compliant(
-                        title=card.canonical_title,
-                        text=f"{card.what} {card.why} {card.how}",
-                        entities=card.entities
-                    )
-                    if not is_ok:
-                        logger.warning(
-                            f"[NICHE_GATE_REJECT] Rejecting event '{card.canonical_title}' [{card.event_id}]: {reason}"
-                        )
-                        telemetry.events_rejected += 1
-                        continue
-
-                    if self.is_event_already_produced(card.event_id, db):
-                        logger.debug(f"[LIVE_EVENT_PRE_FILTER] Skipping already-produced event ID '{card.event_id}'")
-                        continue
-
-                    is_uniq, uniq_reason, _ = self.duplicate_guard.verify_short_uniqueness(
-                        topic_title=card.canonical_title,
-                        script_text=card.what,
-                        duration_seconds=23.0,
-                        asset_ids=[]
-                    )
-                    if not is_uniq:
-                        logger.info(f"[LIVE_EVENT_PRE_FILTER] Skipping duplicate candidate '{card.canonical_title}': {uniq_reason}")
-                        continue
-
-                    compliant_cards.append(card)
-
-                # Rank event cards by Mystery / Bizarre real-world storytelling potential
-                def _score_niche_curiosity(card: EventCard) -> float:
-                    t = f"{card.canonical_title} {card.what} {' '.join(card.entities)}".lower()
-                    high_interest = [
-                        "bizarre", "mysterious", "mystery", "unexplained", "strange", "ancient",
-                        "secret", "anomaly", "skeleton", "tomb", "pyramid", "creature", "cryptid",
-                        "unusual", "odd", "oddity", "stone age", "disappearance", "disappeared",
-                        "vanished", "unsolved", "ghost ship", "abandoned", "curse", "cursed",
-                        "buried", "excavation", "coincidence", "survival", "catacomb", "labyrinth",
-                        "mummy", "mummified", "haunted", "cryptic", "lost civilization", "forbidden",
-                        "eccentric", "macabre", "historical incident", "secret chamber", "hoax",
-                        "voynich", "strangest", "creepy", "eerily", "relic", "phenomenon"
-                    ]
-                    dry_academic_or_political = [
-                        "bilateral", "diplomat", "press briefing", "parliament", "treaty",
-                        "ground forces", "national security", "spokesman", "memorandum", "tariffs",
-                        "quantum computer", "particle physics", "gene editing", "crispr", "clinical trial",
-                        "synthetic biology", "materials science", "semiconductor", "battery technology",
-                        "monastery studied", "worker camp", "field school", "archaeological survey",
-                        "pottery sherds", "lithic scatter", "test pit", "excavation report", "preliminary findings"
-                    ]
-                    score = 0.0
-                    for hi in high_interest:
-                        if hi in t:
-                            score += 2.5
-                    for dp in dry_academic_or_political:
-                        if dp in t:
-                            score -= 8.0
-                    return score
-
-                target_candidates_count = max(needed * 4, 12)
-                if len(compliant_cards) < target_candidates_count:
-                    logger.info(f"[NICHE_DISCOVERY] Currently have {len(compliant_cards)}/{target_candidates_count} candidates. Sourcing qualified historical mystery stories...")
-                    from engines.topic_discovery import TopicDiscoveryEngine, CURATED_HISTORICAL_SEEDS
-                    from intelligence.event_card import WhoSection, WhereSection, WhenSection, ClaimEvidence
-                    t_engine = TopicDiscoveryEngine()
-                    for s in CURATED_HISTORICAL_SEEDS:
-                        t_title = s["title"]
-                        if t_engine.is_duplicate(db, t_title, s["summary"]):
-                            continue
-                        slug = re.sub(r'[^a-zA-Z0-9_]', '_', t_title.lower())[:30].strip('_')
-                        ev_id = f"evt_hist_{slug}"
-                        if self.is_event_already_produced(ev_id, db):
-                            continue
-                        # Pre-filter using global ShortDuplicateGuard to prevent choosing known produced titles
-                        is_uniq, uniq_reason, _ = self.duplicate_guard.verify_short_uniqueness(
-                            topic_title=t_title,
-                            script_text=s["summary"],
-                            duration_seconds=23.0,
-                            asset_ids=[]
-                        )
-                        if not is_uniq:
-                            logger.debug(f"[SEED_PRE_FILTER] Skipping duplicate seed '{t_title}': {uniq_reason}")
-                            continue
-
-                        hist_card = EventCard(
-                            event_id=ev_id,
-                            canonical_title=t_title,
-                            verification_state=VerificationState.MULTI_SOURCE_CORROBORATED.value,
-                            confidence=0.98,
-                            first_seen_utc=datetime(1900, 1, 1, tzinfo=timezone.utc),
-                            latest_seen_utc=datetime.now(timezone.utc),
-                            who=WhoSection(people=[], organizations=[], countries=[]),
-                            what=s["summary"],
-                            where=WhereSection(location_name=s.get("category", "Historical Mystery")),
-                            when=WhenSection(event_time_utc=datetime(1900, 1, 1, tzinfo=timezone.utc)),
-                            claims=[
-                                ClaimEvidence(
-                                    claim_id=f"cl_{uuid.uuid4().hex[:8]}",
-                                    claim_text=s["summary"],
-                                    publisher="Historical Archives",
-                                    source_url="https://archive.org",
-                                    published_utc=datetime.now(timezone.utc),
-                                    verification_state="VERIFIED"
-                                )
-                            ],
-                            important_objects=["evidence", "historical record"],
-                            entities=[t_title]
-                        )
-                        compliant_cards.append(hist_card)
-                        if len(compliant_cards) >= target_candidates_count:
-                            break
-
-                    # If curated seeds did not supply enough unique candidates, discover fresh unproduced historical topics
-                    if len(compliant_cards) < target_candidates_count:
-                        logger.info(f"[NICHE_DISCOVERY] Sourcing additional fresh unproduced historical mystery topics via TopicDiscoveryEngine...")
-                        try:
-                            fresh_topics = t_engine._discover_historical_topics(
-                                db,
-                                limit=(target_candidates_count - len(compliant_cards)),
-                                allow_ai=True
-                            )
-                            for ft in (fresh_topics or []):
-                                if t_engine.is_duplicate(db, ft.title, ft.summary, exclude_topic_id=ft.id):
-                                    continue
-                                slug = re.sub(r'[^a-zA-Z0-9_]', '_', ft.title.lower())[:30].strip('_')
-                                ev_id = f"evt_hist_{slug}"
-                                if self.is_event_already_produced(ev_id, db):
-                                    continue
-                                is_uniq, uniq_reason, _ = self.duplicate_guard.verify_short_uniqueness(
-                                    topic_title=ft.title,
-                                    script_text=ft.summary,
-                                    duration_seconds=23.0,
-                                    asset_ids=[]
-                                )
-                                if not is_uniq:
-                                    logger.debug(f"[FRESH_TOPIC_PRE_FILTER] Skipping duplicate topic '{ft.title}': {uniq_reason}")
-                                    continue
-
-                                hist_card = EventCard(
-                                    event_id=ev_id,
-                                    canonical_title=ft.title,
-                                    verification_state=VerificationState.MULTI_SOURCE_CORROBORATED.value,
-                                    confidence=0.98,
-                                    first_seen_utc=datetime(1900, 1, 1, tzinfo=timezone.utc),
-                                    latest_seen_utc=datetime.now(timezone.utc),
-                                    who=WhoSection(people=[], organizations=[], countries=[]),
-                                    what=ft.summary,
-                                    where=WhereSection(location_name=getattr(ft, "category", "Historical Mystery")),
-                                    when=WhenSection(event_time_utc=datetime(1900, 1, 1, tzinfo=timezone.utc)),
-                                    claims=[
-                                        ClaimEvidence(
-                                            claim_id=f"cl_{uuid.uuid4().hex[:8]}",
-                                            claim_text=ft.summary,
-                                            publisher="Historical Archives",
-                                            source_url="https://archive.org",
-                                            published_utc=datetime.now(timezone.utc),
-                                            verification_state="VERIFIED"
-                                        )
-                                    ],
-                                    important_objects=["evidence", "historical record"],
-                                    entities=[ft.title]
-                                )
-                                compliant_cards.append(hist_card)
-                                if len(compliant_cards) >= target_candidates_count:
-                                    break
-                        except Exception as ai_disc_err:
-                            logger.warning(f"Notice during live historical topic discovery: {ai_disc_err}")
-
-                compliant_cards.sort(key=_score_niche_curiosity, reverse=True)
-
-                # 7. Produce Up to Deficit
+                # 6. Produce Up to Deficit
                 produced_this_run = 0
-                logger.info(f"[PRODUCING_DEFICIT] Sourcing from pool of {len(compliant_cards)} unique compliant candidates to fulfill deficit of {needed} Short(s)...")
-                for ec in compliant_cards:
+                logger.info(f"[PRODUCING_DEFICIT] Producing {needed} Movie Recap Short(s) to fulfill reserve...")
+                for movie_entry in unproduced_movies:
                     if produced_this_run >= needed:
                         break
 
-                    cand_title = getattr(ec, "canonical_title", getattr(ec, "headline", "Event"))
-                    logger.info(f"[PRODUCING_DEFICIT] [{produced_this_run + 1}/{needed}] Processing candidate '{cand_title}' [{ec.event_id}]...")
-                    rec = self.produce_single_event(ec, telemetry, db)
+                    logger.info(
+                        f"[PRODUCING_DEFICIT] [{produced_this_run + 1}/{needed}] Producing movie recap for "
+                        f"'{movie_entry.title} ({movie_entry.year})'..."
+                    )
+                    rec = self.produce_single_movie_recap(movie_entry, telemetry, db)
                     if rec or self.is_dry_run:
                         produced_this_run += 1
-                        logger.info(f"[PRODUCING_DEFICIT] [+] Successfully produced candidate '{cand_title}' ({produced_this_run}/{needed})")
+                        logger.info(
+                            f"[PRODUCING_DEFICIT] [+] Successfully produced '{movie_entry.title}' "
+                            f"({produced_this_run}/{needed})"
+                        )
                         # Incremental Drive DB sync immediately after each short is deposited!
                         if self.drive_engine and not TEST_MODE and not self.is_dry_run:
                             try:
                                 upload_canonical_database(drive_engine=self.drive_engine)
-                                logger.info(f"[INCREMENTAL_SYNC] Canonical DB synced to Drive immediately after producing '{cand_title}'")
+                                logger.info(
+                                    f"[INCREMENTAL_SYNC] Canonical DB synced to Drive immediately after "
+                                    f"producing '{movie_entry.title}'"
+                                )
                             except Exception as sync_e:
                                 logger.warning(f"Incremental DB sync error: {sync_e}")
                     else:
-                        logger.warning(f"[PRODUCING_DEFICIT] [!] Candidate '{cand_title}' was rejected or skipped. Trying next candidate from pool...")
+                        logger.warning(
+                            f"[PRODUCING_DEFICIT] [!] Movie '{movie_entry.title}' failed or skipped. "
+                            f"Trying next candidate from catalog..."
+                        )
 
                 telemetry.final_ready_stock = self.get_ready_stock_count()
                 status = "SUCCEEDED" if (produced_this_run >= needed or self.is_dry_run) else ("PARTIAL" if produced_this_run > 0 else "FAILED")

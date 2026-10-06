@@ -420,6 +420,8 @@ class HeadlessComposer:
             else:
                 raw_p = fetch_summary.asset_path_by_beat.get(beat.beat_id)
                 asset_p = Path(raw_p) if raw_p and _is_valid_render_asset(Path(raw_p)) else None
+                if not asset_p and getattr(beat, "resolved_path", None) and _is_valid_render_asset(Path(beat.resolved_path)):
+                    asset_p = Path(beat.resolved_path)
                 if not asset_p:
                     used_paths = set(p for p in beat_asset_map.values() if p)
                     unused_pool = [p for p in valid_pool if p not in used_paths and _is_valid_render_asset(p)]

@@ -1,8 +1,8 @@
 name: YouTube Shorts Cloud Buffer Producer
 # ==============================================================================
-# BATCH CLOUD PRODUCER: Content Generator & Drive Vault Replenisher
-# Genuinely creates, renders, fact-checks, voice-synthesizes, and QA-verifies
-# fresh historical Shorts and deposits them into Google Drive (01_READY).
+# BATCH CLOUD PRODUCER: Movie Recap Generator & Drive Vault Replenisher
+# Genuinely generates, slices, voice-synthesizes, and QA-verifies
+# 55s Thriller & Survival Movie Recap Shorts and deposits them into Google Drive (01_READY).
 # ZERO direct YouTube uploads (strictly preserves daily publication slots).
 # ==============================================================================
 

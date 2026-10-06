@@ -160,12 +160,10 @@ class ContentNiche(str, Enum):
     MYSTERY_BIZARRE = "Mystery / Bizarre Real-World Stories"
 
 
-# Duration targets (Seconds)
-# Extended to 27s to accommodate Kokoro's natural pacing for 55-70 word scripts.
-# YouTube Shorts up to 60s are allowed; 22-27s is the verified engagement sweet spot.
-MIN_DURATION_SEC = 22.0
-MAX_DURATION_SEC = 28.5
-TARGET_DURATION_SEC = 24.0
+# Duration targets (Seconds) - 1-Minute Shorts (~55s sweet spot)
+MIN_DURATION_SEC = 50.0
+MAX_DURATION_SEC = 59.0
+TARGET_DURATION_SEC = 55.0
 
 # Audio Standards
 AUDIO_SAMPLE_RATE = 44100
@@ -201,10 +199,10 @@ MAX_AUDIO_LOUDNESS_LUFS = -10.0
 MAX_TRUE_PEAK_DBTP = -0.5
 MIN_BGM_RMS_ENERGY = 0.005  # Ensures BGM is physically audible in final render
 
-# Script Constraints (50-56 words hard constraint, optimal 52-54 for 22-24s Bella delivery)
-MIN_WORD_COUNT = 50
-MAX_WORD_COUNT = 56
-OPTIMAL_WORD_COUNT = 53
+# Script Constraints (130-145 words for ~55s Shorts delivery)
+MIN_WORD_COUNT = 125
+MAX_WORD_COUNT = 148
+OPTIMAL_WORD_COUNT = 135
 
 # API Free Limits (Default Safety Buffers)
 PEXELS_FREE_LIMIT_HOURLY = 200
@@ -212,7 +210,7 @@ PEXELS_FREE_LIMIT_MONTHLY = 20000
 GEMINI_FREE_RPM = 15
 YOUTUBE_DAILY_QUOTA_LIMIT = 10000
 YOUTUBE_UPLOAD_COST = 1600
-DAILY_SHORTS_LIMIT = 3
+DAILY_SHORTS_LIMIT = 2
 TARGET_RESERVE_BUFFER = 6
 
 # Canonical Buffer Audit & Replenishment Automation (Every 2 Hours, 24/7)

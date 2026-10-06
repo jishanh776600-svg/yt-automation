@@ -172,6 +172,7 @@ class BeatVisualAssignment:
     selection_reason: str = ""
     provenance_overlay: Optional[ProvenanceOverlayData] = None
     alternative_visual_ids: List[str] = field(default_factory=list)
+    resolved_path: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -197,6 +198,7 @@ class BeatVisualAssignment:
             "selection_reason": self.selection_reason,
             "provenance_overlay": self.provenance_overlay.to_dict() if self.provenance_overlay else None,
             "alternative_visual_ids": self.alternative_visual_ids,
+            "resolved_path": self.resolved_path,
         }
 
     @classmethod
@@ -228,6 +230,7 @@ class BeatVisualAssignment:
             selection_reason=data.get("selection_reason", ""),
             provenance_overlay=prov,
             alternative_visual_ids=data.get("alternative_visual_ids", []),
+            resolved_path=data.get("resolved_path"),
         )
 
 

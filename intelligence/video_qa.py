@@ -450,17 +450,16 @@ class VideoQAEngine:
         else:
             checks["duration_in_tolerance"] = True
 
-        # Production Duration Hard Requirement: 20.0 to 28.0 seconds (tolerance [19.8, 28.5])
-        # Extended window accommodates Kokoro's natural pacing for 55-70 word scripts.
-        # YouTube Shorts 20-28s hit the optimal engagement range.
+        # Production Duration Hard Requirement: 50.0 to 59.5 seconds (~55s target 1-minute Short)
+        # Accommodates 130-145 words breathless thriller storytelling without crossing YouTube 60s Shorts ceiling.
         is_production_run = (expected_duration is None) or (expected_duration >= 15.0)
         if is_production_run:
-            if 19.8 <= dur <= 28.5:
-                checks["duration_bounds_22_25"] = True
+            if 48.0 <= dur <= 59.8:
+                checks["duration_bounds_50_59"] = True
             else:
-                checks["duration_bounds_22_25"] = False
+                checks["duration_bounds_50_59"] = False
                 failure_reasons.append(
-                    f"Duration {dur:.2f}s outside required production bounds 20.0-28.0s (tolerance: [19.8s, 28.5s])."
+                    f"Duration {dur:.2f}s outside required 1-minute Shorts bounds 50.0-59.5s (tolerance: [48.0s, 59.8s])."
                 )
 
         # 5. Scene Density and Uniqueness Gating (Minimum 9 scenes for production runs)

@@ -645,6 +645,13 @@ class AssetFetcher:
         summary = ManifestFetchSummary(manifest_id=manifest.manifest_id)
 
         for beat in manifest.beats:
+            # If visual asset is already pre-sliced and resolved on disk, map directly
+            if getattr(beat, "resolved_path", None) and Path(beat.resolved_path).exists():
+                summary.total_requested += 1
+                summary.successful += 1
+                summary.asset_path_by_beat[beat.beat_id] = str(beat.resolved_path)
+                continue
+
             urls_to_try = []
             if beat.media_url:
                 urls_to_try.append(beat.media_url)

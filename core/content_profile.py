@@ -259,8 +259,49 @@ FINANCIAL_MARKETS_PROFILE = ContentProfile(
 )
 
 
+THRILLER_HORROR_RECAP_PROFILE = ContentProfile(
+    name="THRILLER_HORROR_RECAP",
+    description="Survival, gore-thriller, backwoods horror, trapped games, and psychological dark suspense movie recaps.",
+    target_audience="Cinema lovers, horror/thriller enthusiasts, suspense fans seeking intense storytelling.",
+    tone="Dark, gripping, high-tension, cinematic, and relentless present-tense storytelling.",
+    script_objective="Deconstruct survival dilemmas, terrifying traps, and lethal confrontations into a 55-second breathless narrative.",
+    system_role_instruction="You are a master cinematic thriller storyteller narrating high-stakes movie survival and suspense.",
+    beat_descriptions={
+        "hook": "Immediate life-or-death situation or lethal premise that hooks viewer in first 5 seconds.",
+        "the_mistake": "The fatal error or trap where the characters seal their fate.",
+        "escalation": "The terrifying realization, rising panic, and arrival of the threat.",
+        "the_pursuit": "The desperate struggle, chase, or psychological confrontation.",
+        "climax_twist": "Shocking climax, brutal twist, or haunting cliffhanger."
+    },
+    forbidden_cliches=[
+        "in this movie",
+        "the director shows",
+        "this film is about",
+        "will shock you",
+        "mind-blowing",
+        "you won't believe",
+        "did you know",
+        "hit the subscribe button",
+        "thanks for watching"
+    ],
+    hook_markers=[
+        r"\b(trapped|cabin|forest|woods|chainsaw|cannibal|escape|locked|puzzle|killer|hunt|survival|abyss|heights|darkness|basement|tunnel|game|rule|hours|minutes)\b"
+    ],
+    preferred_cadence="Grim, atmospheric, cinematic cadence. Short, sharp, rhythmic sentences. Total immersion.",
+    min_words=125,
+    max_words=148,
+    target_words="130-142 words (~55 seconds)",
+    discovery_profile=None,
+    deduplication_policy="movie_title_year",
+    research_strategy="movie_catalog",
+    default_archive_name="Cinema Archive",
+    default_archive_url="https://www.imdb.com"
+)
+
+
 # Global profile registry
 _PROFILE_REGISTRY: Dict[str, ContentProfile] = {
+    "THRILLER_HORROR_RECAP": THRILLER_HORROR_RECAP_PROFILE,
     "CURRENT_AFFAIRS": CURRENT_AFFAIRS_PROFILE,
     "HISTORICAL": HISTORICAL_PROFILE,
     "SPACE_TECHNOLOGY": SPACE_TECHNOLOGY_PROFILE,
@@ -307,7 +348,7 @@ def get_active_profile() -> ContentProfile:
         if prof:
             return prof
 
-    return HISTORICAL_PROFILE
+    return THRILLER_HORROR_RECAP_PROFILE
 
 
 def set_active_profile(profile: Optional[ContentProfile]) -> None:
