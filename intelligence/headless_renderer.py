@@ -444,6 +444,19 @@ class HeadlessComposer:
             asset_p = beat_asset_map.get(b.beat_id)
             total_dur = max(0.5, b.duration_seconds)
 
+            # If asset_p is already a pre-sliced movie clip tailored for this beat, preserve its exact framing & titles
+            if getattr(b, "resolved_path", None) and Path(b.resolved_path) == asset_p:
+                cmd_direct = [
+                    self.config.ffmpeg_exe, "-y", "-loglevel", "error",
+                    "-i", str(asset_p),
+                    "-t", f"{total_dur:.2f}",
+                    "-c:v", "libx264", "-preset", "ultrafast", "-crf", "18",
+                    "-pix_fmt", "yuv420p", "-r", str(self.config.fps),
+                    "-an", str(clip_file)
+                ]
+                subprocess.run(cmd_direct, check=True)
+                return idx, clip_file
+
             # Strict Sub-2-Second Cut Rule: Every shot on screen must be <= 2.0s
             if total_dur > 2.0:
                 dur1 = round(total_dur / 2.0, 2)

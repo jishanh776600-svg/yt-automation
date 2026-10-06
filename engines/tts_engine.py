@@ -421,11 +421,12 @@ class TTSEngine:
                 wav_path = tightened_wav
                 duration = t_dur
 
-        # 3c. Safe Duration Pacing Guard: If duration exceeds 25.5s, subtly calibrate tempo via ffmpeg atempo
-        # to strictly ensure narration duration fits comfortably within the required 22.0-27.0s bounds (target 24.5s)
-        if duration > 25.5 and wav_path.exists():
-            target_dur = 24.5
-            tempo = min(1.28, max(1.02, round(duration / target_dur, 2)))
+        # 3c. Safe Duration Pacing Guard:
+        # For Movie Recap 1-minute Shorts (target ~54.0s):
+        # Only subtly adjust if audio exceeds 58.5s to fit safely within the 50.0-59.5s ceiling.
+        if duration > 58.5 and wav_path.exists():
+            target_dur = 55.0
+            tempo = min(1.20, max(1.02, round(duration / target_dur, 2)))
             calibrated_wav = self.voice_dir / f"{asset_id}_calibrated.wav"
             cmd = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav_path), "-filter:a", f"atempo={tempo}", str(calibrated_wav)]
             try:

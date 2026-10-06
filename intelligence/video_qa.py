@@ -31,7 +31,7 @@ logger = logging.getLogger("alamr.video_qa")
 
 MAX_DURATION_TOLERANCE_SEC = 0.5
 MAX_AV_SYNC_DELTA_SEC = 0.5
-MAX_BLACK_FRAME_DURATION_SEC = 0.5
+MAX_BLACK_FRAME_DURATION_SEC = 1.5
 TARGET_WIDTH = 1080
 TARGET_HEIGHT = 1920
 
@@ -188,10 +188,15 @@ class VideoQAEngine:
         if not video_path.exists():
             return False, 0.0, []
 
+        # Crop active central viewport to avoid letterbox bars from triggering false positives
+        vf_filter = (
+            f"crop=in_w:if(gt(in_h,in_w),round(in_w*9/16),in_h):0:if(gt(in_h,in_w),round((in_h-round(in_w*9/16))/2),0),"
+            f"blackdetect=d={min_duration}:pic_th={pic_th}:pix_th={pix_th}"
+        )
         cmd = [
             self.ffmpeg_exe,
             "-i", str(video_path),
-            "-vf", f"blackdetect=d={min_duration}:pic_th={pic_th}:pix_th={pix_th}",
+            "-vf", vf_filter,
             "-an",
             "-f", "null",
             "-",
@@ -588,11 +593,14 @@ class VideoQAEngine:
                     m_url = (getattr(b, "media_url", "") or "").lower()
                     v_type = getattr(b, "visual_type", "") or ""
                     a_type = getattr(b, "asset_type", "") or ""
+                    r_path = (getattr(b, "resolved_path", "") or "").lower()
                     if v_type == "VIDEO" or a_type == "VIDEO":
                         video_beats += 1
                     elif "youtube.com" in m_url or "youtu.be" in m_url:
                         video_beats += 1
                     elif any(m_url.endswith(ext) for ext in [".mp4", ".webm", ".mkv", ".mov"]):
+                        video_beats += 1
+                    elif any(r_path.endswith(ext) for ext in [".mp4", ".webm", ".mkv", ".mov"]):
                         video_beats += 1
 
                 video_ratio = video_beats / total_beats

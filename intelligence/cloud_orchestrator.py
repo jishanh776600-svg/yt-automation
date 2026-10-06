@@ -417,6 +417,7 @@ class CloudProductionOrchestrator:
                 eligibility=ManifestLicensingEligibility.ELIGIBLE.value,
                 transition=EditTransitionType.CUT.value,
                 source_publisher=f"Official Movie Footage ({movie.title})",
+                media_url=resolved_p,
                 resolved_path=resolved_p,
             )
             manifest_beats.append(assignment)
