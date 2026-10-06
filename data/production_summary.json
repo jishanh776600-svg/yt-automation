@@ -1,11 +1,11 @@
 {
   "action": "PRODUCE_BATCH",
-  "outcome": "FAILED",
-  "block_reason": "QA Failed: ['Duration 42.63s outside required 1-minute Shorts bounds 50.0-59.5s (tolerance: [48.0s, 59.8s]).']",
+  "outcome": "SUCCEEDED",
+  "block_reason": null,
   "requested_count": 1,
-  "produced_count": 0,
+  "produced_count": 1,
   "initial_stock": 0,
-  "final_stock": 0,
+  "final_stock": 1,
   "voice": "af_bella",
-  "timestamp": "2026-10-06T20:48:06.480824Z"
+  "timestamp": "2026-10-06T21:14:34.251230Z"
 }
