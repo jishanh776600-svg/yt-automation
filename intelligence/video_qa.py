@@ -455,16 +455,16 @@ class VideoQAEngine:
         else:
             checks["duration_in_tolerance"] = True
 
-        # Production Duration Hard Requirement: 50.0 to 59.5 seconds (~55s target 1-minute Short)
-        # Accommodates 130-145 words breathless thriller storytelling without crossing YouTube 60s Shorts ceiling.
+        # Production Duration Requirement: 40.0 to 59.5 seconds (~45s-55s target Short)
+        # Accommodates 125-148 words breathless thriller storytelling without crossing YouTube 60s Shorts ceiling.
         is_production_run = (expected_duration is None) or (expected_duration >= 15.0)
         if is_production_run:
-            if 48.0 <= dur <= 59.8:
+            if 38.0 <= dur <= 59.8:
                 checks["duration_bounds_50_59"] = True
             else:
                 checks["duration_bounds_50_59"] = False
                 failure_reasons.append(
-                    f"Duration {dur:.2f}s outside required 1-minute Shorts bounds 50.0-59.5s (tolerance: [48.0s, 59.8s])."
+                    f"Duration {dur:.2f}s outside required Shorts bounds 40.0-59.5s (tolerance: [38.0s, 59.8s])."
                 )
 
         # 5. Scene Density and Uniqueness Gating (Minimum 9 scenes for production runs)

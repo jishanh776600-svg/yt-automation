@@ -93,6 +93,7 @@ from intelligence.frame_inspector import FrameInspector
 from intelligence.movie_series_manager import MovieSeriesManager
 from engines.autonomous_movie_downloader import AutonomousMovieDownloader
 from engines.movie_longform_engine import MovieLongformEngine
+from intelligence.scene_matcher import ChronologicalSceneMatcher
 
 logger = logging.getLogger("alamr.cloud_orchestrator")
 
@@ -141,6 +142,7 @@ class CloudProductionOrchestrator:
         self.frame_inspector = FrameInspector()
         self.series_manager = MovieSeriesManager()
         self.movie_downloader = AutonomousMovieDownloader()
+        self.scene_matcher = ChronologicalSceneMatcher()
         self.movie_longform_engine = MovieLongformEngine(
             downloader=self.movie_downloader,
             script_engine=self.movie_script_engine,
@@ -377,6 +379,20 @@ class CloudProductionOrchestrator:
                         if len(downloaded_source_videos) >= 3:
                             break
 
+        # Compute exact scene match timestamps using ChronologicalSceneMatcher
+        matched_scenes: Dict[str, float] = {}
+        if downloaded_source_videos:
+            primary_video = downloaded_source_videos[0]
+            matches = self.scene_matcher.match_beats_to_movie(
+                movie_path=primary_video,
+                beats=movie_script.beats,
+                part_number=active_part,
+                total_parts=active_total,
+                movie_title=movie.title,
+            )
+            for m in matches:
+                matched_scenes[m.beat_id] = m.matched_timestamp_sec
+
         # Slice movie clips into vertical cuts
         for idx, beat in enumerate(movie_script.beats):
             curr_start = round(total_time, 2)
@@ -388,7 +404,10 @@ class CloudProductionOrchestrator:
 
             if downloaded_source_videos:
                 source_video = downloaded_source_videos[idx % len(downloaded_source_videos)]
-                slice_offset = float(part_offset_base + ((idx * 5.0) % max(10.0, part_span - beat_dur)))
+                slice_offset = matched_scenes.get(
+                    beat.beat_id,
+                    float(part_offset_base + (idx * (part_span / max(1, num_beats))))
+                )
                 slice_ok = self.scene_slicer.slice_clip(
                     source_media_path=source_video,
                     output_path=beat_clip_file,
