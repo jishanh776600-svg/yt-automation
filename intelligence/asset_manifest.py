@@ -724,6 +724,7 @@ class AssetManifestEngine:
                     VisualLicensingStatus.CREATIVE_COMMONS.value,
                     VisualLicensingStatus.STOCK_API_LICENSE.value,
                     VisualLicensingStatus.LICENSE_CONFIRMED.value,
+                    VisualLicensingStatus.EDITORIAL_FAIR_USE.value,
                 ]:
                     eligibility = ManifestLicensingEligibility.ELIGIBLE.value
                 elif lic_status == VisualLicensingStatus.RESTRICTED.value:

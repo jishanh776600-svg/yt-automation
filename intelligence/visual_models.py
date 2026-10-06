@@ -25,6 +25,7 @@ class VisualAuthenticity(str, Enum):
 
 class VisualLicensingStatus(str, Enum):
     """Explicit legal licensing status of visual material."""
+    EDITORIAL_FAIR_USE = "EDITORIAL_FAIR_USE"        # Transformative commentary, critique, recap fair use
     LICENSE_CONFIRMED = "LICENSE_CONFIRMED"          # Confirmed commercial/editorial reuse license
     PUBLIC_DOMAIN = "PUBLIC_DOMAIN"                  # Government official work, pre-1929, CC0
     CREATIVE_COMMONS = "CREATIVE_COMMONS"            # CC-BY, CC-BY-SA with attribution
