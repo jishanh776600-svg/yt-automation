@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
   "outcome": "SUCCEEDED",
-  "block_reason": "QA Failed: ['Continuous black frames detected (1.07s >= 0.5s threshold).']; QA Failed: ['Continuous black frames detected (0.60s >= 0.5s threshold).']; Render error: Command '['/usr/bin/ffmpeg', '-y', '-loglevel', 'error', '-ss', '0.00', '-i', 'data/cache/media/sha256/25972d850945bb8d1181fee5078b74ba2904636c1f8d7e8a6dad8b02207284d4.mp4', '-t', '1.15', '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,format=yuv420p', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-r', '30', '-an', 'data/cache/render_tmp/session_6a0b94cc/sub_09_1.mp4']' returned non-zero exit status 183.; Render error: ZERO_REPETITION_RULE: Visual asset missing or failed download for beat 'beat_e863ef29'. Recycling or looping existing clips across beats is strictly prohibited.; Render error: ZERO_REPETITION_RULE: Visual asset missing or failed download for beat 'beat_0d1fe248'. Recycling or looping existing clips across beats is strictly prohibited.; QA Failed: ['Continuous black frames detected (1.67s >= 0.5s threshold).']; QA Failed: ['Continuous black frames detected (2.40s >= 0.5s threshold).']; QA Failed: ['Continuous black frames detected (1.63s >= 0.5s threshold).']",
-  "requested_deficit": 2,
-  "produced_count": 2,
-  "initial_stock": 4,
+  "block_reason": null,
+  "requested_deficit": 0,
+  "produced_count": 0,
+  "initial_stock": 6,
   "final_stock": 6,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-10-06T03:29:17.228404Z"
+  "timestamp": "2026-10-06T08:15:17.534616Z"
 }
