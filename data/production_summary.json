@@ -1,12 +1,11 @@
 {
-  "action": "MAINTAIN_BUFFER",
-  "outcome": "SUCCEEDED",
-  "block_reason": "Render error: ZERO_REPETITION_RULE: Visual asset missing or failed download for beat 'beat_149199ca'. Recycling or looping existing clips across beats is strictly prohibited.; Render error: ZERO_REPETITION_RULE: Visual asset missing or failed download for beat 'beat_90031d22'. Recycling or looping existing clips across beats is strictly prohibited.; Duplicate Short rejected: Duplicate script content (similarity 0.67 >= 0.65) with Short man_08416f932486; Render error: ZERO_REPETITION_RULE: Visual asset missing or failed download for beat 'beat_969cb430'. Recycling or looping existing clips across beats is strictly prohibited.; QA Failed: ['Continuous black frames detected (0.83s >= 0.5s threshold).']; QA Failed: ['Continuous black frames detected (0.50s >= 0.5s threshold).', 'Sample frame at 16.5s is a neutral script card (96.3% charcoal background). Script cards are strictly prohibited.']; Duplicate Short rejected: Duplicate script content (similarity 0.67 >= 0.65) with Short man_08416f932486",
-  "requested_deficit": 3,
-  "produced_count": 3,
-  "initial_stock": 3,
-  "final_stock": 6,
-  "target_stock": 6,
+  "action": "PRODUCE_BATCH",
+  "outcome": "FAILED",
+  "block_reason": "EDITORIAL_FAIR_USE",
+  "requested_count": 1,
+  "produced_count": 0,
+  "initial_stock": 0,
+  "final_stock": 0,
   "voice": "af_bella",
-  "timestamp": "2026-10-06T16:42:41.682525Z"
+  "timestamp": "2026-10-06T19:49:05.783690Z"
 }
