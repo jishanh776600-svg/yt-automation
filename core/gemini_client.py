@@ -926,6 +926,12 @@ class GeminiClient:
         """
         if contents is None and "prompt" in kwargs:
             contents = kwargs.pop("prompt")
+
+        # If first positional argument is prompt text rather than a model identifier
+        if contents is None and model and (" " in model or "\n" in model or len(model) > 50 or not any(m in model.lower() for m in ["gemini", "llama", "deepseek", "qwen", "mistral", "gpt", "nemotron"])):
+            contents = model
+            model = None
+
         if not model:
             model = self.primary_model
 

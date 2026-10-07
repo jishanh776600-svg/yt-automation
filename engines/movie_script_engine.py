@@ -212,40 +212,94 @@ Return valid JSON strictly adhering to this schema:
         """High-craft deterministic fallback for Wrong Turn or catalog movies."""
         logger.info(f"[MOVIE_SCRIPT] Deploying curated deterministic recap for {movie.title} - Part {part_number}/{total_parts}")
         
-        if "wrong turn" in movie.title.lower():
-            raw_beats = [
-                ("Deep in West Virginia, six travelers take an abandoned dirt road.", "Car driving down isolated forested dirt road under grey skies", ["Wrong Turn 2003 driving dirt road", "car woods"]),
-                ("Barbed wire hidden in the brush violently punctures their tires.", "Close-up barbed wire puncturing car tire on muddy path", ["Wrong Turn 2003 tire trap scene", "barbed wire"]),
-                ("Stranded without service, they hike miles into dense mountain woods.", "Group walking through dense Appalachian forest looking lost", ["Wrong Turn 2003 hiking woods", "stranded travelers"]),
-                ("Deep in the forest, they find a secluded, rotting wooden cabin.", "Creepy wooden cabin surrounded by rusty car wreckage", ["Wrong Turn 2003 cabin reveal", "creepy cabin"]),
-                ("Inside, shelves are packed with jars filled with human body parts.", "Jars and severed teeth on wooden kitchen table", ["Wrong Turn 2003 cabin inside jars", "cabin kitchen"]),
-                ("A rusty truck rumbles outside. The occupants have returned.", "Rusty tow truck headlights pulling into cabin driveway", ["Wrong Turn 2003 tow truck arrival", "truck night"]),
-                ("The survivors desperately dive under a wooden bed frame.", "Characters trembling hiding under wooden bed holding breath", ["Wrong Turn 2003 hiding under bed scene", "bed hiding"]),
-                ("Three deformed cannibal brothers drag a fresh corpse inside.", "Three-Finger dragging a dead body into the kitchen", ["Wrong Turn 2003 cannibals body scene", "Three Finger"]),
-                ("They butcher the body inches away from the hiding survivors.", "Axe chopping wood and meat while characters watch terrified", ["Wrong Turn 2003 axe chopping cabin", "cabin terror"]),
-                ("Escaping through a back window, they flee into the trees.", "Characters jumping out cabin window into dark woods", ["Wrong Turn 2003 window escape", "forest night"]),
-                ("Armed with hunting bows, the cannibals track them through the dark.", "Cannibals running through forest shooting arrows", ["Wrong Turn 2003 bow arrow chase", "tree pursuit"]),
-                ("The survivors climb into the canopy, leaping across branches.", "Characters crawling high on pine branches in moonlight", ["Wrong Turn 2003 tree canopy jump scene", "treetop chase"]),
-                ("Trapped inside a wooden watchtower, the cannibals set it on fire.", "Cannibals throwing Molotov cocktail setting tower stairs in flames", ["Wrong Turn 2003 watchtower fire scene", "flaming tower"]),
-                ("With flames rising, they must leap into the dark or burn.", "Characters standing on burning balcony preparing to leap", ["Wrong Turn 2003 balcony jump ending", "flames jump"])
-            ]
+        m_lower = movie.title.lower()
+        if "wrong turn" in m_lower:
+            if part_number == 1:
+                raw_beats = [
+                    ("Deep in West Virginia, six travelers take an abandoned dirt road.", "Car driving down isolated forested dirt road under grey skies", ["Wrong Turn 2003 driving dirt road", "car woods"]),
+                    ("Barbed wire hidden in the brush violently punctures their tires.", "Close-up barbed wire puncturing car tire on muddy path", ["Wrong Turn 2003 tire trap scene", "barbed wire"]),
+                    ("Stranded without service, they hike miles into dense mountain woods.", "Group walking through dense Appalachian forest looking lost", ["Wrong Turn 2003 hiking woods", "stranded travelers"]),
+                    ("Deep in the forest, they find a secluded, rotting wooden cabin.", "Creepy wooden cabin surrounded by rusty car wreckage", ["Wrong Turn 2003 cabin reveal", "creepy cabin"]),
+                    ("Inside, shelves are packed with jars filled with human body parts.", "Jars and severed teeth on wooden kitchen table", ["Wrong Turn 2003 cabin inside jars", "cabin kitchen"]),
+                    ("A rusty truck rumbles outside. The occupants have returned.", "Rusty tow truck headlights pulling into cabin driveway", ["Wrong Turn 2003 tow truck arrival", "truck night"]),
+                    ("The survivors desperately dive under a wooden bed frame.", "Characters trembling hiding under wooden bed holding breath", ["Wrong Turn 2003 hiding under bed scene", "bed hiding"]),
+                    ("Three deformed cannibal brothers drag a fresh corpse inside.", "Three-Finger dragging a dead body into the kitchen", ["Wrong Turn 2003 cannibals body scene", "Three Finger"]),
+                    ("They butcher the body inches away from the hiding survivors.", "Axe chopping wood and meat while characters watch terrified", ["Wrong Turn 2003 axe chopping cabin", "cabin terror"]),
+                    ("Escaping through a back window, they flee into the trees.", "Characters jumping out cabin window into dark woods", ["Wrong Turn 2003 window escape", "forest night"]),
+                    ("Armed with hunting bows, the cannibals track them through the dark.", "Cannibals running through forest shooting arrows", ["Wrong Turn 2003 bow arrow chase", "tree pursuit"]),
+                    ("The survivors climb into the canopy, leaping across branches.", "Characters crawling high on pine branches in moonlight", ["Wrong Turn 2003 tree canopy jump scene", "treetop chase"]),
+                    ("Trapped inside a wooden watchtower, the cannibals set it on fire.", "Cannibals throwing Molotov cocktail setting tower stairs in flames", ["Wrong Turn 2003 watchtower fire scene", "flaming tower"]),
+                    ("With flames rising, they must leap into the dark or burn.", "Characters standing on burning balcony preparing to leap", ["Wrong Turn 2003 balcony jump ending", "flames jump"])
+                ]
+            else:
+                raw_beats = [
+                    (f"In Part {part_number} of Wrong Turn, the mountain nightmare intensifies.", "Dark misty woods establishing shot", ["Wrong Turn forest night", "woods mist"]),
+                    ("The survivors break out through the bedroom window into midnight woods.", "Characters dropping quietly from cabin window", ["Wrong Turn window escape scene", "cabin exterior"]),
+                    ("Behind them, Three-Finger discovers the empty bed and screams with fury.", "Three Finger roaring inside cabin doorway", ["Wrong Turn Three Finger screaming", "cannibal rage"]),
+                    ("The deformed brothers grab hunting bows and barbed wire traps.", "Cannibals grabbing crude weapons and arrows", ["Wrong Turn cannibals weapons", "hunting bow"]),
+                    ("Running blindly in darkness, the survivors search for any safe road.", "Characters sprinting through pitch black trees", ["Wrong Turn night forest chase", "running trees"]),
+                    ("Suddenly, a tripwire snaps, releasing a vicious spiked branch.", "Tripwire triggering spiked log trap in brush", ["Wrong Turn forest trap scene", "spiked branch"]),
+                    ("With cannibals closing the distance, Chris directs everyone up into high pines.", "Characters climbing tall pine tree branches", ["Wrong Turn climbing tree scene", "tree branches"]),
+                    ("Torches flicker below as the brothers search the dead forest floor.", "Torches moving through dark misty forest below", ["Wrong Turn search torches night", "cannibal search"]),
+                    ("Above in the canopy, they crawl across massive wooden branches.", "Survivors leaping between tree limbs in moonlight", ["Wrong Turn canopy jump scene", "pine canopy"]),
+                    ("An arrow whistling through the dark grazes the tree bark inches away.", "Arrow embedding into pine trunk close-up", ["Wrong Turn arrow hit wood", "arrow tree"]),
+                    ("Ahead through the leaves, an abandoned forest fire watchtower emerges.", "Tall wooden watchtower above treeline under stars", ["Wrong Turn watchtower reveal", "fire tower"]),
+                    ("They scramble up the narrow wooden steps, locking the trapdoor.", "Characters racing up wooden tower staircase", ["Wrong Turn tower stairs", "tower trapdoor"]),
+                    ("Below, the cannibals smile and raise glass bottles filled with gasoline.", "Cannibals lighting Molotov cocktail below tower", ["Wrong Turn Molotov cocktail", "fire bottle"]),
+                    ("Flames engulf the stairs, trapping everyone in a raging wooden inferno.", "Flames engulfing base of wooden tower", ["Wrong Turn burning tower scene", "tower fire"])
+                ]
+        elif "hills have eyes" in m_lower:
+            if part_number == 1:
+                raw_beats = [
+                    ("In the scorching desert, an innocent traveling family takes a fatal shortcut.", "Station wagon and trailer driving through barren desert", ["The Hills Have Eyes desert driving", "desert road"]),
+                    ("Concealed spike strips tear through their tires, leaving them completely stranded.", "Spike strip shredding car tires on dirt road", ["The Hills Have Eyes spike trap scene", "blown tires"]),
+                    ("With no phone signal in the heat, the father hikes miles to find help.", "Man walking alone down desolate canyon highway", ["The Hills Have Eyes walking highway", "desert sun"]),
+                    ("Hidden high in the red cliffs, mutated scavengers watch their every move.", "Shadowy deformed figures watching through binoculars", ["The Hills Have Eyes cliff watchers", "mutant binoculars"]),
+                    ("As darkness falls over the canyon, eerie clicking noises surround the trailer.", "Trailer illuminated by cold moonlight in canyon", ["The Hills Have Eyes trailer night", "desert darkness"]),
+                    ("A sudden explosion draws the family outside into the freezing night air.", "Gasoline explosion in distance diverting family", ["The Hills Have Eyes explosion diversion", "desert explosion"]),
+                    ("Inside the defenseless trailer, mutated predators strike with ruthless speed.", "Mutant intruder forcing door of trailer open", ["The Hills Have Eyes trailer raid scene", "mutant attack"]),
+                    ("They take emergency supplies and kidnap the family's newborn infant.", "Mutants fleeing into darkness with stolen baby", ["The Hills Have Eyes baby kidnapping", "mutants night run"]),
+                    ("Traumatized and bleeding, the survivors realize they are being hunted for sport.", "Grieving family staring into dark rocky canyon", ["The Hills Have Eyes shocked survivors", "desert dawn"]),
+                    ("Doug vows to rescue his child and climbs into the mutant canyon territory.", "Determined man gripping shotgun with guard dog", ["The Hills Have Eyes Doug shotgun", "dog canyon"]),
+                    ("He uncovers a horrifying ghost town built for 1950s nuclear testing.", "Abandoned nuclear testing town with plastic mannequins", ["The Hills Have Eyes nuclear village", "mannequin town"]),
+                    ("Deformed mutants lurk behind ruined suburban houses and rusted cars.", "Mutant hiding behind decayed house corner", ["The Hills Have Eyes mutant village", "nuclear town mutant"]),
+                    ("Armed with makeshift weapons, Doug enters the heart of the mutant lair.", "Man sneaking through abandoned house hallway", ["The Hills Have Eyes house hallway", "inside mutant home"]),
+                    ("To save his daughter, this ordinary salesman must become an unstoppable force.", "Doug looking intensely ready for brutal confrontation", ["The Hills Have Eyes Doug fight climax", "shotgun ready"])
+                ]
+            else:
+                raw_beats = [
+                    (f"In Part {part_number} of The Hills Have Eyes, the battle for survival turns brutal.", "Dust storm blowing across nuclear testing town", ["The Hills Have Eyes dust storm", "nuclear ghost town"]),
+                    ("Doug sneaks through the decaying nuclear village with his loyal German Shepherd.", "Doug and guard dog moving stealthily between houses", ["The Hills Have Eyes Doug Beast dog", "nuclear village search"]),
+                    ("Inside a dark living room, a mutant attacker ambushes him from behind.", "Mutant swinging weapon at Doug in narrow room", ["The Hills Have Eyes mutant ambush fight", "indoor struggle"]),
+                    ("His guard dog Beast lunges forward, tearing the attacker to the floor.", "German Shepherd tackling mutant defender", ["The Hills Have Eyes dog attack scene", "Beast dog fight"]),
+                    ("Deep in a back room, Doug hears his baby crying from an iron crib.", "Baby crying in metal crib in dark mutant bedroom", ["The Hills Have Eyes baby in crib", "rescue room"]),
+                    ("The monstrous leader Pluto suddenly steps into the doorway with a sledgehammer.", "Massive mutant Pluto holding heavy sledgehammer", ["The Hills Have Eyes Pluto mutant", "sledgehammer door"]),
+                    ("A violent life-or-death brawl erupts across the dilapidated wooden floor.", "Brutal physical fight against heavy mutant", ["The Hills Have Eyes Pluto fight scene", "wooden floor brawl"]),
+                    ("Using pure desperation, Doug disarms the monster and grabs his daughter.", "Doug retrieving infant and rushing out broken window", ["The Hills Have Eyes baby rescue run", "canyon escape"]),
+                    ("Across the canyon, the remaining family members prepare a gasoline defense.", "Survivors pouring fuel around damaged trailer", ["The Hills Have Eyes gasoline trap", "trailer defense"]),
+                    ("When Papa Jupiter charges through the rocks, they ignite the fuel line.", "Giant mutant charging toward trailer ambush", ["The Hills Have Eyes Papa Jupiter charge", "fuel trap ignites"]),
+                    ("A massive desert fireball erupts into the night sky, wiping out the clan.", "Giant fireball engulfing rocks and canyon", ["The Hills Have Eyes fireball explosion", "desert blast"]),
+                    ("Doug stumbles out of the rocky cliffs, carrying his baby toward the dawn light.", "Battered man carrying child emerging from canyon", ["The Hills Have Eyes Doug ending walk", "sunrise canyon"]),
+                    ("Battered, bloodied, but alive, the survivors reunite under the morning sun.", "Survivors hugging beside burnt trailer remains", ["The Hills Have Eyes survivors embrace", "desert sunrise"]),
+                    ("Yet in the distant peaks, a lone mutant eye watches them walk away.", "Single eye watching through cracked binoculars on cliff", ["The Hills Have Eyes final cliff shot", "ending cliffhanger"])
+                ]
         else:
-            # Generic structured survival recap (14 beats, ~134 words)
+            # Dynamic generic survival recap that changes by part_number
             raw_beats = [
-                (f"In {movie.title}, an innocent road journey turns into an inescapable nightmare.", "Ominous landscape establishing shot", [f"{movie.title} opening scene"]),
-                ("A group of travelers takes a fatal shortcut away from civilization.", "Characters entering isolated zone", [f"{movie.title} travel scene"]),
-                ("Their vehicle breaks down, leaving them completely stranded without any communication.", "Stranded vehicle in desolate wilderness", [f"{movie.title} stranded scene"]),
-                ("Seeking immediate help, they stumble upon an isolated structure in the dark.", "Eerie building discovered in distance", [f"{movie.title} building discovery"]),
-                ("Inside, they uncover gruesome evidence that they are not alone.", "Characters discovering disturbing clues", [f"{movie.title} clues scene"]),
-                ("Before they can flee, the heavy door slams shut. The predator returns.", "Shadowy figure appearing in doorway", [f"{movie.title} killer arrival"]),
-                ("Hiding in the shadows, they watch in horror as the trap is set.", "Characters holding breath hiding", [f"{movie.title} hiding scene"]),
-                ("One by one, the survivors realize every single exit is locked.", "Characters desperately checking locked doors", [f"{movie.title} locked doors"]),
-                ("A relentless pursuit begins through corridors of pure terrifying darkness.", "High tension pursuit through darkness", [f"{movie.title} chase scene"]),
-                ("Armed with makeshift weapons, they prepare for a brutal confrontation.", "Character gripping weapon with shaking hands", [f"{movie.title} weapon confrontation"]),
-                ("In a chaotic clash, the predator closes in with relentless force.", "Violent struggle between survivors and threat", [f"{movie.title} fight scene"]),
-                ("They break through the perimeter, running for their lives into the night.", "Characters sprinting through exterior zone", [f"{movie.title} escape run"]),
-                ("Just when safety seems within reach, a shocking revelation changes everything.", "Shocking climax visual reveal", [f"{movie.title} twist scene"]),
-                (f"Only the most ruthless will survive the final trial of {movie.title}.", "Final dramatic cliffhanger frame", [f"{movie.title} ending scene"])
+                (f"In Part {part_number} of {movie.title}, the danger escalates to a breaking point.", "Dramatic atmospheric establishing scene", [f"{movie.title} scene"]),
+                (f"The survivors push forward into unexplored territory of {movie.title}.", "Characters moving cautiously through hostile environment", [f"{movie.title} exploration"]),
+                ("Every exit route is severed as the relentless threat closes in around them.", "Blocked passage or destroyed bridge", [f"{movie.title} trap"]),
+                ("They discover evidence of past victims who failed to escape this place.", "Disturbing clues found in shadows", [f"{movie.title} clues"]),
+                ("A sudden shock shatters the silence, forcing everyone into a sprint.", "Sudden ambush triggering frantic run", [f"{movie.title} ambush"]),
+                ("Separated in the chaos, each person must fight for their own survival.", "Characters split in dangerous corridors", [f"{movie.title} chase"]),
+                ("Armed only with basic tools, they prepare an unexpected ambush.", "Character rigging makeshift weapon", [f"{movie.title} defense"]),
+                ("When the predator strikes, a violent clash shakes the entire area.", "High intensity fight sequence", [f"{movie.title} fight"]),
+                ("They break through the defensive line, racing toward the final exit.", "Sprinting toward daylight or doorway", [f"{movie.title} escape"]),
+                ("Just when freedom seems certain, a devastating twist changes the game.", "Shocking climax visual reveal", [f"{movie.title} twist"]),
+                ("They trigger a massive counterattack, turning the tables on their hunter.", "Explosion or trap springing on threat", [f"{movie.title} counterattack"]),
+                ("In a breathless climax, only the strongest will make it out alive.", "Dramatic final standoff visual", [f"{movie.title} standoff"]),
+                (f"The dust settles over {movie.title}, leaving a chilling question behind.", "Ominous closing frame", [f"{movie.title} ending"]),
+                ("Watch the next chapter to see if anyone truly escapes this nightmare.", "High tension final cliffhanger", [f"{movie.title} cliffhanger"])
             ]
 
         beats = []
