@@ -1,12 +1,11 @@
 {
-  "action": "MAINTAIN_BUFFER",
-  "outcome": "FAILED",
-  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 1.00 >= 0.65) with Short 9dc1dd8d3526; Duplicate Short rejected: Duplicate script content (similarity 1.00 >= 0.65) with Short e83899ce02d9; Duplicate Short rejected: Duplicate script content (similarity 1.00 >= 0.65) with Short 9dc1dd8d3526; Duplicate Short rejected: Duplicate script content (similarity 1.00 >= 0.65) with Short e83899ce02d9",
-  "requested_deficit": 4,
-  "produced_count": 0,
+  "action": "PRODUCE_BATCH",
+  "outcome": "SUCCEEDED",
+  "block_reason": null,
+  "requested_count": 2,
+  "produced_count": 2,
   "initial_stock": 2,
-  "final_stock": 2,
-  "target_stock": 6,
+  "final_stock": 4,
   "voice": "af_bella",
-  "timestamp": "2026-10-07T09:30:07.241163Z"
+  "timestamp": "2026-10-07T13:42:40.929999Z"
 }
