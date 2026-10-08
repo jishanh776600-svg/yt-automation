@@ -379,6 +379,23 @@ class StoryDeduplicationEngine:
         """
         Layer 2: Deterministic Consistency, Entity-Pair & Fingerprint Matching.
         """
+        # EPISODIC FAST-PATH: Sequential parts/episodes of the same series are distinct chapters
+        m1 = re.search(r"(?:episode|part)\s*0*(\d+)", candidate_fp.title, re.IGNORECASE)
+        m2 = re.search(r"(?:episode|part)\s*0*(\d+)", existing_fp.title, re.IGNORECASE)
+        if m1 and m2:
+            if m1.group(1) != m2.group(1):
+                return None  # Different episode numbers are distinct
+            else:
+                return DeduplicationResult(
+                    is_duplicate=True,
+                    classification="EXACT_DUPLICATE",
+                    matched_event_title=existing_fp.title,
+                    similarity_score=1.0,
+                    shared_elements=[f"Episode {m1.group(1)} Match"],
+                    reason=f"Candidate is identical episode {m1.group(1)} of existing series '{existing_fp.title}'.",
+                    is_allowed=False
+                )
+
         # 1. Exact title match
         if candidate_fp.title.lower().strip() == existing_fp.title.lower().strip():
             return DeduplicationResult(
@@ -679,8 +696,14 @@ class StoryDeduplicationEngine:
             if det_res and not det_res.is_allowed:
                 return det_res
 
+        cand_ep_m = re.search(r"(?:episode|part)\s*0*(\d+)", candidate_title, re.IGNORECASE)
+
         # 2. Entity-Pair (Year + City) Escalation to Semantic NLI
         for existing in corpus:
+            if cand_ep_m:
+                exist_ep_m = re.search(r"(?:episode|part)\s*0*(\d+)", existing.title, re.IGNORECASE)
+                if exist_ep_m and cand_ep_m.group(1) != exist_ep_m.group(1):
+                    continue
             shared_pairs = candidate_fp.entity_pairs.intersection(existing.entity_pairs)
             shared_years = candidate_fp.years.intersection(existing.years)
             shared_locations = candidate_fp.locations.intersection(existing.locations)
@@ -703,6 +726,10 @@ class StoryDeduplicationEngine:
 
         # 3. General Semantic NLI for shared years, entities, or thematic stems
         for existing in corpus:
+            if cand_ep_m:
+                exist_ep_m = re.search(r"(?:episode|part)\s*0*(\d+)", existing.title, re.IGNORECASE)
+                if exist_ep_m and cand_ep_m.group(1) != exist_ep_m.group(1):
+                    continue
             if candidate_fp.years and existing.years and not candidate_fp.years.intersection(existing.years):
                 continue
             shared_years = candidate_fp.years.intersection(existing.years)
@@ -856,6 +883,15 @@ class DeduplicationRouter:
         Evaluates whether two candidate stories collide/duplicate each other.
         Used for intra-batch deduplication across all niches.
         """
+        # EPISODIC FAST-PATH: Sequential parts/episodes of the same series are distinct chapters
+        m1 = re.search(r"(?:episode|part)\s*0*(\d+)", title1, re.IGNORECASE)
+        m2 = re.search(r"(?:episode|part)\s*0*(\d+)", title2, re.IGNORECASE)
+        if m1 and m2:
+            if m1.group(1) != m2.group(1):
+                return False, f"DISTINCT_EPISODES (Part {m1.group(1)} vs Part {m2.group(1)})"
+            else:
+                return True, f"IDENTICAL_EPISODE_{m1.group(1)}"
+
         resolved_policy = self.resolve_policy(category=category, explicit_policy=policy)
         if resolved_policy == "event_action_domain":
             from intelligence.deduplication import is_same_current_affairs_story
