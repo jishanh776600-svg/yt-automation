@@ -7,6 +7,7 @@ Implements True YouTube-Side Scheduled Publishing using YouTube Data API v3.
 - Full idempotency: reconciles existing records without duplicate uploads.
 """
 import os
+import re
 import uuid
 import logging
 from pathlib import Path
