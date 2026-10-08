@@ -1531,7 +1531,8 @@ class ShortsPipeline:
                     cand = matched_cand
                     available_pool.remove(matched_cand)
                 else:
-                    cand = available_pool.pop(0)
+                    console.print(f"[bold yellow][!] No ready candidate available for desired movie '{desired_movie.title()}' at slot {target_slot.strftime('%Y-%m-%d %H:%M')} UTC. Holding slot open for replenishment.[/bold yellow]")
+                    continue
 
                 cand_folder = "02_PROCESSING" if cand in recovered_candidates else "01_READY"
                 console.print(f"[cyan][*] Slot {i+1}/{eligible_to_schedule} ({target_slot.strftime('%Y-%m-%d %H:%M')} UTC) allocated:[/cyan] [bold yellow]{cand.get('name')}[/bold yellow] [dim](Target: {desired_movie.title()})[/dim]")
