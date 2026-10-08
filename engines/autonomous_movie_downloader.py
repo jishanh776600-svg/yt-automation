@@ -310,11 +310,13 @@ class AutonomousMovieDownloader:
 
             if target_subfolder_id:
                 folder_files = drive.list_files(target_subfolder_id)
-                zip_file = None
                 for f in folder_files:
-                    if f.get("name", "").endswith("_assets.zip"):
+                    f_name = f.get("name", "").lower()
+                    if f_name.endswith("_assets_450.zip"):
                         zip_file = f
                         break
+                    elif f_name.endswith(".zip") and "assets" in f_name:
+                        zip_file = f
 
                 if zip_file:
                     cache_dir.mkdir(parents=True, exist_ok=True)
