@@ -511,14 +511,17 @@ class UploadEngine:
             # Sanitize description: strictly viewer-facing, zero internal IDs
             clean_description = self.sanitize_public_description(metadata.get("description", ""))
 
-            # YouTube API requires privacyStatus='private' when publishAt is set.
-            # The tags field is completely omitted for all new uploads.
+            tags = metadata.get("tags") or []
+            snippet_dict = {
+                "title": metadata["title"][:100],
+                "description": clean_description[:5000],
+                "categoryId": "24"  # Entertainment / Cinema
+            }
+            if tags:
+                snippet_dict["tags"] = tags[:25]
+
             body = {
-                "snippet": {
-                    "title": metadata["title"][:100],
-                    "description": clean_description[:5000],
-                    "categoryId": "27"  # Education
-                },
+                "snippet": snippet_dict,
                 "status": {
                     "privacyStatus": "private",
                     "publishAt": publish_at_str,
@@ -828,12 +831,17 @@ class UploadEngine:
             # - privacyStatus: "public"
             # - NO publishAt parameter (100% eliminated)
             # - categoryId: "24" (Entertainment)
+            tags = metadata.get("tags") or []
+            snippet_body = {
+                "title": metadata["title"][:100],
+                "description": clean_description[:5000],
+                "categoryId": "24"
+            }
+            if tags:
+                snippet_body["tags"] = tags[:25]
+
             body = {
-                "snippet": {
-                    "title": metadata["title"][:100],
-                    "description": clean_description[:5000],
-                    "categoryId": "24"
-                },
+                "snippet": snippet_body,
                 "status": {
                     "privacyStatus": "public",
                     "selfDeclaredMadeForKids": False,

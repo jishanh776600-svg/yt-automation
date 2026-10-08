@@ -146,6 +146,20 @@ def resolve_vault_file_metadata(candidate: Dict[str, Any], db: Optional[Session]
 
     props = candidate.get("properties", {}) or {}
     name = candidate.get("name", "")
+
+    # 0. Broadcast-Grade Movie Recap SEO Engine (High-CTR Hook + Synopsis + 20 Tags)
+    name_lower = name.lower()
+    from core.movie_catalog import THRILLER_MOVIE_CATALOG
+    is_movie = (
+        "episode" in name_lower
+        or "part" in name_lower
+        or props.get("layout") == "1:1_SQUARE"
+        or any(m.title.lower() in name_lower for m in THRILLER_MOVIE_CATALOG)
+    )
+    if is_movie:
+        from intelligence.movie_seo_engine import generate_movie_recap_seo
+        return generate_movie_recap_seo(name, properties=props)
+
     event_id = props.get("event_id")
     if not event_id:
         m = re.search(r"evt_[a-z0-9_]+", name)
