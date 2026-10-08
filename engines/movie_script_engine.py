@@ -152,11 +152,13 @@ Return valid JSON strictly adhering to this schema:
 }}
 """
 
+        instruction_prefix = "SYSTEM INSTRUCTION: You are a professional cinema thriller recap director. Output raw JSON only.\n\n"
+        full_prompt = instruction_prefix + prompt
+
         for attempt in range(1, max_attempts + 1):
             try:
                 response = self.gemini.generate_content(
-                    prompt=prompt,
-                    system_instruction="You are a professional cinema thriller recap director. Output raw JSON only."
+                    prompt=full_prompt
                 )
 
                 clean_text = self._extract_json(response)

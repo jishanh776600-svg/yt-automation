@@ -307,9 +307,22 @@ class GeminiClient:
             try:
                 from google import genai
                 client = genai.Client(api_key=api_key)
+                gen_config = kwargs.pop("config", {}) or {}
+                if isinstance(gen_config, dict):
+                    gen_config = dict(gen_config)
+                else:
+                    gen_config = {}
+                if "system_instruction" in kwargs:
+                    gen_config["system_instruction"] = kwargs.pop("system_instruction")
+                if "temperature" in kwargs:
+                    gen_config["temperature"] = kwargs.pop("temperature")
+                if "max_output_tokens" in kwargs:
+                    gen_config["max_output_tokens"] = kwargs.pop("max_output_tokens")
+
                 response = client.models.generate_content(
                     model=current_model,
                     contents=contents,
+                    config=gen_config if gen_config else None,
                     **kwargs
                 )
                 return response
