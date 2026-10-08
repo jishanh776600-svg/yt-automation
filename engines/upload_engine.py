@@ -189,29 +189,34 @@ class UploadEngine:
             return False, f"Gate 15 Failed: Title already published or scheduled (Status: {dup_title.status}, Video ID: {dup_title.youtube_video_id})"
 
         # Semantic Deduplication Gate: verifies candidate story is not a semantic duplicate of existing catalog
-        try:
-            from engines.deduplication_engine import DeduplicationRouter
-            dedup_engine = DeduplicationRouter()
-            desc = metadata.get("description", "") or ""
-            clean_cand_title = (metadata.get("title") or "").strip()
-            exclude_topic_id = getattr(job, "topic_id", None)
-            if not exclude_topic_id and clean_cand_title:
-                top_match = db.query(Topic).filter(Topic.title.ilike(clean_cand_title)).first()
-                if top_match:
-                    exclude_topic_id = top_match.id
+        # EPISODIC FAST-PATH: Allow sequential movie parts (e.g. Part 2, Part 3, Episode 02...)
+        clean_cand_title = (metadata.get("title") or "").strip()
+        is_episodic_continuation = bool(re.search(r"(?:episode|part)\s*0*(\d+)", clean_cand_title, re.IGNORECASE))
+        if is_episodic_continuation:
+            logger.info(f"[GATE 15] Approved episodic continuation: '{clean_cand_title}'")
+        else:
+            try:
+                from engines.deduplication_engine import DeduplicationRouter
+                dedup_engine = DeduplicationRouter()
+                desc = metadata.get("description", "") or ""
+                exclude_topic_id = getattr(job, "topic_id", None)
+                if not exclude_topic_id and clean_cand_title:
+                    top_match = db.query(Topic).filter(Topic.title.ilike(clean_cand_title)).first()
+                    if top_match:
+                        exclude_topic_id = top_match.id
 
-            dedup_res = dedup_engine.evaluate_candidate(
-                candidate_title=clean_cand_title,
-                candidate_summary=desc,
-                db=db,
-                exclude_topic_id=exclude_topic_id,
-                exclude_job_id=getattr(job, "id", None),
-                exclude_title=clean_cand_title
-            )
-            if not dedup_res.is_allowed:
-                return False, f"Gate 15 Failed: Story is a duplicate of '{dedup_res.matched_event_title}' ({dedup_res.classification})"
-        except Exception as dedup_err:
-            logger.warning(f"[GATE 15] Dedup evaluation notice: {dedup_err}")
+                dedup_res = dedup_engine.evaluate_candidate(
+                    candidate_title=clean_cand_title,
+                    candidate_summary=desc,
+                    db=db,
+                    exclude_topic_id=exclude_topic_id,
+                    exclude_job_id=getattr(job, "id", None),
+                    exclude_title=clean_cand_title
+                )
+                if not dedup_res.is_allowed:
+                    return False, f"Gate 15 Failed: Story is a duplicate of '{dedup_res.matched_event_title}' ({dedup_res.classification})"
+            except Exception as dedup_err:
+                logger.warning(f"[GATE 15] Dedup evaluation notice: {dedup_err}")
 
         # 16. Strict Niche Compliance Gate (Mystery / Bizarre Real-World Stories ONLY)
         is_pipeline_output = (
