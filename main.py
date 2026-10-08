@@ -1990,15 +1990,15 @@ def main():
             console.print("[bold yellow][!] Production was safely deferred due to active concurrent lock. Exiting cleanly.[/bold yellow]")
             sys.stdout.flush()
             sys.stderr.flush()
-            os._exit(0)
+            sys.exit(0)
         elif summary.get("outcome") == "FAILED":
             sys.stdout.flush()
             sys.stderr.flush()
-            os._exit(2)
+            sys.exit(2)
         else:
             sys.stdout.flush()
             sys.stderr.flush()
-            os._exit(0)
+            sys.exit(0)
     elif args.produce_batch > 0:
         res = pipeline.produce_batch(count=args.produce_batch, force_unlock=args.force_unlock or args.force)
         count = res[0] if isinstance(res, tuple) else res
