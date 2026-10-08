@@ -183,6 +183,42 @@ class CloudProductionOrchestrator:
         finally:
             db.close()
 
+    def get_track_stock_counts(self) -> Dict[int, int]:
+        """
+        Audits current stock in Drive '01_READY' broken down by track:
+        track 1: Movie A (e.g. Wrong Turn)
+        track 2: Movie B (e.g. The Hills Have Eyes)
+        """
+        counts = {1: 0, 2: 0}
+        m1_title = self.series_manager._state.get("track_1", {}).get("movie_title", "Wrong Turn").lower()
+        m2_title = self.series_manager._state.get("track_2", {}).get("movie_title", "The Hills Have Eyes").lower()
+        m1_slug = m1_title.replace(" ", "_")
+        m2_slug = m2_title.replace(" ", "_")
+
+        ready_files = []
+        if self.drive_engine:
+            try:
+                ready_files = self.drive_engine.list_files_in_folder("01_READY")
+            except Exception as e:
+                logger.warning(f"Could not list 01_READY for track stock: {e}")
+
+        # Also check local vault fallback if empty
+        if not ready_files:
+            local_vault = PROJECT_ROOT / "data" / "vault_ready"
+            if local_vault.exists():
+                ready_files = [{"name": p.name, "properties": {}} for p in local_vault.glob("*.mp4")]
+
+        for f in ready_files:
+            name = (f.get("name") or "").lower()
+            props = f.get("properties") or {}
+            prop_title = (props.get("movie_title") or "").lower()
+            if m1_slug in name or m1_title in name or m1_title in prop_title:
+                counts[1] += 1
+            elif m2_slug in name or m2_title in name or m2_title in prop_title:
+                counts[2] += 1
+
+        return counts
+
     def is_event_already_produced(self, event_id: str, db: Any) -> bool:
         """
         Idempotency check: returns True if an event has already been rendered
@@ -224,17 +260,43 @@ class CloudProductionOrchestrator:
         return False
 
     def is_movie_part_already_produced(self, movie: MovieEntry, part_number: int, db: Any) -> bool:
-        """Checks if a specific episodic part of a movie has already been produced and passed QA."""
-        part_slug = f"movie_{re.sub(r'[^a-zA-Z0-9_]', '_', movie.title.lower())}_{movie.year}_pt{part_number}"
-        existing_render = db.query(RenderedVideoRecord).filter_by(
-            event_id=part_slug, qa_status="PASSED"
-        ).first()
-        if existing_render:
-            return True
+        """Checks if a specific episodic part of a movie has already been produced and is ready/published."""
+        from core.models import UploadRecord
+        clean_title = re.sub(r'[^a-zA-Z0-9_]', '_', movie.title.lower())
 
-        topic = db.query(Topic).filter_by(event_id=part_slug).first()
-        if topic and topic.status in ("PRODUCED", "READY_TO_UPLOAD", "PUBLISHED"):
-            return True
+        # 1. Check if already successfully published to YouTube
+        if db:
+            published = db.query(UploadRecord).filter(
+                (UploadRecord.status.in_(["PUBLISHED", "SUCCESS"])) &
+                (UploadRecord.title.ilike(f"%{movie.title}%Part {part_number}%") |
+                 UploadRecord.title.ilike(f"%{movie.title}%EPISODE_{part_number:02d}%"))
+            ).first()
+            if published:
+                return True
+
+        # 2. Check if currently available in Google Drive 01_READY
+        ep_patterns = [
+            f"{clean_title}_episode_{part_number:02d}",
+            f"{clean_title}_pt{part_number}",
+            f"{clean_title}_part_{part_number}",
+        ]
+        if self.drive_engine:
+            try:
+                ready_files = self.drive_engine.list_files_in_folder("01_READY")
+                for f in ready_files:
+                    fname = (f.get("name") or "").lower()
+                    if any(p in fname for p in ep_patterns):
+                        return True
+            except Exception:
+                pass
+
+        # 3. Check local vault fallback
+        local_ready = PROJECT_ROOT / "data" / "vault_ready"
+        if local_ready.exists():
+            for p in local_ready.glob("*.mp4"):
+                pname = p.name.lower()
+                if any(pat in pname for pat in ep_patterns):
+                    return True
 
         return False
 
@@ -256,7 +318,11 @@ class CloudProductionOrchestrator:
         active_part = part_number or 1
         active_total = total_parts or 10
         movie_event_id = f"movie_{re.sub(r'[^a-zA-Z0-9_]', '_', movie.title.lower())}_{movie.year}_pt{active_part}"
-        movie_display_title = f"{movie.title} - Part {active_part} | Ending Explained #shorts"
+
+        from intelligence.movie_seo_engine import MovieSEOEngine
+        seo_meta = MovieSEOEngine.generate_shorts_seo_metadata(movie.title, active_part)
+        movie_display_title = seo_meta.get("title") or f"{movie.title} - Part {active_part} | Ending Explained #shorts"
+        movie_display_desc = seo_meta.get("description") or f"{movie.high_concept_hook}\n\nPremise: {movie.premise_summary}"
 
         # 1. Idempotency Check
         if self.is_movie_part_already_produced(movie, active_part, db):
@@ -519,9 +585,10 @@ class CloudProductionOrchestrator:
         )
 
         # 6. Assemble & Render MP4 Short
-        telemetry.transition_stage(PipelineStage.RENDERING, f"Rendering 1080x1920 Short for {movie_display_title}")
+        telemetry.transition_stage(PipelineStage.RENDERING, f"Rendering Short for {movie_display_title}")
         t_rend0 = time.perf_counter()
-        output_mp4 = RENDERS_DIR / f"short_{manifest.manifest_id}.mp4"
+        clean_movie_slug = re.sub(r'[^a-zA-Z0-9_]', '_', movie.title)
+        output_mp4 = RENDERS_DIR / f"{clean_movie_slug}_EPISODE_{active_part:02d}.mp4"
 
         try:
             short_path, qa_rep, record = self.composer.assemble_manifest(
@@ -558,7 +625,7 @@ class CloudProductionOrchestrator:
                 record,
                 drive_engine=self.drive_engine,
                 topic_title=movie_display_title,
-                topic_description=f"{movie.high_concept_hook}\n\nPremise: {movie.premise_summary}",
+                topic_description=movie_display_desc,
                 db_session=db
             )
             if file_id:
@@ -1017,23 +1084,40 @@ class CloudProductionOrchestrator:
                 telemetry.complete(status="FAILED")
                 return telemetry
 
-            # 4. Audit Buffer Stock & Deficit (Target: TARGET_BUFFER = 6)
+            # 4. Audit Buffer Stock & Track Balance (Target: TARGET_BUFFER = 6)
             initial_stock = self.get_ready_stock_count()
             telemetry.initial_ready_stock = initial_stock
 
-            deficit = max(0, target_buffer - initial_stock)
+            track_counts = self.get_track_stock_counts()
+            t1_count = track_counts.get(1, 0)
+            t2_count = track_counts.get(2, 0)
+            m1_name = self.series_manager._state.get("track_1", {}).get("movie_title", "Track 1")
+            m2_name = self.series_manager._state.get("track_2", {}).get("movie_title", "Track 2")
+            logger.info(
+                f"[TRACK_AUDIT] Stock in 01_READY: Track 1 ({m1_name})={t1_count}, "
+                f"Track 2 ({m2_name})={t2_count} | Total: {initial_stock}/{target_buffer}"
+            )
+
+            # Ensure minimum stock for both tracks so alternating schedule never starves
+            min_target_per_track = max(2, target_buffer // 2)
+            t1_deficit = max(0, min_target_per_track - t1_count)
+            t2_deficit = max(0, min_target_per_track - t2_count)
+            total_track_deficit = t1_deficit + t2_deficit
+            overall_deficit = max(0, target_buffer - initial_stock)
+            deficit = max(overall_deficit, total_track_deficit)
+
             if force_batch_count > 0:
                 needed = min(force_batch_count, MAX_BATCH_PRODUCTION_CEILING)
             else:
                 cycle_cap = max_per_cycle if max_per_cycle > 0 else MAX_BATCH_PRODUCTION_CEILING
                 needed = min(deficit, cycle_cap)
 
-            if force_batch_count == 0 and (initial_stock >= target_buffer or deficit == 0 or needed == 0):
+            if force_batch_count == 0 and (initial_stock >= target_buffer and total_track_deficit == 0 or needed == 0):
                 logger.info(
-                    f"Buffer full ({initial_stock}/{target_buffer} Shorts in 01_READY, deficit={deficit}). "
+                    f"Buffer full & balanced ({t1_count} in Track 1, {t2_count} in Track 2, target={target_buffer}). "
                     f"Conserving compute/API usage. Production skipped."
                 )
-                telemetry.transition_stage(PipelineStage.BUFFER_HEALTHY, "Buffer full; conserving compute")
+                telemetry.transition_stage(PipelineStage.BUFFER_HEALTHY, "Buffer full and balanced; conserving compute")
                 telemetry.final_ready_stock = initial_stock
                 if attempt_rec:
                     db_att = SessionLocal()
@@ -1048,7 +1132,7 @@ class CloudProductionOrchestrator:
 
             logger.info(
                 f"Reserve check: Producing {needed} Shorts "
-                f"(Current ready: {initial_stock}, Target: {target_buffer}, Deficit: {deficit}, Force: {force_batch_count})"
+                f"(Current ready: {initial_stock}, T1: {t1_count}, T2: {t2_count}, Target: {target_buffer}, Deficit: {deficit}, Force: {force_batch_count})"
             )
 
             # 5. Parallel 2-Movie Episodic Selection & Replenishment
@@ -1058,8 +1142,17 @@ class CloudProductionOrchestrator:
                 produced_this_run = 0
                 logger.info(f"[PRODUCING_DEFICIT] Producing {needed} Movie Recap Short(s) across Slot 1 & Slot 2...")
                 for prod_i in range(needed):
-                    # Alternate between Slot 1 (Track 1) and Slot 2 (Track 2)
-                    target_slot = 1 if (prod_i % 2 == 0) else 2
+                    # Dynamic Track Selection: Prioritize the track with lower reserve stock
+                    current_tracks = self.get_track_stock_counts()
+                    c1 = current_tracks.get(1, 0)
+                    c2 = current_tracks.get(2, 0)
+                    if c1 < c2:
+                        target_slot = 1
+                    elif c2 < c1:
+                        target_slot = 2
+                    else:
+                        target_slot = 1 if (prod_i % 2 == 0) else 2
+
                     movie, curr_part, total_p = self.series_manager.get_active_movie_for_slot(target_slot)
 
                     # Advance if this part has already been produced

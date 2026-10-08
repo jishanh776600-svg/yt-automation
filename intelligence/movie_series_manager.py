@@ -108,6 +108,38 @@ class MovieSeriesManager:
 
         return movie, current_part, total_parts
 
+    def get_target_movie_for_slot_time(self, slot_dt: Any) -> str:
+        """
+        Determines the target movie for a given slot based on the 2-Same, 1-Different alternation rule:
+        Daily Slots:
+          Slot 1: 02:30 UTC (8:00 AM IST)
+          Slot 2: 10:30 UTC (4:00 PM IST)
+          Slot 3: 18:30 UTC (12:00 AM IST)
+
+        Pattern:
+          Day % 2 == 0:
+            Slots 1 & 2 (8am, 4pm)  -> Track 1 Primary (Movie A)
+            Slot 3 (12am)          -> Track 2 Alternate (Movie B)
+          Day % 2 == 1:
+            Slots 1 & 2 (8am, 4pm)  -> Track 2 Primary (Movie B)
+            Slot 3 (12am)          -> Track 1 Alternate (Movie A)
+        """
+        import datetime as dt
+        anchor_date = dt.date(2026, 10, 9)
+        slot_date = slot_dt.date() if hasattr(slot_dt, "date") else slot_dt
+        day_offset = (slot_date - anchor_date).days
+
+        m1_title = self._state.get("track_1", {}).get("movie_title", "Wrong Turn")
+        m2_title = self._state.get("track_2", {}).get("movie_title", "The Hills Have Eyes")
+
+        hour = getattr(slot_dt, "hour", 2)
+        is_slot_3 = (hour >= 16)  # 18:30 UTC is Slot 3 (Midnight IST)
+
+        if day_offset % 2 == 0:
+            return m2_title if is_slot_3 else m1_title
+        else:
+            return m1_title if is_slot_3 else m2_title
+
     def advance_part_for_slot(self, slot_index: int = 1) -> Tuple[int, bool]:
         """
         Increments current_part for this track. If series finishes,

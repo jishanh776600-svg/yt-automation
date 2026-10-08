@@ -1506,11 +1506,35 @@ class ShortsPipeline:
             console.print(f"[bold green][*] Proactively scheduling {eligible_to_schedule} eligible Short(s) into earliest vacant slots across 2-day horizon...[/bold green]")
             scheduled_results = []
 
+            from intelligence.movie_series_manager import MovieSeriesManager
+            series_mgr = MovieSeriesManager()
+
+            # Smart Interleaving: Assign candidates matching the 2-Same, 1-Different alternation rule
+            available_pool = list(all_eligible_candidates)
+
             for i in range(eligible_to_schedule):
-                cand = all_eligible_candidates[i]
-                cand_folder = "02_PROCESSING" if cand in recovered_candidates else "01_READY"
                 target_slot = vacant_horizon_slots[i]
-                console.print(f"[cyan][*] Candidate {i+1}/{eligible_to_schedule} allocated Slot:[/cyan] [bold yellow]{target_slot.strftime('%Y-%m-%d %H:%M')} UTC[/bold yellow]")
+                desired_movie = series_mgr.get_target_movie_for_slot_time(target_slot).lower()
+
+                # Find candidate matching target movie for this slot
+                matched_cand = None
+                for c in available_pool:
+                    c_name = c.get("name", "").lower()
+                    c_props = c.get("properties", {}) or {}
+                    c_title = (c_props.get("movie_title") or "").lower()
+                    clean_movie_key = desired_movie.replace(" ", "_")
+                    if desired_movie in c_name or clean_movie_key in c_name or desired_movie in c_title:
+                        matched_cand = c
+                        break
+
+                if matched_cand:
+                    cand = matched_cand
+                    available_pool.remove(matched_cand)
+                else:
+                    cand = available_pool.pop(0)
+
+                cand_folder = "02_PROCESSING" if cand in recovered_candidates else "01_READY"
+                console.print(f"[cyan][*] Slot {i+1}/{eligible_to_schedule} ({target_slot.strftime('%Y-%m-%d %H:%M')} UTC) allocated:[/cyan] [bold yellow]{cand.get('name')}[/bold yellow] [dim](Target: {desired_movie.title()})[/dim]")
 
                 upload_rec = self._schedule_single_drive_file(
                     db=db,

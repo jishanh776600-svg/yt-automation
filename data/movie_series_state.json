@@ -3,7 +3,7 @@
     "slot_index": 1,
     "movie_title": "Wrong Turn",
     "movie_year": 2003,
-    "current_part": 4,
+    "current_part": 9,
     "total_parts": 10,
     "is_completed": false
   },
@@ -11,7 +11,7 @@
     "slot_index": 2,
     "movie_title": "The Hills Have Eyes",
     "movie_year": 2006,
-    "current_part": 3,
+    "current_part": 1,
     "total_parts": 10,
     "is_completed": false
   },
