@@ -14,6 +14,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 
 from core.gemini_client import GeminiClient
@@ -109,6 +110,7 @@ Subgenre: {movie.subgenre}
 Premise: {movie.premise_summary}
 Main Threat: {movie.threat_or_antagonist}
 Key Scenes: {json.dumps(movie.key_setpieces)}
+{self._get_grounded_beats_context(movie, part_number, total_parts)}
 
 STRICT EDITORIAL REQUIREMENTS:
 1. LANGUAGE LEVEL: SIMPLE, CLEAR, EVERYDAY ENGLISH (Easily understandable worldwide).
@@ -202,6 +204,31 @@ Return valid JSON strictly adhering to this schema:
 
         # Deterministic curated fallback if AI rate limit or word count variance
         return self._build_deterministic_recap(movie, part_number=part_number, total_parts=total_parts)
+
+    def _get_grounded_beats_context(self, movie: MovieEntry, part_number: int, total_parts: int) -> str:
+        """Injects verified forensic timeline beats if visual/srt catalogs exist."""
+        clean_slug = re.sub(r"[^a-zA-Z0-9_]", "_", movie.title.lower())
+        visual_path = Path(f"data/cache/movie_visual_catalogs/{clean_slug}_visual_catalog.json")
+        srt_path = Path(f"data/cache/movie_srt_catalogs/{clean_slug}_srt_catalog.json")
+
+        if visual_path.exists() and srt_path.exists():
+            try:
+                with open(visual_path, "r", encoding="utf-8") as f:
+                    v_cat = json.load(f)
+                with open(srt_path, "r", encoding="utf-8") as f:
+                    s_cat = json.load(f)
+                from intelligence.movie_forensic_pipeline import DualCrossChecker
+                checker = DualCrossChecker(v_cat, s_cat)
+                # Compute narrative window
+                total_dur = 5400.0  # 90m default
+                window_size = total_dur / max(total_parts, 1)
+                win_start = (part_number - 1) * window_size
+                win_end = win_start + window_size
+                
+                return f"\nVERIFIED MOVIE TIMELINE WINDOW: [{win_start:.1f}s to {win_end:.1f}s]. Ensure beats strictly describe verified events from this movie window."
+            except Exception as e:
+                logger.warning(f"[MOVIE_SCRIPT] Failed grounding context: {e}")
+        return ""
 
     def _build_deterministic_recap(
         self,

@@ -135,6 +135,65 @@ THRILLER_MOVIE_CATALOG: List[MovieEntry] = [
         ]
     ),
 
+    MovieEntry(
+        title="Texas Chainsaw",
+        year=2013,
+        director="John Luessenhop",
+        subgenre="Slasher / Backwoods Terror",
+        high_concept_hook="She inherited a lavish Victorian estate in Texas, completely unaware of the hulking monster chained in the cellar.",
+        premise_summary="Heather Miller travels to a remote Texas town to collect an unexpected inheritance from a grandmother she never knew, only to discover her cousin Leatherface lives in the soundproof basement.",
+        threat_or_antagonist="Leatherface (Jedidiah Sawyer with chainsaw and meat cleaver)",
+        key_setpieces=[
+            "Exploring the eerie hidden cellar door beneath the kitchen rug",
+            "Friends ambushed in the basement by the chainsaw-wielding giant",
+            "Sprinting through the carnival grounds while pursued by the chainsaw",
+            "Meat-hook slaughterhouse confrontation with the corrupt town sheriff",
+            "Climactic buzz of the chainsaw in the industrial meat packing plant"
+        ],
+        footage_search_queries=[
+            "Texas Chainsaw 2013 official trailer 1080p",
+            "Texas Chainsaw 2013 basement discovery scene 4k",
+            "Texas Chainsaw 2013 carnival chase scene",
+            "Texas Chainsaw 2013 meat plant climax clip"
+        ],
+        suggested_chapter_names=[
+            "The Mysterious Inheritance",
+            "The Hidden Cellar",
+            "The Chainsaw Awakens",
+            "The Carnival Massacre",
+            "Family Blood"
+        ]
+    ),
+    MovieEntry(
+        title="The Conjuring 2",
+        year=2016,
+        director="James Wan",
+        subgenre="Supernatural Horror / Demonic Possession",
+        high_concept_hook="A desperate mother in London calls paranormal investigators when an ancient demonic entity terrorizes her youngest daughter.",
+        premise_summary="Ed and Lorraine Warren travel to Enfield, London to investigate violent poltergeist activity plaguing the Hodgson family, only to face the demonic nun Valak and the Crooked Man.",
+        threat_or_antagonist="Valak (The Demonic Nun) and Bill Wilkins / The Crooked Man",
+        key_setpieces=[
+            "Janet levitating toward the ceiling while speaking in an old man's demonic voice",
+            "The Crooked Man spinning zoetrope nursery rhyme manifestation",
+            "Lorraine Warren cornered in the dark study by the shadow of the Demonic Nun painting",
+            "Basement water cistern standoff with lightning flashing through iron bars",
+            "Final confrontation commanding the demon by its true name: Valak"
+        ],
+        footage_search_queries=[
+            "The Conjuring 2 2016 official trailer 1080p",
+            "The Conjuring 2 painting shadow demon scene 4k",
+            "The Conjuring 2 crooked man scene 1080p",
+            "The Conjuring 2 basement lightning climax scene"
+        ],
+        suggested_chapter_names=[
+            "The Enfield Haunting",
+            "The Voice of Bill Wilkins",
+            "The Nun's Shadow",
+            "The Crooked Man",
+            "The Demon's True Name"
+        ]
+    ),
+
     # -------------------------------------------------------------
     # 2. Trapped & Claustrophobic Thrillers
     # -------------------------------------------------------------

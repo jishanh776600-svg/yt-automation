@@ -58,3 +58,7 @@ data/vault/
 data/study_reference/
 .agents/
 
+
+data/movies/
+captions_temp.ass
+fonts.conf

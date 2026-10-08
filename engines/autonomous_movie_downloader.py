@@ -125,6 +125,28 @@ class AutonomousMovieDownloader:
             except Exception:
                 pass
 
+        # Strategy 0: Check Google Drive 00_MOVIES_RAW vault
+        try:
+            from engines.drive_engine import DriveVaultEngine
+            drive = DriveVaultEngine()
+            raw_folder_id = drive.get_or_create_folder("00_MOVIES_RAW")
+            drive_files = drive.list_files(raw_folder_id)
+            for f in drive_files:
+                f_name = f.get("name", "").lower()
+                if (clean_slug in f_name or str(movie.year) in f_name) and f_name.endswith(".mp4"):
+                    logger.info(f"[MOVIE_DOWNLOAD] Strategy 0 Hit: Found {f['name']} in Google Drive 00_MOVIES_RAW. Downloading...")
+                    drive.download_file(f["id"], final_movie_path)
+                    if self.is_valid_movie_file(final_movie_path):
+                        # Also check if .srt is available
+                        srt_target = self.target_dir / f"{clean_slug}_{movie.year}.srt"
+                        for srt_f in drive_files:
+                            if (clean_slug in srt_f.get("name", "").lower()) and srt_f.get("name", "").endswith(".srt"):
+                                drive.download_file(srt_f["id"], srt_target)
+                                break
+                        return final_movie_path
+        except Exception as drive_err:
+            logger.info(f"[MOVIE_DOWNLOAD] Drive 00_MOVIES_RAW inspection notice: {drive_err}")
+
         # Strategy 1: Check direct cloud download URLs from catalog
         direct_urls = getattr(movie, "direct_download_urls", [])
         for url in direct_urls:
