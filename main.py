@@ -1544,7 +1544,7 @@ class ShortsPipeline:
         Continuous convergence loop operating 24/7 without manual intervention:
         1. Sync canonical & auxiliary DBs from Drive (00_SYSTEM).
         2. Horizon Audit: Proactively schedules eligible 01_READY videos into vacant slots
-           in the 48-hour forward horizon (06:00, 11:00, 15:00 UTC, max 3/day).
+           in the 48-hour forward horizon (02:30, 10:30, 18:30 UTC / 8am, 4pm, 12am IST, max 3/day).
         3. Reconciles past scheduled uploads from 02_PROCESSING to 03_PUBLISHED.
         4. Buffer Audit: Checks verified 01_READY stock in Drive.
            If stock < target_stock (6), sequentially produces fresh Shorts (strict niche, Sarah voice, QA)
@@ -1559,7 +1559,7 @@ class ShortsPipeline:
             f"[bold green]=== AL-AMR 100% Autonomous Production & Scheduling Daemon ===[/bold green]\n"
             f"Reserve Buffer Target: [bold cyan]{target_stock} Verified Shorts[/bold cyan]\n"
             f"Voice Lock: [bold green]af_bella[/bold green]\n"
-            f"Publishing Limit: [bold]3 Shorts/day (06:00, 11:00, 15:00 UTC)[/bold]\n"
+            f"Publishing Limit: [bold]3 Shorts/day (02:30, 10:30, 18:30 UTC / 8:00 AM, 4:00 PM, 12:00 AM IST)[/bold]\n"
             f"Horizon: [bold]Rolling 48-Hour Forward Horizon[/bold]\n"
             f"Convergence Interval: [bold yellow]{check_interval_sec // 60} minutes[/bold yellow]",
             border_style="green"

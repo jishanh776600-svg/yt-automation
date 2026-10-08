@@ -228,7 +228,7 @@ class KnowledgeBrain:
 - **Canonical Voice**: `{KOKORO_VOICE}` (Kokoro-v1.0 ONNX, American English Female)
 - **Daily Publishing Limit**: `{DAILY_SHORTS_LIMIT}` Shorts/day
 - **Target Reserve Buffer**: `{TARGET_RESERVE_BUFFER}` verified Shorts in Drive `01_READY`
-- **Publishing Slots (UTC)**: `06:00 UTC`, `11:00 UTC`, `15:00 UTC`
+- **Publishing Slots (UTC)**: `02:30 UTC (08:00 AM IST)`, `10:30 UTC (04:00 PM IST)`, `18:30 UTC (12:00 AM IST)`
 - **Target Duration**: `{MIN_DURATION_SEC}s – {MAX_DURATION_SEC}s` (with mandatory 0.6s outro breathing margin)
 - **Target Resolution**: `1080x1920` (9:16 vertical)
 - **Target Master Loudness**: `{TARGET_LUFS:.1f} LUFS` (Broadcast window: `-17.0` to `-11.0` LUFS)
@@ -449,7 +449,7 @@ Every Short follows a strict 5-part retention curve:
 
 ## Automated Scheduling
 - **Daily Limit**: Strictly `{DAILY_SHORTS_LIMIT}` Shorts/day.
-- **Publishing Slots (UTC)**: `06:00 UTC`, `11:00 UTC`, `15:00 UTC`.
+- **Publishing Slots (UTC)**: `02:30 UTC (08:00 AM IST)`, `10:30 UTC (04:00 PM IST)`, `18:30 UTC (12:00 AM IST)`.
 - **Target Reserve Buffer**: `{TARGET_RESERVE_BUFFER}` Shorts maintained in `01_READY`.
 
 ## Telemetry Data Truth
@@ -535,7 +535,7 @@ $$\\text{Gemini Primary} \\longrightarrow \\text{Gemini Secondary} \\longrightar
 - `TARGET_RESERVE_BUFFER = {TARGET_RESERVE_BUFFER}`
 - `DAILY_SHORTS_LIMIT = {DAILY_SHORTS_LIMIT}`
 - `CANONICAL_VOICE = "{KOKORO_VOICE}"`
-- `PUBLISHING_SLOTS = 06:00, 11:00, 15:00 UTC`
+- `PUBLISHING_SLOTS = 02:30, 10:30, 18:30 UTC (08:00 AM, 04:00 PM, 12:00 AM IST)`
 """
         sys_file.write_text(content.strip(), encoding="utf-8")
         return sys_file

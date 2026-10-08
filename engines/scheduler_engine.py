@@ -4,13 +4,13 @@ Calculates and assigns deterministic publication slots for YouTube Shorts.
 
 Slot Rules:
 - 3 Release Slots per UTC calendar day:
-  1. 06:00 UTC (11:30 AM IST)
-  2. 11:00 UTC (04:30 PM IST)
-  3. 15:00 UTC (08:30 PM IST)
+  1. 02:30 UTC (08:00 AM IST)
+  2. 10:30 UTC (04:00 PM IST)
+  3. 18:30 UTC (12:00 AM IST)
 - Strictly maximum 3 publication slots per UTC calendar day.
 - Never assign two Shorts to the same slot.
 - Never schedule into a past slot or a slot less than min_lead_minutes in the future.
-- If today's remaining slots are full or passed, rolls over to the next UTC day starting at 06:00 UTC.
+- If today's remaining slots are full or passed, rolls over to the next UTC day starting at 02:30 UTC.
 """
 import os
 import logging
