@@ -1347,8 +1347,21 @@ class ShortsPipeline:
                     logger.warning(f"[PRE-CLAIM SKIP] File {candidate['id']} ({candidate.get('name')}) skipped from immediate batch: {val_reason}")
                     continue
 
-                # 3. Strict Niche Compliance Gate (Mystery / Bizarre Real-World Stories ONLY)
+                # 3. Strict Niche Compliance Gate & Movie Recap Fast-Path
                 filename = candidate.get("name", "")
+                from core.movie_catalog import THRILLER_MOVIE_CATALOG
+                is_movie_recap = (
+                    "episode" in filename.lower()
+                    or "wrong_turn" in filename.lower()
+                    or "movie_" in filename.lower()
+                    or c_props.get("layout") == "1:1_SQUARE"
+                    or any(m.title.lower() in filename.lower() for m in THRILLER_MOVIE_CATALOG)
+                )
+
+                if is_movie_recap:
+                    fresh_ready_files.append(candidate)
+                    continue
+
                 is_our_output = filename.startswith("short_man_") or filename.startswith("short_job_")
                 if is_our_output:
                     is_comp, comp_reason = True, "APPROVED: AL-AMR pipeline output (pre-validated)"
@@ -1418,10 +1431,6 @@ class ShortsPipeline:
                     logger.warning(f"[PRE-CLAIM] Dedup check notice for {candidate['id']}: {d_err}")
 
                 if is_duplicate_story:
-                    # NON-NEGOTIABLE INVARIANT:
-                    # An asset in 01_READY that duplicates another story was NEVER uploaded to YouTube.
-                    # It must NEVER be moved to 03_PUBLISHED or 02_PROCESSING.
-                    # It must be quarantined to 04_FAILED so it does not falsely claim publication.
                     logger.warning(
                         f"[PRE-CLAIM DEDUP REJECT] File {candidate['id']} ('{c_title}') duplicates existing story "
                         f"'{matched_event}'. Quarantining to 04_FAILED to prevent duplicate publication."
