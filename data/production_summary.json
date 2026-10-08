@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "FAILED",
-  "block_reason": "Duplicate Short rejected: Duplicate script content (similarity 0.96 >= 0.65) with Short 5feb6dd4422c; Duplicate Short rejected: Duplicate script content (similarity 0.97 >= 0.65) with Short 76f193f3618a; Duplicate Short rejected: Duplicate script content (similarity 0.96 >= 0.65) with Short 5feb6dd4422c; Duplicate Short rejected: Duplicate script content (similarity 0.97 >= 0.65) with Short 76f193f3618a; Duplicate Short rejected: Duplicate script content (similarity 0.96 >= 0.65) with Short 5feb6dd4422c",
-  "requested_deficit": 5,
+  "outcome": "SUCCEEDED",
+  "block_reason": null,
+  "requested_deficit": 0,
   "produced_count": 0,
-  "initial_stock": 1,
-  "final_stock": 1,
+  "initial_stock": 7,
+  "final_stock": 7,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-10-08T07:39:15.907817Z"
+  "timestamp": "2026-10-08T15:01:28.967235Z"
 }
