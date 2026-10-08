@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "FAILED",
-  "block_reason": "cannot import name 'MovieSEOEngine' from 'intelligence.movie_seo_engine' (/home/runner/work/yt-automation/yt-automation/intelligence/movie_seo_engine.py)",
-  "requested_deficit": 3,
+  "outcome": "BLOCKED",
+  "block_reason": null,
+  "requested_deficit": 8,
   "produced_count": 0,
-  "initial_stock": 5,
+  "initial_stock": 0,
   "final_stock": 0,
   "target_stock": 8,
   "voice": "af_bella",
-  "timestamp": "2026-10-08T17:28:25.188552Z"
+  "timestamp": "2026-10-08T17:44:01.709455Z"
 }
