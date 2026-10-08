@@ -1449,6 +1449,18 @@ class ShortsPipeline:
             if target_file_id:
                 all_eligible_candidates = [f for f in all_eligible_candidates if f["id"] == target_file_id]
 
+            # Sequence-aware sorting: ensure episodic series (e.g. EPISODE 02, 03...) publish in strict chronological sequence
+            def _candidate_sequence_key(cand):
+                name = cand.get("name", "").lower()
+                m = re.search(r"(?:episode|part)[_\s-]*0*(\d+)", name, re.IGNORECASE)
+                if m:
+                    ep_num = int(m.group(1))
+                    prefix = re.sub(r"(?:episode|part).*", "", name, flags=re.IGNORECASE).strip("_- ")
+                    return (0, prefix, ep_num)
+                return (1, name, 0)
+
+            all_eligible_candidates.sort(key=_candidate_sequence_key)
+
             # 6. Calculate eligible quota to schedule in this run
             ready_stock_count = len(all_eligible_candidates)
             eligible_to_schedule = min(len(vacant_horizon_slots), ready_stock_count)
