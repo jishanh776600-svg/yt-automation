@@ -234,3 +234,16 @@ def generate_movie_recap_seo(
         "description": description.strip(),
         "tags": tags
     }
+
+
+class MovieSEOEngine:
+    """Class wrapper for movie recap SEO metadata generation."""
+
+    @staticmethod
+    def generate_shorts_seo_metadata(movie_title: str, episode_number: int, total_parts: int = 8) -> Dict[str, Any]:
+        return generate_movie_recap_seo(f"{movie_title}_episode_{episode_number:02d}", total_parts=total_parts)
+
+    @staticmethod
+    def generate_movie_recap_seo(filename: str, properties: Optional[Dict[str, Any]] = None, total_parts: int = 8) -> Dict[str, Any]:
+        return generate_movie_recap_seo(filename, properties=properties, total_parts=total_parts)
+
