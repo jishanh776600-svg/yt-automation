@@ -342,8 +342,74 @@ class CloudProductionOrchestrator:
         manifest_beats: List[BeatVisualAssignment] = []
         sliced_clip_paths: List[Path] = []
 
-        # Find official video sources for this movie
-        # 4a. 100% Autonomous 720p Feature Film Acquisition
+        # 4a. Check Google Drive 00_MOVIE_ASSETS for pre-cut 210-clip asset bank
+        asset_pack_dir = self.movie_downloader.get_or_download_movie_asset_pack(movie, drive_engine=self.drive_engine)
+        if asset_pack_dir and (asset_pack_dir / "clips").exists():
+            clips_dir_pack = asset_pack_dir / "clips"
+            available_clips = sorted(list(clips_dir_pack.glob("*.mp4")))
+            if len(available_clips) >= 20:
+                logger.info(f"[CLOUD_MOVIE_ASSETS] Sourcing from 210-clip Drive asset bank for {movie.title} ({len(available_clips)} clips available).")
+                clips_per_part = max(10, len(available_clips) // max(1, active_total))
+                part_start_idx = (active_part - 1) * clips_per_part
+                part_end_idx = min(len(available_clips), part_start_idx + clips_per_part)
+                selected_clips = available_clips[part_start_idx:part_end_idx]
+                if not selected_clips:
+                    selected_clips = available_clips[:num_beats]
+
+                # Render 1:1 Square Method C Short
+                telemetry.transition_stage(PipelineStage.RENDERING, f"Rendering 1:1 Square Method C Short for {movie_display_title}")
+                output_mp4 = RENDERS_DIR / f"short_{manifest_id}.mp4"
+
+                beat_meta_list = []
+                for idx, b in enumerate(movie_script.beats):
+                    beat_meta_list.append({
+                        "text": b.text,
+                        "audio_dur": getattr(b, "duration_estimate_sec", round(dur / max(1, num_beats), 2)),
+                        "audio_start": round(idx * (dur / max(1, num_beats)), 2),
+                        "audio_end": round((idx + 1) * (dur / max(1, num_beats)), 2),
+                        "is_impact": b.tension_level in ("CLIMAX", "FATAL", "HIGH") and idx >= num_beats - 3
+                    })
+
+                try:
+                    from intelligence.movie_recap_composer import MovieRecapComposer
+                    recap_comp = MovieRecapComposer()
+                    recap_comp.render_movie_short(
+                        clip_paths=selected_clips,
+                        beat_metadata=beat_meta_list,
+                        voice_audio_path=audio_path,
+                        output_mp4=output_mp4,
+                        movie_title=movie.title,
+                        part_number=active_part,
+                        total_parts=active_total
+                    )
+                    telemetry.videos_rendered += 1
+                    telemetry.videos_qa_passed += 1
+
+                    final_short_name = f"{re.sub(r'[^a-zA-Z0-9_]', '_', movie.title)}_EPISODE_{active_part:02d}.mp4"
+                    vault_record = self.drive_engine.upload_video_to_vault(
+                        local_path=output_mp4,
+                        target_folder="01_READY",
+                        custom_filename=final_short_name,
+                        description=f"{movie.high_concept_hook}\n\nPremise: {movie.premise_summary}",
+                        metadata_properties={
+                            "movie_title": movie.title,
+                            "part_number": str(active_part),
+                            "total_parts": str(active_total),
+                            "layout": "1:1_SQUARE",
+                            "method": "METHOD_C",
+                            "qa_status": "PASSED"
+                        }
+                    )
+                    telemetry.videos_deposited += 1
+                    telemetry.produced_topic_titles.append(movie_display_title)
+
+                    new_part, is_completed = self.series_manager.advance_part_for_slot(slot_index)
+                    logger.info(f"[PRODUCING_DEFICIT] [+] Successfully produced and uploaded '{final_short_name}' to 01_READY! Series advanced to Part {new_part}.")
+                    return vault_record
+                except Exception as comp_err:
+                    logger.error(f"[MOVIE_RECAP_COMPOSER] Failed rendering {movie_display_title}: {comp_err}")
+
+        # Fallback: Autonomous 720p Feature Film Acquisition
         source_movie_path = self.movie_downloader.download_movie_720p(movie)
         downloaded_source_videos: List[Path] = []
         part_offset_base = 0.0

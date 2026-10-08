@@ -280,3 +280,57 @@ class AutonomousMovieDownloader:
                 logger.error(f"[MASTER_REEL] Failed stitching master reel: {e}")
 
         return None
+
+    def get_or_download_movie_asset_pack(self, movie: MovieEntry, drive_engine=None) -> Optional[Path]:
+        """
+        Retrieves the 210-clip pre-sliced asset bank for a movie from Google Drive 00_MOVIE_ASSETS.
+        Downloads the {clean_slug}_{year}_assets.zip and extracts clips and visual ledger.
+        """
+        clean_slug = re.sub(r"[^a-zA-Z0-9_]", "_", movie.title.lower())
+        cache_dir = Path("data/cache/movie_asset_packs") / f"{clean_slug}_{movie.year}"
+        clips_dir = cache_dir / "clips"
+
+        # Check local cache first
+        if clips_dir.exists() and len(list(clips_dir.glob("*.mp4"))) >= 50:
+            logger.info(f"[ASSET_PACK] Cache hit for {movie.title} ({movie.year}) with {len(list(clips_dir.glob('*.mp4')))} clips.")
+            return cache_dir
+
+        # Try Google Drive 00_MOVIE_ASSETS
+        try:
+            from engines.drive_engine import DriveVaultEngine
+            drive = drive_engine or DriveVaultEngine()
+            assets_root_id = "1ZxdJ1CvGDZDdFMR7W6Wl7qe0cUNBXEjI"  # 00_MOVIE_ASSETS
+            subfolders = drive.list_files(assets_root_id)
+            target_subfolder_id = None
+            for sf in subfolders:
+                sf_name = sf.get("name", "").lower()
+                if clean_slug in sf_name or movie.title.lower().replace(" ", "_") in sf_name:
+                    target_subfolder_id = sf.get("id")
+                    break
+
+            if target_subfolder_id:
+                folder_files = drive.list_files(target_subfolder_id)
+                zip_file = None
+                for f in folder_files:
+                    if f.get("name", "").endswith("_assets.zip"):
+                        zip_file = f
+                        break
+
+                if zip_file:
+                    cache_dir.mkdir(parents=True, exist_ok=True)
+                    target_zip = cache_dir / zip_file["name"]
+                    logger.info(f"[ASSET_PACK] Downloading cloud asset pack '{zip_file['name']}' from Drive...")
+                    drive.download_file(zip_file["id"], target_zip)
+
+                    import zipfile
+                    logger.info(f"[ASSET_PACK] Unzipping asset pack to {cache_dir}...")
+                    with zipfile.ZipFile(target_zip, 'r') as z:
+                        z.extractall(cache_dir)
+                    target_zip.unlink(missing_ok=True)
+
+                    if clips_dir.exists():
+                        logger.info(f"[ASSET_PACK] Successfully loaded {len(list(clips_dir.glob('*.mp4')))} clips from cloud pack.")
+                        return cache_dir
+        except Exception as e:
+            logger.warning(f"[ASSET_PACK] Cloud asset pack notice for {movie.title}: {e}")
+        return None
