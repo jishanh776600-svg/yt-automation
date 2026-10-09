@@ -59,7 +59,7 @@ ScaledBorderAndShadow: yes
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: HeaderBanner,Arial Black,50,&H0000FFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,2,0,1,5,2,8,20,20,80,1
 Style: FooterBanner,Arial Black,46,&H000000FF,&H000000FF,&H00FFFFFF,&H80000000,-1,0,0,0,100,100,2,0,1,4,2,2,20,20,85,1
-Style: SubtitleStyle,Impact,45,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,1,0,1,4,2,2,40,40,285,1
+Style: SubtitleStyle,Arial Black,56,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,6,3,2,60,60,130,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -72,22 +72,40 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     events.append(f"Dialogue: 1,{s_tot},{e_tot},FooterBanner,,0,0,0,,{{\\c&H0000FF&}}{footer_text}{{\\c&HFFFFFF&}}")
 
     for b in beats:
-        text = b.get("text", "").upper().strip()
-        if not text:
+        raw_sentence = b.get("text", b.get("sentence", "")).upper().strip()
+        if not raw_sentence:
             continue
-        words = text.split()
-        chunk_size = 5
-        chunks = [' '.join(words[i:i+chunk_size]) for i in range(0, len(words), chunk_size)]
-        dur = b.get("audio_dur", len(words) * 0.38)
-        chunk_dur = dur / max(1, len(chunks))
+        # Clean punctuation for crisp word matching
+        cleaned = raw_sentence.replace(",", "").replace(".", "").replace("!", "").replace("?", "").replace("—", "").replace("-", " ")
+        words = cleaned.split()
+        n_words = len(words)
+        if n_words == 0:
+            continue
+
+        dur = b.get("audio_dur", n_words * 0.38)
+        w_dur = dur / float(n_words)
         start_t = b.get("audio_start", 0.0)
 
-        for c_idx, chunk in enumerate(chunks):
-            c_start = start_t + c_idx * chunk_dur
-            c_end = c_start + chunk_dur
-            events.append(
-                f"Dialogue: 2,{format_ass_time(c_start)},{format_ass_time(c_end)},SubtitleStyle,,0,0,0,,{{\\c&H00FFFF&}}{chunk}{{\\c&HFFFFFF&}}"
-            )
+        # 2-3 word chunks with active spoken word highlighted in vibrant yellow
+        chunk_size = 3
+        for i in range(0, n_words, chunk_size):
+            chunk_words = words[i:i + chunk_size]
+            for j, active_w in enumerate(chunk_words):
+                w_idx = i + j
+                c_start = start_t + (w_idx * w_dur)
+                c_end = c_start + w_dur
+
+                line_parts = []
+                for k, w in enumerate(chunk_words):
+                    if k == j:
+                        # Spoken word highlighted in vibrant yellow (&H0000FFFF&)
+                        line_parts.append(f"{{\\c&H0000FFFF&}}{w}{{\\c&H00FFFFFF&}}")
+                    else:
+                        line_parts.append(w)
+                chunk_text = " ".join(line_parts)
+                events.append(
+                    f"Dialogue: 2,{format_ass_time(c_start)},{format_ass_time(c_end)},SubtitleStyle,,0,0,0,,{chunk_text}"
+                )
 
     ass_path.parent.mkdir(parents=True, exist_ok=True)
     with open(ass_path, "w", encoding="utf-8") as f:

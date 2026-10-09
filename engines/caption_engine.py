@@ -132,13 +132,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                     w_text = w["word"].upper()
                     clean_punct = "".join([c for c in w_text if c.isalnum()])
                     if j == idx:
-                        # Active spoken word: vibrant gold pop with 115% scale
-                        if clean_punct in punch_keywords or any(c.isdigit() for c in clean_punct):
-                            line_elements.append(f"{{\\c&H0000FFFF&\\fscx115\\fscy115}}{w_text}{{\\c&H00FFFFFF&\\fscx100\\fscy100}}")
-                        else:
-                            line_elements.append(f"{{\\c&H0000D7FF&\\fscx115\\fscy115}}{w_text}{{\\c&H00FFFFFF&\\fscx100\\fscy100}}")
+                        # Active spoken word: vibrant yellow (&H0000FFFF&) with 115% scale pop
+                        line_elements.append(f"{{\\c&H0000FFFF&\\fscx115\\fscy115}}{w_text}{{\\c&H00FFFFFF&\\fscx100\\fscy100}}")
                     else:
-                        line_elements.append(f"{{\\c&H00E0E0E0&\\fscx100\\fscy100}}{w_text}{{\\c&H00FFFFFF&}}")
+                        line_elements.append(f"{{\\c&H00FFFFFF&\\fscx100\\fscy100}}{w_text}{{\\c&H00FFFFFF&}}")
 
                 full_line_text = " ".join(line_elements)
                 event_line = f"Dialogue: 0,{s_fmt},{e_fmt},Default,,0,0,0,,{full_line_text}"
