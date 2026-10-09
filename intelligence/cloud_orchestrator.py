@@ -330,26 +330,56 @@ class CloudProductionOrchestrator:
             telemetry.duplicates_skipped += 1
             return None
 
-        # 2. Movie Recap Script Generation (~55s, 130-145 words, 14-16 visual beats)
-        telemetry.transition_stage(PipelineStage.SCRIPTING, f"Writing 55s thriller recap for {movie_display_title}")
+        # 2. Movie Recap Script Generation
+        telemetry.transition_stage(PipelineStage.SCRIPTING, f"Formulating recap for {movie_display_title}")
         t_script0 = time.perf_counter()
+        movie_slug = re.sub(r'[^a-zA-Z0-9_]', '_', movie.title.lower())
+        from engines.visual_first_engine import VisualFirstEngine
+        vf_engine = VisualFirstEngine()
+        use_visual_first = False
+        vf_packet = None
         try:
-            movie_script: MovieShortsScript = self.movie_script_engine.generate_shorts_script(
-                movie, part_number=active_part, total_parts=active_total
-            )
-        except Exception as script_err:
-            logger.error(f"Movie script generation error for {movie_display_title}: {script_err}")
-            telemetry.failure_reasons.append(f"Movie script error: {script_err}")
-            return None
+            blueprint = vf_engine.load_blueprint(movie_slug)
+            if blueprint and blueprint.get("shots"):
+                use_visual_first = True
+                vf_packet = vf_engine.generate_episode_packet(
+                    movie_slug=movie_slug,
+                    movie_title=movie.title,
+                    part_number=active_part,
+                    total_parts=active_total,
+                    target_shots=13
+                )
+                logger.info(f"[VISUAL_FIRST] Generated visual-first packet for {movie.title} Part {active_part}: {len(vf_packet['beats'])} beats.")
+        except Exception as vf_err:
+            logger.info(f"[VISUAL_FIRST] Blueprint check for {movie.title}: {vf_err}")
+
+        movie_script = None
+        if not use_visual_first:
+            try:
+                movie_script = self.movie_script_engine.generate_shorts_script(
+                    movie, part_number=active_part, total_parts=active_total
+                )
+            except Exception as script_err:
+                logger.error(f"Movie script generation error for {movie_display_title}: {script_err}")
+                telemetry.failure_reasons.append(f"Movie script error: {script_err}")
+                return None
 
         script_dur = time.perf_counter() - t_script0
         telemetry.scripts_generated += 1
         telemetry.stage_durations["4_script_generation"] = script_dur
 
+        # Script text formulation
+        if use_visual_first and vf_packet:
+            script_full_text = " ".join(b.get("sentence", "") for b in vf_packet["beats"])
+            num_beats = len(vf_packet["beats"])
+        else:
+            script_full_text = movie_script.full_script_text if movie_script else ""
+            num_beats = len(movie_script.beats) if movie_script else 14
+
         # Duplicate Protection Guard
         is_uniq, uniq_msg, _ = self.duplicate_guard.verify_short_uniqueness(
             topic_title=movie_display_title,
-            script_text=movie_script.full_script_text,
+            script_text=script_full_text,
             duration_seconds=55.0,
             asset_ids=[]
         )
@@ -372,7 +402,7 @@ class CloudProductionOrchestrator:
         try:
             asset_rec, dur = tts_engine.generate_narration(
                 db=db,
-                text=movie_script.full_script_text,
+                text=script_full_text,
                 voice=self.voice_id,
             )
             raw_path = getattr(asset_rec, "local_path", getattr(asset_rec, "file_path", None))
@@ -400,41 +430,67 @@ class CloudProductionOrchestrator:
         clips_dir = Path("data/cache/movie_clips") / manifest_id
         clips_dir.mkdir(parents=True, exist_ok=True)
 
-        # Build visual assignments for beats
-        num_beats = len(movie_script.beats)
         beat_dur = round(dur / max(1, num_beats), 2)
         total_time = 0.0
 
         manifest_beats: List[BeatVisualAssignment] = []
         sliced_clip_paths: List[Path] = []
 
-        # 4a. Check Google Drive 00_MOVIE_ASSETS for pre-cut 210-clip asset bank
+        # 4a. Check Google Drive 00_MOVIE_ASSETS for pre-cut asset bank
         asset_pack_dir = self.movie_downloader.get_or_download_movie_asset_pack(movie, drive_engine=self.drive_engine)
         if asset_pack_dir and (asset_pack_dir / "clips").exists():
             clips_dir_pack = asset_pack_dir / "clips"
             available_clips = sorted(list(clips_dir_pack.glob("*.mp4")))
             if len(available_clips) >= 20:
-                logger.info(f"[CLOUD_MOVIE_ASSETS] Sourcing from 210-clip Drive asset bank for {movie.title} ({len(available_clips)} clips available).")
-                clips_per_part = max(10, len(available_clips) // max(1, active_total))
-                part_start_idx = (active_part - 1) * clips_per_part
-                part_end_idx = min(len(available_clips), part_start_idx + clips_per_part)
-                selected_clips = available_clips[part_start_idx:part_end_idx]
-                if not selected_clips:
-                    selected_clips = available_clips[:num_beats]
+                logger.info(f"[CLOUD_MOVIE_ASSETS] Sourcing from Drive asset bank for {movie.title} ({len(available_clips)} clips available).")
+
+                if use_visual_first and vf_packet:
+                    # Visual-First: resolve exact pre-locked clips
+                    selected_clips = []
+                    for b in vf_packet["beats"]:
+                        c_fname = b.get("clip_file")
+                        c_cand = clips_dir_pack / c_fname if c_fname else None
+                        if c_cand and c_cand.exists():
+                            selected_clips.append(c_cand)
+                        else:
+                            # fallback matching
+                            m_sh = [c for c in available_clips if b["shot_id"] in c.name]
+                            if m_sh:
+                                selected_clips.append(m_sh[0])
+                    if len(selected_clips) < num_beats:
+                        selected_clips = available_clips[:num_beats]
+                else:
+                    clips_per_part = max(10, len(available_clips) // max(1, active_total))
+                    part_start_idx = (active_part - 1) * clips_per_part
+                    part_end_idx = min(len(available_clips), part_start_idx + clips_per_part)
+                    selected_clips = available_clips[part_start_idx:part_end_idx]
+                    if not selected_clips:
+                        selected_clips = available_clips[:num_beats]
 
                 # Render 1:1 Square Method C Short
                 telemetry.transition_stage(PipelineStage.RENDERING, f"Rendering 1:1 Square Method C Short for {movie_display_title}")
                 output_mp4 = RENDERS_DIR / f"short_{manifest_id}.mp4"
 
                 beat_meta_list = []
-                for idx, b in enumerate(movie_script.beats):
-                    beat_meta_list.append({
-                        "text": b.text,
-                        "audio_dur": getattr(b, "duration_estimate_sec", round(dur / max(1, num_beats), 2)),
-                        "audio_start": round(idx * (dur / max(1, num_beats)), 2),
-                        "audio_end": round((idx + 1) * (dur / max(1, num_beats)), 2),
-                        "is_impact": b.tension_level in ("CLIMAX", "FATAL", "HIGH") and idx >= num_beats - 3
-                    })
+                if use_visual_first and vf_packet:
+                    for idx, b in enumerate(vf_packet["beats"]):
+                        beat_meta_list.append({
+                            "text": b.get("sentence", ""),
+                            "sentence": b.get("sentence", ""),
+                            "audio_dur": round(dur / max(1, num_beats), 2),
+                            "audio_start": round(idx * (dur / max(1, num_beats)), 2),
+                            "audio_end": round((idx + 1) * (dur / max(1, num_beats)), 2),
+                            "is_impact": b.get("is_impact", False)
+                        })
+                else:
+                    for idx, b in enumerate(movie_script.beats if movie_script else []):
+                        beat_meta_list.append({
+                            "text": b.text,
+                            "audio_dur": getattr(b, "duration_estimate_sec", round(dur / max(1, num_beats), 2)),
+                            "audio_start": round(idx * (dur / max(1, num_beats)), 2),
+                            "audio_end": round((idx + 1) * (dur / max(1, num_beats)), 2),
+                            "is_impact": b.tension_level in ("CLIMAX", "FATAL", "HIGH") and idx >= num_beats - 3
+                        })
 
                 try:
                     from intelligence.movie_recap_composer import MovieRecapComposer
