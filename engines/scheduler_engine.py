@@ -6,7 +6,7 @@ Slot Rules:
 - 3 Release Slots per UTC calendar day:
   1. 02:30 UTC (08:00 AM IST)
   2. 10:30 UTC (04:00 PM IST)
-  3. 18:30 UTC (12:00 AM IST)
+  3. 14:30 UTC (08:00 PM IST)
 - Strictly maximum 3 publication slots per UTC calendar day.
 - Never assign two Shorts to the same slot.
 - Never schedule into a past slot or a slot less than min_lead_minutes in the future.

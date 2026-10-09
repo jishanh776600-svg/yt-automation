@@ -133,7 +133,7 @@ class MovieSeriesManager:
         m2_title = self._state.get("track_2", {}).get("movie_title", "The Hills Have Eyes")
 
         hour = getattr(slot_dt, "hour", 2)
-        is_slot_3 = (hour >= 16)  # 18:30 UTC is Slot 3 (Midnight IST)
+        is_slot_3 = (hour >= 13)  # 14:30 UTC is Slot 3 (8:00 PM IST)
 
         if day_offset % 2 == 0:
             return m2_title if is_slot_3 else m1_title
