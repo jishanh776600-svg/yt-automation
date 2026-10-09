@@ -77,7 +77,7 @@ jobs:
 
           for i in $(seq 1 $MAX_RETRIES); do
             echo "=== Publishing Attempt $i/$MAX_RETRIES ==="
-            if python main.py --schedule-ready; then
+            if python main.py --schedule-ready --max-to-schedule 1; then
               echo "✅ Direct public publishing succeeded on attempt $i!"
               SUCCESS=1
               break

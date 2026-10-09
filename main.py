@@ -1485,10 +1485,11 @@ class ShortsPipeline:
             all_eligible_candidates.sort(key=_candidate_sequence_key)
 
             # 6. Calculate eligible quota to schedule in this run
+            # STRICT SAFETY INVARIANT: A single scheduled release invocation must ONLY publish
+            # 1 Short per slot (8am, 4pm, 12am IST). Never burst-upload multiple videos.
             ready_stock_count = len(all_eligible_candidates)
-            eligible_to_schedule = min(len(vacant_horizon_slots), ready_stock_count)
-            if max_to_schedule is not None and max_to_schedule > 0:
-                eligible_to_schedule = min(eligible_to_schedule, max_to_schedule)
+            target_limit = max_to_schedule if (max_to_schedule is not None and max_to_schedule > 0) else 1
+            eligible_to_schedule = min(len(vacant_horizon_slots), ready_stock_count, target_limit)
 
             if eligible_to_schedule <= 0:
                 console.print(f"[bold yellow][!] Zero eligible Shorts to schedule (Vacant Horizon Slots: {len(vacant_horizon_slots)}, READY Stock: {ready_stock_count}). Scheduler exiting safely.[/bold yellow]")
