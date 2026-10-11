@@ -1,12 +1,12 @@
 {
   "action": "MAINTAIN_BUFFER",
-  "outcome": "SUCCEEDED",
-  "block_reason": null,
+  "outcome": "FAILED",
+  "block_reason": "Render error: ZERO_REPETITION_RULE: Visual asset missing or failed download for beat 'beat_07'. Recycling or looping existing clips across beats is strictly prohibited.",
   "requested_deficit": 1,
   "produced_count": 0,
   "initial_stock": 5,
   "final_stock": 5,
   "target_stock": 6,
   "voice": "af_bella",
-  "timestamp": "2026-10-11T14:17:24.665782Z"
+  "timestamp": "2026-10-11T19:08:24.490206Z"
 }
