@@ -1,9 +1,9 @@
 {
   "track_1": {
     "slot_index": 1,
-    "movie_title": "Wrong Turn",
-    "movie_year": 2003,
-    "current_part": 10,
+    "movie_title": "The Ritual",
+    "movie_year": 2017,
+    "current_part": 1,
     "total_parts": 10,
     "is_completed": false
   },
@@ -15,5 +15,7 @@
     "total_parts": 10,
     "is_completed": false
   },
-  "completed_movies": []
+  "completed_movies": [
+    "Wrong Turn (2003)"
+  ]
 }
